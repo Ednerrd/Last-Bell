@@ -316,10 +316,10 @@ function freeRun(x, z, dx, dz) {
   if (dz > 1e-3) t = Math.min(t, (ZR - z) / dz); else if (dz < -1e-3) t = Math.min(t, (-ZR - z) / dz);
   return Math.max(0, t);
 }
-let DMG = 0.45; // global tuning
-const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .5, jabEv: 0, jabBlk: 1, form: 0, even: .15, evenAt: .35, pace: 1, jShare: 0, jNoise: 1.1, flash: 0, kdHurt: 0, jLean: 0, kdAt: 4.3, kdBase: 4, kdDiv: 10, upFloor: 14, wear: .14 };
+let DMG = 0.32; // global tuning
+const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08 };
 
-const CUT = { fresh: .0006, worn: .022, wearPow: 1.6, reopen: .25, crit: .006, widen: .085, onEye: .45, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
+const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .45, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
 function cutChance(D, dmg, crit) {
   const size = dmg / 4, wear = 1 - D.headMax / 100;
   let p = (CUT.fresh + CUT.worn * Math.pow(wear, CUT.wearPow)) * size * size;
