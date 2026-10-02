@@ -33,31 +33,36 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `python3 tests/strip.py "<js rows>" out.png`, `tests/shot.py`, `tests/live.py` — Playwright captures (poses, UI flow, live fight bursts) into `shots/`.
 
 ## Current state
-Live build has: 6 guards (balanced 51–55% vs standard at OVR 82 under the OLD combat tuning), Ring IQ, combo AI, ring movement, doctor fix, guard UI, commentary, per-guard animations.
+Live build has: 6 guards, Ring IQ, combo AI, ring movement, doctor fix, guard UI, commentary, per-guard animations, all under the OLD combat tuning.
 
-In progress: COMBAT REALISM PASS. Knobs exist in `TUNE` but defaults still reproduce the old behavior. Tested candidate values (500-fight audit):
-
+Repo (not yet published) has the COMBAT REALISM PASS finished:
 ```
 TUNE: vol .36, pace 1.45, jabEv .12, jabBlk 1.4, form 3.8, even .01, evenAt .25,
       jShare .3, jNoise .9, jLean .7, flash .009, kdHurt .18, upFloor 3, wear .08,
       kdAt 3, kdBase 2.6, kdDiv 9
 DMG .32
-CUT fresh .004, worn .06, wearPow 1.2   (cuts in ~30% of fights, doctor TKO 0.8%)
+CUT fresh .004, worn .06, wearPow 1.2, onEye .65
+GUARDS: cross str 1.08, peekaboo head 1 / ev .98, handslow ctr 1.3
 ```
-Result vs real (CompuBox ~54 thrown / ~16–17 landed / ~30% per round):
-59 thrown, 19 landed, 32% connect; jab 25%, power 33%; stoppages 28% (timing 23% early / 24% mid / 53% late); draws 6% of decisions, SD 6%; favorites win 70% at +3 OVR, 77% at +6, 86% at +10.
+Audit (2000+ fights) vs real (CompuBox ~54 thrown / ~16–17 landed / ~30% per round):
+60 thrown, 19 landed, 32% connect; jab 25%, power 33%; stoppages ~32% (timing ~20% early / 24% mid / 56% late); draws ~8% of decisions; favorites win ~60% at "+3" (really +2: the audit rounds gap/2 down on each side), ~74% at +6, ~87% at +10.
+Cuts (cut.js, 5000 fights): cuts in ~27% of fights, doctor TKO ~2.0%, doctor looks ~4%. CUT.doc alone barely moves it; onEye is the lever.
+Guard balance (600+ mirrored fights each, vs standard): at 82 high 54, peekaboo 52.6 (n2100), philly 49, cross 49, handslow 52; at 65 philly 48, handslow 47, cross 51.
 (Stoppage/draw/upset targets are estimates, not sourced.)
 
 What the knobs do: vol/pace = punch output; jabEv/jabBlk = jabs get picked off more; form = random on/off night (upsets); even/evenAt/jShare/jNoise/jLean = judging (shared view + per-judge taste); flash = clean counters can drop a fresh fighter; kdHurt/upFloor = a knockdown leaves him hurt and finishable; wear = permanent headMax damage per head shot (drives late stoppages); kdAt/kdBase/kdDiv = KD check on hurt fighters (uses shot danger `dn`, normalized to DMG).
 
-## To do (in order)
-1. Make the candidate values above the defaults. Re-run the audit to confirm.
-2. Cut tuning: target doctor TKO ~2% of fights (`tests/cut.js`). Try lowering `CUT.doc` slightly or raising `onEye`.
-3. Re-run guard balance at 300/guard (all 5 vs standard at OVR 82, plus philly/handslow/cross at 65). Target 45–55% at 82. Previous guard numbers were tuned under old combat.
-4. Live visual check (tests/live.py), commit, then Ed publishes via chat.
+## To do
+1. Ed publishes via chat (live.py check passed: no page errors, poses render).
+2. Optional: phone performance check on a real device.
+
+## Env notes
+- Python Playwright here may not match the preinstalled browser. If `live.py` asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` instead.
+- Even 600-fight guard runs swing ±2–4% between runs. Pool to 1500+ before trusting a 1–2% difference.
 
 ## Known notes / ideas
+- The referee overlaps the red corner fighter in most live frames (pre-existing).
 - New fighters show 0% guard fit for skill guards (starting stats ~48, formula starts at 50). Idea: show projected fit at ceiling in the UI.
-- Philly wins ~58% at OVR 65 because low-IQ opponents don't throw the lead right. Left in as flavor; one-line fix if it feels cheap.
+- Philly used to win ~58% at OVR 65 (low-IQ opponents don't throw the lead right). Under the new combat it's 48%, so the flavor is gone.
 - AI corner switches to 'ko' when trailing late, which causes a knockdown spike around round 8 of 10. Realistic, but watch it.
 - Phone performance with the new animations is untested on a real device.
