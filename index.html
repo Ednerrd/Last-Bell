@@ -2285,12 +2285,15 @@ const GUARD_SCOUT = {
   handslow: 'Hands down, eyes up. Sharp straight shots, then make him work tired.'
 };
 function gLabel(g) { return (GUARDS[g] || GUARDS.standard).label; }
-function guardCard(stats, g, iq) {
-  const G = GUARDS[g] || GUARDS.standard, fit = guardSkill(stats, g);
-  const need = G.skill ? G.skill.map(k => STAT_LABEL[k]).join(', ') : '';
-  const warn = G.skill && fit < .5 ? `<p class="alert small">His stats can't run this yet (fit ${Math.round(fit * 100)}%). The holes are there now, the perks come as ${esc(need)} climb.</p>` : '';
+// pot: his ceiling stats, if known. Fit at the ceiling is where the guard is headed
+function guardCard(stats, g, iq, pot) {
+  const G = GUARDS[g] || GUARDS.standard, fit = guardSkill(stats, g), top = pot ? Math.max(fit, guardSkill(pot, g)) : null;
+  const pc = x => Math.round(x * 100), need = G.skill ? G.skill.map(k => STAT_LABEL[k]).join(', ') : '';
+  const warn = !G.skill || fit >= .5 ? ''
+    : top != null && top < .5 ? `<p class="alert small">Even at his ceiling he only half-runs this guard (fit ${pc(top)}%). The holes stay, the perks never fully arrive.</p>`
+    : `<p class="alert small">His stats can't run this yet (fit ${pc(fit)}%${top != null ? `, ${pc(top)}% at his ceiling` : ''}). The holes are there now, the perks come as ${esc(need)} climb.</p>`;
   return `<div class="gcard"><div class="gtop"><b>${G.label}</b>${iq != null ? `<span>Ring IQ <b>${Math.round(iq)}</b></span>` : ''}</div><p class="mute small">${G.desc}</p>
-    ${G.skill ? `<div class="stat"><span class="sl">Guard fit</span><span class="bar"><i style="width:${Math.round(fit * 100)}%"></i></span><span class="sv">${Math.round(fit * 100)}</span><span></span></div><p class="mute tiny">Runs on ${esc(need)}.</p>` : ''}${warn}</div>`;
+    ${G.skill ? `<div class="stat"><span class="sl">Guard fit</span><span class="bar"><i style="width:${pc(fit)}%"></i>${top != null ? `<b style="left:${pc(top)}%"></b>` : ''}</span><span class="sv">${pc(fit)}</span><span></span></div><p class="mute tiny">Runs on ${esc(need)}.${top != null ? ' The tick is his ceiling.' : ''}</p>` : ''}${warn}</div>`;
 }
 function beltChips(list) { return list.map(k => { const o = ORGS.find(x => x.k === k); return `<span class="belt" style="--bc:${o.c}">${k}</span>`; }).join(''); }
 function statRow(k, v, pot, delta) {
@@ -2370,7 +2373,7 @@ function renderCreate() {
     <div class="seg small"><button class="${D.stance === 'orthodox' ? 'on' : ''}" data-act="stance" data-v="orthodox">Orthodox</button><button class="${D.stance === 'southpaw' ? 'on' : ''}" data-act="stance" data-v="southpaw">Southpaw</button></div>
     <h4>Guard <span class="pts">locked for the career</span></h4>
     <div class="chips wrap">${Object.keys(GUARDS).map(k => `<button class="chip ${D.guard === k ? 'on' : ''}" data-act="guard" data-v="${k}">${GUARDS[k].label}</button>`).join('')}</div>
-    ${guardCard(D.stats, D.guard)}
+    ${guardCard(D.stats, D.guard, null, Object.fromEntries(STATS.map(k => [k, Math.min(97, D.stats[k] + D.potAdd[k])])))}
     <h4>Look</h4>
     <div class="swatches">${SKINS.map(c => `<button class="sw ${D.look.skin === c ? 'on' : ''}" style="background:${c}" data-act="look" data-k="skin" data-v="${c}" aria-label="Skin tone"></button>`).join('')}</div>
     <div class="chips wrap">${HAIRS.map(h => `<button class="chip ${D.look.hair === h ? 'on' : ''}" data-act="look" data-k="hair" data-v="${h}">${h === 'bald' ? 'Bald' : h[0].toUpperCase() + h.slice(1)}</button>`).join('')}<button class="chip ${D.look.beard ? 'on' : ''}" data-act="beard">Beard</button></div>
@@ -2447,7 +2450,7 @@ function hubBody() {
   const P = save.player;
   if (hubTab === 'fighter') {
     return `<div class="ovr">Overall <b>${ovr(P.stats)}</b><span class="mute"> The faint tick is his ceiling.</span></div><div class="stats">${STATS.map(k => statRow(k, P.stats[k], P.pot[k])).join('')}</div>
-    ${guardCard(P.stats, P.guard, playerIQ(save))}<p class="mute tiny">Ring IQ grows with fights and with accuracy, head movement, footwork and heart. Smarter fighters read guards, cut off the ring and slip off the ropes.</p>
+    ${guardCard(P.stats, P.guard, playerIQ(save), P.pot)}<p class="mute tiny">Ring IQ grows with fights and with accuracy, head movement, footwork and heart. Smarter fighters read guards, cut off the ring and slip off the ropes.</p>
     <p class="mute small">Gym: ${GYMS[P.gym].name}. Career earnings ${money(P.earnings)}.</p>`;
   }
   if (hubTab === 'rank') {
