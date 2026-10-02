@@ -154,6 +154,14 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .ctimer{height:3px;background:rgba(255,255,255,.1)}.ctimer i{display:block;height:3px;background:#f0b85a;width:100%}
 .pop{position:absolute;left:10px;right:10px;bottom:30px;text-align:center;color:#f4ecdf;font-style:italic;font-size:16px;text-shadow:0 2px 6px #000;opacity:0;transition:opacity .3s;pointer-events:none}
 .pop.show{opacity:1}
+.yell{position:absolute;left:10px;top:10px;max-width:70%;background:#f0b85a;color:#1a120a;font-family:var(--disp);font-size:clamp(18px,5.5vw,26px);text-transform:uppercase;line-height:1.05;padding:6px 10px;border-radius:4px;box-shadow:0 3px 0 #3a0c0c;opacity:0;transform:scale(.85) rotate(-2deg);transition:opacity .15s,transform .15s;pointer-events:none}
+.yell::after{content:'';position:absolute;left:14px;bottom:-8px;border:8px solid transparent;border-top-color:#f0b85a;border-bottom:0}
+.yell.show{opacity:1;transform:scale(1) rotate(-2deg)}
+.shouts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;transition:opacity .2s}.shouts.off{opacity:.4;pointer-events:none}
+.shouts button{position:relative;overflow:hidden;border:1.5px solid rgba(236,228,214,.2);background:#0e0a08;color:#ece4d6;border-radius:5px;padding:10px 4px;font-weight:700;font-size:15px;letter-spacing:.02em;touch-action:manipulation}
+.shouts button:active{transform:scale(.96)}
+.shouts button.on{border-color:#f0b85a;color:#f0b85a}
+.shouts button i{position:absolute;left:0;bottom:0;height:3px;width:0;background:#f0b85a}
 .feed{min-height:76px;background:#0e0a08;color:#cfc4ad;border-radius:5px;padding:7px 11px;font-size:16px}
 .feed p{margin:2px 0}.feed p:first-child{color:#ece4d6}.feed p.hot{color:#f0b85a;font-weight:600}
 .feed p:nth-child(3){opacity:.55}
@@ -2190,6 +2198,13 @@ const Comm = (() => {
     roll: ['{d} rolls it off the shoulder.', 'Shoulder roll by {d}. Nothing landed.', '{d} catches it on the shoulder.'],
     cutWorse: ["That cut on {d} is getting worse.", "{a} keeps hitting that cut. It is wide open now.", "Blood pouring down {d}'s face now."],
     doctorLook: ['The doctor is up on the apron, looking at that cut on {d}.', 'The ringside doctor takes a look at {d}. He lets it go, for now.'],
+    heard_jab: ['{a} heard the corner. The jab is popping now.', '{a} starts sticking the jab.', 'Double jab from {a}. That is what the corner wanted.'],
+    heard_body: ['{a} goes downstairs, just like the corner said.', '{a} switches to the body.', '{a} is digging to the ribs now.'],
+    heard_press: ['{a} steps on the gas and walks him down.', '{a} takes the advice and gets on him.', '{a} is cutting off the ring now.'],
+    heard_counter: ['{a} sits back and makes him pay.', 'There it is. {a} is countering now.', '{a} lets him come and fires back.'],
+    heard_move: ['{a} is using the ring now.', '{a} gets on his bike.', '{a} moves his feet, like the corner asked.'],
+    heard_hands: ['{a} tightens up the guard.', 'Hands up now for {a}.', '{a} shells up and takes it on the gloves.'],
+    ignored: ["{a} is not hearing his corner.", "The corner is yelling, but {a} is doing his own thing.", "{a} tunes out the corner."],
     wild: ['{a} winds up and hits nothing but air.', 'Wild {p} from {a}, way off the mark.', '{a} is swinging for the fences and missing.', 'Sloppy {p} from {a}, telegraphed it.']
   };
   const COLOR = ["He's gotta move his head.", "That body work is going to pay off late.", "You can hear that one in the cheap seats.", "He's fighting like his rent's due.", "The jab has been the story so far.", "His corner wants him off the ropes.", "That's a veteran move right there.", "He's breathing through his mouth now. Bad sign.", "Somebody's gonna feel this tomorrow.", "Look at the feet. Always in position.", "He's loading up on that right hand.", "This crowd is on its feet."];
@@ -2230,6 +2245,8 @@ const Comm = (() => {
       case 'home': if (ok('home' + e.a, t, 170) && ok('homeAny', t, 60)) { o.p = PN[e.p]; L('home', 2); } break;
       case 'cutWorse': o.a = nm(1 - e.d); L('cutWorse', 3); break;
       case 'doctorLook': L('doctorLook', 3); break;
+      case 'heard': if (ok('heard', t, 4)) L('heard_' + e.k, 1); break;
+      case 'ignored': if (ok('ignored', t, 20)) L('ignored', 1); break;
       case 'stoppage': L(e.why === 'three' ? 'three' : 'tko', 5); break;
       case 'doctor': L('doctor', 5); break;
       case 'rtd': o.a = nm(1 - e.d); L('rtd', 5); break;
@@ -2249,7 +2266,7 @@ const Comm = (() => {
     const u = new SpeechSynthesisUtterance(line.text);
     const v = voices.length ? (line.kind === 'color' && voices[1] ? voices[1] : voices[0]) : null;
     if (v) u.voice = v;
-    u.rate = line.pri >= 4 ? 1.18 : 1.08; u.pitch = line.kind === 'color' ? .8 : 1; u.volume = .9;
+    u.rate = line.kind === 'coach' ? 1.25 : line.pri >= 4 ? 1.18 : 1.08; u.pitch = line.kind === 'color' ? .8 : line.kind === 'coach' ? 1.15 : 1; u.volume = .9;
     try { speechSynthesis.speak(u); } catch (e) { }
   }
   function stop() { if ('speechSynthesis' in window) speechSynthesis.cancel(); }
@@ -2616,8 +2633,10 @@ function startFight() {
       <div class="clock"><span id="rd">R1</span><b id="ck">3:00</b></div>
       <div class="hf r"><div class="hn">${nm(B)}</div><div class="hb"><i class="max" id="hm1"></i><i class="cur" id="hh1"></i></div><div class="sb"><i class="bd" id="hbd1"></i><i class="st" id="hs1"></i></div></div>
     </div>
-    <div class="stage"><canvas id="cv"></canvas><div class="ov" id="ov"></div><div class="pop" id="pop"></div></div>
-    <div class="feed" id="feed" aria-live="polite"></div><div class="cornerbox" id="cbox"></div>
+    <div class="stage"><canvas id="cv"></canvas><div class="ov" id="ov"></div><div class="pop" id="pop"></div><div class="yell" id="yell"></div></div>
+    <div class="feed" id="feed" aria-live="polite"></div>
+    <div class="shouts off" id="shouts" aria-label="Yell from the corner">${Object.keys(SHOUTS).map(k => `<button data-act="shout" data-v="${k}">${SHOUT_BTN[k]}<i></i></button>`).join('')}</div>
+    <div class="cornerbox" id="cbox"></div>
     <div class="ctrl"><div class="seg small">${[1, 2, 4].map(s => `<button class="${FX.speed === s ? 'on' : ''}" data-act="speed" data-v="${s}">${s}x</button>`).join('')}</div><div class="row">${soundBtns()}</div></div>
   </div>`, 'fightmode');
   Render.init($('#cv'));
@@ -2636,6 +2655,34 @@ function feed(text, hot) {
 }
 let popT = 0;
 function pop(text) { const p = $('#pop'); if (!p) return; p.textContent = '“' + text + '”'; p.classList.add('show'); clearTimeout(popT); popT = setTimeout(() => p.classList.remove('show'), 2600); }
+// yelling from the corner during the round
+const SHOUT_BTN = { jab: 'Jab', body: 'Body', press: 'Pressure', counter: 'Counter', move: 'Move', hands: 'Hands up' };
+const YELLS = {
+  jab: ['Jab! Jab!', 'Double the jab!', 'Stick the jab!'],
+  body: ['Body! Go downstairs!', 'Dig to the body!', 'Kill the body!'],
+  press: ['Get on him!', 'Walk him down!', 'Cut the ring off!'],
+  counter: ['Make him miss! Counter!', 'Let him come, fire back!', 'Sit down on the counter!'],
+  move: ['Move your feet!', 'Get off the ropes!', 'Angles! Move!'],
+  hands: ['Hands up!', 'Chin down, hands up!', 'Tighten up!']
+};
+let yellT = 0;
+function yell(text) { const y = $('#yell'); if (!y) return; y.textContent = text; y.classList.add('show'); clearTimeout(yellT); yellT = setTimeout(() => y.classList.remove('show'), 1600); }
+ACT.shout = d => {
+  if (!F || FX.mode !== 'live' || F.phase !== 'fight' || performance.now() < (FX.shoutLock || 0)) return;
+  const o = F.shout(0, d.v); if (!o) return;
+  FX.shoutLock = performance.now() + 900;
+  const line = pick(YELLS[d.v]); yell(line); Comm.say({ text: line, kind: 'coach', pri: 4 });
+  if (F.t - (FX.tuneT || -99) > 12 && (F.f[0].spam > 2.6 || o.q < .4)) { FX.tuneT = F.t; feed(F.f[0].spam > 2.6 ? "Easy, coach. He's tuning you out." : "He can barely hear you right now."); }
+};
+function updShouts() {
+  const box = $('#shouts'); if (!box) return;
+  const live = FX.mode === 'live' && F.phase === 'fight', o = F.f[0].order;
+  box.classList.toggle('off', !live);
+  for (const b of box.children) {
+    const on = live && o && o.k === b.dataset.v; b.classList.toggle('on', !!on);
+    b.lastChild.style.width = on ? (100 * o.t / SHOUT_LEN).toFixed(1) + '%' : '0';
+  }
+}
 
 function handleEvents() {
   for (const e of F.events) {
@@ -2678,6 +2725,7 @@ function refTick(fs, info, dt) {
     const off = Math.max(66, gap + 52) + (Math.min(zA, zB) - 40 < -ZR + 2 ? 14 : 0);
     tx = mx + r.side * off;
     if (Math.abs(tx) > RING - 8) { r.side *= -1; tx = mx + r.side * off; }
+    if (Math.abs(tx) > RING - 8) { tx = mx; tz = Math.max(-ZR + 2, Math.min(zA, zB) - 70); } // both lanes blocked (they are far apart): deep behind the middle
     if (Math.abs(mx - r.x) > 6) face = mx > r.x ? 1 : -1;
   }
   tx = clamp(tx, -RING + 4, RING - 4); tz = clamp(tz, -ZR + 2, ZR - 2);
@@ -2740,6 +2788,7 @@ function loop(ts) {
     view = { f: s.f, looks: FX.looks, t: FX.t, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: .6, ev, replay: true, ref, flash: ev.some(e => e.dmg > 5 && !e.blocked) ? .35 : 0 };
     if (i >= R_.length - 1) { FX.mode = 'done'; clearOverlay(); setTimeout(resultScreen, 700); }
   } else { view = liveView(); }
+  updShouts();
   Render.frame(view, dt);
 }
 function onEnd(res) {
@@ -2760,7 +2809,6 @@ function startReplay() {
   const data = F.replay || F.rec.slice(-280);
   if (!data || data.length < 20) { FX.mode = 'done'; clearOverlay(); setTimeout(resultScreen, 400); return; }
   // start ~3.5s before the end of the clip (clip ends ~1.2s after the final blow)
-    if (Math.abs(tx) > RING - 8) { tx = mx; tz = Math.max(-ZR + 2, Math.min(zA, zB) - 70); } // both lanes blocked (they are far apart): deep behind the middle
   FX.rpData = data.slice(-Math.min(data.length, 150)); FX.rp = 0; FX.rpLast = -1; FX.mode = 'replay'; FX.zoom = 1.32;
   overlay(`<div class="replay-tag">Replay <small>tap to skip</small></div>`);
   $('.stage').onclick = () => { if (FX.mode === 'replay') { FX.mode = 'done'; clearOverlay(); resultScreen(); } };
