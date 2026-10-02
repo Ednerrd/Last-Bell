@@ -30,6 +30,7 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `node tests/diag.js 150 82 philly` — per-guard detail (land/block/evade %, KDs).
 - `node tests/probe.js` — knockdowns and stoppages by round.
 - `node tests/commtest.js` — runs fights through commentary, counts lines per event.
+- `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x` — style round robin: every pair of styles, identical stats + standard guard, sides swapped. Prints win % vs the field, a fingerprint per style (punches/rd, power %, landed, avg distance, gas, counters/rd, seconds on the ropes per round, stoppage wins) and the matchup grid. `BIAS=1` gives each fighter his style's stat lean, `GRD=roll` rolls his style's usual guard (BIAS=1 GRD=roll = what the AI roster looks like). Pass pairs to split runs over cores: `outboxer-counter,slugger-swarmer`.
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,worst,smart,only_body` then `node tests/shout.js agg x` — coach shout policies (side 0 shouts, mirrored stats). `STY=`/`GRD=` filter matchups. Note side 0 alone wins ~48–52% with no shouts; compare against `none` from the same batch.
 - `python3 tests/strip.py "<js rows>" out.png`, `tests/shot.py`, `tests/live.py` — Playwright captures (poses, UI flow, live fight bursts) into `shots/`.
 
@@ -41,35 +42,46 @@ Repo (not yet published) has the COMBAT REALISM PASS finished:
 TUNE: vol .36, pace 1.45, jabEv .12, jabBlk 1.4, form 3.8, even .01, evenAt .25,
       jShare .3, jNoise .9, jLean .7, flash .009, kdHurt .18, upFloor 3, wear .08,
       kdAt 3, kdBase 2.6, kdDiv 9
-DMG .32
+DMG .35 (was .32; raised after the style pass so stoppages stay ~30%)
 CUT fresh .004, worn .06, wearPow 1.2, onEye .65
-GUARDS: cross str 1.08, peekaboo head 1 / ev .98, handslow ctr 1.3
+GUARDS: cross str 1.08 / head 1.2, peekaboo head 1 / ev .98, handslow ctr 1.3, high head 1.15 / hold 1.1
+STYLE PASS: reach .2, reachIn 14, jabCtr .5, moveEv .2, setup .3 (TUNE); STYLE_IN, STYLE_OUT, STYLE_OPEN, STYLE_RAMP, STYLE_STICK, STYLE_PLANS
 ```
-Audit (2000+ fights) vs real (CompuBox ~54 thrown / ~16–17 landed / ~30% per round):
+Audit after the style pass (900 fights, DMG .35): 57 thrown, 16.6 landed, 29% connect, stoppages ~30%, favorites 57/78/87 at +3/+6/+10, cut TKO 1.8%, cuts in ~21% of fights.
+Audit before the style pass (2000+ fights) vs real (CompuBox ~54 thrown / ~16–17 landed / ~30% per round):
 60 thrown, 19 landed, 32% connect; jab 25%, power 33%; stoppages ~32% (timing ~20% early / 24% mid / 56% late); draws ~8% of decisions; favorites win ~60% at "+3" (really +2: the audit rounds gap/2 down on each side), ~74% at +6, ~87% at +10.
 Cuts (cut.js, 5000 fights): cuts in ~27% of fights, doctor TKO ~2.0%, doctor looks ~4%. CUT.doc alone barely moves it; onEye is the lever.
-Guard balance (600+ mirrored fights each, vs standard): at 82 high 54, peekaboo 52.6 (n2100), philly 49, cross 49, handslow 52; at 65 philly 48, handslow 47, cross 51.
+Guard balance after the style pass (pooled 600–1100 mirrored fights each, vs standard): at 82 high ~55, peekaboo 52, philly 48.5, cross ~53, handslow ~52; at 65 all 47.6–52.3. (Before: high 54, peekaboo 52.6, philly 49, cross 49, handslow 52.)
 (Stoppage/draw/upset targets are estimates, not sourced.)
+
+Style pass knobs: reach = a power shot thrown from the edge of its range is easier to see; jabCtr = a missed jab is harder to counter than a missed hook; moveEv = a moving target is harder to hit (scaled by guard ev); setup = a power shot right behind a jab is harder to slip/block. All evasion adds are scaled by the guard's ev factor.
 
 What the knobs do: vol/pace = punch output; jabEv/jabBlk = jabs get picked off more; form = random on/off night (upsets); even/evenAt/jShare/jNoise/jLean = judging (shared view + per-judge taste); flash = clean counters can drop a fresh fighter; kdHurt/upFloor = a knockdown leaves him hurt and finishable; wear = permanent headMax damage per head shot (drives late stoppages); kdAt/kdBase/kdDiv = KD check on hurt fighters (uses shot danger `dn`, normalized to DMG).
 
 Coach shouts (repo only): during a round the player yells one of six calls (`SHOUTS`: jab, body, press, counter, move, hands). `Fight.shout(side, k)` sets `F.order` for SHOUT_LEN (14 sim-s, ~40s of fight clock). `sgOf(F)` mixes the call's mods into the STRATS lookup, scaled by `q` (how well he hears it: Ring IQ, heart, hurt, and spam makes him tune out). `shoutFit()` scores the call 0..1 against the moment (guard holes, his body/gas, who is hurt/trapped, his punch pace), worn down by `F.used` (the other corner adjusts to a call you keep using). Above `SHOUT_EDGE.bar` the call gives an edge (atkEdge/defEdge/ctrEdge in react, evade, block, counters); below it the call costs (60%). Only the player's corner shouts; the AI never does. No shouts = old behavior exactly.
-Shout results (600 mirrored fights each, vs no shouting): perfect coach +12%, simple human rules +2%, worst call 0%, random yelling −3%, mashing one call −5% (Body ~+3%).
+Shout results after the style pass (500 each, SHOUT_EDGE atk .6 def .5 ctr 1.1): perfect coach +10%, simple human rules +1%, random yelling −5%. (Before, at atk .4 def .35 ctr .8: +12 / +2 / −3, mashing one call −5%.)
 
 ## To do
 1. Ed publishes via chat.
 2. Optional: phone performance check on a real device.
 3. Ideas: the AI corner could shout too (title fights?), and a better human-ish policy in tests/shout.js to tune against.
 
-## Planned: legends + special styles (Ed's call, NOT started, wait for his go)
-Problem found first: the five base styles are badly unbalanced. Identical stats, standard guard, 400 fights per matchup: Counter-puncher wins ~71% vs the field, Boxer-puncher ~57, Swarmer ~55, Slugger ~43, Out-boxer ~24 (Out-boxer vs Counter 13%). Likely causes: counter's miss-counter (`STYLES.counter.counter` .85) + rope-a-dope + low output; Out-boxer lives on the jab, which the realism pass made easier to block and slip.
+## Styles (repo only, done)
+Ed's descriptions: Counter-puncher fights slower and waits for an opening; Boxer-puncher is the balanced hybrid that throws volume when needed; Swarmer throws a lot, burns stamina, relentless; Slugger is pressure + power (fewer, heavier shots); Out-boxer fights at distance, the outside is his strong suit.
+Traits in `STYLES` (comments above the table): open, legs, stick, out, inside, hit, ramp. AI corner picks round plans per style (`STYLE_PLANS`).
+Fingerprint (identical stats, thrown/rd, avg distance, gas): counter 43 / 63 / 96%, slugger 49 / 56 / 90% (83% power), boxer-puncher 60 / 61 / 87%, out-boxer 61 / 66 / 96% (43% power), swarmer 82 / 59 / 52%.
+Balance: before, Counter-puncher won 72.5% vs the field and Out-boxer 22% (identical stats). Now 48.3–53.8 identical, 46.8–55.5 with stat leans + rolled guards. Matchups run ~38–62 (styles make fights).
+How the out-boxer got fixed (for next time): he lost on the cards, not by KO; 43% of the power shots that landed on him caught him mid-punch in the pocket. Range/legs knobs alone did nothing; what worked was moveEv + setup + jabCtr + reach + stepping out when the other man gets inside.
+Stat economy (NOT fixed, known): +8 in one stat vs identical fighter (400 fights): defense 61%, power 57, speed 57, accuracy 55.5, recovery 53, chin 52, stamina 51, body 50.5, heart 50, footwork 49. OVR weights price them almost the same, so builds that pump head movement win and chin/stamina/heart/body/footwork are near-dead points. Style stat leans were reworked to be value-neutral against this (see scratch calc in commit e014194 message). Fixing it properly = make the dead stats matter (stamina/heart in long fights, footwork in range control) or reprice OVR_W.
+
+## Planned: legends + special styles (Ed said go, in progress)
 Build order:
-1. Balance the five base styles (target ~45–55% each vs the field, 400+ fights per matchup).
+1. DONE: balance the five base styles.
 2. Engine support for new styles: Volume puncher, Pressure boxer, Body snatcher, Jab-and-grab (existing knobs); Angle fighter (pivot after combos), Switch-hitter (stance switch mid-fight + render flip), Awkward (blunts the opponent's read), Veteran spoiler (needs a fouls system: warnings, point deductions, DQ).
 3. One legend per division, the only fighter with that style. Stays top 5, may hold a belt. The boss version is stronger than the unlocked version (the unlock is a sidegrade, not an upgrade).
    Names: inspired by real fighters, slightly altered so you know who it is but it's not them.
 4. Beat the legend → unlock his style. Ed picked: move up/down in weight like real boxing (one fighter chases legends across divisions). Careers are currently locked to one division with one roster, so this needs per-division rosters, weight-change rules and size/stat shifts.
-   Open: can the current fighter learn an unlocked style (camp?) or only new fighters.
+   Ed: yes, the current fighter learns a new style in camp (and can change stance in camp too).
 
 ## Env notes
 - Python Playwright here may not match the preinstalled browser. If `live.py` asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` instead.
