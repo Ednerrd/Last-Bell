@@ -1499,7 +1499,7 @@ function newCareer(p) {
   return {
     v: 1, savedAt: Date.now(), week: 0,
     player: {
-      id: 'P', name: p.name, nick: p.nick || '', div: p.div, style: p.style, guard: p.guard || 'standard', stance: p.stance,
+      id: 'P', name: p.name, nick: p.nick || '', div: p.div, style: p.style, baseStyle: p.style, guard: p.guard || 'standard', stance: p.stance,
       stats: p.stats, pot: p.pot, look: p.look, startAge: p.age || 21,
       record: { w: 0, l: 0, d: 0, ko: 0 }, points: 0, money: 800, gym: 0, wear: 0,
       injury: null, belts: [], history: [], earnings: 0, owned: ['t_black', 't_ox', 'g_red', 'g_black', 's_black', 's_white'],
@@ -1600,6 +1600,8 @@ function settleStyle(P, notes) {
   if (P.styleFrom && P.styleFit >= 1) { delete P.styleFrom; P.styleFit = 1; if (notes) notes.push('The ' + STYLES[P.style].label.toLowerCase() + ' style is his now. He fights it like he was born to.'); }
   if (P.stanceFit != null && P.stanceFit >= 1) { delete P.stanceFit; if (notes) notes.push('Fighting ' + P.stance + ' feels natural now.'); }
 }
+// his style is locked in: the one he was built with, plus any legend's style he has earned
+function campStyles(P) { return Array.from(new Set([P.baseStyle || P.style, ...(P.unlocked || [])])); }
 function campCost(plan) { let c = GYMS[plan.gym].cost; if (plan.sci) c += ADDONS.sci.cost; if (plan.spar) c += ADDONS.spar.cost; return c; }
 function runCamp(save, plan) {
   // plan: {gym, focus:[k,k], intensity, sci, spar} or null for rest
@@ -1626,7 +1628,7 @@ function runCamp(save, plan) {
   if (R() < injCh) { injury = Object.assign({}, pick(INJURIES.filter(i => i.k !== 'conc'))); injury.weeks = Math.round(injury.weeks * .7); injury.source = 'camp'; P.injury = injury; notes.push('Got hurt in camp: ' + injury.name.toLowerCase() + '. Fight is off.'); }
   // new style / new stance: takes a focus slot, and he is only part of the way there after one camp
   const lm = learnRate(P, G);
-  if (plan.learn && plan.learn !== P.style && STYLES[plan.learn]) {
+  if (plan.learn && plan.learn !== P.style && STYLES[plan.learn] && campStyles(P).includes(plan.learn)) {
     const f = P.styleFrom ? P.styleFit : 1;
     if (plan.learn === P.styleFrom) { P.styleFrom = P.style; P.styleFit = Math.max(.5, 1 - f); }
     else { P.styleFrom = P.styleFrom && f < .5 ? P.styleFrom : P.style; P.styleFit = STYLE_LEARN.first * lm; }
@@ -1766,6 +1768,7 @@ function migrateSave(s) {
   if (!s) return s;
   if (!s.player.guard) s.player.guard = rollGuard(s.player.style);
   if (!s.world.away) s.world.away = {};
+  if (!s.player.baseStyle) s.player.baseStyle = !STYLES[s.player.style].special ? s.player.style : s.player.styleFrom && !STYLES[s.player.styleFrom].special ? s.player.styleFrom : 'boxerpuncher';
   ensureLegend(s.world.roster, s.world.div);
   s.world.roster.forEach(f => { if (!f.guard) f.guard = rollGuard(f.style); });
   if (s.pending && s.pending.offer && s.pending.offer.opp && !s.pending.offer.opp.guard) {
@@ -2742,9 +2745,10 @@ function renderCreate() {
     </div>
     <h4>Division</h4>
     <select id="inDiv">${DIVS.map((v, i) => `<option value="${i}" ${i === D.div ? 'selected' : ''}>${v.name} (${v.lb})</option>`).join('')}</select>
-    <h4>Style</h4>
+    <h4>Style <span class="pts">locked for the career</span></h4>
     <div class="chips wrap">${BASE_STYLES.map(k => `<button class="chip ${D.style === k ? 'on' : ''}" data-act="style" data-v="${k}">${STYLES[k].label}</button>`).join('')}</div>
-    <h4>Stance</h4>
+    <p class="mute small">${esc(STYLES[D.style].desc)} The only way to change it later: beat a legend and learn his.</p>
+    <h4>Stance <span class="pts">can change in camp</span></h4>
     <div class="seg small"><button class="${D.stance === 'orthodox' ? 'on' : ''}" data-act="stance" data-v="orthodox">Orthodox</button><button class="${D.stance === 'southpaw' ? 'on' : ''}" data-act="stance" data-v="southpaw">Southpaw</button></div>
     <h4>Guard <span class="pts">locked for the career</span></h4>
     <div class="chips wrap">${Object.keys(GUARDS).map(k => `<button class="chip ${D.guard === k ? 'on' : ''}" data-act="guard" data-v="${k}">${GUARDS[k].label}</button>`).join('')}</div>
@@ -2925,14 +2929,14 @@ function campScreen() {
   const need = focusNeed(); while (plan.focus.length > need) plan.focus.pop();
   const sk = plan.learn || P.style, other = P.stance === 'southpaw' ? 'orthodox' : 'southpaw';
   const prog = P.styleFrom ? ` Still learning it: ${Math.round(P.styleFit * 100)}% (was ${STYLES[P.styleFrom].label.toLowerCase()}).` : '';
-  const styleNote = plan.learn ? `New style: ${STYLES[sk].desc} One camp gets him part of the way. Fights and more camps finish the job.` : STYLES[sk].desc + prog;
+  const styleNote = plan.learn ? `New style: ${STYLES[sk].desc} One camp gets him part of the way. Fights and more camps finish the job.` : `${STYLES[sk].label}: ${STYLES[sk].desc}${prog}${campStyles(P).length < 2 ? ' His style is locked in. Beat a legend and you can learn his.' : ''}`;
   const cost = campCost(plan); const after = P.money - cost;
   show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight camp</span><span class="cash">${money(P.money)}</span></div>
     <p class="mute">Eight weeks to get ready for ${esc(o.opp.name)} (${STYLES[o.opp.style].label.toLowerCase()}, ${gLabel(o.opp.guard).toLowerCase()}, OVR ${Math.round(o.opp.rating)}).</p>
     <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
     <h4>Gym</h4><div class="opts">${GYMS.map((g, i) => `<button class="opt ${plan.gym === i ? 'on' : ''}" data-act="pgym" data-i="${i}" ${g.cost > P.money ? 'disabled' : ''}><b>${g.name}</b><span>${g.cost ? money(g.cost) + ' per camp' : 'Free'}</span><small>${g.note}</small></button>`).join('')}</div>
     <h4>Style and stance <span class="pts">a change uses a focus slot</span></h4>
-    <div class="chips wrap">${Array.from(new Set(BASE_STYLES.concat(P.unlocked || [], P.styleFrom && STYLES[P.styleFrom].special ? [P.styleFrom] : [], STYLES[P.style].special ? [P.style] : []))).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>
+    ${campStyles(P).length < 2 ? '' : `<div class="chips wrap">${campStyles(P).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>`}
     <p class="mute small">${esc(styleNote)}</p>
     <div class="chips"><button class="chip ${plan.stance ? 'on' : ''}" data-act="pstance">Switch to ${other}</button></div>
     <p class="mute small">${plan.stance ? `He will be rusty fighting ${other} for a while: a little less accurate, a little easier to hit.` : `Fights ${P.stance}${P.stanceFit != null ? `, still getting used to it (${Math.round(P.stanceFit * 100)}%)` : ''}.`}</p>
