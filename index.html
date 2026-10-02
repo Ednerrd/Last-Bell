@@ -2709,8 +2709,7 @@ ACT.shout = d => {
   FX.shoutLock = performance.now() + 900;
   const line = pick(YELLS[d.v]); yell(line); Comm.say({ text: line, kind: 'coach', pri: 4 });
   if (F.t - (FX.tuneT || -99) > 12 && (F.f[0].spam > 2.6 || o.q < .4)) { FX.tuneT = F.t; feed(F.f[0].spam > 2.6 ? "Easy, coach. He's tuning you out." : "He can barely hear you right now."); }
-  else if (o.fit >= .7) feed(pick(CALL_GOOD), true);
-  else if (o.fit < .2) feed(pick(CALL_BAD));
+  else if ((o.fit >= .7 || o.fit < .2) && F.t - (FX.callT || -99) > 8) { FX.callT = F.t; feed(pick(o.fit >= .7 ? CALL_GOOD : CALL_BAD), o.fit >= .7); }
 };
 function updShouts() {
   const box = $('#shouts'); if (!box) return;

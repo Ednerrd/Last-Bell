@@ -30,6 +30,7 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `node tests/diag.js 150 82 philly` — per-guard detail (land/block/evade %, KDs).
 - `node tests/probe.js` — knockdowns and stoppages by round.
 - `node tests/commtest.js` — runs fights through commentary, counts lines per event.
+- `TAG=x node tests/shout.js 600 82 none,oracle,random,worst,smart,only_body` then `node tests/shout.js agg x` — coach shout policies (side 0 shouts, mirrored stats). `STY=`/`GRD=` filter matchups. Note side 0 alone wins ~48–52% with no shouts; compare against `none` from the same batch.
 - `python3 tests/strip.py "<js rows>" out.png`, `tests/shot.py`, `tests/live.py` — Playwright captures (poses, UI flow, live fight bursts) into `shots/`.
 
 ## Current state
@@ -52,17 +53,21 @@ Guard balance (600+ mirrored fights each, vs standard): at 82 high 54, peekaboo 
 
 What the knobs do: vol/pace = punch output; jabEv/jabBlk = jabs get picked off more; form = random on/off night (upsets); even/evenAt/jShare/jNoise/jLean = judging (shared view + per-judge taste); flash = clean counters can drop a fresh fighter; kdHurt/upFloor = a knockdown leaves him hurt and finishable; wear = permanent headMax damage per head shot (drives late stoppages); kdAt/kdBase/kdDiv = KD check on hurt fighters (uses shot danger `dn`, normalized to DMG).
 
+Coach shouts (repo only): during a round the player yells one of six calls (`SHOUTS`: jab, body, press, counter, move, hands). `Fight.shout(side, k)` sets `F.order` for SHOUT_LEN (14 sim-s, ~40s of fight clock). `sgOf(F)` mixes the call's mods into the STRATS lookup, scaled by `q` (how well he hears it: Ring IQ, heart, hurt, and spam makes him tune out). `shoutFit()` scores the call 0..1 against the moment (guard holes, his body/gas, who is hurt/trapped, his punch pace), worn down by `F.used` (the other corner adjusts to a call you keep using). Above `SHOUT_EDGE.bar` the call gives an edge (atkEdge/defEdge/ctrEdge in react, evade, block, counters); below it the call costs (60%). Only the player's corner shouts; the AI never does. No shouts = old behavior exactly.
+Shout results (600 mirrored fights each, vs no shouting): perfect coach +12%, simple human rules +2%, worst call 0%, random yelling −3%, mashing one call −5% (Body ~+3%).
+
 ## To do
-1. Ed publishes via chat (live.py check passed: no page errors, poses render).
+1. Ed publishes via chat.
 2. Optional: phone performance check on a real device.
+3. Ideas: the AI corner could shout too (title fights?), and a better human-ish policy in tests/shout.js to tune against.
 
 ## Env notes
 - Python Playwright here may not match the preinstalled browser. If `live.py` asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` instead.
 - Even 600-fight guard runs swing ±2–4% between runs. Pool to 1500+ before trusting a 1–2% difference.
 
 ## Known notes / ideas
-- The referee overlaps the red corner fighter in most live frames (pre-existing).
-- New fighters show 0% guard fit for skill guards (starting stats ~48, formula starts at 50). Idea: show projected fit at ceiling in the UI.
+- Referee lane fixed (was within a body-width of a fighter 96% of frames, now ~10%).
+- Guard card shows fit now plus a ceiling tick (new fighters start near 0% for skill guards).
 - Philly used to win ~58% at OVR 65 (low-IQ opponents don't throw the lead right). Under the new combat it's 48%, so the flavor is gone.
 - AI corner switches to 'ko' when trailing late, which causes a knockdown spike around round 8 of 10. Realistic, but watch it.
 - Phone performance with the new animations is untested on a real device.
