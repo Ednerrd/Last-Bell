@@ -62,7 +62,7 @@ Coach shouts (repo only): during a round the player yells one of six calls (`SHO
 Shout results after the style pass (500 each, SHOUT_EDGE atk .6 def .5 ctr 1.1): perfect coach +10%, simple human rules +1%, random yelling −5%. (Before, at atk .4 def .35 ctr .8: +12 / +2 / −3, mashing one call −5%.)
 
 ## To do
-1. Ed publishes via chat.
+1. Ed publishes via chat (big batch now: style pass, camp learning, special styles, weight classes, legends).
 2. Optional: phone performance check on a real device.
 3. Ideas: the AI corner could shout too (title fights?), and a better human-ish policy in tests/shout.js to tune against.
 
@@ -74,14 +74,14 @@ Balance: before, Counter-puncher won 72.5% vs the field and Out-boxer 22% (ident
 How the out-boxer got fixed (for next time): he lost on the cards, not by KO; 43% of the power shots that landed on him caught him mid-punch in the pocket. Range/legs knobs alone did nothing; what worked was moveEv + setup + jabCtr + reach + stepping out when the other man gets inside.
 Stat economy (NOT fixed, known): +8 in one stat vs identical fighter (400 fights): defense 61%, power 57, speed 57, accuracy 55.5, recovery 53, chin 52, stamina 51, body 50.5, heart 50, footwork 49. OVR weights price them almost the same, so builds that pump head movement win and chin/stamina/heart/body/footwork are near-dead points. Style stat leans were reworked to be value-neutral against this (see scratch calc in commit e014194 message). Fixing it properly = make the dead stats matter (stamina/heart in long fights, footwork in range control) or reprice OVR_W.
 
-## Planned: legends + special styles (Ed said go, in progress)
-Build order:
-1. DONE: balance the five base styles.
-2. Engine support for new styles: Volume puncher, Pressure boxer, Body snatcher, Jab-and-grab (existing knobs); Angle fighter (pivot after combos), Switch-hitter (stance switch mid-fight + render flip), Awkward (blunts the opponent's read), Veteran spoiler (needs a fouls system: warnings, point deductions, DQ).
-3. One legend per division, the only fighter with that style. Stays top 5, may hold a belt. The boss version is stronger than the unlocked version (the unlock is a sidegrade, not an upgrade).
-   Names: inspired by real fighters, slightly altered so you know who it is but it's not them.
-4. Beat the legend → unlock his style. Ed picked: move up/down in weight like real boxing (one fighter chases legends across divisions). Careers are currently locked to one division with one roster, so this needs per-division rosters, weight-change rules and size/stat shifts.
-   Ed: yes, the current fighter learns a new style in camp (and can change stance in camp too).
+## Legends, special styles, weight classes, camp learning (repo only, done)
+- Special styles (`special: true` in STYLES; random fighters, the create screen and the tests use `BASE_STYLES`): volume (Volume puncher), angle (Angle fighter), awkward, switch (Switch-hitter), body (Body snatcher), pboxer (Pressure boxer), spoiler (Veteran spoiler), jabgrab (Jab-and-grab), feinter (Feint master). Combo menus come from a base style via `STYLE_COMBO`. Traits: eco, angle (+ `lostT` on the other man), odd + leap, swap (stance flips mid-fight, `F.stance`, halves his read), bodyX, pjab, spoil (ties up combos, dirty shots in the clinch, warnings, point deductions via `rs.ded`), grab (+ lean), bite. Knobs: STYLE_ANGLE/ODD/SWAP/SPOIL/GRAB/BITE.
+- Balance, each special vs each base style (identical stats, 200–260/pair): 48–54%. The unlock is a sidegrade; the legend's edge is his stats. `TAG=x node tests/styles.js 200 82 vs:volume,angle` runs it.
+- Legends (`LEGENDS`, fictional, inspired-by names Ed asked for): one per division, generated into every roster by `ensureLegend` (old saves too), stays top 5, no fade/retire, may hold a belt. Wins 58–76% vs 87-rated contenders. Beat him → `P.unlocked` gets his style (camp chip), `P.beatLegends`. Rankings tab stars him and lists all nine.
+- Camp learning: Style and stance row in camp, each change uses a focus slot. Fluency `styleFit`/`stanceFit` (STYLE_LEARN first .55 / camp .3 / fight .08, times gym mult and Ring IQ). While learning he fights a blend (`blendStyle`, `comboW`); a new stance is rusty (`stanceRust`).
+- Corner's call (auto) now uses `aiStrategy(0)` for the player (style-aware), instead of a neutral plan all fight.
+- Weight classes: hub "Weight class" button, one division at a time (`changeDiv`). Each division keeps its own roster/belts (`world.away`), catches up on return. Up: power −2, chin −1, speed +1; down: power +1, chin +1, stamina −3, recovery −2 (stats and ceiling). Keeps 60% of points, vacates belts. `P.titleDivs` tracks multi-division titles.
+- Not done / ideas: no art for the special styles beyond the stance flip (angle step-offs use the normal slide); foul DQ is not in (warnings + point deductions only); legends never move divisions; the other divisions don't sim while you are away except a catch-up when you return.
 
 ## Env notes
 - Python Playwright here may not match the preinstalled browser. If `live.py` asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` instead.
