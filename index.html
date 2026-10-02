@@ -2629,15 +2629,15 @@ function refTick(fs, info, dt) {
   const zA = fs[0].z || 0, zB = fs[1].z || 0;
   // stand on the far side of the action; if they are on the back ropes, come around the front
   const behind = Math.max(-ZR + 2, Math.min(zA, zB) - 40), gap = Math.abs(fs[0].x - fs[1].x) / 2;
-  let tx, tz = behind, sp = 60, pose = 'watch', face = r.face, pulse = 0;
+  let tx, tz = behind, sp = 130, pose = 'watch', face = r.face, pulse = 0;
   if (info.down != null) { const D = fs[info.down], O = fs[1 - info.down]; tx = D.x + (O.x > D.x ? 30 : -30); tz = Math.max(-ZR + 2, (D.z || 0) - 14); sp = 150; pose = 'count'; face = D.x > tx ? 1 : -1; pulse = info.pulse; }
   else if (info.wave != null) { const D = fs[info.wave], O = fs[1 - info.wave]; tx = D.x + (O.x > D.x ? 24 : -24); tz = Math.max(-ZR + 2, (D.z || 0) - 10); sp = 170; pose = 'wave'; face = D.x > tx ? 1 : -1; }
   else if (info.clinch) { tx = mx; tz = Math.max(-ZR + 2, Math.min(zA, zB) - 12); sp = 130; pose = 'break'; }
   else if (info.neutral) { tx = 0; tz = -ZR * .6; sp = 45; face = 1; }
   else {
     r.sideT -= dt; if (r.sideT <= 0) { r.side *= -1; r.sideT = 5 + Math.random() * 7; }
-    // a lane beside the pair so he never stands right behind a fighter
-    const off = Math.max(46, gap + 34) + (Math.min(zA, zB) - 40 < -ZR + 2 ? 14 : 0);
+    // a lane beside the pair, clear of the fighter's back and arms (depth barely separates them on screen)
+    const off = Math.max(66, gap + 52) + (Math.min(zA, zB) - 40 < -ZR + 2 ? 14 : 0);
     tx = mx + r.side * off;
     if (Math.abs(tx) > RING - 8) { r.side *= -1; tx = mx + r.side * off; }
     if (Math.abs(mx - r.x) > 6) face = mx > r.x ? 1 : -1;
@@ -2722,6 +2722,7 @@ function startReplay() {
   const data = F.replay || F.rec.slice(-280);
   if (!data || data.length < 20) { FX.mode = 'done'; clearOverlay(); setTimeout(resultScreen, 400); return; }
   // start ~3.5s before the end of the clip (clip ends ~1.2s after the final blow)
+    if (Math.abs(tx) > RING - 8) { tx = mx; tz = Math.max(-ZR + 2, Math.min(zA, zB) - 70); } // both lanes blocked (they are far apart): deep behind the middle
   FX.rpData = data.slice(-Math.min(data.length, 150)); FX.rp = 0; FX.rpLast = -1; FX.mode = 'replay'; FX.zoom = 1.32;
   overlay(`<div class="replay-tag">Replay <small>tap to skip</small></div>`);
   $('.stage').onclick = () => { if (FX.mode === 'replay') { FX.mode = 'done'; clearOverlay(); resultScreen(); } };
