@@ -321,6 +321,16 @@ const SHOUTS = {
   hands:   { label: 'Hands up!',   mods: { aggr: .78, def: 1.15, power: .82, clinch: 1.35 } }
 };
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
+const SHOUT_EDGE = { atk: .4, def: .35, ctr: .8, bar: .35 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
+// a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
+function orderPow(F) { const o = F.order; return o ? o.q * (o.fit - SHOUT_EDGE.bar) * Math.min(1, o.t / (SHOUT_LEN * .3)) : 0; }
+function atkEdge(A, P) {
+  const o = A.order; if (!o) return 0;
+  const on = o.k === 'jab' ? P.cat === 'jab' : o.k === 'body' ? P.zone === 'body' : o.k === 'press' ? P.cat === 'power' : o.k === 'counter' ? A.counterWin > 0 : false;
+  return on ? orderPow(A) * SHOUT_EDGE.atk : 0;
+}
+function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 'hands') ? orderPow(D) * SHOUT_EDGE.def : 0; }
+function ctrEdge(D) { const o = D.order; return o && o.k === 'counter' ? Math.max(.2, 1 + orderPow(D) * SHOUT_EDGE.ctr) : 1; }
 // round plan with the current shout mixed in, scaled by how well he took it and fading near the end
 function sgOf(F) {
   const base = STRATS[F.strategy] || STRATS.auto, o = F.order;
@@ -427,7 +437,7 @@ class Fight {
         break;
       }
       case 'fight': {
-        for (const F of this.f) if (F.order && (F.order.t -= dt) <= 0) { if (!F.order.ack) this.emit('ignored', { a: F.side, k: F.order.k }); F.order = null; }
+        for (const F of this.f) if (F.order && ((F.used || (F.used = {}))[F.order.k] = (F.used[F.order.k] || 0) + dt, F.order.t -= dt) <= 0) { if (!F.order.ack) this.emit('ignored', { a: F.side, k: F.order.k }); F.order = null; }
         if (this.clinchT > 0) this.updateClinch(dt);
         else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt); }
         this.physics();
@@ -782,6 +792,7 @@ class Fight {
     if (D.head < D.headMax * .3) ch *= .75;
     ch *= (1.15 - A.s.accuracy / 100 * .35);
     ch *= .92 + .16 * iqK(D);
+    ch *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
     if (R() > ch) return;
     A.read.reacts++;
     // which defense he reaches for depends on his guard
@@ -830,8 +841,9 @@ class Fight {
       let ev = TUNE.ev + (P.cat === 'jab' ? TUNE.jabEv : 0) + (D.s.defense * .5 + D.s.footwork * .3 - A.s.accuracy * .5 - A.s.speed * .3) / TUNE.evDiv;
       ev = clamp(ev, .06, .5) * stamFac(D) * (this.atRopes(D) ? .75 : 1) * gf(D, 'ev') * (D.guard === 'handslow' ? stamFac(D) : 1);
       if (D.state === 'punch') ev *= .45;
+      ev *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
       if (R() < ev) evaded = true;
-      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1))) {
+      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
         D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; // show the guard catching it
       }
@@ -903,7 +915,7 @@ class Fight {
     }
     // fire back out of the guard (tap-block counter)
     if (blocked && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
-      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + STYLES[D.sheet.style].counter);
+      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + STYLES[D.sheet.style].counter) * ctrEdge(D);
       if (R() < p) { const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
     }
   }
@@ -915,7 +927,7 @@ class Fight {
     if (why === 'evade') A.read.av[kindOf(a.type)]++;
     if (why === 'evade' && D.state !== 'stun' && D.state !== 'down') {
       const st = STYLES[D.sheet.style], sg = sgOf(D);
-      const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1);
+      const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1) * ctrEdge(D);
       if (R() < Math.min(.95, ch) && D.state !== 'punch') {
         D.counterWin = .6; D.def = null; D.pendingDef = null;
         const c = this.pickCounter(D, dist(A, D), def === 'roll');
@@ -1045,6 +1057,7 @@ class Fight {
       if (F.headMax < 26 && behind && R() < .5) { this.emit('rtd', { d: F.side }); F.state = 'slump'; this.end(F.op.side, 'RTD'); return false; }
     }
     A.strategy = stratA || 'auto'; B.strategy = stratB || 'auto'; A.order = B.order = null;
+    for (const F of this.f) for (const k in F.used) F.used[k] *= .6; // the other corner adjusts, but he forgets some of it over the break
     this.round++; this.clock = 0; this.phase = 'intro2'; this.phaseT = 0;
     this.emit('nextRound');
     return true;
@@ -1075,9 +1088,26 @@ class Fight {
     F.spam = (F.spam || 0) * Math.exp(-(this.t - (F.spamT || 0)) / 10) + 1; F.spamT = this.t;
     const hurt = F.state === 'stun' || F.head < F.headMax * .3;
     const q = clamp(.45 + .35 * iqK(F) + F.s.heart / 500, .3, 1) * (hurt ? .55 : 1) / (1 + .4 * Math.max(0, F.spam - 1.5));
-    F.order = { k, t: SHOUT_LEN, q, ack: false };
-    this.emit('shout', { a: side, k, q });
+    F.order = { k, t: SHOUT_LEN, q, fit: this.shoutFit(F, k), ack: false };
+    this.emit('shout', { a: side, k, q, fit: F.order.fit });
     return F.order;
+  }
+  // how right the call is for what is happening right now, 0..1. The corner sees what the fighter can't
+  shoutFit(F, k) { return this.shoutRead(F, k) * Math.exp(-((F.used && F.used[k]) || 0) / 60); } // same look over and over: the other corner adjusts
+  shoutRead(F, k) {
+    const O = F.op, holes = GUARD_HOLES[O.guard] || {}, gas = X => X.stam / Math.max(1, X.stamMax);
+    const hurt = X => X.state === 'stun' || X.head < X.headMax * .35;
+    const pace = X => X.rs.thrown / Math.max(30, this.clock) * ROUND_LEN;                   // punches per round, this round
+    const style = X => X.sheet.style;
+    switch (k) {
+      case 'jab': return clamp(Math.max(((holes.jab || 1) - 1) * 2.5, /swarmer|slugger/.test(style(O)) ? .6 : 0, O.cutting ? .7 : 0, hurt(F) ? 0 : .1), 0, 1);
+      case 'body': return clamp(Math.max(((holes.bodyHook || 1) - 1) * 1.4, O.body < 60 ? .8 : 0, gas(O) < .5 ? .7 : 0), 0, 1);
+      case 'press': return clamp(Math.max(hurt(O) ? 1 : 0, gas(O) < .45 ? .8 : 0, this.trapped(O) ? .6 : 0, O.headMax < 60 ? .6 : 0) * (hurt(F) ? .3 : 1), 0, 1);
+      case 'counter': return clamp(Math.max((pace(O) - 60) / 30, /pressure|ko/.test(O.strategy) ? .7 : 0, /swarmer|slugger/.test(style(O)) ? .5 : 0), 0, 1);
+      case 'move': return clamp(Math.max(this.trapped(F) ? .9 : 0, gas(F) < .45 ? .7 : 0, O.cutting ? .45 : 0, hurt(F) ? .5 : 0), 0, 1);
+      case 'hands': return clamp(Math.max(hurt(F) ? 1 : 0, O.rs.landedPow / Math.max(30, this.clock) * ROUND_LEN > 12 ? .7 : 0, F.gi < .4 ? .4 : 0), 0, 1);
+    }
+    return 0;
   }
   // he does what the corner said (once per shout, for the commentary)
   ack(F, k) { const o = F.order; if (o && !o.ack && o.k === k && R() < o.q) { o.ack = true; this.emit('heard', { a: F.side, k }); } }

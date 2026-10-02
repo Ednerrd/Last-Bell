@@ -24,7 +24,9 @@ const COND={
   c_jab:C((f,F,O)=>O.sheet.style==='counter','jab'),
   b_press:C((f,F)=>hurt(F),'press'), b_hands:C((f,F,O)=>hurt(O),'hands'), b_counter:C((f,F,O)=>/outboxer|counter/.test(O.sheet.style),'counter')
 };
-const POL={none:null, ...COND, ...Object.fromEntries(keys.map(k=>['only_'+k,{gap:8,f:()=>k}])), smart:{gap:8,f:smart}, random:{gap:8,f:()=>keys[Math.random()*keys.length|0]}, spam:{gap:2,f:smart}};
+const oracle=f=>{ let best=null,bf=.5; for(const k of keys){ const v=f.shoutFit(f.f[0],k); if(v>bf){bf=v;best=k;} } return best; };
+const worst=f=>{ let best=null,bf=2; for(const k of keys){ const v=f.shoutFit(f.f[0],k); if(v<bf){bf=v;best=k;} } return best; };
+const POL={none:null, ...COND, oracle:{gap:4,f:oracle}, worst:{gap:8,f:worst}, ...Object.fromEntries(keys.map(k=>['only_'+k,{gap:8,f:()=>k}])), smart:{gap:8,f:smart}, random:{gap:8,f:()=>keys[Math.random()*keys.length|0]}, spam:{gap:2,f:smart}};
 for(const p of pols){ let w=0,l=0,d=0,heard=0,shouts=0,ign=0;
   const stP=process.env.STY?process.env.STY.split(','):styles, gP=process.env.GRD?process.env.GRD.split(','):gs; // optional matchup filter
   for(let i=0;i<N;i++){ const st=stP[i%stP.length], g=gP[(i/stP.length|0)%gP.length];
