@@ -175,7 +175,7 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .sumgrid small{color:var(--mute);font-size:14px}.sumgrid b{font-family:var(--disp);font-weight:400;font-size:22px}
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.cards div{display:flex;flex-direction:column;align-items:center;background:var(--panel);border-radius:5px;padding:8px}
 .cards span{color:var(--mute);font-size:14px}.cards b{font-family:var(--disp);font-weight:400;font-size:22px}
-.pstats{display:grid}.pr{display:grid;grid-template-columns:1fr auto 1fr;padding:7px 0;border-bottom:1px solid var(--line);gap:10px}
+.lgd{color:#c9a24a}.pstats{display:grid}.pr{display:grid;grid-template-columns:1fr auto 1fr;padding:7px 0;border-bottom:1px solid var(--line);gap:10px}
 .pr>b:last-child{text-align:right}.pr span{color:var(--mute);text-align:center}.pr.head b{font-family:var(--disp);font-weight:400}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body><div id="app"></div>
@@ -1447,6 +1447,31 @@ function genFighter(divIdx, rating, points, age) {
     points: Math.round(points), age: age || ri(22, 34), record: genRecord(points), look: randLook(divIdx)
   };
 }
+// ---------- legends: one per division, the only man in the world who fights his style. Beat him and it is yours to learn ----------
+const LEGENDS = [
+  { name: 'Román Gonzalo', nick: 'Chocolatito', style: 'volume', guard: 'high', stance: 'orthodox', rating: 91, age: 31, rec: [50, 3, 41] },
+  { name: 'Vasyl Lomachuk', nick: 'Hi-Tech', style: 'angle', guard: 'standard', stance: 'southpaw', rating: 92, age: 30, rec: [17, 2, 11] },
+  { name: 'Nazir Hameed', nick: 'The Prince', style: 'awkward', guard: 'handslow', stance: 'southpaw', rating: 89, age: 27, rec: [36, 0, 31] },
+  { name: 'Terrance Crawfield', nick: 'Bud', style: 'switch', guard: 'standard', stance: 'orthodox', rating: 91, age: 33, rec: [40, 0, 31] },
+  { name: 'Ricky Hattersley', nick: 'The Hitman', style: 'body', guard: 'peekaboo', stance: 'orthodox', rating: 89, age: 29, rec: [45, 1, 32] },
+  { name: 'Gennadi Golovko', nick: 'Triple G', style: 'pboxer', guard: 'high', stance: 'orthodox', rating: 91, age: 34, rec: [42, 1, 37] },
+  { name: 'Bernie Hoskins', nick: 'The Alien', style: 'spoiler', guard: 'philly', stance: 'orthodox', rating: 90, age: 40, rec: [55, 7, 32] },
+  { name: 'Oleks Usykenko', nick: 'The Cat', style: 'feinter', guard: 'standard', stance: 'southpaw', rating: 91, age: 33, rec: [21, 0, 14] },
+  { name: 'Vlad Klitchenko', nick: 'Dr. Steelhammer', style: 'jabgrab', guard: 'standard', stance: 'orthodox', rating: 91, age: 32, rec: [64, 5, 53] }
+];
+function genLegend(divIdx) {
+  const L = LEGENDS[divIdx]; if (!L) return null;
+  const f = genFighter(divIdx, L.rating, 400 + rnd(0, 25), L.age);
+  return Object.assign(f, { id: 'L' + divIdx, name: L.name, nick: L.nick, style: L.style, guard: L.guard, stance: L.stance, legend: true, stats: genStats(L.rating, L.style), record: { w: L.rec[0], l: L.rec[1], d: 0, ko: L.rec[2] } });
+}
+// every division has its legend, and he stays near the top
+function ensureLegend(roster, divIdx) {
+  if (!roster.some(f => f.legend)) { const lg = genLegend(divIdx); if (lg) roster.push(lg); }
+  roster.sort((a, b) => b.points - a.points);
+  const i = roster.findIndex(f => f.legend);
+  if (i > 4) { roster[i].points = roster[4].points + 1; roster.sort((a, b) => b.points - a.points); }
+  return roster;
+}
 function genRoster(divIdx) {
   const r = [];
   for (let i = 0; i < 40; i++) {
@@ -1455,7 +1480,7 @@ function genRoster(divIdx) {
     r.push(genFighter(divIdx, rating, lerp(430, 40, Math.pow(t, .9)) + rnd(-8, 8)));
   }
   r.sort((a, b) => b.points - a.points);
-  return r;
+  return ensureLegend(r, divIdx);
 }
 function genStars(skipDiv) {
   const out = [];
@@ -1499,6 +1524,7 @@ function findFighter(save, id) { return save.world.roster.find(f => f.id === id)
 function p4p(save) {
   const P = save.player; const out = [];
   save.world.stars.forEach(s => out.push({ name: s.name, div: DIVS[s.div].name, score: s.rating + s.belts * 2.5 + (s.unbeaten ? 3 : 0), belts: s.belts }));
+  LEGENDS.forEach((L, d) => { if (d !== save.world.div) out.push({ name: L.name, div: DIVS[d].name, score: L.rating + 3, belts: 0 }); });
   const champs = new Set(Object.values(save.world.belts));
   save.world.roster.slice(0, 6).forEach(f => { const b = beltsOf(save, f.id).length; out.push({ name: f.name, div: DIVS[save.world.div].name, score: f.rating + b * 2.5 + (f.record.l === 0 ? 3 : 0), belts: b }); });
   const pr = playerRank(save);
@@ -1645,6 +1671,13 @@ function applyResult(save, offer, fight) {
   else if (loss) { const l = 5 + Math.max(0, P.points - op) * .12 + P.points * .06; P.points = Math.max(0, P.points - l); if (!opp.club) opp.points += 6 + P.points * .1; }
   else { P.points += 2; if (!opp.club) opp.points += 2; }
   P.money += offer.purse; P.earnings += offer.purse;
+  if (win && opp.legend && STYLES[opp.style]) {
+    P.beatLegends = Array.from(new Set([...(P.beatLegends || []), opp.id]));
+    if (!(P.unlocked || []).includes(opp.style)) {
+      P.unlocked = [...(P.unlocked || []), opp.style];
+      out.notes.push('You beat ' + opp.name + '. Nobody else in the world fights like him, and now you can learn it: the ' + STYLES[opp.style].label.toLowerCase() + ' style is unlocked in camp.');
+    }
+  }
   if (P.styleFrom) P.styleFit = Math.min(1, P.styleFit + STYLE_LEARN.fight);
   if (P.stanceFit != null) P.stanceFit = Math.min(1, P.stanceFit + STYLE_LEARN.fight);
   settleStyle(P, out.notes);
@@ -1701,21 +1734,21 @@ function worldSim(save, weeks) {
     ORGS.forEach(o => { if (W.belts[o.k] === Ls.id && R() < .5) W.belts[o.k] = Wn.id; });
   }
   W.roster.forEach(f => {
-    f.age += weeks / 52;
+    f.age += weeks / 52; if (f.legend) return; // legends don't fade
     const drift = f.age < 27 ? rnd(0, .25) : f.age > 32 ? -rnd(0, .3) : rnd(-.1, .1);
     f.rating = Math.round(clamp(f.rating + drift * weeks / 4, 50, 95) * 10) / 10;
   });
   // retirements -> new prospects
   for (let i = W.roster.length - 1; i >= 0; i--) {
     const f = W.roster[i];
-    if ((f.age > 37 && R() < .08 * weeks / 4) || f.rating < 54) {
+    if (!f.legend && ((f.age > 37 && R() < .08 * weeks / 4) || f.rating < 54)) {
       const held = ORGS.filter(o => W.belts[o.k] === f.id);
       W.roster.splice(i, 1);
       const nf = genFighter(save.player.div, ri(60, 74), rnd(30, 70), ri(20, 24)); W.roster.push(nf);
       held.forEach(o => { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; W.belts[o.k] = top.id; });
     }
   }
-  W.roster.sort((x, y) => y.points - x.points);
+  ensureLegend(W.roster, W.div);
   W.stars.forEach(s => { s.rating = clamp(s.rating + rnd(-.4, .35) * weeks / 6, 78, 97); });
 }
 
@@ -1733,6 +1766,7 @@ function migrateSave(s) {
   if (!s) return s;
   if (!s.player.guard) s.player.guard = rollGuard(s.player.style);
   if (!s.world.away) s.world.away = {};
+  ensureLegend(s.world.roster, s.world.div);
   s.world.roster.forEach(f => { if (!f.guard) f.guard = rollGuard(f.style); });
   if (s.pending && s.pending.offer && s.pending.offer.opp && !s.pending.offer.opp.guard) {
     const live = s.world.roster.find(f => f.id === s.pending.offer.oppId);
@@ -2797,12 +2831,15 @@ function hubBody() {
   }
   if (hubTab === 'rank') {
     const list = rankList(save); const pr = playerRank(save);
-    const row = (e, i) => { const b = beltsOf(save, e.id); return `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}${b.length ? ' ' + beltChips(b) : ''}</span><span class="rc">${rec(e.record)}</span><span class="ov">${Math.round(e.rating)}</span></div>`; };
+    const row = (e, i) => { const b = beltsOf(save, e.id); return `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}${e.f && e.f.legend ? ' <span class="lgd" title="Legend">★</span>' : ''}${b.length ? ' ' + beltChips(b) : ''}</span><span class="rc">${rec(e.record)}</span><span class="ov">${Math.round(e.rating)}</span></div>`; };
     let rows = list.slice(0, 15).map(row).join('');
     if (pr > 15) rows += `<div class="rk gap">…</div>` + row(list[pr - 1], pr - 1);
     const champs = ORGS.map(o => { const id = save.world.belts[o.k]; const nm = id === 'P' ? save.player.name : (findFighter(save, id) || {}).name || 'Vacant'; return `<div class="champ"><span class="belt" style="--bc:${o.c}">${o.k}</span><span>${esc(nm)}</span></div>`; }).join('');
+    const beat = save.player.beatLegends || [];
+    const lg = LEGENDS.map((L, d) => `<div class="rk ${beat.includes('L' + d) ? 'me' : ''}"><span class="n">${beat.includes('L' + d) ? '✓' : '★'}</span><span class="nm">${esc(L.name)}<small class="mute" style="display:block">${esc(STYLES[L.style].label)}, "${esc(L.nick)}"</small></span><span class="rc">${esc(DIVS[d].name)}</span></div>`).join('');
     const pp = p4p(save).map((e, i) => `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}</span><span class="rc">${esc(e.div)}</span></div>`).join('');
-    return `<h4>World champions</h4><div class="champs">${champs}</div><h4>${DIVS[P.div].name} rankings</h4><div class="rklist"><div class="rk head"><span class="n">#</span><span class="nm">Fighter</span><span class="rc">Record</span><span class="ov">OVR</span></div>${rows}</div><h4>Pound for pound</h4><div class="rklist">${pp}</div>`;
+    return `<h4>World champions</h4><div class="champs">${champs}</div><h4>${DIVS[P.div].name} rankings</h4><div class="rklist"><div class="rk head"><span class="n">#</span><span class="nm">Fighter</span><span class="rc">Record</span><span class="ov">OVR</span></div>${rows}</div><h4>Pound for pound</h4><div class="rklist">${pp}</div>
+      <h4>Legends</h4><p class="mute small">One in every division, and nobody else fights like him. Beat him and you can learn his style in camp.</p><div class="rklist">${lg}</div>`;
   }
   if (hubTab === 'locker') {
     const kinds = [['trunks', 'Trunks'], ['gloves', 'Gloves'], ['shoes', 'Boots']];
@@ -2895,7 +2932,7 @@ function campScreen() {
     <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
     <h4>Gym</h4><div class="opts">${GYMS.map((g, i) => `<button class="opt ${plan.gym === i ? 'on' : ''}" data-act="pgym" data-i="${i}" ${g.cost > P.money ? 'disabled' : ''}><b>${g.name}</b><span>${g.cost ? money(g.cost) + ' per camp' : 'Free'}</span><small>${g.note}</small></button>`).join('')}</div>
     <h4>Style and stance <span class="pts">a change uses a focus slot</span></h4>
-    <div class="chips wrap">${BASE_STYLES.concat(P.styleFrom && STYLES[P.styleFrom].special ? [P.styleFrom] : [], STYLES[P.style].special ? [P.style] : []).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>
+    <div class="chips wrap">${Array.from(new Set(BASE_STYLES.concat(P.unlocked || [], P.styleFrom && STYLES[P.styleFrom].special ? [P.styleFrom] : [], STYLES[P.style].special ? [P.style] : []))).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>
     <p class="mute small">${esc(styleNote)}</p>
     <div class="chips"><button class="chip ${plan.stance ? 'on' : ''}" data-act="pstance">Switch to ${other}</button></div>
     <p class="mute small">${plan.stance ? `He will be rusty fighting ${other} for a while: a little less accurate, a little easier to hit.` : `Fights ${P.stance}${P.stanceFit != null ? `, still getting used to it (${Math.round(P.stanceFit * 100)}%)` : ''}.`}</p>
