@@ -1471,6 +1471,12 @@ function genOffers(save) {
   return offers.slice(0, 3);
 }
 
+const STYLE_LEARN = { first: .55, camp: .3, fight: .08 }; // fluency: first camp of a new style/stance, each camp after, each fight
+function learnRate(P, G) { return G.mult * (.8 + .4 * clamp((ringIQ({ stats: P.stats, exp: P.record.w + P.record.l + P.record.d }) - 35) / 55, 0, 1)); }
+function settleStyle(P, notes) {
+  if (P.styleFrom && P.styleFit >= 1) { delete P.styleFrom; P.styleFit = 1; if (notes) notes.push('The ' + STYLES[P.style].label.toLowerCase() + ' style is his now. He fights it like he was born to.'); }
+  if (P.stanceFit != null && P.stanceFit >= 1) { delete P.stanceFit; if (notes) notes.push('Fighting ' + P.stance + ' feels natural now.'); }
+}
 function campCost(plan) { let c = GYMS[plan.gym].cost; if (plan.sci) c += ADDONS.sci.cost; if (plan.spar) c += ADDONS.spar.cost; return c; }
 function runCamp(save, plan) {
   // plan: {gym, focus:[k,k], intensity, sci, spar} or null for rest
@@ -1495,6 +1501,21 @@ function runCamp(save, plan) {
   let injury = null;
   const injCh = .03 * I.inj * (plan.sci ? .5 : 1) * (plan.focus.includes('sparring') ? 1.6 : 1);
   if (R() < injCh) { injury = Object.assign({}, pick(INJURIES.filter(i => i.k !== 'conc'))); injury.weeks = Math.round(injury.weeks * .7); injury.source = 'camp'; P.injury = injury; notes.push('Got hurt in camp: ' + injury.name.toLowerCase() + '. Fight is off.'); }
+  // new style / new stance: takes a focus slot, and he is only part of the way there after one camp
+  const lm = learnRate(P, G);
+  if (plan.learn && plan.learn !== P.style && STYLES[plan.learn]) {
+    const f = P.styleFrom ? P.styleFit : 1;
+    if (plan.learn === P.styleFrom) { P.styleFrom = P.style; P.styleFit = Math.max(.5, 1 - f); }
+    else { P.styleFrom = P.styleFrom && f < .5 ? P.styleFrom : P.style; P.styleFit = STYLE_LEARN.first * lm; }
+    P.style = plan.learn;
+    notes.push('Started learning the ' + STYLES[P.style].label.toLowerCase() + ' style. About ' + Math.round(P.styleFit * 100) + '% there. It will still look like the old him on fight night.');
+  } else if (P.styleFrom) { P.styleFit = Math.min(1, P.styleFit + STYLE_LEARN.camp * lm); notes.push('The ' + STYLES[P.style].label.toLowerCase() + ' style is coming along: ' + Math.round(P.styleFit * 100) + '%.'); }
+  if (plan.stance) {
+    P.stanceFit = P.stanceFit != null && P.stanceFit < 1 ? Math.max(.5, 1 - P.stanceFit) : STYLE_LEARN.first * lm;
+    P.stance = P.stance === 'southpaw' ? 'orthodox' : 'southpaw';
+    notes.push('Switched to ' + P.stance + '. Still rusty: ' + Math.round(P.stanceFit * 100) + '%.');
+  } else if (P.stanceFit != null) P.stanceFit = Math.min(1, P.stanceFit + STYLE_LEARN.camp * lm);
+  settleStyle(P, notes);
   P.money -= campCost(plan);
   save.week += 8;
   P.campDone = !injury;
@@ -1527,6 +1548,9 @@ function applyResult(save, offer, fight) {
   else if (loss) { const l = 5 + Math.max(0, P.points - op) * .12 + P.points * .06; P.points = Math.max(0, P.points - l); if (!opp.club) opp.points += 6 + P.points * .1; }
   else { P.points += 2; if (!opp.club) opp.points += 2; }
   P.money += offer.purse; P.earnings += offer.purse;
+  if (P.styleFrom) P.styleFit = Math.min(1, P.styleFit + STYLE_LEARN.fight);
+  if (P.stanceFit != null) P.stanceFit = Math.min(1, P.stanceFit + STYLE_LEARN.fight);
+  settleStyle(P, out.notes);
   // belts
   if (isTitle) {
     if (win) {
@@ -1598,7 +1622,7 @@ function worldSim(save, weeks) {
 
 function playerSheet(save) {
   const P = save.player;
-  return { name: P.name, nick: P.nick, style: P.style, guard: P.guard || 'standard', stance: P.stance, stats: Object.assign({}, P.stats), look: P.look, wear: P.wear, exp: P.record.w + P.record.l + P.record.d };
+  return { name: P.name, nick: P.nick, style: P.style, styleFrom: P.styleFrom, styleFit: P.styleFit, guard: P.guard || 'standard', stance: P.stance, stanceFit: P.stanceFit, stats: Object.assign({}, P.stats), look: P.look, wear: P.wear, exp: P.record.w + P.record.l + P.record.d };
 }
 function oppSheet(save, offer) {
   const o = offer.opp.club ? offer.opp : (findFighter(save, offer.oppId) || offer.opp);
@@ -2611,7 +2635,7 @@ function hub(tab) {
         ${P.nick ? `<span class="nick">"${esc(P.nick)}"</span>` : ''}
         <h2>${esc(P.name)}</h2>
         <div class="recbig">${rec(P.record)} <small>${P.record.ko} KO</small></div>
-        <div class="mute">Age ${a}, ${STYLES[P.style].label.toLowerCase()}, ${P.stance}</div>
+        <div class="mute">Age ${a}, ${STYLES[P.style].label.toLowerCase()}${P.styleFrom ? ` (learning, ${Math.round(P.styleFit * 100)}%)` : ''}, ${P.stance}${P.stanceFit != null ? ` (new, ${Math.round(P.stanceFit * 100)}%)` : ''}</div>
         <div class="mute">${gLabel(P.guard)} guard, Ring IQ ${playerIQ(save)}</div>
         <div class="mute">${P.retired ? 'Retired' : `Ranked #${rank} of ${save.world.roster.length + 1}`}${P.peakRank ? `, peak #${P.peakRank}` : ''}</div>
         ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}
@@ -2715,25 +2739,38 @@ function campScreen() {
   const P = save.player; const o = save.pending.offer;
   if (!plan) plan = { gym: P.gym, focus: ['technique', 'conditioning'], intensity: 'normal', sci: false, spar: false };
   if (GYMS[plan.gym].cost > P.money) plan.gym = 0;
+  const need = focusNeed(); while (plan.focus.length > need) plan.focus.pop();
+  const sk = plan.learn || P.style, other = P.stance === 'southpaw' ? 'orthodox' : 'southpaw';
+  const prog = P.styleFrom ? ` Still learning it: ${Math.round(P.styleFit * 100)}% (was ${STYLES[P.styleFrom].label.toLowerCase()}).` : '';
+  const styleNote = plan.learn ? `New style: ${STYLES[sk].desc} One camp gets him part of the way. Fights and more camps finish the job.` : STYLES[sk].desc + prog;
   const cost = campCost(plan); const after = P.money - cost;
   show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight camp</span><span class="cash">${money(P.money)}</span></div>
     <p class="mute">Eight weeks to get ready for ${esc(o.opp.name)} (${STYLES[o.opp.style].label.toLowerCase()}, ${gLabel(o.opp.guard).toLowerCase()}, OVR ${Math.round(o.opp.rating)}).</p>
     <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
     <h4>Gym</h4><div class="opts">${GYMS.map((g, i) => `<button class="opt ${plan.gym === i ? 'on' : ''}" data-act="pgym" data-i="${i}" ${g.cost > P.money ? 'disabled' : ''}><b>${g.name}</b><span>${g.cost ? money(g.cost) + ' per camp' : 'Free'}</span><small>${g.note}</small></button>`).join('')}</div>
-    <h4>Focus <span class="pts">pick two</span></h4><div class="opts two">${Object.keys(FOCUS).map(k => `<button class="opt ${plan.focus.includes(k) ? 'on' : ''}" data-act="pfocus" data-k="${k}"><b>${FOCUS[k].label}</b><small>${FOCUS[k].stats.map(s => STAT_LABEL[s]).join(', ')}</small></button>`).join('')}</div>
+    <h4>Style and stance <span class="pts">a change uses a focus slot</span></h4>
+    <div class="chips wrap">${Object.keys(STYLES).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>
+    <p class="mute small">${esc(styleNote)}</p>
+    <div class="chips"><button class="chip ${plan.stance ? 'on' : ''}" data-act="pstance">Switch to ${other}</button></div>
+    <p class="mute small">${plan.stance ? `He will be rusty fighting ${other} for a while: a little less accurate, a little easier to hit.` : `Fights ${P.stance}${P.stanceFit != null ? `, still getting used to it (${Math.round(P.stanceFit * 100)}%)` : ''}.`}</p>
+    <h4>Focus <span class="pts">pick ${need === 2 ? 'two' : need === 1 ? 'one' : 'none'}</span></h4><div class="opts two">${Object.keys(FOCUS).map(k => `<button class="opt ${plan.focus.includes(k) ? 'on' : ''}" data-act="pfocus" data-k="${k}" ${need === 0 ? 'disabled' : ''}><b>${FOCUS[k].label}</b><small>${FOCUS[k].stats.map(s => STAT_LABEL[s]).join(', ')}</small></button>`).join('')}</div>
     <h4>Intensity</h4><div class="seg">${INTENSITY.map(i => `<button class="${plan.intensity === i.k ? 'on' : ''}" data-act="pint" data-v="${i.k}">${i.label}</button>`).join('')}</div>
     <p class="mute small">Hard camps build more but you can get hurt before fight night.</p>
     <h4>Extras</h4><div class="opts">${Object.keys(ADDONS).map(k => `<button class="opt ${plan[k] ? 'on' : ''}" data-act="padd" data-k="${k}" ${!plan[k] && ADDONS[k].cost > P.money - cost ? 'disabled' : ''}><b>${ADDONS[k].label}</b><span>${money(ADDONS[k].cost)}</span><small>${ADDONS[k].desc}</small></button>`).join('')}</div>
     <div class="sumbar"><span>Camp cost <b>${money(cost)}</b></span><span>Left after <b class="${after < 0 ? 'neg' : ''}">${money(after)}</b></span></div>
-    <button class="btn big" data-act="runCamp" ${after < 0 || plan.focus.length !== 2 ? 'disabled' : ''}>Start camp</button></div>`, 'camp');
+    <button class="btn big" data-act="runCamp" ${after < 0 || plan.focus.length !== need ? 'disabled' : ''}>Start camp</button></div>`, 'camp');
 }
 ACT.pgym = d => { plan.gym = +d.i; campScreen(); };
-ACT.pfocus = d => { const i = plan.focus.indexOf(d.k); if (i >= 0) plan.focus.splice(i, 1); else { plan.focus.push(d.k); if (plan.focus.length > 2) plan.focus.shift(); } campScreen(); };
+ACT.pfocus = d => { const i = plan.focus.indexOf(d.k); if (i >= 0) plan.focus.splice(i, 1); else { plan.focus.push(d.k); if (plan.focus.length > focusNeed()) plan.focus.shift(); } campScreen(); };
+function focusNeed() { return 2 - (plan.learn ? 1 : 0) - (plan.stance ? 1 : 0); }
+ACT.plearn = d => { plan.learn = d.v === save.player.style ? null : d.v; campScreen(); };
+ACT.pstance = () => { plan.stance = !plan.stance; campScreen(); };
 ACT.pint = d => { plan.intensity = d.v; campScreen(); };
 ACT.padd = d => { plan[d.k] = !plan[d.k]; campScreen(); };
 ACT.runCamp = () => {
   const P = save.player; P.gym = plan.gym;
   const r = runCamp(save, plan);
+  plan.learn = null; plan.stance = false;
   if (r.injury) save.pending = null; else save.pending.campDone = true;
   persist();
   const lines = STATS.filter(k => Math.abs(r.delta[k]) >= .1).sort((a, b) => r.delta[b] - r.delta[a]).map(k => statRow(k, P.stats[k], P.pot[k], r.delta[k])).join('');
@@ -2953,7 +2990,7 @@ function cornerAdvice() {
   if (op.headMax < 50 || op.head < op.headMax * .4) return ["He's hurt! Go get him. Take him out!", 'ko'];
   if (me.stam < me.stamMax * .5) return ["You're gassing. Jab and move, catch your breath.", 'move'];
   if (op.body < 55) return ["He drops the elbows when you hit the body. Keep digging.", 'body'];
-  if ((rl.a.trap || 0) > 25 && me.sheet.style !== 'swarmer') return ["You're living on the ropes! Get off them. Angles, pivot out, take the center.", 'move'];
+  if ((rl.a.trap || 0) > 25 && me.sk !== 'swarmer') return ["You're living on the ropes! Get off them. Angles, pivot out, take the center.", 'move'];
   if (op.gi < .5) return ["His guard's falling apart. Keep banging on those arms, it'll open up.", 'pressure'];
   const gTip = { high: ["His hands are glued up top. Rip the body, then the uppercut through the middle.", 'body'],
     cross: ["Arms locked over his face. The ribs are wide open. Go downstairs.", 'body'],
@@ -2998,7 +3035,7 @@ ACT.strat = (d, b) => { FX.strat = d.v; b.parentNode.querySelectorAll('.chip').f
 ACT.nextRound = () => {
   if (FX.mode !== 'corner') return;
   hideCorner(); FX.mode = 'live';
-  const ok = F.nextRound(FX.strat, F.aiStrategy(1));
+  const ok = F.nextRound(FX.strat === 'auto' ? F.aiStrategy(0) : FX.strat, F.aiStrategy(1)); // corner's call: the corner reads the fight and his style
   handleEvents();
   if (!ok) {
     const res = F.result; const w = F.f[res.winner];
