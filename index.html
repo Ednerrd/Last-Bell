@@ -1652,6 +1652,8 @@ function applyResult(save, offer, fight) {
   if (isTitle) {
     if (win) {
       offer.title.forEach(k => { if (!P.belts.includes(k)) { P.belts.push(k); out.notes.push('New ' + k + ' world champion.'); } else { P.titleDefenses++; } save.world.belts[k] = 'P'; });
+      P.titleDivs = Array.from(new Set([...(P.titleDivs || []), P.div]));
+      if (P.titleDivs.length > 1) out.notes.push(['', '', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'][P.titleDivs.length] + '-division world champion.');
     } else if (loss) {
       offer.title.forEach(k => { if (P.belts.includes(k)) { P.belts = P.belts.filter(b => b !== k); out.notes.push('Lost the ' + k + ' belt.'); } save.world.belts[k] = opp.id; });
     }
@@ -1730,12 +1732,41 @@ function playerIQ(save) { const P = save.player; return Math.round(ringIQ({ stat
 function migrateSave(s) {
   if (!s) return s;
   if (!s.player.guard) s.player.guard = rollGuard(s.player.style);
+  if (!s.world.away) s.world.away = {};
   s.world.roster.forEach(f => { if (!f.guard) f.guard = rollGuard(f.style); });
   if (s.pending && s.pending.offer && s.pending.offer.opp && !s.pending.offer.opp.guard) {
     const live = s.world.roster.find(f => f.id === s.pending.offer.oppId);
     s.pending.offer.opp.guard = live ? live.guard : rollGuard(s.pending.offer.opp.style);
   }
   return s;
+}
+// ---------- weight classes: one fighter, many divisions. Each division keeps its own world while he is away ----------
+const DIV_MOVE = { up: { power: -2, chin: -1, speed: 1 }, down: { power: 1, chin: 1, stamina: -3, recovery: -2 }, keep: .6 };
+function divMoveOk(save, to) { const P = save.player; return to >= 0 && to < DIVS.length && Math.abs(to - P.div) === 1 && !save.pending && !P.retired && !P.injury; }
+function changeDiv(save, to) {
+  const P = save.player, W = save.world, from = P.div, notes = [];
+  if (!divMoveOk(save, to)) return null;
+  W.away = W.away || {};
+  // he vacates: the belts go to the top man in the old division
+  const held = ORGS.filter(o => W.belts[o.k] === 'P');
+  if (held.length) { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; held.forEach(o => { W.belts[o.k] = top.id; }); notes.push('Vacated the ' + held.map(o => o.k).join(', ') + ' ' + DIVS[from].name.toLowerCase() + (held.length > 1 ? ' belts.' : ' belt.')); }
+  P.belts = [];
+  W.away[from] = { roster: W.roster, belts: W.belts, week: save.week };
+  const back = W.away[to];
+  if (back) { W.roster = back.roster; W.belts = back.belts; delete W.away[to]; }
+  else { W.roster = genRoster(to); W.belts = {}; ORGS.forEach((o, i) => { W.belts[o.k] = W.roster[i < 2 ? 0 : i - 1].id; }); }
+  W.div = to; P.div = to;
+  if (back) worldSim(save, Math.min(52, save.week - back.week));
+  W.stars = W.stars.filter(s => s.div !== to);
+  // the body changes: bigger men hit harder going up, the cut drains you going down
+  const ch = DIV_MOVE[to > from ? 'up' : 'down'];
+  for (const k in ch) { P.stats[k] = clamp(P.stats[k] + ch[k], 20, 99); P.pot[k] = clamp(P.pot[k] + ch[k], 20, 99); }
+  P.look.build = P.look.build * DIVS[to].build / DIVS[from].build;
+  P.points = Math.round(P.points * DIV_MOVE.keep);
+  P.divs = Array.from(new Set([...(P.divs || [from]), to]));
+  notes.push((to > from ? 'Moved up' : 'Moved down') + ' to ' + DIVS[to].name.toLowerCase() + ' (' + DIVS[to].lb + '). Ranked #' + playerRank(save) + ' here.');
+  notes.push(to > from ? 'Bigger men up here. His power will not carry the same, but he is the quicker man.' : 'He hits harder at this weight, but the cut takes something out of his gas tank.');
+  return notes;
 }
 function gearItem(kind, id) { return GEAR[kind].find(g => g.id === id) || GEAR[kind][0]; }
 
@@ -2741,7 +2772,8 @@ function hub(tab) {
         <h2>${esc(P.name)}</h2>
         <div class="recbig">${rec(P.record)} <small>${P.record.ko} KO</small></div>
         <div class="mute">Age ${a}, ${STYLES[P.style].label.toLowerCase()}${P.styleFrom ? ` (learning, ${Math.round(P.styleFit * 100)}%)` : ''}, ${P.stance}${P.stanceFit != null ? ` (new, ${Math.round(P.stanceFit * 100)}%)` : ''}</div>
-        <div class="mute">${gLabel(P.guard)} guard, Ring IQ ${playerIQ(save)}</div>
+        <div class="mute">${gLabel(P.guard).replace(/ guard$/i, '')} guard, Ring IQ ${playerIQ(save)}</div>
+        <div class="mute">${DIVS[P.div].name} (${DIVS[P.div].lb})${(P.titleDivs || []).length > 1 ? `, champion in ${P.titleDivs.length} divisions` : ''}</div>
         <div class="mute">${P.retired ? 'Retired' : `Ranked #${rank} of ${save.world.roster.length + 1}`}${P.peakRank ? `, peak #${P.peakRank}` : ''}</div>
         ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}
       </div>
@@ -2749,7 +2781,7 @@ function hub(tab) {
     ${status}
     <div class="wear"><span>Career damage</span><span class="bar warn"><i style="width:${P.wear}%"></i></span><span class="sv">${Math.round(P.wear)}</span></div>
     ${primary}
-    ${!P.retired ? `<div class="row"><button class="btn ghost" data-act="rest" ${P.injury ? 'disabled' : ''}>Rest 6 weeks</button><button class="btn ghost" data-act="retire">Retire</button></div>` : ''}
+    ${!P.retired ? `<div class="row"><button class="btn ghost" data-act="rest" ${P.injury ? 'disabled' : ''}>Rest 6 weeks</button><button class="btn ghost" data-act="weight" ${save.pending || P.injury ? 'disabled' : ''}>Weight class</button><button class="btn ghost" data-act="retire">Retire</button></div>` : ''}
     <div class="tabs" role="tablist">${[['fighter', 'Fighter'], ['rank', 'Rankings'], ['locker', 'Locker'], ['history', 'Record']].map(([k, l]) => `<button class="${hubTab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div>
     <div class="tabbody">${hubBody()}</div>
   </div>`, 'hub');
@@ -2797,6 +2829,15 @@ ACT.rest = () => {
   const lines = STATS.filter(k => Math.abs(r.delta[k]) >= .1).map(k => statRow(k, save.player.stats[k], 0, r.delta[k])).join('');
   const m = modal(`<h3>${r.weeks} weeks off</h3><p class="mute">${r.healed ? 'Body feels better. Wear is down a little.' : 'Still healing.'} Time off costs sharpness.</p><div class="stats">${lines}</div><button class="btn" data-ok>OK</button>`);
   m.querySelector('[data-ok]').onclick = () => { closeModal(); hub(); };
+};
+ACT.weight = () => {
+  const P = save.player, opt = (to, dir) => divMoveOk(save, to) ? `<button class="opt" data-div="${to}"><b>Move ${dir} to ${DIVS[to].name}</b><span>${DIVS[to].lb}</span><small>${dir === 'up' ? 'Bigger, stronger men. His power will not carry the same (power -2, chin -1), but he is the quicker man (hand speed +1).' : 'He hits harder at this weight (power +1, chin +1), but the cut drains him (stamina -3, recovery -2).'} He starts lower in the rankings${P.belts.length ? ' and vacates his belts' : ''}.</small></button>` : '';
+  const m = modal(`<h3>Weight class</h3><p class="mute">Fighting at ${DIVS[P.div].name.toLowerCase()} (${DIVS[P.div].lb}). Each division has its own rankings and champions.</p><div class="opts">${opt(P.div + 1, 'up')}${opt(P.div - 1, 'down')}</div><button class="btn ghost" data-close>Stay here</button>`);
+  m.querySelector('[data-close]').onclick = closeModal;
+  m.querySelectorAll('[data-div]').forEach(b => b.onclick = () => {
+    const notes = changeDiv(save, +b.dataset.div); persist(); closeModal(); hub();
+    if (notes) { const r = modal(`<h3>New weight class</h3>${notes.map(n => `<p class="alert">${esc(n)}</p>`).join('')}<button class="btn" data-ok>Back to the gym</button>`); r.querySelector('[data-ok]').onclick = closeModal; }
+  });
 };
 ACT.retire = () => {
   const m = modal(`<h3>Hang up the gloves?</h3><p class="mute">This ends the career for good. The record is final.</p><div class="row"><button class="btn ghost" data-close>Not yet</button><button class="btn danger" data-go>Retire</button></div>`);
