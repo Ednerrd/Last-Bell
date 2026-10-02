@@ -1,6 +1,6 @@
 const S=require('./sim.js'); const fs=require('fs');
 const N=+process.argv[2], RT=+process.argv[3], gs=process.argv[4].split(','), tag=process.argv[5]||'x';
-const styles=Object.keys(S.STYLES);
+const styles=Object.keys(S.STYLES).filter(k=>!S.STYLES[k].special);
 for(const g of gs){ let w=0,l=0,cut=0,n=0;
   for(let i=0;i<N;i++){ const st=styles[i%5];
     const A=S.sheet(RT,st,g), B=Object.assign({},A,{guard:'standard',stats:Object.assign({},A.stats)});

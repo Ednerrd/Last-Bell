@@ -214,6 +214,9 @@ const PUNCH = {
 // legs: footwork going back and sideways. stick: jabs the man walking in and stops his feet
 // hit: weight behind the power shots. ramp: turns the volume up when the fight calls for it
 // out: slides out on an angle when the other guy gets inside. inside: smothers you in close (no room to slip or counter)
+// special-style traits: eco (cheaper punches), angle (steps off after combos, he loses you), odd (hard to read, weird timing),
+// leap (lunges in from further out), swap (switches stance, resets your read), bodyX (body shots hurt more), pjab (jab on the way in),
+// spoil (ties up combos, dirty work in the clutches), grab (grabs when you get close, leans), bite (feints that make you commit)
 const STYLES = {
   outboxer: { label: 'Out-boxer', desc: 'Fights on the outside behind the jab. Gets out when you get close.', range: 72, ret: .95, circ: .85, cutK: .25, aggr: .82, counter: .35, feint: 1.2, clinch: .8, gen: .3, legs: 1.3, stick: .7, out: 1,
     bias: { speed: 2, footwork: 3, defense: 1, accuracy: 3, heart: 3, power: -3, chin: -1 } },
@@ -224,8 +227,28 @@ const STYLES = {
   counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .6, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
     bias: { defense: 4, accuracy: 6, recovery: 2, heart: 3, chin: 2, stamina: -2, power: -5 } },
   boxerpuncher: { label: 'Boxer-puncher', desc: 'A bit of everything. Boxes, then turns it up when the fight calls for it.', range: 66, ret: .8, circ: .5, cutK: .6, aggr: .8, counter: .45, feint: 1, clinch: .9, gen: .12, open: .3, ramp: .8,
-    bias: { power: 3, accuracy: 3, speed: 2, footwork: 3, heart: 2 } }
+    bias: { power: 3, accuracy: 3, speed: 2, footwork: 3, heart: 2 } },
+  // special styles: one legend per division fights each of these. Beat him and you can learn it
+  volume: { label: 'Volume puncher', special: true, desc: 'Throws in bunches, round after round. Light hands, a gas tank that never empties.', range: 62, ret: .7, circ: .55, cutK: .7, aggr: 1.7, counter: .35, feint: .6, clinch: .8, gen: .1, hit: .82, eco: .78, ramp: .3,
+    bias: { stamina: 8, speed: 5, recovery: 4, power: -6, chin: -2 } },
+  angle: { label: 'Angle fighter', special: true, desc: 'Hits you, then he is gone. Steps off to the side and makes you turn to find him.', range: 64, ret: .85, circ: .9, cutK: .5, aggr: .85, counter: .45, feint: 1.3, clinch: .7, gen: .25, legs: 1.15, angle: 1,
+    bias: { footwork: 8, speed: 5, accuracy: 3, power: -4, chin: -3 } },
+  awkward: { label: 'Awkward', special: true, desc: 'Weird rhythm, hands low, punches from places you do not see coming. Hard to figure out.', range: 66, ret: .8, circ: .7, cutK: .4, aggr: .85, counter: .4, feint: 1.6, clinch: .8, gen: .1, odd: .8, leap: 4,
+    bias: { speed: 4, power: 4, defense: 3, accuracy: -4, stamina: -3 } },
+  switch: { label: 'Switch-hitter', special: true, desc: 'Orthodox, southpaw, orthodox again. Every time you figure him out, he changes.', range: 64, ret: .8, circ: .55, cutK: .6, aggr: .85, counter: .45, feint: 1, clinch: .85, gen: .15, swap: 1,
+    bias: { accuracy: 5, defense: 4, speed: 3, power: 1, stamina: -2 } },
+  body: { label: 'Body snatcher', special: true, desc: 'Breaks you down downstairs, one rib at a time. The head comes later.', range: 56, ret: .55, circ: .35, cutK: .95, aggr: 1.2, counter: .3, feint: .7, clinch: 1, gen: 0, inside: .6, bodyX: 1,
+    bias: { body: 5, power: 5, stamina: 5, heart: 4, speed: -3, footwork: -3 } },
+  pboxer: { label: 'Pressure boxer', special: true, desc: 'Walks you down behind a stiff jab and cuts the ring off. No wasted punches.', range: 60, ret: .65, circ: .3, cutK: 1.25, aggr: 1.05, counter: .35, feint: .8, clinch: .9, gen: .2, pjab: 1, hit: 1.18,
+    bias: { power: 6, chin: 5, stamina: 4, footwork: 2, speed: -3, defense: -3 } },
+  spoiler: { label: 'Veteran spoiler', special: true, desc: 'Old tricks. Ties you up, leans on you, sneaks shots in the clutches. Ugly and smart.', range: 64, ret: .85, circ: .45, cutK: .5, aggr: .7, counter: .5, feint: 1.2, clinch: 1.6, gen: .3, open: .5, spoil: 1,
+    bias: { defense: 6, accuracy: 5, recovery: 4, heart: 2, speed: -4, stamina: -2 } },
+  jabgrab: { label: 'Jab-and-grab', special: true, desc: 'Long jab, and the second you get close he grabs you and leans his weight on you.', range: 74, ret: .95, circ: .6, cutK: .35, aggr: .9, counter: .3, feint: .8, clinch: 1.4, gen: .35, legs: 1.1, stick: 1, grab: 1, hit: 1.15,
+    bias: { power: 6, accuracy: 4, footwork: 2, chin: -2, speed: -2, heart: -2 } },
+  feinter: { label: 'Feint master', special: true, desc: 'Feints you into knots, then hits whatever you leave open.', range: 64, ret: .85, circ: .7, cutK: .6, aggr: .92, counter: .45, feint: 2.6, clinch: .8, gen: .4, legs: 1.1, bite: 1,
+    bias: { speed: 4, accuracy: 4, footwork: 4, defense: 2, power: -3 } }
 };
+const BASE_STYLES = Object.keys(STYLES).filter(k => !STYLES[k].special);
 
 /* ---------- guards: how a fighter holds his hands. Picked at creation, fixed for the career ----------
    head/body: passive block strength by zone. str/hook/up: block strength by punch type.
@@ -276,6 +299,11 @@ function blendStyle(sh) {
 }
 function domStyle(sh) { return sh.styleFrom && STYLES[sh.styleFrom] && (sh.styleFit == null ? 1 : sh.styleFit) < .5 ? sh.styleFrom : sh.style; }
 function comboW(F, c) { const sh = F.sheet, f = sh.styleFit == null ? 1 : sh.styleFit; return sh.styleFrom && f < 1 ? lerp(c.w[sh.styleFrom] || 0, c.w[sh.style] || 0, f) : c.w[sh.style] || 0; }
+Object.assign(STYLE_GUARDS, {
+  volume: { peekaboo: 2, high: 1.5, standard: 1 }, angle: { handslow: 2, standard: 2 }, awkward: { handslow: 3, philly: 1 },
+  switch: { standard: 2, philly: 1 }, body: { high: 2, peekaboo: 1.5 }, pboxer: { high: 2.5, standard: 1 },
+  spoiler: { philly: 2, high: 1.5 }, jabgrab: { standard: 2, high: 1 }, feinter: { standard: 2, handslow: 1 }
+});
 function rollGuard(style) { const w = STYLE_GUARDS[style] || { standard: 1 }; return wpick(Object.keys(w), k => w[k]); }
 // how well his stats support the guard: 0 = can't make it work, 1 = fully
 function guardSkill(stats, g) { const G = GUARDS[g] || GUARDS.standard; if (!G.skill) return 1; const v = G.skill.reduce((s, k) => s + stats[k], 0) / G.skill.length; return clamp((v - 50) / 32, 0, 1); }
@@ -317,6 +345,15 @@ const COMBOS = [
   ['bodyHook', 'I', { swarmer: .9, slugger: .7, boxerpuncher: .6, counter: .5, outboxer: .3 }]
 ].map(([s, r, w]) => { const seq = s.split(','); return { key: s, seq, r, w, len: seq.length, body: seq.filter(p => PUNCH[p].zone === 'body').length, pow: seq.filter(p => PUNCH[p].cat === 'power').length }; });
 const RANGE_C = { L: [70, 14], M: [56, 12], I: [41, 12] };
+// special styles borrow a base style's combo menu and lean it: longer combos, more body, more jabs, more power
+const STYLE_COMBO = {
+  volume: { from: 'boxerpuncher', len: 1.35, jab: 1.1, pow: .95 }, angle: { from: 'boxerpuncher' }, awkward: { from: 'counter', pow: 1.15 },
+  switch: { from: 'boxerpuncher' }, body: { from: 'swarmer', body: 2.2 }, pboxer: { from: 'boxerpuncher', jab: 1.4 },
+  spoiler: { from: 'counter' }, jabgrab: { from: 'outboxer', jab: 1.2, pow: 1.1 }, feinter: { from: 'boxerpuncher' }
+};
+for (const k in STYLE_COMBO) { const m = STYLE_COMBO[k];
+  for (const c of COMBOS) { const b = c.w[m.from] || 0; if (!b) continue; const j = c.seq.filter(p => p === 'jab').length;
+    c.w[k] = b * Math.pow(m.len || 1, c.len - 1) * Math.pow(m.body || 1, c.body) * Math.pow(m.pow || 1, c.pow) * Math.pow(m.jab || 1, j); } }
 const kindOf = p => { const P = PUNCH[p]; return P.zone === 'body' ? 'body' : P.kind; }; // straight | hook | upper | body
 const LEVEL_SWAP = { jab: 'bodyJab', cross: 'bodyJab', hook: 'bodyHook', uppercut: 'bodyHook', bodyJab: 'jab', bodyHook: 'hook' };
 
@@ -344,9 +381,18 @@ const STYLE_PLANS = {
   counter: { auto: 6, counter: 2.5, move: 1.5 },
   swarmer: { auto: 6, pressure: 2.5, body: 1.5 },
   slugger: { auto: 6, pressure: 2, body: 1.5, counter: .5 },
-  boxerpuncher: { auto: 6, pressure: 1, body: 1, counter: 1, move: 1 }
+  boxerpuncher: { auto: 6, pressure: 1, body: 1, counter: 1, move: 1 },
+  volume: { auto: 6, pressure: 2, body: 1 }, angle: { auto: 6, move: 1.5, counter: 1 }, awkward: { auto: 6, counter: 2 },
+  switch: { auto: 6, counter: 1, move: 1 }, body: { auto: 6, body: 3, pressure: 1 }, pboxer: { auto: 6, pressure: 3 },
+  spoiler: { auto: 6, counter: 2, move: 1 }, jabgrab: { auto: 6, move: 2 }, feinter: { auto: 6, counter: 1, move: 1 }
 };
 const STYLE_IN = { at: 54, ev: .4, ctr: .5 };
+const STYLE_ANGLE = { p: .22, lost: .35, react: .6, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
+const STYLE_ODD = { react: .08, read: .25 };                                 // awkward: less time to react, his read is half as useful
+const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
+const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2 };            // spoiler: tie up a combo coming, dirty shots/s in the clinch, foul chance per dirty shot, stamina drain/s
+const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
+const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
@@ -413,7 +459,7 @@ function nightForm(stats) {
 function stanceRust(s, sh) { const f = sh.stanceFit == null ? 1 : sh.stanceFit; if (f >= 1) return s; const r = (1 - f) * 8; return Object.assign({}, s, { accuracy: s.accuracy - r, defense: s.defense - r, footwork: s.footwork - r * .5 }); }
 function mkF(sheet, side) {
   return {
-    sheet, s: stanceRust(nightForm(sheet.stats), sheet), st: blendStyle(sheet), sk: domStyle(sheet), side, dir: side === 0 ? 1 : -1, x: side === 0 ? -120 : 120, z: 0, vx: 0, vz: 0,
+    sheet, s: stanceRust(nightForm(sheet.stats), sheet), st: blendStyle(sheet), sk: domStyle(sheet), stance: sheet.stance, side, lostT: 0, swapT: 0, biteT: 0, warn: 0, dir: side === 0 ? 1 : -1, x: side === 0 ? -120 : 120, z: 0, vx: 0, vz: 0,
     want: 64, spd: 60, circ: .5, circDir: R() < .5 ? 1 : -1, slideT: 0, cutting: false, inMul: 1,
     head: 100, headMax: 100, body: 100, stam: 100, stamMax: 100,
     state: 'idle', act: null, queue: [], def: null, defT: 0, defP: 0, pendingDef: null,
@@ -430,7 +476,7 @@ function mkF(sheet, side) {
   };
 }
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
-function newRS() { return { thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {} }; }
+function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {} }; }
 
 class Fight {
   constructor(A, B, opts) {
@@ -512,7 +558,7 @@ class Fight {
     }
   }
   snap() {
-    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' ? F.mv : 0, stance: F.sheet.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, downP: F.downP, cut: F.cut, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
+    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, downP: F.downP, cut: F.cut, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
   }
   walkTo(F, x, z, dt, sp) {
     const dx = x - F.x, dz = z - F.z, d = Math.hypot(dx, dz); F.vx = F.vz = 0;
@@ -621,6 +667,9 @@ class Fight {
     const O = F.op;
     F.hitT = Math.max(0, F.hitT - dt * 3.2);
     F.counterWin = Math.max(0, F.counterWin - dt);
+    if (F.lostT > 0) F.lostT -= dt;
+    if (F.biteT > 0) F.biteT -= dt;
+    if (F.st.swap && F.state !== 'punch' && (F.swapT += dt) > STYLE_SWAP.every * rnd(.6, 1.4)) this.swapStance(F);
     if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
     const regen = (1.3 + F.s.stamina / 100 * 2.9) * (0.45 + 0.55 * Math.max(0, F.body) / 100);
     if (F.state !== 'punch') F.stam = Math.min(F.stamMax, F.stam + regen * dt);
@@ -673,6 +722,7 @@ class Fight {
     if (hurtOp) aggr *= (F.strategy === 'survive' ? 1.2 : 1.8);
     if (hurtMe) aggr *= 0.55;
     if (F.bait > 0) aggr *= .5; // lying on the ropes, waiting to counter
+    if (F.lostT > 0) aggr *= .3;  // he stepped off to the side: find him first
     if (st.open) aggr *= lerp(1, STYLE_OPEN.idle + STYLE_OPEN.boost * this.opening(F), st.open);
     if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
     // range intent
@@ -702,6 +752,7 @@ class Fight {
     if (d < 50 && (hurtMe || sf < 0.62)) clP = 0.28;
     if (d < 52 && trapped && F.trapT > 1.4 && F.bait <= 0) clP = Math.max(clP, .08 + .1 * k);
     if (clP && R() < clP * st.clinch * sg.clinch * (1.25 - F.s.heart / 200)) { this.startClinch(F); return; }
+    if (st.grab && d < STYLE_GRAB.at && !hurtOp && O.state !== 'stun' && R() < STYLE_GRAB.p * st.grab * (.5 + .5 * k)) { this.startClinch(F); return; } // inside his jab: grab and lean
     // on the ropes: get out (or stay there on purpose)
     if (trapped && d < 84 && F.slideT <= 0 && F.bait <= 0 && !this.tryBait(F, k, hurtMe)) {
       const urge = .05 + F.s.footwork / 100 * .17 + k * .13 + F.trapT * (.15 + .24 * k) - (O.cutting ? .1 : 0) - (hurtMe ? .1 : 0);
@@ -721,6 +772,26 @@ class Fight {
     const fv = lerp(1, (GUARD_FEINT[O.guard] || 1) * (1 + clamp(Rd.reacts / Math.max(6, thT) - .35, 0, .6)), k);
     if (d < 86 && R() < 0.07 * st.feint * fv) { this.startFeint(F); return; }
     if (d < 86 && R() < (F.s.defense / 100) * 0.22 * sg.def * (F.bait > 0 ? 1.6 : 1)) { F.def = 'block'; F.defZ = 'head'; F.defT = .3 + R() * .4; F.defD = F.defT; F.defP = 0; }
+  }
+  // switch-hitter: flips stance; everything the other man had figured out is half wrong now
+  swapStance(F) {
+    F.swapT = 0; F.stance = F.stance === 'southpaw' ? 'orthodox' : 'southpaw';
+    const Rd = F.op.read; for (const g of ['th', 'av']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
+    for (const g of ['thr', 'land']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
+    F.op.lostT = Math.max(F.op.lostT, STYLE_SWAP.lost * F.st.swap);
+    this.emit('switch', { a: F.side, st: F.stance });
+  }
+  // angle fighter: combo done, step off to the side before he can answer
+  angleOff(F) {
+    const O = F.op, v = vec(F, O), px = -v.uz, pz = v.ux; let best = null, bs = -1;
+    for (const s of [1, -1]) for (const a of [75, 95]) {
+      const r = a * Math.PI / 180, dx = v.ux * Math.cos(r) + px * s * Math.sin(r), dz = v.uz * Math.cos(r) + pz * s * Math.sin(r);
+      const sc = Math.min(100, freeRun(F.x, F.z, dx, dz)) + R() * 15; if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
+    }
+    if (!best || bs < 40) return;
+    F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .26 + F.s.footwork / 500; F.decT = Math.min(F.decT, .3);
+    O.lostT = Math.max(O.lostT, STYLE_ANGLE.lost * F.st.angle);
+    this.emit('angle', { a: F.side, d: O.side });
   }
   // outside fighter: he got inside, slide out on a diagonal to where the open ring is
   stepOut(F, v) {
@@ -759,7 +830,7 @@ class Fight {
     if (appr < 18 || d > Math.min(F.want, PUNCH.jab.max + 4) || d < PUNCH.jab.min + 10 || O.state === 'stun' || O.state === 'clinch') return false;
     if (R() > st.stick * STYLE_STICK * (.5 + .5 * iqK(F)) * stamFac(F) * dt) return false;
     F.stickT = .7; F.queue = R() < .3 ? ['jab'] : [];
-    this.startPunch(F, 'jab'); F.act.stick = true; F.decT = .25 + R() * .2;
+    this.startPunch(F, 'jab'); if (F.act) F.act.stick = true; F.decT = .25 + R() * .2;
     return true;
   }
   // rope-a-dope: some fighters choose to stay on the ropes and counter
@@ -796,6 +867,7 @@ class Fight {
   }
   // combo finished: if he punched his way off the ropes, now slide out
   comboDone(F) {
+    if (F.st.angle && F.slideT <= 0 && !this.trapped(F) && F.state !== 'stun' && R() < F.st.angle * STYLE_ANGLE.p * (.4 + .6 * iqK(F))) this.angleOff(F);
     { const D = F.op, op = D.st.open;
       if (op && (D.state === 'idle' || D.state === 'move') && D.slideT <= 0 && R() < op * (.45 + .45 * iqK(D)))
         D.decT = Math.min(D.decT, (.05 + (1 - D.s.speed / 100) * .14) * (1.25 - .45 * iqK(D))); }
@@ -821,7 +893,7 @@ class Fight {
   }
   pickCombo(F, d, sg, hurtOp) {
     const O = F.op, k = iqK(F), Rd = F.read;
-    const ok = COMBOS.filter(c => { if (!comboW(F, c)) return false; const P = PUNCH[c.seq[0]]; const step = P.kind === 'straight' ? 10 : 6; return d <= P.max + step && d >= P.min - 6; });
+    const ok = COMBOS.filter(c => { if (!comboW(F, c)) return false; const P = PUNCH[c.seq[0]]; const step = (P.kind === 'straight' ? 10 : 6) + (P.cat !== 'jab' ? F.st.leap || 0 : 0); return d <= P.max + step && d >= P.min - 6; });
     if (!ok.length) return null;
     const holes = GUARD_HOLES[O.guard] || {};
     const lead = F.side === 0 ? this.lead : -this.lead, late = this.round > this.rounds - 3;
@@ -845,7 +917,7 @@ class Fight {
       if (late && lead > 2.5) read *= n <= 2 ? 1.25 : .7;   // up on the cards: stay smart
       if (late && lead < -2.5) read *= 1 + c.pow * .2;       // down: needs something big
       if (c.key === F.lastCombo) read *= .65;               // don't show him the same look twice
-      w *= lerp(1, read, k);
+      w *= lerp(1, read, k * (1 - STYLE_ODD.read * (O.st.odd || 0))); // an awkward man is hard to read
       w *= 1 + (R() - .5) * (1 - k) * .8;                   // low IQ: noisy choices
       return w;
     });
@@ -857,8 +929,10 @@ class Fight {
     const v = vec(F, F.op);
     F.act = { type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
+    if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
+    if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
     F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0;
-    F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5));
+    F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
     this.react(F.op, F, P);
@@ -869,6 +943,7 @@ class Fight {
     { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz }; }
     F.state = 'punch'; F.def = null;
     this.react(F.op, F, PUNCH.jab, true);
+    if (F.st.bite && F.op.pendingDef) F.biteT = STYLE_BITE.t; // he bit: the real one is coming into whatever he opened
     if (R() < .7) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
     this.emit('feint', { a: F.side });
   }
@@ -882,6 +957,9 @@ class Fight {
     ch *= (1.15 - A.s.accuracy / 100 * .35);
     ch *= .92 + .16 * iqK(D);
     ch *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
+    if (D.lostT > 0) ch *= STYLE_ANGLE.react;
+    if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
+    if (D.st.spoil && A.queue.length && D.state !== 'punch' && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) { this.startClinch(D); return; } // sees the combo coming, ties him up
     if (R() > ch) return;
     A.read.reacts++;
     // which defense he reaches for depends on his guard
@@ -905,7 +983,7 @@ class Fight {
   resolve(A, D, a) {
     const P = PUNCH[a.type]; const d = dist(A, D);
     if (D.state === 'down') return;
-    if (d > P.max + 4 || d < P.min - 10) { this.miss(A, D, a, 'range'); return; }
+    if (d > P.max + 4 + (P.cat !== 'jab' ? A.st.leap || 0 : 0) || d < P.min - 10) { this.miss(A, D, a, 'range'); return; }
     // raw skill: low accuracy/speed fighters throw wild and miss clean air, worse when tired
     if (D.state !== 'stun') {
       const skill = A.s.accuracy * .7 + A.s.speed * .3;
@@ -935,10 +1013,11 @@ class Fight {
       { const ins = A.st.inside; if (ins && d < STYLE_IN.at) ev *= 1 - STYLE_IN.ev * ins; } // smothered: no room to slip in there
       const setup = (A.prevP === 'jab' && P.cat !== 'jab' ? 1 - TUNE.setup : 1) * (1 - STYLE_OPEN.edge * (a.open || 0)); // the jab hides the right hand behind it; a shot into an opening finds him recovering
       ev *= setup;
+      if (D.lostT > 0) ev *= STYLE_ANGLE.ev;
       if (P.cat !== 'jab') ev = Math.min(.7, ev + TUNE.reach * clamp((d - P.max + TUNE.reachIn) / TUNE.reachIn, 0, 1) * gf(D, 'ev')); // reaching for a power shot from the outside: he sees it coming
       ev *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
       if (R() < ev) evaded = true;
-      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (1 - atkEdge(A, P)) * (1 + defEdge(D)))) {
+      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
         D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; // show the guard catching it
       }
@@ -954,6 +1033,7 @@ class Fight {
     } else A.read.land[a.type] = (A.read.land[a.type] || 0) + 1;
     let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A));
     if (P.cat !== 'jab') dmg *= A.st.hit || 1;
+    if (P.zone === 'body' && A.st.bodyX) dmg *= 1 + .25 * A.st.bodyX;
     if (a.stick && !blocked && D.state !== 'stun') { D.stopT = .45; D.decT = Math.max(D.decT, .2); }
     const caught = D.state === 'punch' && !blocked;
     if (caught) dmg *= 1.3;
@@ -1042,18 +1122,35 @@ class Fight {
   startClinch(F) {
     const O = F.op; if (O.state === 'down') return;
     for (const X of this.f) { X.state = 'clinch'; X.act = null; X.queue = []; X.def = null; X.pendingDef = null; X.vx = X.vz = 0; X.slideT = 0; X.esc = null; X.spin = false; }
-    this.clinchT = 1.1 + R() * 1.2; this.emit('clinch', { c: F.side });
+    this.clinchT = 1.1 + R() * 1.2; this.clinchBy = F.side; this.emit('clinch', { c: F.side, lean: !!F.st.grab });
   }
   updateClinch(dt) {
     const [A, B] = this.f; this.clinchT -= dt;
     const v = vec(A, B), mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2;
     A.x = lerp(A.x, mx - v.ux * MIN_D / 2, .15); A.z = lerp(A.z, mz - v.uz * MIN_D / 2, .15); B.x = lerp(B.x, mx + v.ux * MIN_D / 2, .15); B.z = lerp(B.z, mz + v.uz * MIN_D / 2, .15);
     for (const F of this.f) { F.hitT = Math.max(0, F.hitT - dt * 3); F.stam = Math.min(F.stamMax, F.stam + (2.5 + F.s.stamina / 40) * dt); }
+    for (const F of this.f) {
+      const O = F.op;
+      const lean = (F.st.grab && this.clinchBy === F.side ? STYLE_GRAB.lean * F.st.grab : 0) + (F.st.spoil ? STYLE_SPOIL.lean * F.st.spoil : 0);
+      if (lean) O.stam = Math.max(0, O.stam - lean * dt);                                   // leaning his weight on him
+      if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt) this.dirtyShot(F, O);   // holding and hitting
+    }
     if (this.clinchT <= 0) {
       for (const F of this.f) { F.state = 'idle'; F.decT = .3 + R() * .3; F.resetT = 1.2; F.trapT *= .3; F.bait = 0; }
       // the ref pulls them apart and back toward the middle
       const cx = -mx * .18, cz = -mz * .18;
       A.x += cx - v.ux * 20; A.z += cz - v.uz * 20; B.x += cx + v.ux * 20; B.z += cz + v.uz * 20; this.emit('break');
+    }
+  }
+  // a short shot in the clutches: the judges may see it, the ref may not like it
+  dirtyShot(F, O) {
+    const dmg = PUNCH.hook.dmg * DMG * .35 * (0.5 + F.s.power / 100) * rnd(.7, 1.2) / (0.55 + effChin(O) / 100 * .9);
+    O.head = Math.max(1, O.head - dmg); F.rs.dmg += dmg; F.rs.landedPow++; F.tot.landed.power++; F.tot.thrown.power++; F.rs.thrown++; F.rs.thrownPow++; O.hitT = .6; O.hitZone = 'head'; O.hitKind = 'hook'; O.hitPow = .3;
+    if (R() < STYLE_SPOIL.foul) {
+      F.warn++;
+      const ded = F.warn >= 3 && R() < .5;
+      if (ded) F.rs.ded++;
+      this.emit('foul', { a: F.side, d: O.side, ded });
     }
   }
   knockdown(D, A, zone) {
@@ -1118,7 +1215,7 @@ class Fight {
       let pa = 10, pb = 10;
       if (Math.abs(diff) < TUNE.evenAt && R() < TUNE.even) { /* even */ }
       else if (diff > 0) pb = 9; else pa = 9;
-      pa -= A.rs.kd; pb -= B.rs.kd;
+      pa -= A.rs.kd + A.rs.ded; pb -= B.rs.kd + B.rs.ded;
       if (A.rs.kd && B.rs.kd === 0 && pa === 9 && pb === 9) pb = 10;
       if (B.rs.kd && A.rs.kd === 0 && pa === 9 && pb === 9) pa = 10;
       if (pa > 10) pa = 10; if (pb > 10) pb = 10;
@@ -1343,7 +1440,7 @@ function genRecord(points) {
   return { w, l, d: R() < .3 ? ri(1, 2) : 0, ko: Math.round(w * rnd(.3, .8)) };
 }
 function genFighter(divIdx, rating, points, age) {
-  const style = pick(Object.keys(STYLES));
+  const style = pick(BASE_STYLES);
   return {
     id: uid('f'), name: pick(FIRST) + ' ' + pick(LAST), nick: R() < .7 ? pick(NICKS) : '',
     style, guard: rollGuard(style), stance: R() < .22 ? 'southpaw' : 'orthodox', rating, stats: genStats(rating, style),
@@ -2542,7 +2639,7 @@ ACT.delSlot = d => {
 let draft = null;
 const BASE = 42, POOL = 100, CAP = 72;
 function rollDraft(mode, keep) {
-  const div = keep ? keep.div : 4; const style = pick(Object.keys(STYLES));
+  const div = keep ? keep.div : 4; const style = pick(BASE_STYLES);
   const d = { mode, slot: keep ? keep.slot : 0, name: keep && keep.nameLocked ? keep.name : pick(FIRST) + ' ' + pick(LAST), nick: keep && keep.nameLocked ? keep.nick : pick(NICKS), nameLocked: keep ? keep.nameLocked : false, div, style: keep && mode === 'build' ? keep.style : style, stance: R() < .22 ? 'southpaw' : 'orthodox', look: randLook(div) };
   d.guard = keep && keep.guard ? keep.guard : mode === 'random' ? rollGuard(d.style) : 'standard';
   if (keep && keep.lookLocked) { d.look = keep.look; d.lookLocked = true; }
@@ -2573,7 +2670,7 @@ function renderCreate() {
     <h4>Division</h4>
     <select id="inDiv">${DIVS.map((v, i) => `<option value="${i}" ${i === D.div ? 'selected' : ''}>${v.name} (${v.lb})</option>`).join('')}</select>
     <h4>Style</h4>
-    <div class="chips wrap">${Object.keys(STYLES).map(k => `<button class="chip ${D.style === k ? 'on' : ''}" data-act="style" data-v="${k}">${STYLES[k].label}</button>`).join('')}</div>
+    <div class="chips wrap">${BASE_STYLES.map(k => `<button class="chip ${D.style === k ? 'on' : ''}" data-act="style" data-v="${k}">${STYLES[k].label}</button>`).join('')}</div>
     <h4>Stance</h4>
     <div class="seg small"><button class="${D.stance === 'orthodox' ? 'on' : ''}" data-act="stance" data-v="orthodox">Orthodox</button><button class="${D.stance === 'southpaw' ? 'on' : ''}" data-act="stance" data-v="southpaw">Southpaw</button></div>
     <h4>Guard <span class="pts">locked for the career</span></h4>
@@ -2749,7 +2846,7 @@ function campScreen() {
     <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
     <h4>Gym</h4><div class="opts">${GYMS.map((g, i) => `<button class="opt ${plan.gym === i ? 'on' : ''}" data-act="pgym" data-i="${i}" ${g.cost > P.money ? 'disabled' : ''}><b>${g.name}</b><span>${g.cost ? money(g.cost) + ' per camp' : 'Free'}</span><small>${g.note}</small></button>`).join('')}</div>
     <h4>Style and stance <span class="pts">a change uses a focus slot</span></h4>
-    <div class="chips wrap">${Object.keys(STYLES).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>
+    <div class="chips wrap">${BASE_STYLES.concat(P.styleFrom && STYLES[P.styleFrom].special ? [P.styleFrom] : [], STYLES[P.style].special ? [P.style] : []).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>
     <p class="mute small">${esc(styleNote)}</p>
     <div class="chips"><button class="chip ${plan.stance ? 'on' : ''}" data-act="pstance">Switch to ${other}</button></div>
     <p class="mute small">${plan.stance ? `He will be rusty fighting ${other} for a while: a little less accurate, a little easier to hit.` : `Fights ${P.stance}${P.stanceFit != null ? `, still getting used to it (${Math.round(P.stanceFit * 100)}%)` : ''}.`}</p>

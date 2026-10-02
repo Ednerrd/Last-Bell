@@ -1,4 +1,4 @@
-const S=require('./sim.js');const N=+process.argv[2]||400;const st=Object.keys(S.STYLES);
+const S=require('./sim.js');const N=+process.argv[2]||400;const st=Object.keys(S.STYLES).filter(k=>!S.STYLES[k].special);
 const A={rounds:0,thr:0,ld:0,jT:0,jL:0,pT:0,pL:0,bT:0,bL:0,kd:0,fights:0,stop:0,ko:0,tko:0,cut:0,rtd:0,dec:0,ud:0,sd:0,md:0,draw:0,koRound:{},sched:{}};
 const gapB={};
 for(let i=0;i<N;i++){const base=60+Math.random()*30|0;const gap=[0,3,6,10][i%4];

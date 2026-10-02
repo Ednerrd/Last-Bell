@@ -6,7 +6,7 @@ if(process.argv[2]==='agg'){ const L=require('fs').readFileSync('/tmp/shout_'+pr
   return; }
 const S=require('./sim.js');
 const N=+process.argv[2]||300, RT=+process.argv[3]||82, pols=(process.argv[4]||'none,smart,random,spam').split(',');
-const styles=Object.keys(S.STYLES), gs=Object.keys(S.GUARDS), keys=Object.keys(S.SHOUTS);
+const styles=Object.keys(S.STYLES).filter(k=>!S.STYLES[k].special), gs=Object.keys(S.GUARDS), keys=Object.keys(S.SHOUTS);
 function smart(f){
   const F=f.f[0],O=F.op;
   if(F.state==='stun'||F.head<F.headMax*.35) return 'hands';

@@ -1,4 +1,4 @@
-const S=require('./sim.js');const N=+process.argv[2];const st=Object.keys(S.STYLES),gs=Object.keys(S.GUARDS);
+const S=require('./sim.js');const N=+process.argv[2];const st=Object.keys(S.STYLES).filter(k=>!S.STYLES[k].special),gs=Object.keys(S.GUARDS);
 let cut=0,stop=0,cutAny=0,doc=0;
 for(let i=0;i<N;i++){const r=60+Math.random()*28|0;
  const mk=()=>{const s=st[Math.random()*5|0];return S.sheet(r+(Math.random()*8-4|0),s,S.rollGuard(s),Math.random()*30|0)};

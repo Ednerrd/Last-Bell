@@ -2,6 +2,7 @@
 // Prints each style's win % vs the field, how he fights (punches/rd, power %, distance, gas, counters, time on the ropes) and the matchup grid.
 //   TAG=x node tests/styles.js 300 82            all pairs (or pass a pair list: outboxer-counter,slugger-swarmer)
 //   node tests/styles.js agg x                   pool every run with that TAG
+//   TAG=x node tests/styles.js 200 82 vs:volume,angle   special style(s) vs each of the five base styles
 // BIAS=1: each fighter gets his style's stat lean (like the AI roster). GRD=roll: each rolls his style's usual guard.
 const fs = require('fs');
 const OUT = t => '/tmp/styles_' + t + '.txt';
@@ -31,9 +32,10 @@ function report(rows) {
 if (process.argv[2] === 'agg') { report(fs.readFileSync(OUT(process.argv[3]), 'utf8').trim().split('\n').map(JSON.parse)); return; }
 
 const S = require('./sim.js');
-const N = +process.argv[2] || 300, RT = +process.argv[3] || 82, styles = Object.keys(S.STYLES);
+const N = +process.argv[2] || 300, RT = +process.argv[3] || 82, styles = Object.keys(S.STYLES).filter(k => !S.STYLES[k].special);
 let pairs = [];
-if (process.argv[4]) pairs = process.argv[4].split(',').map(p => p.split('-'));
+if (process.argv[4] && process.argv[4].startsWith('vs:')) { for (const sp of process.argv[4].slice(3).split(',')) for (const b of styles) pairs.push([sp, b]); } // special style(s) vs every base style
+else if (process.argv[4]) pairs = process.argv[4].split(',').map(p => p.split('-'));
 else for (let i = 0; i < styles.length; i++) for (let j = i + 1; j < styles.length; j++) pairs.push([styles[i], styles[j]]);
 const blank = () => ({ rd: 0, thr: 0, pow: 0, land: 0, d: 0, dn: 0, gas: 0, ctr: 0, trap: 0, stop: 0 });
 for (const [a, b] of pairs) {

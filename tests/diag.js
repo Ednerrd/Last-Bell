@@ -1,6 +1,6 @@
 const S=require('./sim.js');
 const N=+process.argv[2]||60, RT=+process.argv[3]||82, only=process.argv[4];
-const styles=Object.keys(S.STYLES);
+const styles=Object.keys(S.STYLES).filter(k=>!S.STYLES[k].special);
 const gs=only?only.split(','):Object.keys(S.GUARDS).filter(g=>g!=='standard');
 for(const g of gs){
   let w=0,l=0,ko=0,cutT=0; const me={th:0,ld:0,dm:0,ctr:0,ev:0,bl:0}, op={th:0,ld:0,dm:0,ctr:0,ev:0,bl:0};
