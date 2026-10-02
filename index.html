@@ -2455,6 +2455,11 @@ const Comm = (() => {
     heard_move: ['{a} is using the ring now.', '{a} gets on his bike.', '{a} moves his feet, like the corner asked.'],
     heard_hands: ['{a} tightens up the guard.', 'Hands up now for {a}.', '{a} shells up and takes it on the gloves.'],
     ignored: ["{a} is not hearing his corner.", "The corner is yelling, but {a} is doing his own thing.", "{a} tunes out the corner."],
+    angle: ['{a} steps off to the side and {d} is punching air.', 'Beautiful angle by {a}. {d} has to turn to find him.', '{a} hits and pivots out. He is gone.', '{a} lands and steps around him. {d} is looking at nothing.'],
+    swap: ['{a} switches to {s}.', '{a} changes stances again. Now he is {s}.', 'There is the switch. {a} goes {s}.', '{a} flips to {s}. Back to the drawing board for {d}.'],
+    foul: ['The ref warns {a} for holding and hitting.', 'Warning for {a}. Watch the hands in the clinch.', '{a} is sneaking shots in the clinch. The ref has words with him.'],
+    foulDed: ['The referee takes a point from {a}!', 'Point deduction! {a} has been warned enough.', 'That is a point off for {a}. The ref has had it.'],
+    lean: ['{a} grabs and leans all his weight on him.', '{a} ties him up and makes him carry him.', '{a} smothers him and leans on the back of his neck.'],
     wild: ['{a} winds up and hits nothing but air.', 'Wild {p} from {a}, way off the mark.', '{a} is swinging for the fences and missing.', 'Sloppy {p} from {a}, telegraphed it.']
   };
   const COLOR = ["He's gotta move his head.", "That body work is going to pay off late.", "You can hear that one in the cheap seats.", "He's fighting like his rent's due.", "The jab has been the story so far.", "His corner wants him off the ropes.", "That's a veteran move right there.", "He's breathing through his mouth now. Bad sign.", "Somebody's gonna feel this tomorrow.", "Look at the feet. Always in position.", "He's loading up on that right hand.", "This crowd is on its feet."];
@@ -2467,7 +2472,7 @@ const Comm = (() => {
   // returns [{text, kind:'pbp'|'color', pri}]
   function handle(e, fight, t) {
     const nm = i => short(fight.f[i].sheet.name);
-    const o = { a: e.a != null ? nm(e.a) : '', d: e.d != null ? nm(e.d) : '', r: fight.round, n: e.n, c: e.c != null ? nm(e.c) : '' };
+    const o = { a: e.a != null ? nm(e.a) : '', d: e.d != null ? nm(e.d) : e.a != null ? nm(1 - e.a) : '', r: fight.round, n: e.n, c: e.c != null ? nm(e.c) : '', s: e.st || '' };
     const out = []; const L = (k, pri) => out.push({ text: fill(pick(PBP[k]), o), kind: 'pbp', pri: pri || 1 });
     switch (e.type) {
       case 'roundStart': L('start', 2); break;
@@ -2482,7 +2487,10 @@ const Comm = (() => {
       case 'stun': if (ok('stun', t, 3)) L('stun', 3); break;
       case 'knockdown': L(e.zone === 'body' ? 'kdBody' : 'kd', 5); break;
       case 'up': L('up', 4); break;
-      case 'clinch': if (ok('clinch', t, 10)) L('clinch', 0); break;
+      case 'clinch': if (e.lean && ok('lean', t, 25)) { o.a = nm(e.c); L('lean', 1); } else if (ok('clinch', t, 10)) L('clinch', 0); break;
+      case 'angle': if (ok('angle', t, 22)) L('angle', 1); break;
+      case 'switch': if (ok('swap', t, 30)) L('swap', 1); break;
+      case 'foul': if (e.ded) L('foulDed', 4); else if (ok('foul', t, 15)) L('foul', 2); break;
       case 'cut': if (e.fresh) L('cut', 3); break;
       case 'roundEnd': L('end', 2); break;
       case 'miss': if (e.why === 'wild' && e.p !== 'jab' && e.p !== 'bodyJab' && ok('wild', t, 16)) { o.p = PN[e.p]; L('wild', 0); break; }
