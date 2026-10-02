@@ -61,6 +61,16 @@ Shout results (600 mirrored fights each, vs no shouting): perfect coach +12%, si
 2. Optional: phone performance check on a real device.
 3. Ideas: the AI corner could shout too (title fights?), and a better human-ish policy in tests/shout.js to tune against.
 
+## Planned: legends + special styles (Ed's call, NOT started, wait for his go)
+Problem found first: the five base styles are badly unbalanced. Identical stats, standard guard, 400 fights per matchup: Counter-puncher wins ~71% vs the field, Boxer-puncher ~57, Swarmer ~55, Slugger ~43, Out-boxer ~24 (Out-boxer vs Counter 13%). Likely causes: counter's miss-counter (`STYLES.counter.counter` .85) + rope-a-dope + low output; Out-boxer lives on the jab, which the realism pass made easier to block and slip.
+Build order:
+1. Balance the five base styles (target ~45–55% each vs the field, 400+ fights per matchup).
+2. Engine support for new styles: Volume puncher, Pressure boxer, Body snatcher, Jab-and-grab (existing knobs); Angle fighter (pivot after combos), Switch-hitter (stance switch mid-fight + render flip), Awkward (blunts the opponent's read), Veteran spoiler (needs a fouls system: warnings, point deductions, DQ).
+3. One legend per division, the only fighter with that style. Stays top 5, may hold a belt. The boss version is stronger than the unlocked version (the unlock is a sidegrade, not an upgrade).
+   Names: inspired by real fighters, slightly altered so you know who it is but it's not them.
+4. Beat the legend → unlock his style. Ed picked: move up/down in weight like real boxing (one fighter chases legends across divisions). Careers are currently locked to one division with one roster, so this needs per-division rosters, weight-change rules and size/stat shifts.
+   Open: can the current fighter learn an unlocked style (camp?) or only new fighters.
+
 ## Env notes
 - Python Playwright here may not match the preinstalled browser. If `live.py` asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` instead.
 - Even 600-fight guard runs swing ±2–4% between runs. Pool to 1500+ before trusting a 1–2% difference.
