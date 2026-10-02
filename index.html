@@ -321,9 +321,9 @@ const SHOUTS = {
   hands:   { label: 'Hands up!',   mods: { aggr: .78, def: 1.15, power: .82, clinch: 1.35 } }
 };
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
-const SHOUT_EDGE = { atk: .4, def: .35, ctr: .8, bar: .35 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
+const SHOUT_EDGE = { atk: .4, def: .35, ctr: .8, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
 // a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
-function orderPow(F) { const o = F.order; return o ? o.q * (o.fit - SHOUT_EDGE.bar) * Math.min(1, o.t / (SHOUT_LEN * .3)) : 0; }
+function orderPow(F) { const o = F.order; if (!o) return 0; const f = o.fit - SHOUT_EDGE.bar; return o.q * (f < 0 ? f * SHOUT_EDGE.bad : f) * Math.min(1, o.t / (SHOUT_LEN * .3)); }
 function atkEdge(A, P) {
   const o = A.order; if (!o) return 0;
   const on = o.k === 'jab' ? P.cat === 'jab' : o.k === 'body' ? P.zone === 'body' : o.k === 'press' ? P.cat === 'power' : o.k === 'counter' ? A.counterWin > 0 : false;
@@ -437,7 +437,11 @@ class Fight {
         break;
       }
       case 'fight': {
-        for (const F of this.f) if (F.order && ((F.used || (F.used = {}))[F.order.k] = (F.used[F.order.k] || 0) + dt, F.order.t -= dt) <= 0) { if (!F.order.ack) this.emit('ignored', { a: F.side, k: F.order.k }); F.order = null; }
+        for (const F of this.f) {
+          const o = F.order; if (!o) continue;
+          F.used = F.used || {}; F.used[o.k] = (F.used[o.k] || 0) + dt; // how long the other corner has been looking at this call
+          if ((o.t -= dt) <= 0) { if (!o.ack) this.emit('ignored', { a: F.side, k: o.k }); F.order = null; }
+        }
         if (this.clinchT > 0) this.updateClinch(dt);
         else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt); }
         this.physics();
