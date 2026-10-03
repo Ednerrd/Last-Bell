@@ -3493,8 +3493,26 @@ function refTick(fs, info, dt) {
   r.pose = pose; r.face = face; r.pulse = pulse;
   return r;
 }
+// draw between the last two sim ticks so motion is smooth at any refresh rate and speed
+const LERP_K = ['x', 'z', 'gait', 'mv', 'aP', 'defP', 'defU', 'tired', 'gi', 'hitT', 'downP'];
+function blendSnap(a, b, t) {
+  if (!a) a = b;
+  return { f: b.f.map((B, i) => {
+    const A = a.f[i], o = Object.assign({}, B);
+    for (const k of LERP_K) {
+      if (typeof A[k] !== 'number' || typeof B[k] !== 'number') continue;
+      if (k === 'aP' && (A.aT !== B.aT || B.aP < A.aP)) continue; // a new punch starts clean
+      if ((k === 'defP' || k === 'defU') && A.def !== B.def) continue;
+      if (k === 'hitT' && B.hitT > A.hitT) continue; // the hit lands on its tick
+      if ((k === 'x' || k === 'z') && Math.abs(B[k] - A[k]) > 40) continue; // teleport (new round)
+      o[k] = A[k] + (B[k] - A[k]) * t;
+    }
+    return o;
+  }) };
+}
 function liveView() {
-  const s = F.snap(); const A = F.f[0], B = F.f[1];
+  if (FX.mode !== 'live') FX.sPrev = FX.sCur = null;
+  const s = FX.sCur ? blendSnap(FX.sPrev, FX.sCur, clamp(FX.acc / DT, 0, 1)) : F.snap(); const A = F.f[0], B = F.f[1];
   const mid = (A.x + B.x) / 2; FX.cam += (clamp(mid, -70, 70) - FX.cam) * .08;
   { const zt = F.phase === 'corner' || (F.phase === 'roundEnd' && F.phaseT > .8) ? 1.02 : 1.32; FX.zoom += (zt - FX.zoom) * .06; } // pull back so both corners fit between rounds
   const info = {};
@@ -3526,7 +3544,7 @@ function loop(ts) {
     else {
       FX.acc += dt * FX.speed;
       while (FX.acc >= DT && FX.mode === 'live') {
-        F.step(DT); FX.acc -= DT; handleEvents();
+        FX.sPrev = FX.sCur; F.step(DT); FX.sCur = F.snap(); FX.acc -= DT; handleEvents();
         if (F.phase === 'corner') { openCorner(); break; }
       }
     }
