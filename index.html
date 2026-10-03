@@ -1765,9 +1765,17 @@ function playerSheet(save) {
   const P = save.player;
   return { name: P.name, nick: P.nick, style: P.style, styleFrom: P.styleFrom, styleFit: P.styleFit, guard: P.guard || 'standard', stance: P.stance, stanceFit: P.stanceFit, stats: Object.assign({}, P.stats), look: P.look, wear: P.wear, exp: P.record.w + P.record.l + P.record.d };
 }
+// worldSim moves a fighter's rating (young men improve, old men fade) but never touched his stats, so after a few years
+// the OVR on the card could be 10 off from the man in the ring. His stats follow his rating (OVR_W sums to 1, so +1 to every stat = +1 OVR)
+function liveStats(f) {
+  const st = Object.assign({}, f.stats); if (f.rating == null) return st;
+  let raw = 0; for (const k of STATS) raw += st[k] * OVR_W[k];
+  const sh = f.rating - raw; for (const k of STATS) st[k] = clamp(st[k] + sh, 20, 99);
+  return st;
+}
 function oppSheet(save, offer) {
   const o = offer.opp.club ? offer.opp : (findFighter(save, offer.oppId) || offer.opp);
-  return { name: o.name, nick: o.nick, style: o.style, guard: o.guard || offer.opp.guard || 'standard', stance: o.stance, stats: Object.assign({}, o.stats), look: o.look, wear: 0, exp: o.record ? o.record.w + o.record.l + o.record.d : 0 };
+  return { name: o.name, nick: o.nick, style: o.style, guard: o.guard || offer.opp.guard || 'standard', stance: o.stance, stats: liveStats(o), look: o.look, wear: 0, exp: o.record ? o.record.w + o.record.l + o.record.d : 0 };
 }
 function playerIQ(save) { const P = save.player; return Math.round(ringIQ({ stats: P.stats, exp: P.record.w + P.record.l + P.record.d })); }
 // older saves: give everyone a guard that fits his style
