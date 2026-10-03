@@ -1931,7 +1931,7 @@ class Boxer {
     const live = s.state !== 'down' && s.state !== 'slump';
     const breathe = Math.sin(this.t * 2.2 + s.bob) * .6, bounce = (s.mv || s.walk) ? 0 : Math.sin(this.t * 7 + s.bob) * 1.1;
     // ---- body targets
-    let c = gd.c + (s.tired || 0) * 2.5 + bounce, bl = gd.bl, lean = gd.lean, sideL = 0, back = 0;
+    let c = gd.c + 3.5 + (s.tired || 0) * 2.5 + bounce, bl = gd.bl, lean = gd.lean + 4, sideL = 0, back = 0;
     if (P_) {
       if (!leadArm) bl -= k * 52; else if (kind === 'hook') bl -= k * 34; else bl += k * 10;
       lean += k * (P_.cat === 'power' ? 6 : 3); if (P_.zone === 'body') { c += k * 9; sideL += (leadArm ? 1 : -1) * k * 3; }
@@ -1998,11 +1998,12 @@ class Boxer {
     const spineUp = chest.clone().sub(hip).normalize();
     let headT = chest.clone().addScaledVector(spineUp, 11 * hs).addScaledVector(fwd, 1.5 - sm.back * .6);
     if (hit && s.hitZone === 'head') headT.addScaledVector(fwd, -6 * hit).addScaledVector(lead, (s.hitKind === 'hook' ? 4 : 0) * hit).addScaledVector(UP, 2 * hit);
-    if (live && !s.walk && !P_) headT.addScaledVector(UP, -1.5); // chin down
+    if (live && !s.walk) headT.addScaledVector(UP, P_ ? -1.5 : -2.6).addScaledVector(fwd, 1.5); // chin down, eyes up
     if (P_ && live) headT.addScaledVector(lead, leadArm ? -2 * k : 2 * k);
     sm.head = sm.head ? dampV(sm.head, headT, 22, dt) : headT.clone();
     const headP = lie > 0 || sit > .5 ? headT : sm.head;
-    const shL = chest.clone().addScaledVector(shLine, 13.2 * G).addScaledVector(UP, -3.5), shR = chest.clone().addScaledVector(shLine, -13.2 * G).addScaledVector(UP, -3.5);
+    const hunch = s.walk || sit > .3 || lie > 0 ? 0 : 1;
+    const shL = chest.clone().addScaledVector(shLine, 13.2 * G).addScaledVector(UP, -3.5 + 1.6 * hunch).addScaledVector(fwd, 1.2 * hunch), shR = chest.clone().addScaledVector(shLine, -13.2 * G).addScaledVector(UP, -3.5 - .4 * hunch).addScaledVector(fwd, .8 * hunch);
     // ---- gloves
     const gp = (a) => P(a[0], a[1] - sm.c, a[2]).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side).addScaledVector(UP, breathe * .4);
     let gL = gp(gd.L), gR = gp(gd.R);
@@ -2014,14 +2015,23 @@ class Boxer {
     }
     if (hit && s.hitZone === 'head' && s.hitKind !== 'jab') { gL.addScaledVector(fwd, -3 * hit).addScaledVector(lead, 4 * hit); gR.addScaledVector(lead, -4 * hit); }
     if (hit && s.hitZone === 'body') { gL.y -= 6 * hit; gR.y -= 6 * hit; }
+    const GR = 6.4;
     if (P_ && live) {
-      const tgt = (P_.zone === 'body' ? opB.clone() : op.head.clone());
+      if (this.aimT !== s.aT || p < (this.aimP || 0) - .05 || !this.aim) { this.aimT = s.aT; this.aim = (P_.zone === 'body' ? opB : op.head).clone(); }
+      this.aimP = p;
+      const tgt = this.aim.clone().lerp(P_.zone === 'body' ? opB : op.head, .25);
       const arm = leadArm ? 0 : 1, from = arm ? gR : gL, sh = arm ? shR : shL, out = arm ? lead.clone().negate() : lead.clone();
       const dir = tgt.clone().sub(sh).normalize();
       let gT;
-      if (kind === 'straight') gT = from.clone().lerp(tgt.clone().addScaledVector(dir, -3), k);
-      else if (kind === 'hook') { gT = from.clone().lerp(tgt.clone().addScaledVector(out, 3), ease(k)); gT.addScaledVector(out, Math.sin(Math.PI * Math.max(0, k)) * 15).addScaledVector(UP, P_.zone === 'body' ? -2 : 2); }
-      else { gT = from.clone().lerp(tgt.clone().addScaledVector(UP, -2), ease(k)); gT.addScaledVector(UP, -Math.sin(Math.PI * clamp(k * 1.2, 0, 1)) * 13).addScaledVector(fwd, -Math.sin(Math.PI * Math.max(0, k)) * 3); }
+      // where the glove meets him: the face for straights, the side of the jaw for hooks, under the chin for uppercuts
+      const body = P_.zone === 'body', R = body ? 4 : 8.6 + GR * .8, dirH = dir.clone().setY(0).normalize();
+      let hit_;
+      if (kind === 'straight') hit_ = tgt.clone().addScaledVector(dir, -R);
+      else if (kind === 'hook') hit_ = tgt.clone().addScaledVector(out, R * .72).addScaledVector(dirH, -R * .55).addScaledVector(UP, body ? 0 : -2);
+      else hit_ = tgt.clone().addScaledVector(UP, -R * .78).addScaledVector(dirH, -R * .5);
+      if (kind === 'straight') gT = from.clone().lerp(hit_, k);
+      else if (kind === 'hook') { gT = from.clone().lerp(hit_, ease(k)); gT.addScaledVector(out, Math.sin(Math.PI * Math.max(0, k)) * 13).addScaledVector(UP, body ? -2 : 2); }
+      else { gT = from.clone().lerp(hit_, ease(k)); gT.addScaledVector(UP, -Math.sin(Math.PI * clamp(k * 1.2, 0, 1)) * 12).addScaledVector(fwd, -Math.sin(Math.PI * Math.max(0, k)) * 3); }
       if (arm) gR = gT; else gL = gT;
     }
     if (s.state === 'clinch' && op.chest) {
@@ -2042,6 +2052,19 @@ class Boxer {
     // smooth the guard, not the punch
     const gr = P_ ? 40 : 16;
     for (const [i, gT] of [[0, gL], [1, gR]]) { const punching = P_ && (i === 0) === leadArm; sm.gl[i] = sm.gl[i] ? dampV(sm.gl[i], gT, punching ? 60 : gr, dt) : gT.clone(); }
+    // gloves are solid: they stop on his head, body and gloves (and stay off your own face)
+    const oc = op.col;
+    const push = (g, c, r) => { const d = g.clone().sub(c), L = d.length(); if (L < r) g.addScaledVector(L > 1e-3 ? d.multiplyScalar(1 / L) : fwd.clone().negate(), r - L); };
+    const pushCap = (g, a, b, r) => { const ab = b.clone().sub(a), t = clamp(g.clone().sub(a).dot(ab) / Math.max(1e-3, ab.lengthSq()), 0, 1); push(g, a.clone().addScaledVector(ab, t), r); };
+    if (lie < .3 && sit < .3) for (let i = 0; i < 2; i++) {
+      const g = sm.gl[i];
+      if (oc && s.state !== 'clinch') {
+        pushCap(g, oc.hip, oc.chest, oc.tr + GR * .8);
+        push(g, oc.head, oc.hr + GR * .85);
+        for (const og of oc.gl) push(g, og, GR * 1.75);
+      }
+      push(g, headP, 8.6 + GR * .7);
+    }
     gL = sm.gl[0]; gR = sm.gl[1];
     // ---- arms via IK
     const { UA, FA } = this.len, out0 = lead.clone(), out1 = lead.clone().negate();
@@ -2050,7 +2073,7 @@ class Boxer {
       if (punching && kind === 'hook') return outS.clone().addScaledVector(UP, .6);
       if (punching && kind === 'upper') return UP.clone().negate().addScaledVector(fwd, -.4);
       if (s.walk || sit > .3) return fwd.clone().negate().addScaledVector(outS, .3);
-      return UP.clone().negate().addScaledVector(outS, 1 - gd.tuck).addScaledVector(fwd, -.25);
+      return UP.clone().negate().addScaledVector(outS, .12 + .3 * (1 - gd.tuck)).addScaledVector(fwd, -.3);
     };
     const shs = [shL, shR], gls = [gL, gR];
     for (let i = 0; i < 2; i++) {
@@ -2062,18 +2085,25 @@ class Boxer {
     // ---- legs via IK (knees forward and a touch out)
     const hipL = hip.clone().addScaledVector(lead, 6.5 * G).addScaledVector(fwd, 1), hipR = hip.clone().addScaledVector(lead, -6.5 * G).addScaledVector(fwd, -1);
     const feet = [fL, fR], hips = [hipL, hipR];
+    const stance = !(s.walk || sit > .3 || dp > 0), rearPunch = P_ && !leadArm ? Math.max(0, k) : 0;
     for (let i = 0; i < 2; i++) {
-      const ank = feet[i].clone().setY(feet[i].y + 6);
+      const heel = stance ? (i ? .8 + .5 * rearPunch : 0) : 0;
+      const ank = feet[i].clone().setY(feet[i].y + 6 + heel * 3.2);
       const kp = (lie > .2 ? UP.clone() : fwd.clone()).addScaledVector(i ? out1 : out0, .4);
       const [kn, an] = ik(hips[i], ank, this.len.TH, this.len.SH, kp);
       placeLimb(this.thigh[i], hips[i], kn, fwd); placeLimb(this.shin[i], kn, an, fwd);
       placeSeg(this.legSleeve[i], hips[i].clone().addScaledVector(UP, 3), hips[i].clone().lerp(kn, .42));
       placeLimb(this.bootShaft[i], an.clone().addScaledVector(an.clone().sub(kn).normalize(), -7 * hs), an.clone().addScaledVector(an.clone().sub(kn).normalize(), 2 * hs), fwd);
-      const toe = (lie > .2 ? fwd.clone().multiplyScalar(.2).add(UP) : fwd.clone()).addScaledVector(i ? out1 : out0, .2).normalize();
-      const fc = an.clone().addScaledVector(UP, -2.6).addScaledVector(toe, 4.5);
-      if (lie <= .2) fc.y = Math.max(3.6 * G, an.y - 2.6);
-      this.foot[i].position.copy(fc); orient(this.foot[i], toe, UP); this.foot[i].scale.set(.95, 1, .72); // capsule axis = Y, so point it along the foot
-      this.sole[i].position.copy(fc).setY(Math.max(.6, fc.y - 3.4 * G)); orient(this.sole[i], UP, toe); if (lie > .2) this.sole[i].visible = false; else this.sole[i].visible = true;
+      let toeH = fwd.clone();
+      if (stance) toeH = i ? fwd.clone().multiplyScalar(.75 + .6 * rearPunch).addScaledVector(out1, .8 * (1 - rearPunch * .7)) : fwd.clone().addScaledVector(out0, .08);
+      else toeH.addScaledVector(i ? out1 : out0, .2);
+      toeH.normalize();
+      const pa = heel * .45, toe = lie > .2 ? fwd.clone().multiplyScalar(.2).add(UP).addScaledVector(i ? out1 : out0, .2).normalize() : toeH.clone().multiplyScalar(Math.cos(pa)).addScaledVector(UP, -Math.sin(pa));
+      const up2 = UP.clone().multiplyScalar(Math.cos(pa)).addScaledVector(toeH, Math.sin(pa));
+      const fc = an.clone().addScaledVector(up2, -2.6).addScaledVector(toe, 4.5);
+      if (lie <= .2) fc.y = Math.max(3.4 * G + Math.sin(pa) * 5, fc.y);
+      this.foot[i].position.copy(fc); orient(this.foot[i], toe, up2); this.foot[i].scale.set(.95, 1, .72); // capsule axis = Y, so point it along the foot
+      this.sole[i].position.copy(fc).addScaledVector(up2, -3.4 * G); this.sole[i].position.y = Math.max(.6, this.sole[i].position.y); orient(this.sole[i], up2, toe); this.sole[i].visible = lie <= .2;
     }
     // ---- torso, trunks, neck, head
     const neck = chest.clone().addScaledVector(spineUp, 3);
@@ -2092,6 +2122,7 @@ class Boxer {
     this.stool.visible = sit > .05 && !!cornerPt; if (cornerPt) this.stool.position.set(cornerPt.x, 0, cornerPt.z);
     this.stool.scale.setScalar(clamp(sit * 1.4, .01, 1));
     // what the other man aims at
+    this.col = { head: headP.clone(), hr: 8.6, chest: chest.clone().addScaledVector(spineUp, -4), hip: hip.clone().addScaledVector(spineUp, 6), tr: 10.5 * G, gl: [sm.gl[0].clone(), sm.gl[1].clone()] };
     this.jHead = headP; this.jChest = chest; this.jBody = hip.clone().lerp(chest, .55).addScaledVector(fwd, 6 * G);
   }
 }
@@ -2182,13 +2213,13 @@ setTimeout(() => { $('hint').style.opacity = 0; }, 5000);
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 newFight();
-let last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
+let bodyPush = 0, last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
 const corners = [V(-RING + 8, 0, -ZR * .55 - 6), V(RING - 8, 0, ZR * .55 + 6)];
 // the sim ticks at 60 Hz; the screen draws between the last two ticks so motion is smooth at any frame rate
 function tick() { fight.step(DT); sPrev = sCur; sCur = fight.snap(); }
 const LERP_K = ['x', 'z', 'gait', 'mv', 'aP', 'defP', 'defU', 'tired', 'gi', 'hitT', 'downP'];
 function blendSnap(a, b, t) {
-  if (!a || !b) return b || fight.snap();
+  if (!b) b = fight.snap(); if (!a) a = b; // always a fresh copy (the renderer nudges positions)
   return { f: b.f.map((B, i) => {
     const A = a.f[i], o = Object.assign({}, B);
     for (const k of LERP_K) {
@@ -2205,7 +2236,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (!sCur) sCur = sPrev = fight.snap();
-  if (fight.phase === 'corner') {
+  if (window.__paused) { sPrev = sCur = fight.snap(); acc = 0; }
+  else if (fight.phase === 'corner') {
     cornerWait += dt; sPrev = sCur = fight.snap(); acc = 0;
     if (cornerWait > 3.2) { cornerWait = 0; fight.nextRound(fight.aiStrategy(0), fight.aiStrategy(1)); bigText('Round ' + fight.round, '', 1300); }
   } else if (fight.phase === 'over') {
@@ -2219,11 +2251,24 @@ function frame(now) {
     if (hitstop > 0) acc = Math.min(acc, DT);
   }
   const snap = blendSnap(sPrev, sCur, clamp(acc / DT, 0, 1));
+  {
+    const [a, b] = boxers, A = snap.f[0], B = snap.f[1];
+    if (a.col && b.col && !A.sit && !B.sit && A.state !== 'down' && B.state !== 'down') {
+      const hd = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
+      const cl = A.state === 'clinch' || B.state === 'clinch' ? 7 : 0;
+      const need = Math.max(a.col.tr + b.col.tr + 3 - cl - hd(a.col.chest, b.col.chest), a.col.hr + b.col.hr + 2 - cl - hd(a.col.head, b.col.head), a.col.tr + b.col.tr - cl - hd(a.col.hip, b.col.hip));
+      bodyPush = clamp(bodyPush + (need > 0 ? need * .5 : need * .08) , 0, 40);
+    } else bodyPush = Math.max(0, bodyPush - 60 * dt);
+    if (bodyPush > 0) {
+      const dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz) || 1, h = bodyPush / 2;
+      A.x -= dx / L * h; A.z -= dz / L * h; B.x += dx / L * h; B.z += dz / L * h;
+    }
+  }
   // poses: compute both, each aims at where the other was last frame
   for (let i = 0; i < 2; i++) {
     const o = boxers[1 - i], os = snap.f[1 - i];
     const opHead = o.jHead || V(os.x, 88, os.z), opBody = o.jBody || V(os.x, 66, os.z);
-    boxers[i].pose(snap.f[i], { x: os.x, z: os.z, head: opHead, chest: o.jChest }, opBody, dt, corners[i]);
+    boxers[i].pose(snap.f[i], { x: os.x, z: os.z, head: opHead, chest: o.jChest, col: o.col }, opBody, dt, corners[i]);
   }
   tickSpray(dt); updCam(dt);
   fight.f.forEach((X, i) => { const el = $('hb' + i); if (el) el.style.width = clamp(X.head / Math.max(1, X.headMax) * 100, 0, 100) + '%'; });
