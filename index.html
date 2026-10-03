@@ -2097,13 +2097,25 @@ const Render = (() => {
     ctx.strokeStyle = OUT; ctx.lineWidth = w + 3; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
+  // boxing glove, side on: padded mitt with the knuckles out front, thumb tucked along the side, finger fold, a cuff up the wrist
   function glove(g, e, col, B, st) {
     const r = 7.2 * Math.sqrt(B); const a = Math.atan2(g.y - e.y, g.x - e.x);
     ctx.save(); ctx.translate(g.x, g.y); ctx.rotate(a); if (st) ctx.scale(1 + st, 1 - st * .45);
-    ctx.fillStyle = '#d9d2c4'; ctx.strokeStyle = OUT; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.rect(-r - 4, -r * .55, 5, r * 1.1); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, 0, r * 1.05, r * .92, 0, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,240,220,.22)'; ctx.beginPath(); ctx.ellipse(r * .2, -r * .4, r * .5, r * .25, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.lineJoin = 'round'; ctx.strokeStyle = OUT;
+    // cuff: runs back up the wrist, a little narrower than the hand, with a trim band
+    const cuff = new Path2D(); cuff.moveTo(-r * .45, -r * .62); cuff.lineTo(-r * 1.85, -r * .5); cuff.quadraticCurveTo(-r * 2.05, 0, -r * 1.85, r * .5); cuff.lineTo(-r * .45, r * .66); cuff.closePath();
+    ctx.fillStyle = shade(col, -.12); ctx.lineWidth = 2; ctx.stroke(cuff); ctx.fill(cuff);
+    ctx.fillStyle = 'rgba(236,228,214,.85)'; ctx.beginPath(); ctx.moveTo(-r * 1.32, -r * .56); ctx.lineTo(-r * 1.08, -r * .58); ctx.lineTo(-r * 1.08, r * .6); ctx.lineTo(-r * 1.32, r * .57); ctx.closePath(); ctx.fill();
+    // the mitt: back of the hand curving over the knuckles, fingers folded under
+    const m = new Path2D(); m.moveTo(-r * .6, -r * .72);
+    m.bezierCurveTo(-r * .1, -r * 1.05, r * .85, -r * .95, r * 1.12, -r * .22);
+    m.bezierCurveTo(r * 1.3, r * .3, r * 1.0, r * .95, r * .45, r * .98);
+    m.bezierCurveTo(r * .05, r * 1.0, -r * .3, r * .92, -r * .6, r * .72); m.closePath();
+    ctx.fillStyle = col; ctx.lineWidth = 2; ctx.stroke(m); ctx.fill(m);
+    // thumb along the side, finger fold, knuckle shine
+    ctx.fillStyle = shade(col, -.1); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.ellipse(-r * .02, r * .66, r * .55, r * .24, -.12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(18,13,10,.45)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(r * .62, -r * .58); ctx.quadraticCurveTo(r * .42, 0, r * .62, r * .5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,240,220,.3)'; ctx.beginPath(); ctx.ellipse(r * .45, -r * .55, r * .48, r * .2, .25, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
   function drawHead(v, look, J, t) {
