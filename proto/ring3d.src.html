@@ -151,12 +151,12 @@ function mkStool() {
 
 /* ================= the fighter ================= */
 const GUARD3 = { // glove spots in (forward, height, toward lead side), crouch, blade angle (deg), forward lean, elbow tuck
-  standard: { L: [23, 80, 4], R: [12, 82, -5], c: 3, bl: 32, lean: 3, tuck: .35 },
-  high:     { L: [15, 89, 4], R: [12, 89, -4], c: 4, bl: 26, lean: 3, tuck: .9 },
+  standard: { L: [20, 79, 5.5], R: [7, 81, -7.5], c: 3, bl: 32, lean: 3, tuck: .35 },
+  high:     { L: [12, 88, 6], R: [8, 88, -6.5], c: 4, bl: 26, lean: 3, tuck: .9 },
   peekaboo: { L: [12, 85, 4], R: [11, 85, -4], c: 8, bl: 16, lean: 7, tuck: .95 },
   philly:   { L: [9, 60, -3], R: [9, 86, -7], c: 2, bl: 52, lean: 1, tuck: .5 },
-  cross:    { L: [13, 85, -5], R: [14, 78, 5], c: 5, bl: 22, lean: 4, tuck: .8 },
-  handslow: { L: [22, 57, 7], R: [12, 70, -4], c: 1, bl: 36, lean: -1, tuck: .2 }
+  cross:    { L: [11, 84, -5], R: [12, 77, 5], c: 5, bl: 22, lean: 4, tuck: .8 },
+  handslow: { L: [20, 58, 8], R: [8, 75, -7], c: 1, bl: 36, lean: -1, tuck: .2 }
 };
 class Boxer {
   constructor(look, side) {
@@ -194,8 +194,8 @@ class Boxer {
     this.fore = [0, 1].map(() => limb(FA, 3.5 * G, 2.9 * G, 1 * G, .22, .3));
     this.glove = [0, 1].map(() => {
       const o = new THREE.Group(); g.add(o);
-      const m = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 14), gloveM)); m.scale.set(1, .92, 1.22); m.position.z = 6.5; o.add(m);
-      const th = shade(new THREE.Mesh(new THREE.CapsuleGeometry(1.9, 4, 4, 8), gloveM)); th.position.set(4.6, 2.4, 6); th.rotation.x = Math.PI / 2.4; th.rotation.z = -.4; o.add(th); o.thumb = th;
+      const m = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 14), gloveM)); m.scale.set(.86, .86, 1.14); m.position.z = 6; o.add(m);
+      const th = shade(new THREE.Mesh(new THREE.CapsuleGeometry(1.9, 4, 4, 8), gloveM)); th.position.set(4.1, 2.2, 5.6); th.rotation.x = Math.PI / 2.4; th.rotation.z = -.4; o.add(th); o.thumb = th;
       const cuff = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.2, 6.5, 14), gloveM)); cuff.rotation.x = Math.PI / 2; cuff.position.z = 0; o.add(cuff);
       const tr = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.55, 4.55, 1.6, 14), cuffM)); tr.rotation.x = Math.PI / 2; tr.position.z = -1.8; o.add(tr);
       return o;
@@ -248,6 +248,19 @@ class Boxer {
     let k = 0; if (P_) k = p < .16 ? -.12 * Math.sin(Math.PI * p / .16) : p < .46 ? outQ((p - .16) / .3) : p < .64 ? 1 : 1 - ease((p - .64) / .36);
     if (s.feint) k *= .35;
     const leadArm = P_ ? P_.arm === 'lead' : true, kind = P_ ? P_.kind : null;
+    // step in: if his arm can't reach from where he stands, the punch carries him in (and he gets back out after)
+    let lunge = 0;
+    if (P_ && s.state !== 'down' && s.state !== 'slump' && s.state !== 'clinch' && this.bSh) {
+      const body = P_.zone === 'body', tgt = body ? opB : op.head, sh0 = this.bSh[leadArm ? 0 : 1];
+      const R = body ? 4 : 8.6 + 5.8 * .8, f2 = kind === 'straight' ? 1 : .55, dH = Math.hypot(tgt.x - sh0.x, tgt.z - sh0.z) - R * f2, dV = tgt.y - sh0.y;
+      const need = clamp(Math.sqrt(Math.max(0, dH * dH + dV * dV)) - (this.len.UA + this.len.FA) * .97, 0, P_.cat === 'jab' ? 34 : 30);
+      if (this.lgA !== s.aT || p < (this.lgP || 0) - .05) { this.lgA = s.aT; this.lgN = need; } else if (p < .4) this.lgN = damp(this.lgN, need, 10, dt);
+      this.lgP = p;
+      const lk = p < .1 ? 0 : p < .42 ? ease((p - .1) / .32) : p < .66 ? 1 : 1 - ease((p - .66) / .34);
+      lunge = this.lgN * lk * (s.feint ? .3 : 1);
+    }
+    this.lg = lunge;
+    pos.addScaledVector(fwd, lunge * .85);
     const defE = s.def ? clamp(s.defP || 0, 0, 1) * clamp((1 - (s.defU || 0)) / .3, 0, 1) : 0;
     const hit = clamp(s.hitT || 0, 0, 1) * (s.hitPow != null ? clamp(.5 + s.hitPow * .5, .4, 1.3) : 1);
     // the last shot that landed: snaps in fast, eases out (body shots fold a beat late and stay longer)
@@ -261,7 +274,7 @@ class Boxer {
     if (P_) {
       if (!leadArm) bl -= k * 52; else if (kind === 'hook') bl -= k * 34; else bl += k * 10;
       if (this.overhand && k > 0) { sideL -= 4 * k; c += 3 * k; }
-      lean += k * (P_.cat === 'power' ? 6 : 3); if (P_.zone === 'body') { c += k * 9; sideL += (leadArm ? 1 : -1) * k * 3; }
+      lean += k * (P_.cat === 'power' ? 6 : 3) + lunge * .15; if (P_.zone === 'body') { c += k * 9; sideL += (leadArm ? 1 : -1) * k * 3; }
       if (kind === 'upper') c += (p < .4 ? k * 6 : -k * 2);
     }
     if (s.def !== this.defWas) { this.defWas = s.def; this.defSide = Math.random() < .5 ? 1 : -1; }
@@ -284,7 +297,7 @@ class Boxer {
     const vl = vel.lengthSq() > 4 ? vel.clone().normalize() : fwd.clone();
     let fL, fR;
     if (s.walk) { fL = P(1, 0, 7); fR = P(-1, 0, -7); }
-    else { fL = P(12, 0, 9.5); fR = P(-12, 0, -10.5); if (P_ && P_.cat === 'jab' && k > 0) fL.addScaledVector(fwd, 6); }
+    else { fL = P(12, 0, 9.5); fR = P(-12 - lunge * .45, 0, -10.5); if (P_ && P_.cat === 'jab' && k > 0) fL.addScaledVector(fwd, 6); }
     // planted feet: each foot stays put on the canvas until it's too far from where it should be, then steps there
     const ft = this.ft = this.ft || [fL, fR].map(f => ({ at: f.clone(), from: f.clone(), to: f.clone(), t: 1, dur: .14 }));
     const spd = vel.length(), lead_t = clamp(spd * .1, 0, 14);
@@ -352,6 +365,7 @@ class Boxer {
     const headP = lie > 0 || sit > .5 ? headT : sm.head;
     const hunch = s.walk || sit > .3 || lie > 0 ? 0 : 1;
     const shL = chest.clone().addScaledVector(shLine, 13.2 * G).addScaledVector(UP, -3.5 + 1.6 * hunch).addScaledVector(fwd, 1.2 * hunch), shR = chest.clone().addScaledVector(shLine, -13.2 * G).addScaledVector(UP, -3.5 - .4 * hunch).addScaledVector(fwd, .8 * hunch);
+    this.bSh = [shL.clone().addScaledVector(fwd, -lunge), shR.clone().addScaledVector(fwd, -lunge)]; // where his shoulders are without the step
     // ---- gloves
     const gp = (a) => P(a[0], a[1] - sm.c, a[2]).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side).addScaledVector(UP, breathe * .4);
     let gL = gp(gd.L), gR = gp(gd.R);
@@ -365,7 +379,7 @@ class Boxer {
     if (rH && !rc.blocked && rc.pow > .7) { gL.addScaledVector(rPush, 4 * rH).addScaledVector(lead, 3 * rH); gR.addScaledVector(rPush, 4 * rH).addScaledVector(lead, -3 * rH); } // a clean shot knocks the guard loose
     if (rc && rc.blocked) { const j = env * 3; gL.addScaledVector(rPush, j); gR.addScaledVector(rPush, j); } // the block takes the shot
     if (rB && !rc.blocked) { gL.y -= 7 * rB; gR.y -= 7 * rB; gL.addScaledVector(fwd, -3 * rB); gR.addScaledVector(fwd, -3 * rB); } // elbows clamp down
-    const GR = 6.4;
+    const GR = 5.8;
     if (P_ && live) {
       if (this.aimT !== s.aT || p < (this.aimP || 0) - .05 || !this.aim) { this.aimT = s.aT; this.aim = (P_.zone === 'body' ? opB : op.head).clone(); this.pv = Math.random(); }
       this.aimP = p;
@@ -437,7 +451,7 @@ class Boxer {
       const [el, wr] = ik(shs[i], gls[i], UA, FA, poleFor(i));
       placeLimb(this.upper[i], shs[i], el, fwd); placeLimb(this.fore[i], el, wr, fwd);
       this.delt[i].position.copy(shs[i]).lerp(chest, .12).addScaledVector(UP, 1.2); orient(this.delt[i], UP, el.clone().sub(shs[i]).setY(0).add(fwd));
-      const gl = this.glove[i]; gl.position.copy(wr); orient(gl, UP.clone().addScaledVector(fwd, -.3), wr.clone().sub(el)); gl.thumb.position.x = (i ? 1 : -1) * (s.stance === 'southpaw' ? -1 : 1) * 4.6;
+      const gl = this.glove[i]; gl.position.copy(wr); orient(gl, UP.clone().addScaledVector(fwd, -.3), wr.clone().sub(el)); gl.thumb.position.x = (i ? 1 : -1) * (s.stance === 'southpaw' ? -1 : 1) * 4.1;
     }
     // ---- legs via IK (knees forward and a touch out)
     const hipL = hip.clone().addScaledVector(lead, 6.5 * G).addScaledVector(fwd, 1), hipR = hip.clone().addScaledVector(lead, -6.5 * G).addScaledVector(fwd, -1);
@@ -535,13 +549,33 @@ class Ref {
       const D = snap.f[1 - F.result.winner];
       tx = D.x + px * this.side * 30; tz = D.z + pz * this.side * 30; sp = 170; look = V(D.x, 0, D.z); mode = 'wave';
     } else if (F.phase === 'fight' && (F.clinchT > 0 || A.state === 'clinch')) {
-      tx = mx + px * this.side * 22; tz = mz + pz * this.side * 22; sp = 140; mode = 'break';
+      tx = mx + px * camS * 22; tz = mz + pz * camS * 22; sp = 140; mode = 'break'; // always steps in from behind them
     } else if (F.phase !== 'fight') {
       tx = RING * .55; tz = -ZR * .62; sp = 60; look = V(0, 0, 0);
     } else {
-      const off = Math.max(70, L / 2 + 50);
-      tx = mx + px * this.side * off; tz = mz + pz * this.side * off;
-      if (Math.abs(tx) > RING - 6 || Math.abs(tz) > ZR - 6) { const s2 = -this.side, x2 = mx + px * s2 * off, z2 = mz + pz * s2 * off; if (Math.abs(x2) <= RING - 6 && Math.abs(z2) <= ZR - 6) { this.side = s2; tx = x2; tz = z2; } }
+      // pick a spot by where it lands on screen: off to one side of the pair (never between them or in front),
+      // far from both, inside the ropes. Re-pick twice a second, and only move for a clearly better spot
+      this.pickT = (this.pickT || 0) - dt;
+      if (this.pickT <= 0 || this.tx == null) {
+        this.pickT = .5;
+        const scr = (x, z) => { const v = V(x, 80, z).project(camera); return v; };
+        const fs = [scr(A.x, A.z), scr(Bs.x, Bs.z)], lo = Math.min(fs[0].x, fs[1].x) - .22, hi = Math.max(fs[0].x, fs[1].x) + .22;
+        const score = (x, z) => {
+          let sc = 0; const v = scr(x, z);
+          if (v.x > lo && v.x < hi) sc += 6 * Math.min(v.x - lo, hi - v.x); // on screen in the middle of the action
+          for (const f of [A, Bs]) sc += Math.max(0, 75 - Math.hypot(x - f.x, z - f.z)) * .05;
+          const camD = (camera.position.x - mx) * (x - mx) + (camera.position.z - mz) * (z - mz); if (camD > 0) sc += 2; // between them and the lens
+          sc += Math.max(0, Math.abs(x) - (RING - 14)) * .2 + Math.max(0, Math.abs(z) - (ZR - 14)) * .2;
+          return sc;
+        };
+        let best = null;
+        for (let a = 0; a < 16; a++) for (const r of [85, 110, 135]) {
+          const th = a / 16 * Math.PI * 2, x = clamp(mx + Math.cos(th) * r, -RING + 10, RING - 10), z = clamp(mz + Math.sin(th) * r, -ZR + 10, ZR - 10), sc = score(x, z);
+          if (!best || sc < best.sc) best = { x, z, sc };
+        }
+        if (this.tx == null || best.sc < score(this.tx, this.tz) - .3) { this.tx = best.x; this.tz = best.z; }
+      }
+      tx = this.tx; tz = this.tz; sp = 90;
     }
     if (F.phase !== 'over') this.overT = 0;
     tx = clamp(tx, -RING + 6, RING - 6); tz = clamp(tz, -ZR + 6, ZR - 6);
@@ -681,11 +715,11 @@ function camFit(sep) { // distance so about 330 units of ring fit across the scr
 }
 function updCam(dt) {
   const A = fight.f[0], B = fight.f[1], between = fight.phase === 'corner' || fight.phase === 'roundEnd';
-  const mid = V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
+  const mid = rMid ? rMid.clone() : V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
   if (between) mid.set(0, 50, 0);
   tgt.lerp(mid, 1 - Math.exp(-3 * dt));
   if (!cam.user) { const C = CAMS[camI], tall = innerWidth < innerHeight ? .14 : 0; cam.yaw = damp(cam.yaw, C.yaw, 2.5, dt); cam.pitch = damp(cam.pitch, C.pitch + tall, 2.5, dt); cam.dist = damp(cam.dist, C.dist, 2.5, dt); }
-  sepS = damp(sepS, between ? 2 * RING : Math.hypot(A.x - B.x, A.z - B.z), 2, dt);
+  sepS = damp(sepS, between ? 2 * RING : rSep, 2, dt);
   const D = camFit(sepS) * cam.dist;
   const sx = shake > 0 ? (Math.random() - .5) * shake * 4 : 0, sy = shake > 0 ? (Math.random() - .5) * shake * 4 : 0; shake = Math.max(0, shake - dt * 2);
   camera.position.set(tgt.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * D + sx, tgt.y + Math.sin(cam.pitch) * D + sy, tgt.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * D);
@@ -707,7 +741,7 @@ setTimeout(() => { $('hint').style.opacity = 0; }, 5000);
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 newFight();
-let bodyPush = 0, last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
+let spad = 0, sw = [.5, .5], rMid = null, rSep = 60, bodyPush = 0, last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
 const corners = [V(-RING + 8, 0, -ZR * .55 - 6), V(RING - 8, 0, ZR * .55 + 6)];
 // the sim ticks at 60 Hz; the screen draws between the last two ticks so motion is smooth at any frame rate
 function tick() { fight.step(DT); sPrev = sCur; sCur = fight.snap(); }
@@ -745,6 +779,20 @@ function frame(now) {
     if (hitstop > 0) acc = Math.min(acc, DT);
   }
   const snap = blendSnap(sPrev, sCur, clamp(acc / DT, 0, 1));
+  {
+    // the engine's distances were tuned for the 2D side view: at real arm length they'd stand nose to nose.
+    // Spread them out (less on the inside, none in a clinch); punches step in to land (Boxer.pose lunge)
+    const A = snap.f[0], B = snap.f[1], dx = B.x - A.x, dz = B.z - A.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+    const kd = fight.phase === 'kd' || A.state === 'down' || B.state === 'down';
+    const want = A.sit || B.sit || A.state === 'clinch' || B.state === 'clinch' ? 0 : 26 * clamp((d - 34) / 26, 0, 1);
+    if (!kd) spad = damp(spad, want, want < spad ? 9 : 4, dt);
+    // who takes the room: both, or only the man still standing
+    const w0 = kd ? (A.state === 'down' ? 0 : B.state === 'down' ? 1 : .5) : .5;
+    sw[0] = damp(sw[0], w0, 5, dt); sw[1] = 1 - sw[0];
+    const XL = RING - 8, ZL = ZR - 8, cl = (f, s) => { const x = clamp(f.x + s * ux, -XL, XL), z = clamp(f.z + s * uz, -ZL, ZL), r = (s - ((x - f.x) * ux + (z - f.z) * uz)) * Math.sign(s || 1); f.x = x; f.z = z; return r; }; // returns the room it couldn't take (ropes)
+    const mA = cl(A, -spad * sw[0]), mB = cl(B, spad * sw[1] + Math.max(0, mA)); if (mB > 0) cl(A, -mB);
+    rSep = Math.hypot(B.x - A.x, B.z - A.z); rMid = V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
+  }
   {
     const [a, b] = boxers, A = snap.f[0], B = snap.f[1];
     if (a.col && b.col && !A.sit && !B.sit && A.state !== 'down' && B.state !== 'down') {
