@@ -2063,7 +2063,7 @@ const Render = (() => {
       const jit = Math.sin(t * 46) * Math.max(0, .7 - gi) * 7 * v.hitT;
       leadG.x -= 7 * kb; leadG.y -= up * kb - jit; rearG.x -= 5 * kb; rearG.y -= up * .7 * kb + jit * .7;
     }
-    let leadBend = -1, rearBend = -1;
+    let leadBend = -1, rearBend = -1, punchK = 0, punchLead = null;
     if (v.aT && J.dp === 0) {
       const P = PUNCH[v.aT]; const isLead = P.arm === 'lead';
       const sh = isLead ? (southpaw ? shN : shF) : (southpaw ? shF : shN);
@@ -2084,6 +2084,7 @@ const Render = (() => {
         : P.kind === 'hook' ? bez(G, hookC, T, k) : P.kind === 'upper' ? bez(G, upC, T, k) : flick ? bez(G, flickC, T, k) : L(G, T, k);
       const p = v.aP, k = kOf(p), pos = gpos(k);
       if (P.kind === 'hook' && k > .25) { if (isLead) leadBend = 1; else rearBend = 1; }
+      punchK = Math.max(0, k); punchLead = isLead;
       if (isLead) leadG = pos; else rearG = pos;
       // motion trail while the shot is travelling out
       if (!v.feint && p > .37 && p < .74) {
@@ -2101,7 +2102,15 @@ const Render = (() => {
     }
     const gN = southpaw ? leadG : rearG, gF = southpaw ? rearG : leadG;
     const bN = southpaw ? leadBend : rearBend, bF = southpaw ? rearBend : leadBend;
-    return { shN, shF, gN, gF, eN: ik(shN, gN, S.arm, S.arm, bN), eF: ik(shF, gF, S.arm, S.arm, bF), trail, trailNear, stretch };
+    // tucked guards (and covering up): elbows hang down in front of the ribs, forearms stand up. Hooks keep the elbow up
+    const tuck = gd === 'high' || gd === 'peekaboo' || (v.def === 'block' && v.defZ !== 'body' && gd !== 'cross');
+    // the elbow comes forward across the body toward us, so from the side the upper arm looks short; a punch stretches it back out
+    const elbow = (sh, g, b, lead) => {
+      const f = !tuck || b === 1 || J.dp > 0 ? 0 : punchLead === lead ? 1 - clamp(punchK * 1.6, 0, 1) : 1;
+      if (f <= 0) return ik(sh, g, S.arm, S.arm, b);
+      const l1 = S.arm * (1 - .4 * f), e1 = ik(sh, g, l1, S.arm, 1), e2 = ik(sh, g, l1, S.arm, -1); return e1.y > e2.y ? e1 : e2;
+    };
+    return { shN, shF, gN, gF, eN: elbow(shN, gN, bN, southpaw), eF: elbow(shF, gF, bF, !southpaw), trail, trailNear, stretch };
   }
   function limb(a, b, w, col) {
     ctx.lineCap = 'round';
