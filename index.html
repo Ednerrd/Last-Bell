@@ -1986,6 +1986,14 @@ const Render = (() => {
     }
     if (v.def === 'roll') { const k = dk * (1 - ease((du - .65) / .35)); lean -= .32 * k; hipX -= 4.5 * k; hipY += 2.5 * k; } // turn away, then come back with it
     let twist = 0, heel = 0, pivot = 0, load = 0;
+    // every punch is a little different: about a third of the right hands to the head loop over the top,
+    // hooks go wider or tighter, uppercuts dig from lower or higher (render only, rolled when the punch starts)
+    let pv = { over: false, hw: 1, ud: 1 };
+    if (v.aT && v._sm) {
+      const sm = v._sm, P0 = PUNCH[v.aT];
+      if (sm.pvA !== v.aT || v.aP < (sm.pvP || 0) - .05 || !sm.pv) { sm.pvA = v.aT; sm.pv = { over: P0.kind === 'straight' && P0.arm === 'rear' && P0.zone === 'head' && !v.feint && Math.random() < .3, hw: .7 + Math.random() * .7, ud: .8 + Math.random() * .45 }; }
+      sm.pvP = v.aP; pv = sm.pv;
+    }
     if (v.aT) {
       const P = PUNCH[v.aT], p = v.feint ? Math.min(v.aP, .35) * .8 : v.aP;
       const ext = p < .35 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .35) / .25, 3) : Math.max(0, 1 - ease((p - .6) / .4));
@@ -1993,6 +2001,7 @@ const Render = (() => {
       load = p < .35 ? (p / .35) * drive : 0; // coil before the shot
       twist = ext * drive * (rear ? 1 : .7);
       if (P.kind === 'straight') { lean += (.12 + .12 * drive) * ext - .05 * load; hipX += (rear ? 6 : 3.5) * ext; hipY += 2 * ext * drive; if (rear) heel = ext; }
+      if (pv.over) { lean += .12 * ext + .05 * load; hipY += 3 * ext; } // overhand: rolls over the top of it, dips the head under
       if (P.kind === 'hook') { lean += .14 * ext - .04 * load; hipY += 3 * load + 2 * ext; hipX += 1.5 * ext; if (!rear) pivot = ext; }
       if (P.kind === 'upper') { hipY += p < .4 ? 9 * (p / .4) : 9 * (1 - ext) - 3 * ext; lean += p < .4 ? .18 : -.06 * ext; if (rear) heel = ext * .8; }
       if (P.zone === 'body') { hipY += 9 * ext; lean += .3 * ext; hipX += 2 * ext; }
@@ -2047,21 +2056,25 @@ const Render = (() => {
     }
     if (v.state === 'stun') { footF.x = 14 + Math.sin(t * 6) * 4; footB.x = -18; footB.y = 0; }
     if (sit > 0) { footF = L(footF, { x: 18, y: 0 }, sit); footB = L(footB, { x: 6, y: 0 }, sit); }
-    const J = { hip, neck, head, ha, footF, footB, S, twist, breath: breath * (1 + sit * .8), heelB: heel * .55, pivotF: pivot * .32, sit };
+    const J = { pv, hip, neck, head, ha, footF, footB, S, twist, breath: breath * (1 + sit * .8), heelB: heel * .55, pivotF: pivot * .32, sit };
     // knockdown: keyframed. Going down: knees buckle, he drops onto his seat, the back hits, the head last.
     // Getting up: sits up, gets to a knee, stands with the gloves coming back up
     const dp = v.state === 'down' ? clamp(v.downP, 0, 1) : 0;
     if (dp > 0) {
       const T = S.torso, k0 = { hip, neck, footF, footB };
       const pose = (hx, hy, ang, fF, fB) => ({ hip: { x: hx, y: hy }, neck: { x: hx + Math.sin(ang) * T, y: hy - Math.cos(ang) * T }, footF: fF, footB: fB });
-      const KEYS = v.rise
+      const knee = v.hitZone === 'body', kn = pose(-4, -31, .22, { x: 17, y: 0 }, { x: -21, y: -1 }); // body shot: he takes a knee
+      const KEYS = knee ? (v.rise ? [[0, k0], [.5, pose(-3, -44, .18, { x: 18, y: 0 }, { x: -18, y: -1 })], [1, kn]] : [[0, k0], [.35, pose(hip.x - 1, -38, .4, footF, footB)], [.75, kn], [1, kn]])
+        : v.rise
         ? [[0, k0], [.35, pose(-6, -26, .1, { x: 16, y: 0 }, { x: -10, y: -1 })], [.7, pose(-12, -8, -.25, { x: 20, y: 0 }, { x: 8, y: 0 })], [1, pose(-10, -7, -1.57, { x: 34, y: -2 }, { x: 26, y: -1 })]]
         : [[0, k0], [.3, pose(hip.x - 3, -30, .35, footF, footB)], [.62, pose(-12, -8, -.55, { x: 18, y: 0 }, { x: 6, y: 0 })], [.85, pose(-10, -7, -1.5, { x: 32, y: -2 }, { x: 24, y: -1 })], [1, pose(-10, -7, -1.57, { x: 34, y: -2 }, { x: 26, y: -1 })]];
       let i = 1; while (i < KEYS.length - 1 && dp > KEYS[i][0]) i++;
       const [p0, a] = KEYS[i - 1], [p1, b] = KEYS[i], u = ease((dp - p0) / (p1 - p0));
       J.hip = L(a.hip, b.hip, u); J.neck = L(a.neck, b.neck, u); J.footF = L(a.footF, b.footF, u); J.footB = L(a.footB, b.footB, u);
       const tang = Math.atan2(J.neck.x - J.hip.x, -(J.neck.y - J.hip.y));
-      J.ha = tang * .9 + (dp < .3 && !v.rise ? snap : 0) + (dp > .85 && !v.rise ? Math.sin((dp - .85) / .15 * Math.PI) * .25 : 0); // head bounces off the canvas
+      J.ha = knee ? tang + .4 * Math.min(1, dp * 1.5) // on one knee, head bowed
+        : tang * .9 + (dp < .3 && !v.rise ? snap : 0) + (dp > .85 && !v.rise ? Math.sin((dp - .85) / .15 * Math.PI) * .25 : 0); // head bounces off the canvas
+      J.knee = knee;
       J.head = { x: J.neck.x + Math.sin(J.ha) * (S.headR + 3), y: J.neck.y - Math.cos(J.ha) * (S.headR + 3) };
     }
     J.dp = dp; J.lean = lean; if (dp > 0) { J.heelB *= 1 - dp; J.pivotF *= 1 - dp; J.breath *= 1 - dp; }
@@ -2161,10 +2174,11 @@ const Render = (() => {
       const kOf = p => v.feint ? Math.sin(Math.min(1, p) * Math.PI) * .35
         : P.cat === 'jab' ? jabK(p)
         : p < .35 ? -.18 * ease(p / .35) : p < .6 ? -.18 + 1.18 * (1 - Math.pow(1 - (p - .35) / .25, 3)) : 1 - ease((p - .6) / .4);
-      const hookC = { x: G.x - 9, y: (G.y + T.y) / 2 - 3 }, upC = { x: sh.x + 4, y: sh.y + 44 };
+      const pv = J.pv || { hw: 1, ud: 1 }, hookC = { x: G.x - 9 * pv.hw, y: (G.y + T.y) / 2 - 3 * pv.hw }, upC = { x: sh.x + 4, y: sh.y + 44 * pv.ud };
+      const overC = { x: (sh.x + T.x) / 2 - 4, y: Math.min(sh.y, T.y) - 18 }; // overhand: loops up and over, comes down on him
       const flick = gd === 'handslow' && P.kind === 'straight' && G.y > sh.y + 8, flickC = { x: (G.x + T.x) / 2 + 6, y: G.y + 4 }; // whips up from the hip
       const gpos = k => k < 0 ? { x: G.x + (G.x - sh.x) * k * .5, y: G.y + (G.y - sh.y) * k * .25 + (P.kind === 'upper' ? -k * 14 : 0) }
-        : P.kind === 'hook' ? bez(G, hookC, T, k) : P.kind === 'upper' ? bez(G, upC, T, k) : flick ? bez(G, flickC, T, k) : L(G, T, k);
+        : P.kind === 'hook' ? bez(G, hookC, T, k) : P.kind === 'upper' ? bez(G, upC, T, k) : pv.over ? bez(G, overC, T, k) : flick ? bez(G, flickC, T, k) : L(G, T, k);
       const p = v.aP, k = kOf(p), pos = gpos(k);
       if (P.kind === 'hook' && k > .25) { if (isLead) leadBend = 1; else rearBend = 1; }
       punchK = Math.max(0, k); punchLead = isLead;
@@ -2180,8 +2194,9 @@ const Render = (() => {
     if (J.dp > 0) {
       const limp = v.rise ? Math.min(1, J.dp * 1.6) : Math.min(1, J.dp * 2.2);
       const lg = { x: (J.neck.x + J.hip.x) / 2 + 12, y: Math.min(-5, J.hip.y + 6) }, rg = { x: J.neck.x - 2, y: Math.min(-8, (J.neck.y + J.hip.y) / 2 + 4) };
+      if (J.knee) { lg.x = J.hip.x + 17; lg.y = J.hip.y + 4; rg.x = J.hip.x + 9; rg.y = -3; }
       leadG = L(leadG, lg, limp); rearG = L(rearG, rg, limp);
-      if (!v.rise && J.dp > .7) { const sp = ease((J.dp - .7) / .3); leadG = L(leadG, { x: J.neck.x + S.arm * 1.85, y: -3 }, sp); rearG = L(rearG, { x: J.neck.x - S.arm * 1.7, y: -5 }, sp); } // out cold: arms spread on the canvas
+      if (!v.rise && J.dp > .7 && !J.knee) { const sp = ease((J.dp - .7) / .3); leadG = L(leadG, { x: J.neck.x + S.arm * 1.85, y: -3 }, sp); rearG = L(rearG, { x: J.neck.x - S.arm * 1.7, y: -5 }, sp); } // out cold: arms spread on the canvas
     }
     const gN = southpaw ? leadG : rearG, gF = southpaw ? rearG : leadG;
     const bN = southpaw ? leadBend : rearBend, bF = southpaw ? rearBend : leadBend;
@@ -2339,7 +2354,7 @@ const Render = (() => {
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
     const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
     // shadow
-    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 ? -14 : 0, 2, J.dp > .5 ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
       const a = Math.min(1, J.sit * 1.5), sx = J.hip.x - 2, sy = J.hip.y + 5, wd = '#6b4a2c', wl = '#8a6440';
       ctx.globalAlpha = a; ctx.strokeStyle = OUT; ctx.lineWidth = 2;
@@ -2439,11 +2454,13 @@ const Render = (() => {
     const h = loc(Jo.head), hp = loc(Jo.hip), nk = loc(Jo.neck), og = [loc(Ao.gN), loc(Ao.gF)], tw = 10.5 * Math.pow(Jo.S.B, 1.5);
     // push g out to distance R from c, always back toward his own side (never through the other man)
     const out = (g, c, R) => { let dx = g.x - c.x, dy = g.y - c.y; const d = Math.hypot(dx, dy); if (d >= R) return g; if (dx > 0) dx = -dx; if (d < .01) { dx = -1; dy = 0; } const n = Math.hypot(dx, dy); return { x: c.x + dx / n * R, y: c.y + dy / n * R }; };
+    // the punching hand only stops on his gloves when he's blocking; otherwise it splits the guard (his gloves give way in his pass)
+    const P = v.aT && PUNCH[v.aT], pk = P ? ((P.arm === 'lead') === (v.stance === 'southpaw') ? 'gN' : 'gF') : null;
     let moved = false;
     for (const k of ['gN', 'gF']) {
       let g = A[k];
       const ux = nk.x - hp.x, uy = nk.y - hp.y, t = clamp(((g.x - hp.x) * ux + (g.y - hp.y) * uy) / (ux * ux + uy * uy), 0, 1);
-      for (const c of og) g = out(g, c, (gr + gro) * .78);
+      if (k !== pk || o.def === 'block') for (const c of og) g = out(g, c, (gr + gro) * .78);
       g = out(g, { x: hp.x + ux * t, y: hp.y + uy * t }, tw + gr * .6);
       g = out(g, h, Jo.S.headR + gr * .85);
       if (g !== A[k]) { moved = true; A[k] = g; }
@@ -2451,6 +2468,16 @@ const Render = (() => {
     if (!moved) return;
     A.redo(A);
     if (A.trail) A.trail[A.trail.length - 1] = A.trailNear ? A.gN : A.gF;
+  }
+  // heads and chests never overlap on screen: if leaning, ducking or stepping in puts them into each other,
+  // both lean back out by half (render only; not in a clinch or a knockdown)
+  function bodyPush(f, J) {
+    const busy = x => x.state === 'down' || x.state === 'slump' || x.state === 'clinch' || x.walk || x.sit;
+    if (busy(f[0]) || busy(f[1]) || J[0].dp > 0 || J[1].dp > 0) return;
+    const front = (v, Jv) => { const G = Math.pow(Jv.S.B, 1.5), q = P3(v.x, v.z), fx = Math.max(Jv.head.x + Jv.S.headR * .9, Jv.neck.x + 9 * G, L(Jv.hip, Jv.neck, .66).x + 11 * G); return q.x + fx * v.dir * q.s; };
+    const u = f[1].x >= f[0].x ? 1 : -1, ov = (front(f[0], J[0]) - front(f[1], J[1])) * u + 3;
+    if (ov <= 0) return;
+    J.forEach((Jv, i) => { const m = Math.min(ov / 2, 14); for (const k of ['hip', 'neck', 'head', 'footF', 'footB']) Jv[k] = { x: Jv[k].x - m * (k === 'footB' ? .4 : k === 'footF' ? .7 : 1), y: Jv[k].y }; });
   }
   // a punch that can't reach from where he stands brings him in with it (the view keeps them apart, see spreadView):
   // the distance is read when the punch starts, he steps in on the load, holds through contact and steps back out
@@ -2462,14 +2489,14 @@ const Render = (() => {
     const t = toLocal(v, toWorld(o, body ? L(Jo.hip, Jo.neck, .45) : Jo.head)), sh = { x: J.neck.x + 1, y: J.neck.y + 3 };
     const R = body ? 12 : Jo.S.headR + 6, f2 = P.kind === 'straight' ? 1 : .55;
     const dH = t.x - sh.x - R * f2, dV = body ? t.y - sh.y : clamp(t.y + Jo.S.headR * .85 - sh.y, -6, 16);
-    const need = clamp(Math.hypot(Math.max(0, dH), dV) - J.S.arm * 2 * .97, 0, P.cat === 'jab' ? 30 : 26);
+    const need = clamp(Math.hypot(Math.max(0, dH), dV) - J.S.arm * 2 * .97, 0, P.cat === 'jab' ? 24 : 20);
     if (sm.lgA !== v.aT || p < (sm.lgP || 0) - .05) { sm.lgA = v.aT; sm.lgN = need; }
     else if (p < .4) sm.lgN += (need - sm.lgN) * (1 - Math.exp(-dt * 10));
     sm.lgP = p;
     const lk = p < .1 ? 0 : p < .42 ? ease((p - .1) / .32) : p < .66 ? 1 : 1 - ease((p - .66) / .34);
     const lg = sm.lgN * lk * (v.feint ? .3 : 1); if (lg < .05) return;
     for (const k of ['hip', 'neck', 'head', 'footF']) J[k] = { x: J[k].x + lg * .85, y: J[k].y };
-    J.neck.x += lg * .1; J.head.x += lg * .14; J.footB = { x: J.footB.x + lg * .4, y: J.footB.y }; // leans into it, the back foot follows halfway
+    J.neck.x += lg * .1; J.head.x += lg * .14; J.footB = { x: J.footB.x + lg * .6, y: J.footB.y }; // leans into it, the back foot follows most of the way
   }
   // ---------- scene
   function drawBackground(V, venue, camX, t, excite) {
@@ -2701,6 +2728,7 @@ const Render = (() => {
     f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt; });
     const J = f.map((v, i) => body(v, looks[i], view.t));
     f.forEach((v, i) => lunge(v, J[i], f[1 - i], J[1 - i], dt));
+    bodyPush(f, J);
     const headW = f.map((v, i) => toWorld(v, J[i].head)), bodyW = f.map((v, i) => toWorld(v, L(J[i].hip, J[i].neck, .45)));
     // he aims where the man is; once the man starts to slip, duck, pull or roll, the aim stays put and the punch misses
     const aim = f.map((v, i) => {
@@ -3577,7 +3605,7 @@ function spreadView(fs, dt) {
   const st = FX.sp || (FX.sp = { pad: 0, w: .5 }), A = Object.assign({}, fs[0]), B = Object.assign({}, fs[1]);
   const dx = B.x - A.x, u = dx < 0 ? -1 : 1, d = Math.hypot(dx, (B.z || 0) - (A.z || 0));
   const kd = A.state === 'down' || B.state === 'down';
-  const want = A.sit || B.sit || A.walk || B.walk || A.state === 'clinch' || B.state === 'clinch' ? 0 : 20 * clamp((d - 32) / 24, 0, 1);
+  const want = A.sit || B.sit || A.walk || B.walk || A.state === 'clinch' || B.state === 'clinch' ? 0 : 16 * clamp((d - 32) / 24, 0, 1);
   if (!kd) st.pad += (want - st.pad) * (1 - Math.exp(-dt * (want < st.pad ? 9 : 4)));
   const w0 = kd ? (A.state === 'down' ? 0 : B.state === 'down' ? 1 : .5) : .5;
   st.w += (w0 - st.w) * (1 - Math.exp(-dt * 5));
