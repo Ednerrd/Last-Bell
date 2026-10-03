@@ -62,7 +62,7 @@ Coach shouts (repo only): during a round the player yells one of six calls (`SHO
 Shout results after the style pass (500 each, SHOUT_EDGE atk .6 def .5 ctr 1.1): perfect coach +10%, simple human rules +1%, random yelling −5%. (Before, at atk .4 def .35 ctr .8: +12 / +2 / −3, mashing one call −5%.)
 
 ## To do
-1. Ed publishes via chat (big batch now: style pass, camp learning, special styles, weight classes, legends).
+1. Ed publishes via chat (big batch now: style pass, camp learning, special styles, weight classes, legends, visuals pass, backup codes, scouting). Tell Ed to make a backup code of his careers first.
 2. Optional: phone performance check on a real device.
 3. Ideas: the AI corner could shout too (title fights?), and a better human-ish policy in tests/shout.js to tune against.
 
@@ -83,6 +83,11 @@ Stat economy (NOT fixed, known): +8 in one stat vs identical fighter (400 fights
 - Corner's call (auto) now uses `aiStrategy(0)` for the player (style-aware), instead of a neutral plan all fight.
 - Weight classes: hub "Weight class" button, one division at a time (`changeDiv`). Each division keeps its own roster/belts (`world.away`), catches up on return. Up: power −2, chin −1, speed +1; down: power +1, chin +1, stamina −3, recovery −2 (stats and ceiling). Keeps 60% of points, vacates belts. `P.titleDivs` tracks multi-division titles.
 - Not done / ideas: no art for the special styles beyond the stance flip (angle step-offs use the normal slide); foul DQ is not in (warnings + point deductions only); legends never move divisions; the other divisions don't sim while you are away except a catch-up when you return.
+
+## Saves, scouting (repo only, done)
+- Backup codes: title screen, Backup on each slot gives a text code (`Backup.encode`: gzip via CompressionStream + base64, prefix `LBz1.`; plain base64 `LB1.` fallback). "Restore from a backup code" pastes it into any slot (`Backup.decode` → `migrateSave`, then Store.push syncs it). A 12-year career is ~17k characters.
+- Offers show a corner read (`cornerRead`: OVR-gap verdict, his biggest edge, yours, his weak spot) and a collapsible tale of the tape (`tapeHtml`). Camp shows the tape too.
+- `liveStats(f)`: worldSim drifts roster ratings but never touched stats (gap was mean 4.3 / p90 8.7 OVR after 5 years). Fight sheets (`oppSheet`) and the tape shift every stat by rating − raw OVR, so the card OVR is the man in the ring. `oppNow(save, offer)` = the live roster fighter for an offer.
 
 ## Env notes
 - Python Playwright here may not match the preinstalled browser. If `live.py` asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` instead.
