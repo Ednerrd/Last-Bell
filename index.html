@@ -3160,14 +3160,19 @@ ACT.fightNight = () => startFight();
 /* ===== LAST BELL : ui part 3 (fight) ===== */
 const CROWD_BASE = { gym: .12, hall: .35, civic: .5, coliseum: .62, vegas: .72 };
 let F = null, FX = null, rafId = 0;
+// how different two colors look (weighted RGB distance, ~0..255)
+const CLASH = 70;
+function colorDist(a, b) { const p = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }; const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b), rm = (r1 + r2) / 2; return Math.sqrt((2 + rm / 256) * (r1 - r2) ** 2 + 4 * (g1 - g2) ** 2 + (2 + (255 - rm) / 256) * (b1 - b2) ** 2) / 3; }
 function startFight() {
   const o = save.pending.offer; const A = playerSheet(save), B = oppSheet(save, o);
   F = new Fight(A, B, { rounds: o.rounds, cutmanA: GYMS[save.player.gym].cut, cutmanB: .45 });
   FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null };
-  const lum = h => { const n = parseInt(h.slice(1), 16); return (n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11; };
+  // the two corners have to be told apart at a glance: trunks and gloves that look alike get swapped on the other man
   const ta = gearItem('trunks', A.look.trunks).c;
-  if (Math.abs(lum(ta) - lum(gearItem('trunks', B.look.trunks).c)) < 55) { const alt = GEAR.trunks.filter(g => g.price < 1000).sort((x, y) => Math.abs(lum(y.c) - lum(ta)) - Math.abs(lum(x.c) - lum(ta)))[0]; B.look = Object.assign({}, B.look, { trunks: alt.id }); }
-  if (B.look.gloves === A.look.gloves) B.look = Object.assign({}, B.look, { gloves: GEAR.gloves.filter(g => g.id !== A.look.gloves && g.price < 1000)[ri(0, 3)].id });
+  if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
+  const ga = gearItem('gloves', A.look.gloves).c;
+  if (colorDist(ga, gearItem('gloves', B.look.gloves).c) < CLASH) { const alt = GEAR.gloves.filter(g => colorDist(g.c, ga) >= CLASH); if (alt.length) B.look = Object.assign({}, B.look, { gloves: pick(alt).id }); }
+  FX.looks = [A.look, B.look]; // the swaps have to reach the renderer
   Render.reset(); Comm.reset();
   const nm = s => esc(s.name.split(' ').slice(-1)[0]);
   show(`<div class="fight">

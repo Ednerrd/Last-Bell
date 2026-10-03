@@ -94,3 +94,4 @@ Stat economy (NOT fixed, known): +8 in one stat vs identical fighter (400 fights
 - Philly used to win ~58% at OVR 65 (low-IQ opponents don't throw the lead right). Under the new combat it's 48%, so the flavor is gone.
 - AI corner switches to 'ko' when trailing late, which causes a knockdown spike around round 8 of 10. Realistic, but watch it.
 - Phone performance with the new animations is untested on a real device.
+- Kit clash: `startFight()` swaps the opponent's trunks/gloves when `colorDist()` < `CLASH` (70, weighted RGB). The dark trunks (black/oxblood/navy/forest/royal) all clash with each other. Bug fixed: `FX.looks` used to be set before the swap, so swaps never reached the renderer.
