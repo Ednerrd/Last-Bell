@@ -87,6 +87,8 @@ Stat economy (NOT fixed, known): +8 in one stat vs identical fighter (400 fights
 ## Saves, scouting (repo only, done)
 - Backup codes: title screen, Backup on each slot gives a text code (`Backup.encode`: gzip via CompressionStream + base64, prefix `LBz1.`; plain base64 `LB1.` fallback). "Restore from a backup code" pastes it into any slot (`Backup.decode` → `migrateSave`, then Store.push syncs it). A 12-year career is ~17k characters.
 - Offers show a corner read (`cornerRead`: OVR-gap verdict, his biggest edge, yours, his weak spot) and a collapsible tale of the tape (`tapeHtml`). Camp shows the tape too.
+- Ed's call: his stats are ?? until you scout him. The tape's public side (age, record, KO %, stance, ranking, notable wins, last fight, belts held, former champ) is always shown. "Scout him" (`scoutHim`, cost `scoutCost` = 8% of the purse, capped per tier in SCOUT_CAP) reveals his numbers for a year (`P.scout[id] = week`, SCOUT_FOR 52); club fighters get `opp.scouted`. Fought him before (history `oppId`, or name for old entries) = known. Unscouted corner read uses only public info (`publicRead`). OVR stays public.
+- Resumes: `f.wins` (last 3 notable: beat a top-10 man, a legend, took a belt, or beat you), `f.last`, `f.exBelts`, written by `noteFight` from worldSim and applyResult. Old saves/new men get a believable past from `seedResume` (lazily via `resumeOf`).
 - `liveStats(f)`: worldSim drifts roster ratings but never touched stats (gap was mean 4.3 / p90 8.7 OVR after 5 years). Fight sheets (`oppSheet`) and the tape shift every stat by rating − raw OVR, so the card OVR is the man in the ring. `oppNow(save, offer)` = the live roster fighter for an offer.
 
 ## Env notes

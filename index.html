@@ -114,6 +114,9 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .tape{margin:10px 0 0}.tape summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:15px;padding:4px 0;list-style:none}.tape summary::-webkit-details-marker{display:none}.tape summary:before{content:'▸ ';}.tape[open] summary:before{content:'▾ '}
 .tt{display:grid;grid-template-columns:1.6em 1fr max-content 1fr 1.6em;gap:3px 6px;align-items:center;font-size:14px;margin-top:6px}.tt .h{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
 .tt .l{text-align:center;color:var(--mute);white-space:nowrap;font-size:13px}.tt .v{text-align:center;font-variant-numeric:tabular-nums}.tt .v.w{font-weight:700;color:var(--ink)}.tt .v:not(.w){color:var(--mute)}
+.tt .pv{grid-column:span 2;font-variant-numeric:tabular-nums}.tt .pv.me{text-align:right}.tt .pv.him{text-align:left}.tt .pv small{color:var(--mute)}.tt .q{color:var(--mute);letter-spacing:.05em}.tt .b.unk{background:repeating-linear-gradient(90deg,var(--panel2) 0 4px,transparent 4px 8px)}
+.resume{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}.resume h5{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin:0 0 4px}.resume ul{margin:0 0 6px;padding-left:18px;font-size:15px}.resume li.you{color:var(--red)}.resume p{margin:4px 0}
+.scout{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
 .tt .b{height:7px;background:var(--panel2);border-radius:2px;position:relative;overflow:hidden}.tt .b i{position:absolute;top:0;bottom:0;border-radius:2px}.tt .b.me i{right:0;background:var(--blue)}.tt .b.him i{left:0;background:var(--red)}
 .of{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .of .btn{width:auto;padding:11px 26px}.purse{font-family:var(--disp);font-size:26px;display:block;color:var(--good)}.of small{color:var(--mute)}
@@ -1678,6 +1681,8 @@ function applyResult(save, offer, fight) {
   const win = res.winner === 0, draw = res.winner == null, loss = res.winner === 1;
   const stop = !res.decision; const out = { notes: [], pointsBefore: P.points, rankBefore: playerRank(save) };
   const isTitle = offer.title.length > 0;
+  if (!draw) { const me = { name: P.name, isPlayer: true, wins: [] }; noteFight(win ? me : opp, win ? opp : me, { ko: stop, t: isTitle ? offer.title.filter(k => win ? save.world.belts[k] === opp.id : true) : [], r: win ? (opp.club ? null : rankList(save).findIndex(e => e.id === opp.id) + 1) : out.rankBefore, wk: save.week }); }
+  else { if (opp.wins === undefined) seedResume(opp); opp.last = { w: null, n: P.name, wk: save.week, you: true }; }
   if (win) { P.record.w++; if (stop) P.record.ko++; } else if (loss) P.record.l++; else P.record.d++;
   if (opp.record) { if (loss) { opp.record.w++; if (stop) opp.record.ko++; } else if (win) opp.record.l++; else opp.record.d++; }
   const op = opp.points || 0;
@@ -1724,7 +1729,7 @@ function applyResult(save, offer, fight) {
   if (P.injury) { P.injury.weeks = Math.max(0, P.injury.weeks - recWeeks); if (P.injury.weeks === 0) P.injury = null; }
   P.campDone = false;
   const entry = {
-    wk: save.week, opp: opp.name, oppRec: opp.record ? `${opp.record.w}-${opp.record.l}-${opp.record.d}` : '', r: win ? 'W' : loss ? 'L' : 'D',
+    wk: save.week, opp: opp.name, oppId: opp.id, oppRec: opp.record ? `${opp.record.w}-${opp.record.l}-${opp.record.d}` : '', r: win ? 'W' : loss ? 'L' : 'D',
     method: res.method, dec: res.decision, round: res.round, time: res.time, venue: VENUE_NAMES[offer.venue], purse: offer.purse, title: offer.title.slice(), cards: res.cards
   };
   P.history.unshift(entry);
@@ -1741,11 +1746,12 @@ function worldSim(save, weeks) {
     const L = W.roster; if (L.length < 4) break;
     const a = ri(0, L.length - 1); let b = clamp(a + ri(-5, 5), 0, L.length - 1); if (b === a) b = (a + 1) % L.length;
     const A = L[a], B = L[b]; const aw = (A.rating - B.rating) + gauss() * 6 > 0;
-    const Wn = aw ? A : B, Ls = aw ? B : A;
-    Wn.record.w++; Ls.record.l++; if (R() < .55) Wn.record.ko++;
+    const Wn = aw ? A : B, Ls = aw ? B : A, ko = R() < .55;
+    Wn.record.w++; Ls.record.l++; if (ko) Wn.record.ko++;
     const g = 6 + Ls.points * .1; Wn.points += g; Ls.points = Math.max(5, Ls.points - (4 + g * .3));
     // belts change hands sometimes
-    ORGS.forEach(o => { if (W.belts[o.k] === Ls.id && R() < .5) W.belts[o.k] = Wn.id; });
+    const took = []; ORGS.forEach(o => { if (W.belts[o.k] === Ls.id && R() < .5) { W.belts[o.k] = Wn.id; took.push(o.k); } });
+    noteFight(Wn, Ls, { ko, t: took, r: (aw ? b : a) + 1, wk: save.week });
   }
   W.roster.forEach(f => {
     f.age += weeks / 52; if (f.legend) return; // legends don't fade
@@ -1777,6 +1783,40 @@ function liveStats(f) {
   let raw = 0; for (const k of STATS) raw += st[k] * OVR_W[k];
   const sh = f.rating - raw; for (const k of STATS) st[k] = clamp(st[k] + sh, 20, 99);
   return st;
+}
+// ---------- resumes: what the world knows about a man (notable wins, last fight, belts). His real numbers need scouting ----------
+const fakeName = () => pick(FIRST) + ' ' + pick(LAST);
+// men made before resumes existed get a believable past: better men have bigger wins
+function seedResume(f, belts) {
+  const pts = f.points || 0, rc = f.record || { w: 0, l: 0, ko: 0 }, koR = rc.w ? rc.ko / rc.w : .5;
+  const n = f.legend ? 3 : f.club ? 0 : pts > 300 ? ri(2, 3) : pts > 160 ? ri(1, 2) : pts > 70 ? ri(0, 1) : 0;
+  f.wins = [];
+  for (let i = 0; i < Math.min(n, rc.w); i++) f.wins.push({ n: fakeName(), ko: R() < koR, r: pts > 300 ? ri(1, 8) : ri(4, 18), t: [] });
+  const bl = (belts || []).slice(); if (f.legend && !bl.length) bl.push(pick(ORGS).k);
+  if (bl.length) { if (!f.wins.length) f.wins.push({ n: fakeName(), ko: R() < koR, r: ri(1, 3), t: [] }); f.wins[0].t = bl; f.wins[0].r = ri(1, 3); }
+  if (!f.last && rc.w + rc.l > 0) { const lost = R() < rc.l / (rc.w + rc.l) * 1.2; f.last = { w: lost ? 0 : 1, n: fakeName(), ko: R() < (lost ? .35 : koR) }; }
+}
+function resumeOf(save, f) { if (f.wins === undefined) seedResume(f, f.club ? [] : beltsOf(save, f.id)); return f; }
+// a result goes on both men's resumes. A win is notable if he beat a top-10 man, a legend, took a belt, or beat you
+function noteFight(W, L, o) {
+  if (W.wins === undefined) seedResume(W); if (L.wins === undefined) seedResume(L);
+  W.last = { w: 1, n: L.name, ko: o.ko, wk: o.wk, you: !!L.isPlayer }; L.last = { w: 0, n: W.name, ko: o.ko, wk: o.wk, you: !!W.isPlayer };
+  if ((o.t && o.t.length) || (o.r && o.r <= 10) || L.legend || L.isPlayer) W.wins = [{ n: L.name, ko: o.ko, r: o.r, t: o.t || [], wk: o.wk, you: !!L.isPlayer }, ...W.wins].slice(0, 3);
+  if (o.t && o.t.length && !L.isPlayer) L.exBelts = Array.from(new Set([...(L.exBelts || []), ...o.t.filter(k => !(W.exBelts || []).includes(k))]));
+}
+// you know a man's real numbers if you fought him or paid for film in the last year
+const SCOUT_FOR = 52, SCOUT_CAP = { club: 150, regional: 1000, tv: 5000, main: 15000, title: 25000 };
+function scoutCost(offer) { return Math.max(100, Math.round(Math.min(offer.purse * .08, SCOUT_CAP[offer.tier] || 1000) / 50) * 50); }
+function isScouted(save, f) {
+  const P = save.player; if (f.scouted) return true;
+  const wk = (P.scout || {})[f.id]; if (wk != null && save.week - wk <= SCOUT_FOR) return true;
+  return P.history.some(h => h.oppId ? h.oppId === f.id : h.opp === f.name);
+}
+function scoutHim(save, offer) {
+  const P = save.player, f = oppNow(save, offer), c = scoutCost(offer);
+  if (P.money < c || isScouted(save, f)) return false;
+  P.money -= c; if (offer.opp.club) offer.opp.scouted = true; else (P.scout = P.scout || {})[f.id] = save.week;
+  return true;
 }
 function oppNow(save, offer) { return offer.opp.club ? offer.opp : (findFighter(save, offer.oppId) || offer.opp); }
 function oppSheet(save, offer) {
@@ -2917,9 +2957,22 @@ const TAPE_HIM = { power: 'he hits harder than you', speed: 'his hands are quick
 const TAPE_YOU = { power: 'you hit harder', speed: 'your hands are quicker', accuracy: "you're the sharper puncher", defense: "you're harder to hit", footwork: 'you move better', chin: 'you take a shot better', body: 'you take the body better', stamina: "you've got more gas", recovery: 'you bounce back quicker', heart: "you've got more heart" };
 const TAPE_HOLE = { power: 'No real pop, so you can walk through him.', speed: 'Slow hands. Beat him to the punch.', accuracy: "He's wild. Make him miss and make him pay.", defense: "He's there to be hit.", footwork: 'Flat feet. Cut the ring off.', chin: "Chin's a question. Test it early.", body: 'Soft downstairs. Dig to the body.', stamina: 'He fades late. Make it a long night.', recovery: 'Once he is hurt he stays hurt. Jump on him.', heart: 'He folds when it gets ugly. Break his will.' };
 const cap1 = t => t[0].toUpperCase() + t.slice(1);
-function cornerRead(me, him) {
+const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+// what anyone could tell you from his record
+function publicRead(save, f) {
+  const out = [], rc = f.record || { w: 0, l: 0, ko: 0 }, kp = pct(rc.ko, rc.w), L = f.last;
+  if (L && L.w === 0 && L.ko) out.push(L.you ? 'You stopped him last time out. He remembers.' : 'Got stopped last time out. The chin could be shaky.');
+  if (rc.w >= 6 && kp >= 70) out.push(`${kp}% of his wins by KO. Respect the power.`);
+  else if (rc.w >= 8 && kp <= 30) out.push(`Only ${kp}% KOs. He wins on points, not power.`);
+  if (f.age >= 34) out.push(`He's ${Math.floor(f.age)}. The legs might not be there late.`);
+  else if (f.age <= 23 && !f.club) out.push('Young and still getting better.');
+  return out.slice(0, 2);
+}
+function cornerRead(save, f) {
+  const me = save.player.stats, him = liveStats(f), known = isScouted(save, f);
   const gap = ovr(him) - ovr(me);
   const verdict = gap >= 8 ? "On paper he's a lot better than you." : gap >= 4 ? "He's the better fighter on paper." : gap > -4 ? 'Even fight on paper.' : gap > -8 ? "You're the better fighter on paper." : 'You should handle him.';
+  if (!known) return [verdict, ...publicRead(save, f), 'Get film on him to know more.'].join(' ');
   let hk = null, yk = null;
   for (const k of STATS) { const d = him[k] - me[k]; if (d >= 4 && (!hk || d > him[hk] - me[hk])) hk = k; if (d <= -4 && (!yk || d < him[yk] - me[yk])) yk = k; }
   const edge = hk && yk ? cap1(TAPE_HIM[hk]) + ', but ' + TAPE_YOU[yk] + '.' : hk ? cap1(TAPE_HIM[hk]) + '.' : yk ? cap1(TAPE_YOU[yk]) + '.' : '';
@@ -2927,13 +2980,32 @@ function cornerRead(me, him) {
   let lo = null; for (const k of STATS) if (him[k] - avg <= -6 && k !== yk && (!lo || him[k] < him[lo])) lo = k;
   return [verdict, edge, lo ? TAPE_HOLE[lo] : ''].filter(Boolean).join(' ');
 }
-function tapeHtml(me, him, open) {
+function winLine(w) { return `<li class="${w.you ? 'you' : ''}">${w.you ? (w.ko ? 'Stopped <b>you</b>' : 'Beat <b>you</b>') : (w.ko ? 'KO ' : 'Beat ') + esc(w.n)}${w.r ? ` <small>(#${w.r})</small>` : ''}${w.t && w.t.length ? ' ' + beltChips(w.t) : ''}</li>`; }
+function lastLine(L) {
+  if (!L) return 'No pro fights on record.';
+  const who = L.you ? 'you' : esc(L.n);
+  return L.w == null ? `Drew with ${who}` : L.w ? `Beat ${who}${L.ko ? ' by KO' : ' on points'}` : `Lost to ${who}${L.ko ? ' by KO' : ' on points'}`;
+}
+// offer: the fight on the table. open: start expanded. The tape always shows the public side; his numbers need film
+function tapeHtml(save, offer, open, idx) {
+  const P = save.player, f = resumeOf(save, oppNow(save, offer)), known = isScouted(save, f), me = P.stats, him = liveStats(f);
+  const prow = (a, l, b) => `<span class="pv me">${a}</span><span class="l">${l}</span><span class="pv him">${b}</span>`;
+  const hr = f.club ? 'Unranked' : '#' + (rankList(save).findIndex(e => e.id === f.id) + 1), mr = P.points < 30 ? 'Unranked' : '#' + playerRank(save);
+  const pub = prow(Math.floor(age(save)), 'Age', Math.floor(f.age)) + prow(rec(P.record), 'Record', rec(f.record)) + prow(`${P.record.ko} <small>(${pct(P.record.ko, P.record.w)}%)</small>`, 'KOs', `${f.record.ko} <small>(${pct(f.record.ko, f.record.w)}%)</small>`) + prow(cap1(P.stance), 'Stance', cap1(f.stance)) + prow(mr, 'Ranking', hr);
   const rows = STATS.map(k => {
     const a = Math.round(me[k]), b = Math.round(him[k]);
-    return `<span class="v ${a > b ? 'w' : ''}">${a}</span><span class="b me"><i style="width:${a}%"></i></span><span class="l">${STAT_LABEL[k]}</span><span class="b him"><i style="width:${b}%"></i></span><span class="v ${b > a ? 'w' : ''}">${b}</span>`;
+    return known ? `<span class="v ${a > b ? 'w' : ''}">${a}</span><span class="b me"><i style="width:${a}%"></i></span><span class="l">${STAT_LABEL[k]}</span><span class="b him"><i style="width:${b}%"></i></span><span class="v ${b > a ? 'w' : ''}">${b}</span>`
+      : `<span class="v">${a}</span><span class="b me"><i style="width:${a}%"></i></span><span class="l">${STAT_LABEL[k]}</span><span class="b him unk"></span><span class="v q">??</span>`;
   }).join('');
-  return `<details class="tape" ${open ? 'open' : ''}><summary>Tale of the tape</summary><div class="tt"><span class="h" style="grid-column:1/3">You</span><span></span><span class="h" style="grid-column:4/6;text-align:right">Him</span>${rows}
-    <span class="v w">${ovr(me)}</span><span></span><span class="l"><b>Overall</b></span><span></span><span class="v w">${ovr(him)}</span></div></details>`;
+  const belts = f.club ? [] : beltsOf(save, f.id), ex = (f.exBelts || []).filter(k => !belts.includes(k));
+  const res = `<div class="resume"><h5>Notable wins</h5>${f.wins.length ? `<ul>${f.wins.map(winLine).join('')}</ul>` : '<p class="mute small">Nobody worth mentioning yet.</p>'}
+    <p class="small"><span class="mute">Last fight:</span> ${lastLine(f.last)}</p>
+    ${belts.length ? `<p class="small"><span class="mute">Holds:</span> ${beltChips(belts)}</p>` : ''}${ex.length ? `<p class="small"><span class="mute">Former champ:</span> ${beltChips(ex)}</p>` : ''}</div>`;
+  const c = scoutCost(offer);
+  const foot = known ? `<p class="mute tiny">${(P.history.some(h => h.oppId ? h.oppId === f.id : h.opp === f.name)) ? "You've been in there with him. You know what he has." : 'Scouted. Your corner has film on him.'}</p>`
+    : `<div class="scout"><button class="btn sm" data-act="scout" data-i="${idx}" ${P.money < c ? 'disabled' : ''}>Scout him: ${money(c)}</button><span class="mute tiny">Film study. Shows his real numbers for a year.</span></div>`;
+  return `<details class="tape" ${open ? 'open' : ''}><summary>Tale of the tape${known ? '' : ' <small class="mute">(not scouted)</small>'}</summary><div class="tt"><span class="h" style="grid-column:1/3">You</span><span></span><span class="h" style="grid-column:4/6;text-align:right">Him</span>${pub}${rows}
+    <span class="v w">${ovr(me)}</span><span></span><span class="l"><b>Overall</b></span><span></span><span class="v w">${ovr(him)}</span></div>${res}${foot}</details>`;
 }
 function gLabel(g) { return (GUARDS[g] || GUARDS.standard).label; }
 // pot: his ceiling stats, if known. Fit at the ceiling is where the guard is headed
@@ -3212,8 +3284,8 @@ function retiredCard() {
 
 /* ---------- offers ---------- */
 let offerCache = null;
-ACT.offers = () => {
-  offerCache = genOffers(save);
+ACT.offers = () => { offerCache = genOffers(save); renderOffers(); };
+function renderOffers(openI) {
   const cards = offerCache.map((o, i) => {
     const f = o.opp; const fr = o.opp.club ? 'Unranked' : '#' + (rankList(save).findIndex(e => e.id === f.id) + 1);
     return `<div class="offer stitched ${o.title.length ? 'title-fight' : ''}">
@@ -3222,17 +3294,25 @@ ACT.offers = () => {
         <h3>${esc(f.name)}</h3>${f.nick ? `<div class="nick">"${esc(f.nick)}"</div>` : ''}
         <div class="mute">${rec(f.record)} (${f.record.ko} KO), ${fr}, OVR ${Math.round(f.rating)}</div>
         <div class="mute">${STYLES[f.style].label}, ${gLabel(f.guard).toLowerCase()}, ${f.stance}, age ${Math.floor(f.age)}</div></div></div>
-      <p class="read"><b>Corner:</b> ${esc(cornerRead(save.player.stats, liveStats(f)))}</p>
-      ${tapeHtml(save.player.stats, liveStats(f))}
+      <p class="read"><b>Corner:</b> ${esc(cornerRead(save, oppNow(save, o)))}</p>
+      ${tapeHtml(save, o, openI === i, i)}
       <div class="of"><div><span class="purse">${money(o.purse)}</span><small>${o.rounds} rounds at ${esc(VENUE_NAMES[o.venue])}</small></div><button class="btn" data-act="sign" data-i="${i}">Sign</button></div>
     </div>`;
   }).join('');
   show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight offers</span><span class="cash">${money(save.player.money)}</span></div>
     <p class="mute">Your promoter came back with these. Pick one.</p>${cards || '<p>No offers right now.</p>'}</div>`, 'offers');
   document.querySelectorAll('canvas[data-look]').forEach(c => { const o = offerCache[+c.dataset.look]; Render.portrait(c, o.opp.look, { stance: o.opp.stance, guard: o.opp.guard, dir: -1 }); });
+}
+ACT.scout = d => {
+  const camp = d.i === 'camp', offer = camp ? save.pending.offer : offerCache[+d.i];
+  if (!scoutHim(save, offer)) return;
+  persist(); const y = window.scrollY;
+  if (camp) { campOpenTape = true; campScreen(); } else renderOffers(+d.i);
+  window.scrollTo(0, y);
 };
+let campOpenTape = false;
 ACT.backHub = () => hub();
-ACT.sign = d => { save.pending = { offer: offerCache[+d.i], campDone: false }; persist(); campScreen(); };
+ACT.sign = d => { campOpenTape = false; save.pending = { offer: offerCache[+d.i], campDone: false }; persist(); campScreen(); };
 
 /* ---------- camp ---------- */
 let plan = null;
@@ -3249,7 +3329,8 @@ function campScreen() {
   show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight camp</span><span class="cash">${money(P.money)}</span></div>
     <p class="mute">Eight weeks to get ready for ${esc(o.opp.name)} (${STYLES[o.opp.style].label.toLowerCase()}, ${gLabel(o.opp.guard).toLowerCase()}, OVR ${Math.round(o.opp.rating)}).</p>
     <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
-    ${tapeHtml(P.stats, liveStats(oppNow(save, o)))}
+    <p class="read"><b>Corner:</b> ${esc(cornerRead(save, oppNow(save, o)))}</p>
+    ${tapeHtml(save, o, campOpenTape, 'camp')}
     <h4>Gym</h4><div class="opts">${GYMS.map((g, i) => `<button class="opt ${plan.gym === i ? 'on' : ''}" data-act="pgym" data-i="${i}" ${g.cost > P.money ? 'disabled' : ''}><b>${g.name}</b><span>${g.cost ? money(g.cost) + ' per camp' : 'Free'}</span><small>${g.note}</small></button>`).join('')}</div>
     <h4>Style and stance <span class="pts">a change uses a focus slot</span></h4>
     ${campStyles(P).length < 2 ? '' : `<div class="chips wrap">${campStyles(P).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>`}
