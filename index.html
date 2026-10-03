@@ -1950,7 +1950,7 @@ const Render = (() => {
     if (v.state === 'stun') { lean += Math.sin(t * 8) * .18 - .1; hipY += 7; snap += Math.sin(t * 5) * .25; }
     if (v.hurt && !still) hipY += 3 + Math.max(0, Math.sin(t * 4.3)) * 2.5;       // legs going: knees dip and wobble
     if (v.hitT > .3 && v.hitKind !== 'block' && (v.hitPow || 0) > .75) hipY += 6 * (v.hitT - .3) * (v.hitPow || 0); // big shot: knees buckle
-    if (v.state === 'clinch') { lean += .55; hipY += 5; }
+    if (v.state === 'clinch') { lean += .5 + Math.sin(ph * 2.3) * .05; hipY += 5; snap += .35; hipX += 2; } // leaning on him, head tucked beside his
     if (v.state === 'slump') { hipY += 14; lean = .35; snap = .55; }
     if (v.def === 'roll') snap += .2 * ease(v.defP); // chin tucks behind the shoulder
     if (gd === 'philly' && !still) snap += .06;        // chin always tucked a little
@@ -1998,6 +1998,7 @@ const Render = (() => {
     return J;
   }
   function arms(v, look, J, tgt, t) {
+    let leadBend = -1, rearBend = -1, punchK = 0, punchLead = null;
     const S = J.S; const southpaw = v.stance === 'southpaw';
     const shN = { x: J.neck.x + 2, y: J.neck.y + 4 }, shF = { x: J.neck.x - 3, y: J.neck.y + 2 };
     // shoulder rotation: punching shoulder drives through, the other one pulls back
@@ -2042,6 +2043,12 @@ const Render = (() => {
     // a worn-down guard sags and comes apart, a tired fighter's hands drop
     const sag = tir * (gd === 'handslow' ? 10 : 12) + (1 - gi) * 4;
     leadG.y += sag; rearG.y += sag * .85; leadG.x += (1 - gi) * 3.5; rearG.y += (1 - gi) * 2;
+    if (v.state === 'clinch') {
+      // tie-up: one arm over and around his back, the other dug in underneath; they wrestle a little for position
+      const w = Math.sin(ph * 3.1) * 2, bx = tgt.body.x, by = tgt.body.y;
+      const over = { x: bx + 9 + w, y: by - 16 }, under = { x: bx + 6 - w, y: by + 5 };
+      if (southpaw) { rearG = over; leadG = under; rearBend = 1; } else { leadG = over; rearG = under; leadBend = 1; }
+    }
     if (v.def === 'block') {
       const k = v.defP != null ? ease(v.defP) : 1, B = v.defZ === 'body' ? GUARD_POSE.body : (GP.b || GUARD_POSE.standard.b);
       leadG = L(leadG, { x: N.x + B.l[0], y: N.y + B.l[1] }, k); rearG = L(rearG, { x: N.x + B.r[0], y: N.y + B.r[1] }, k);
@@ -2063,7 +2070,6 @@ const Render = (() => {
       const jit = Math.sin(t * 46) * Math.max(0, .7 - gi) * 7 * v.hitT;
       leadG.x -= 7 * kb; leadG.y -= up * kb - jit; rearG.x -= 5 * kb; rearG.y -= up * .7 * kb + jit * .7;
     }
-    let leadBend = -1, rearBend = -1, punchK = 0, punchLead = null;
     if (v.aT && J.dp === 0) {
       const P = PUNCH[v.aT]; const isLead = P.arm === 'lead';
       const sh = isLead ? (southpaw ? shN : shF) : (southpaw ? shF : shN);
