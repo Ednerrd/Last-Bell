@@ -1904,6 +1904,31 @@ class Boxer {
     this.stool = mkStool();
     this.sm = null; this.t = Math.random() * 10; this.heading = side ? Math.PI : 0;
   }
+  // arms via IK from the shoulders to the gloves
+  arms(gls) {
+    const { shs, poles, fwd, chest, south } = this.armC, { UA, FA } = this.len;
+    for (let i = 0; i < 2; i++) {
+      const [el, wr] = ik(shs[i], gls[i], UA, FA, poles[i]);
+      placeLimb(this.upper[i], shs[i], el, fwd); placeLimb(this.fore[i], el, wr, fwd);
+      this.delt[i].position.copy(shs[i]).lerp(chest, .12).addScaledVector(UP, 1.2); orient(this.delt[i], UP, el.clone().sub(shs[i]).setY(0).add(fwd));
+      const gl = this.glove[i]; gl.position.copy(wr); orient(gl, UP.clone().addScaledVector(fwd, -.3), wr.clone().sub(el)); gl.thumb.position.x = (i ? 1 : -1) * (south ? -1 : 1) * 4.1;
+    }
+  }
+  // after both men are posed: push the gloves off where the other man is NOW (he moved after we aimed), redo the arms
+  settle(oc) {
+    if (!this.armC || !this.armC.free || this.armC.clinch || !oc) return;
+    const GR = 5.8, sm = this.sm, fwd = this.armC.fwd;
+    const push = (g, c, r) => { const d = g.clone().sub(c), L = d.length(); if (L < r) { g.addScaledVector(L > 1e-3 ? d.multiplyScalar(1 / L) : fwd.clone().negate(), r - L); return true; } return false; };
+    const pushCap = (g, a, b, r) => { const ab = b.clone().sub(a), t = clamp(g.clone().sub(a).dot(ab) / Math.max(1e-3, ab.lengthSq()), 0, 1); return push(g, a.clone().addScaledVector(ab, t), r); };
+    let moved = false;
+    for (let i = 0; i < 2; i++) {
+      const g = sm.gl[i];
+      moved = pushCap(g, oc.hip, oc.chest, oc.tr + GR * .8) | moved;
+      moved = push(g, oc.head, oc.hr + GR * .85) | moved;
+      for (const og of oc.gl) moved = push(g, og, GR * 1.75) | moved;
+    }
+    if (moved) { this.arms([sm.gl[0], sm.gl[1]]); this.col.gl = [sm.gl[0].clone(), sm.gl[1].clone()]; }
+  }
   // build this frame's joint positions from the engine snapshot, then place every mesh
   pose(s, op, opB, dt, cornerPt) {
     const G = this.G, hs = this.hs, gd = GUARD3[s.guard] || GUARD3.standard; this.t += dt;
@@ -2124,13 +2149,8 @@ class Boxer {
       if (s.walk || sit > .3) return fwd.clone().negate().addScaledVector(outS, .3);
       return UP.clone().negate().addScaledVector(outS, .12 + .3 * (1 - gd.tuck)).addScaledVector(fwd, -.3);
     };
-    const shs = [shL, shR], gls = [gL, gR];
-    for (let i = 0; i < 2; i++) {
-      const [el, wr] = ik(shs[i], gls[i], UA, FA, poleFor(i));
-      placeLimb(this.upper[i], shs[i], el, fwd); placeLimb(this.fore[i], el, wr, fwd);
-      this.delt[i].position.copy(shs[i]).lerp(chest, .12).addScaledVector(UP, 1.2); orient(this.delt[i], UP, el.clone().sub(shs[i]).setY(0).add(fwd));
-      const gl = this.glove[i]; gl.position.copy(wr); orient(gl, UP.clone().addScaledVector(fwd, -.3), wr.clone().sub(el)); gl.thumb.position.x = (i ? 1 : -1) * (s.stance === 'southpaw' ? -1 : 1) * 4.1;
-    }
+    this.armC = { shs: [shL, shR], poles: [poleFor(0), poleFor(1)], fwd, chest, south: s.stance === 'southpaw', clinch: s.state === 'clinch', free: lie < .3 && sit < .3 };
+    this.arms([gL, gR]);
     // ---- legs via IK (knees forward and a touch out)
     const hipL = hip.clone().addScaledVector(lead, 6.5 * G).addScaledVector(fwd, 1), hipR = hip.clone().addScaledVector(lead, -6.5 * G).addScaledVector(fwd, -1);
     const feet = [fL, fR], hips = [hipL, hipR];
@@ -2490,6 +2510,7 @@ function frame(now) {
     const opHead = o.jHead || V(os.x, 88, os.z), opBody = o.jBody || V(os.x, 66, os.z);
     boxers[i].pose(snap.f[i], { x: os.x, z: os.z, head: opHead, chest: o.jChest, col: o.col }, opBody, dt, corners[i]);
   }
+  boxers[0].settle(boxers[1].col); boxers[1].settle(boxers[0].col);
   ref.update(dt, fight, boxers, snap);
   tickSpray(dt); updCam(dt);
   fight.f.forEach((X, i) => { const el = $('hb' + i); if (el) el.style.width = clamp(X.head / Math.max(1, X.headMax) * 100, 0, 100) + '%'; });
