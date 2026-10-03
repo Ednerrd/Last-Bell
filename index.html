@@ -1,5 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7dfd0" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#15110e" media="(prefers-color-scheme: dark)">
 <title>Last Bell</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1531,7 +1532,6 @@ function p4p(save) {
   const P = save.player; const out = [];
   save.world.stars.forEach(s => out.push({ name: s.name, div: DIVS[s.div].name, score: s.rating + s.belts * 2.5 + (s.unbeaten ? 3 : 0), belts: s.belts }));
   LEGENDS.forEach((L, d) => { if (d !== save.world.div) out.push({ name: L.name, div: DIVS[d].name, score: L.rating + 3, belts: 0 }); });
-  const champs = new Set(Object.values(save.world.belts));
   save.world.roster.slice(0, 6).forEach(f => { const b = beltsOf(save, f.id).length; out.push({ name: f.name, div: DIVS[save.world.div].name, score: f.rating + b * 2.5 + (f.record.l === 0 ? 3 : 0), belts: b }); });
   const pr = playerRank(save);
   if (pr <= 15) out.push({ name: P.name, div: DIVS[P.div].name, score: ovr(P.stats) + P.belts.length * 2.5 + (P.record.l === 0 && P.record.w > 12 ? 3 : 0) - (pr > 5 ? 3 : 0), belts: P.belts.length, isPlayer: true });
@@ -2970,7 +2970,7 @@ function renderCreate() {
   Render.portrait($('#pv'), D.look, { stance: D.stance, guard: D.guard });
   const keepName = () => { D.name = $('#inName').value; D.nick = $('#inNick').value; D.nameLocked = true; };
   $('#inName').oninput = keepName; $('#inNick').oninput = keepName;
-  $('#inDiv').onchange = e => { D.div = +e.target.value; D.look.build = DIVS[D.div].build; renderCreate(); };
+  $('#inDiv').onchange = e => { const to = +e.target.value; D.look.build *= DIVS[to].build / DIVS[D.div].build; D.div = to; renderCreate(); }; // keeps his own size within the division
 }
 ACT.toTitle = () => titleScreen();
 ACT.mode = d => { const k = { slot: draft.slot, name: draft.name, nick: draft.nick, nameLocked: draft.nameLocked, div: draft.div, style: draft.style, guard: draft.guard, look: draft.look, lookLocked: true }; draft = rollDraft(d.v, k); renderCreate(); };
@@ -2989,7 +2989,6 @@ ACT.pm = d => {
 ACT.startCareer = () => {
   const D = draft; const name = (D.name || '').trim() || 'No Name';
   const pot = {}; STATS.forEach(k => pot[k] = Math.min(97, D.stats[k] + D.potAdd[k]));
-  D.look.build = DIVS[D.div].build * (D.look.build ? 1 : 1);
   save = newCareer({ name, nick: (D.nick || '').trim(), div: D.div, style: D.style, guard: D.guard, stance: D.stance, stats: Object.assign({}, D.stats), pot, look: D.look, age: ri(19, 22) });
   cur = D.slot; persist(); hub();
 };
