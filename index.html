@@ -1870,6 +1870,8 @@ const Render = (() => {
     return { x: a.x + Math.cos(ang) * l1, y: a.y + Math.sin(ang) * l1 };
   }
   const L = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  // the jab: no wind-up, snaps out by contact (60% of the punch), snaps straight back
+  const jabK = p => p < .2 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .2) / .4, 3) : p < .8 ? 1 - ease((p - .6) / .2) : 0;
   const bez = (a, c, b, t) => ({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
   function shade(hex, f) {
     const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
@@ -2018,6 +2020,7 @@ const Render = (() => {
     if (v.aT && J.dp === 0 && J.twist) {
       const pl = PUNCH[v.aT].arm === 'lead'; const lsh = southpaw ? shN : shF, rsh = southpaw ? shF : shN;
       const fw = pl ? lsh : rsh, bk = pl ? rsh : lsh; fw.x += 5 * J.twist; bk.x -= 3 * J.twist; fw.y -= 1.5 * J.twist;
+      if (PUNCH[v.aT].cat === 'jab' && !v.feint) { const jk = jabK(v.aP); fw.x += 7 * jk; fw.y -= 2.2 * jk; } // lead shoulder rolls forward and up over the chin
     }
     let trail = null, stretch = 0, trailNear = false;
     const gd = v.guard || 'standard', N = J.neck, tir = v.tired || 0;
@@ -2056,7 +2059,7 @@ const Render = (() => {
     // a worn-down guard sags and comes apart, a tired fighter's hands drop
     const sag = tir * (gd === 'handslow' ? 10 : 12) + (1 - gi) * 4;
     leadG.y += sag; rearG.y += sag * .85; leadG.x += (1 - gi) * 3.5; rearG.y += (1 - gi) * 2;
-    if (v.walk) { const sw = Math.sin((v.gait || 0) * .2) * 5; leadG = { x: J.hip.x + 10 + sw, y: J.hip.y - 4 }; rearG = { x: J.hip.x + 2 - sw, y: J.hip.y - 2 }; }
+    if (v.walk) { const sw = Math.sin((v.gait || 0) * .2) * 4 * Math.min(1, (v.mv || 0) / 30); leadG = { x: J.hip.x + 5 + sw, y: J.hip.y + 13 }; rearG = { x: J.hip.x + 1 - sw, y: J.hip.y + 14 }; } // arms hang loose by his thighs, swinging with the walk
     if (J.sit > 0) { const s2 = ease(J.sit); leadG = L(leadG, { x: J.hip.x + 24, y: J.hip.y - 4 }, s2); rearG = L(rearG, { x: J.hip.x + 18, y: J.hip.y - 1 }, s2); }
     if (v.state === 'clinch') {
       // tie-up: one arm over and around his back, the other dug in underneath; they wrestle a little for position
@@ -2096,8 +2099,10 @@ const Render = (() => {
         T = { x: T.x, y: clamp(chinY, sh.y - 6, sh.y + 16) };
       }
       const reach = S.arm * 2 * .97; let dx = T.x - sh.x, dy = T.y - sh.y, d = Math.hypot(dx, dy);
-      if (d > reach) T = { x: sh.x + dx / d * reach, y: sh.y + dy / d * reach };
+      if (P.cat === 'jab' && !v.feint && d > 1) { const go = Math.min(reach, d + 14); T = { x: sh.x + dx / d * go, y: sh.y + dy / d * go }; } // punch through him: the arm straightens
+      else if (d > reach) T = { x: sh.x + dx / d * reach, y: sh.y + dy / d * reach };
       const kOf = p => v.feint ? Math.sin(Math.min(1, p) * Math.PI) * .35
+        : P.cat === 'jab' ? jabK(p)
         : p < .35 ? -.18 * ease(p / .35) : p < .6 ? -.18 + 1.18 * (1 - Math.pow(1 - (p - .35) / .25, 3)) : 1 - ease((p - .6) / .4);
       const hookC = { x: G.x - 9, y: (G.y + T.y) / 2 - 3 }, upC = { x: sh.x + 4, y: sh.y + 44 };
       const flick = gd === 'handslow' && P.kind === 'straight' && G.y > sh.y + 8, flickC = { x: (G.x + T.x) / 2 + 6, y: G.y + 4 }; // whips up from the hip
@@ -2128,6 +2133,7 @@ const Render = (() => {
     // the elbow comes forward across the body toward us, so from the side the upper arm looks short; a punch stretches it back out
     const elbow = (sh, g, b, lead) => {
       const f = !tuck || b === 1 || J.dp > 0 ? 0 : punchLead === lead ? 1 - clamp(punchK * 1.6, 0, 1) : 1;
+      if (v.walk && !(J.sit > .05)) { const e1 = ik(sh, g, S.arm, S.arm, 1), e2 = ik(sh, g, S.arm, S.arm, -1); return e1.x > e2.x ? e1 : e2; } // hanging arm: a soft bend, elbow just in front
       if (f <= 0) return ik(sh, g, S.arm, S.arm, b);
       const l1 = S.arm * (1 - .4 * f), e1 = ik(sh, g, l1, S.arm, 1), e2 = ik(sh, g, l1, S.arm, -1); return e1.y > e2.y ? e1 : e2;
     };
