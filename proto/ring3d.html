@@ -2127,6 +2127,133 @@ class Boxer {
   }
 }
 
+/* ================= the referee ================= */
+class Ref {
+  constructor() {
+    const skin = std(0xc89a78, .62), shirt = std(0xece8e0, .75), pants = std(0x16161a, .7), shoe = std(0x0a0a0a, .3), tie = std(0x0b0b0d, .5);
+    const g = this.g = new THREE.Group(); scene.add(g);
+    const add = (geo, m) => { const o = shade(new THREE.Mesh(geo, m)); g.add(o); return o; };
+    const TH = 24 * 1.04, SH = 23 * 1.04, UA = 18.5, FA = 16.5; this.len = { TH, SH, UA, FA };
+    const prof = [[.01, 0], [.92, 0], [.95, .2], [.93, .45], [.95, .7], [1, .85], [.86, .94], [.4, 1]].map(([r, y]) => new THREE.Vector2(r, y));
+    this.torso = add(new THREE.LatheGeometry(prof, 28), shirt); this.torso.geometry.scale(12.5, 1, 12.5 * .7);
+    this.belt = add(new THREE.CylinderGeometry(11.8, 11.8, 2.4, 24), std(0x2a2420, .4)); this.belt.geometry.scale(1, 1, .72);
+    this.hips = add(new THREE.SphereGeometry(1, 20, 12), pants); this.hips.geometry.scale(11.6, 8, 8.6);
+    this.thigh = [0, 1].map(() => add(limbGeo(TH, 6.6, 5, .4, .3, .4), pants));
+    this.shin = [0, 1].map(() => add(limbGeo(SH, 5, 4.4, 0, .5, .3), pants));
+    this.foot = [0, 1].map(() => add(new THREE.CapsuleGeometry(3.2, 8, 6, 12), shoe));
+    this.delt = [0, 1].map(() => add(new THREE.SphereGeometry(5, 14, 10), shirt));
+    this.upper = [0, 1].map(() => add(limbGeo(UA, 4.8, 4.2, .2, .4, .3), shirt));
+    this.fore = [0, 1].map(() => add(limbGeo(FA, 3.2, 2.6, .7, .25, .3), skin));
+    this.hand = [0, 1].map(() => { const h = add(new THREE.SphereGeometry(2.9, 12, 10), skin); h.scale.set(.8, 1.15, 1); return h; });
+    this.neck = add(new THREE.CylinderGeometry(4.6, 5, 1, 14), skin);
+    const hd = this.head = new THREE.Group(); g.add(hd);
+    const sk = shade(new THREE.Mesh(new THREE.SphereGeometry(8.2, 24, 16), skin)); sk.scale.set(.84, 1.04, .96); hd.add(sk);
+    const jaw = shade(new THREE.Mesh(new THREE.SphereGeometry(6, 16, 12), skin)); jaw.scale.set(.95, .76, 1); jaw.position.set(0, -4.2, 2.3); hd.add(jaw);
+    const nose = shade(new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 8), skin)); nose.position.set(0, -1.4, 7.9); hd.add(nose);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(8.35, 22, 14, 0, Math.PI * 2, 0, Math.PI * .45), std(0x8a8580, .9)); hair.scale.set(.88, 1.06, 1); hair.rotation.x = -.35; hair.position.set(0, .3, -.6); hd.add(hair);
+    for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.7, 8, 6), std(0x1a120c, .3)); e.position.set(s * 2.8, 1, 7.3); hd.add(e); const ear = shade(new THREE.Mesh(new THREE.SphereGeometry(1.6, 10, 8), skin)); ear.scale.set(.5, 1, .8); ear.position.set(s * 7, 0, .3); hd.add(ear); }
+    const bt = new THREE.Group(); g.add(bt); this.tie = bt;
+    for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.ConeGeometry(1.7, 3.4, 4), tie); w.rotation.z = s * Math.PI / 2; w.position.x = s * 1.6; bt.add(w); }
+    this.x = 0; this.z = -60; this.heading = 0; this.side = 1; this.sideT = 4; this.t = 0; this.prev = null; this.mode = 'watch';
+    this.ft = null;
+  }
+  update(dt, F, B, snap) {
+    this.t += dt;
+    const A = snap.f[0], Bs = snap.f[1], mx = (A.x + Bs.x) / 2, mz = (A.z + Bs.z) / 2;
+    const ax = Bs.x - A.x, az = Bs.z - A.z, L = Math.hypot(ax, az) || 1, px = -az / L, pz = ax / L; // perpendicular to their line
+    // the side farther from the camera, so he never stands in front of the action (with a little stickiness)
+    const camS = (camera.position.x - mx) * px + (camera.position.z - mz) * pz > 0 ? -1 : 1;
+    this.sideT -= dt; if (camS !== this.side && this.sideT <= 0) { this.side = camS; this.sideT = 2.5; }
+    let tx, tz, sp = 120, look = V(mx, 0, mz), mode = 'watch';
+    const K = F.kdState;
+    if (F.phase === 'kd' && K) {
+      // beside his chest (he's lying along his heading), on the side away from the camera
+      const bx = B[K.who], c = bx.jChest || V(snap.f[K.who].x, 0, snap.f[K.who].z), hx = Math.sin(bx.heading), hz = Math.cos(bx.heading), lx = hz, lz = -hx;
+      const cs = (camera.position.x - c.x) * lx + (camera.position.z - c.z) * lz > 0 ? -1 : 1;
+      tx = c.x + lx * cs * 30 - hx * 6; tz = c.z + lz * cs * 30 - hz * 6; sp = 160; look = V(c.x, 0, c.z); mode = 'count';
+      this.count = K.count; this.pulse = clamp(K.tick / .95, 0, 1);
+    } else if (F.phase === 'over' && F.result && !F.result.decision && (this.overT = (this.overT || 0) + dt) < 4) {
+      const D = snap.f[1 - F.result.winner];
+      tx = D.x + px * this.side * 30; tz = D.z + pz * this.side * 30; sp = 170; look = V(D.x, 0, D.z); mode = 'wave';
+    } else if (F.phase === 'fight' && (F.clinchT > 0 || A.state === 'clinch')) {
+      tx = mx + px * this.side * 22; tz = mz + pz * this.side * 22; sp = 140; mode = 'break';
+    } else if (F.phase !== 'fight') {
+      tx = RING * .55; tz = -ZR * .62; sp = 60; look = V(0, 0, 0);
+    } else {
+      const off = Math.max(70, L / 2 + 50);
+      tx = mx + px * this.side * off; tz = mz + pz * this.side * off;
+      if (Math.abs(tx) > RING - 6 || Math.abs(tz) > ZR - 6) { const s2 = -this.side, x2 = mx + px * s2 * off, z2 = mz + pz * s2 * off; if (Math.abs(x2) <= RING - 6 && Math.abs(z2) <= ZR - 6) { this.side = s2; tx = x2; tz = z2; } }
+    }
+    if (F.phase !== 'over') this.overT = 0;
+    tx = clamp(tx, -RING + 6, RING - 6); tz = clamp(tz, -ZR + 6, ZR - 6);
+    // move there, never through a fighter
+    const dx = tx - this.x, dz = tz - this.z, dd = Math.hypot(dx, dz);
+    if (dd > 3) { const m = Math.min(dd, sp * dt) / dd; this.x += dx * m; this.z += dz * m; }
+    const keep = [A, Bs].map(f => ({ x: f.x, z: f.z })); for (const bx of B) if (bx.jChest && bx.col) keep.push({ x: bx.jChest.x, z: bx.jChest.z }, { x: bx.col.head.x, z: bx.col.head.z });
+    for (const f of keep) { const ox = this.x - f.x, oz = this.z - f.z, od = Math.hypot(ox, oz), r = mode === 'break' ? 18 : 30; if (od < r && od > .01) { this.x = f.x + ox / od * r; this.z = f.z + oz / od * r; } }
+    this.mode = mode; this.pose(dt, look, B);
+  }
+  pose(dt, look, B) {
+    const pos = V(this.x, 0, this.z);
+    if (!this.prev) this.prev = pos.clone();
+    const vel = pos.clone().sub(this.prev).multiplyScalar(1 / Math.max(dt, 1e-3)); this.prev.copy(pos);
+    const spd = vel.length(), moving = spd > 15;
+    const want = moving && this.mode === 'watch' && pos.distanceTo(look) > 40 && spd > 60 ? Math.atan2(vel.x, vel.z) : Math.atan2(look.x - this.x, look.z - this.z);
+    let dh = want - this.heading; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
+    this.heading += dh * (1 - Math.exp(-7 * dt));
+    const fwd = V(Math.sin(this.heading), 0, Math.cos(this.heading)), left = V(fwd.z, 0, -fwd.x);
+    const crouch = this.mode === 'count' ? 7 : this.mode === 'watch' ? 3 : this.mode === 'break' ? 2 : 0, lean = this.mode === 'count' ? 7 : this.mode === 'break' ? 4 : 2;
+    this.sc = this.sc == null ? crouch : damp(this.sc, crouch, 6, dt); this.sl = this.sl == null ? lean : damp(this.sl, lean, 6, dt);
+    // planted feet (same idea as the fighters)
+    const wantF = [pos.clone().addScaledVector(left, 8).addScaledVector(fwd, 2), pos.clone().addScaledVector(left, -8).addScaledVector(fwd, -2)];
+    const ft = this.ft = this.ft || wantF.map(f => ({ at: f.clone(), from: f.clone(), to: f.clone(), t: 1 }));
+    const vl = spd > 4 ? vel.clone().normalize() : fwd; let lift = 0;
+    wantF.forEach((w, i) => {
+      const f = ft[i], o = ft[1 - i], aim = w.clone().addScaledVector(vl, spd > 4 ? clamp(spd * .12, 0, 16) : 0);
+      if (f.t >= 1) { const far = f.at.distanceTo(aim); if (far > 7 && (o.t >= .6 || far > 26)) { f.from.copy(f.at); f.to.copy(aim); f.t = 0; } }
+      else f.to.lerp(aim, 1 - Math.exp(-10 * dt));
+      if (f.t < 1) { f.t = Math.min(1, f.t + dt / .2); f.at.lerpVectors(f.from, f.to, ease(f.t)); f.at.y = Math.sin(Math.PI * f.t) * 3.5; lift = Math.max(lift, f.at.y); } else f.at.y = 0;
+    });
+    const hip = pos.clone().addScaledVector(UP, 51 - this.sc - lift * .2).addScaledVector(fwd, -this.sl * .3);
+    const chest = hip.clone().addScaledVector(UP, 30).addScaledVector(fwd, this.sl);
+    const spineUp = chest.clone().sub(hip).normalize();
+    const head = chest.clone().addScaledVector(spineUp, 11).addScaledVector(fwd, 1.5);
+    const shs = [chest.clone().addScaledVector(left, 12).addScaledVector(UP, -3), chest.clone().addScaledVector(left, -12).addScaledVector(UP, -3)];
+    // hands
+    let hands;
+    const sw = Math.sin((ft[0].t < 1 ? ft[0].t : 0) * Math.PI) * 6 - Math.sin((ft[1].t < 1 ? ft[1].t : 0) * Math.PI) * 6;
+    if (this.mode === 'count') {
+      const up = this.pulse < .25 ? 1 - this.pulse / .25 : this.pulse > .8 ? (this.pulse - .8) / .2 : 0; // chop down on each count
+      hands = [shs[0].clone().addScaledVector(fwd, 16).addScaledVector(UP, -16 + up * 26).addScaledVector(left, -3), hip.clone().addScaledVector(fwd, 12).addScaledVector(left, -9).addScaledVector(UP, -16)];
+    } else if (this.mode === 'wave') {
+      const w = Math.sin(this.t * 11) * 13;
+      hands = [shs[0].clone().addScaledVector(UP, 20).addScaledVector(left, -6 + w).addScaledVector(fwd, 6), shs[1].clone().addScaledVector(UP, 20).addScaledVector(left, 6 - w).addScaledVector(fwd, 6)];
+    } else if (this.mode === 'break' && B[0].jChest && B[1].jChest) {
+      hands = [0, 1].map(i => { const c = B[i].jChest.clone(), toMe = pos.clone().setY(c.y).sub(c).normalize(); return c.addScaledVector(toMe, 9).addScaledVector(UP, 2); });
+      if (hands[0].distanceTo(shs[0]) + hands[1].distanceTo(shs[1]) > hands[0].distanceTo(shs[1]) + hands[1].distanceTo(shs[0])) hands.reverse();
+    } else hands = [hip.clone().addScaledVector(fwd, 9 + sw).addScaledVector(left, 9).addScaledVector(UP, -6), hip.clone().addScaledVector(fwd, 9 - sw).addScaledVector(left, -9).addScaledVector(UP, -6)];
+    this.hs_ = this.hs_ || hands.map(h => h.clone()); hands.forEach((h, i) => dampV(this.hs_[i], h, this.mode === 'count' ? 22 : 10, dt));
+    for (let i = 0; i < 2; i++) {
+      const out = i ? left.clone().negate() : left, [el, wr] = ik(shs[i], this.hs_[i], this.len.UA, this.len.FA, UP.clone().negate().addScaledVector(out, .5).addScaledVector(fwd, -.4));
+      placeLimb(this.upper[i], shs[i], el, fwd); placeLimb(this.fore[i], el, wr, fwd); this.delt[i].position.copy(shs[i]);
+      this.hand[i].position.copy(wr).addScaledVector(wr.clone().sub(el).normalize(), 2.5);
+    }
+    for (let i = 0; i < 2; i++) {
+      const hp = hip.clone().addScaledVector(left, i ? -6 : 6), ank = ft[i].at.clone().setY(ft[i].at.y + 5.5);
+      const [kn, an] = ik(hp, ank, this.len.TH, this.len.SH, fwd.clone().addScaledVector(i ? left.clone().negate() : left, .2));
+      placeLimb(this.thigh[i], hp, kn, fwd); placeLimb(this.shin[i], kn, an, fwd);
+      this.foot[i].position.copy(an).addScaledVector(fwd, 4).setY(Math.max(3, an.y - 2.5)); orient(this.foot[i], fwd, UP); this.foot[i].scale.set(.95, 1, .7);
+    }
+    this.torso.position.copy(hip).addScaledVector(spineUp, 2); orient(this.torso, spineUp, fwd); this.torso.scale.set(1, chest.distanceTo(hip) + 1, 1);
+    this.belt.position.copy(hip).addScaledVector(spineUp, 2.5); orient(this.belt, spineUp, fwd);
+    this.hips.position.copy(hip); orient(this.hips, spineUp, fwd);
+    placeSeg(this.neck, chest.clone().addScaledVector(spineUp, -2), head.clone().addScaledVector(UP, -4));
+    this.head.position.copy(head); orient(this.head, UP.clone().lerp(spineUp, .5), fwd.clone().addScaledVector(UP, this.mode === 'count' ? -.35 : -.05));
+    this.tie.position.copy(chest).addScaledVector(spineUp, 2.5).addScaledVector(fwd, 8.2); orient(this.tie, spineUp, fwd);
+  }
+}
+const ref = new Ref();
+
 /* ================= sweat / impact spray ================= */
 const SPRAY = []; const sprayM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .85 });
 for (let i = 0; i < 60; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(.7, 6, 4), sprayM.clone()); m.visible = false; scene.add(m); SPRAY.push({ m, v: V(0, 0, 0), life: 0 }); }
@@ -2167,6 +2294,7 @@ function events() {
       if (d && d.jHead && e.zone !== 'body') spray(d.jHead, d.jHead.clone().sub(boxers[1 - d.side].jChest || d.jHead).setY(0).normalize(), big ? 10 : 4, big ? 1 : .4);
       if (big) { shake = Math.max(shake, .35); if (speed === 1) hitstop = e.crit ? .09 : .05; }
     }
+    if (e.type === 'count' && e.n >= 1) bigText(String(e.n), fight.f[e.d] ? fight.f[e.d].sheet.name : '', 900);
     if (e.type === 'knockdown') { bigText('Down!', fight.f[e.d] ? fight.f[e.d].sheet.name + ' is down' : '', 1800); shake = .8; if (speed === 1) hitstop = .14; }
     if (e.type === 'roundEnd' || e.type === 'corner') {}
   }
@@ -2270,6 +2398,7 @@ function frame(now) {
     const opHead = o.jHead || V(os.x, 88, os.z), opBody = o.jBody || V(os.x, 66, os.z);
     boxers[i].pose(snap.f[i], { x: os.x, z: os.z, head: opHead, chest: o.jChest, col: o.col }, opBody, dt, corners[i]);
   }
+  ref.update(dt, fight, boxers, snap);
   tickSpray(dt); updCam(dt);
   fight.f.forEach((X, i) => { const el = $('hb' + i); if (el) el.style.width = clamp(X.head / Math.max(1, X.headMax) * 100, 0, 100) + '%'; });
   const left = Math.max(0, ROUND_LEN - fight.clock); $('ck').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
