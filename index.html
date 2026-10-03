@@ -110,6 +110,11 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .offer{padding:16px;margin:12px 0}.offer.title-fight{box-shadow:0 0 0 2px var(--accent)}
 .ol{color:var(--accent);font-weight:700;margin-bottom:8px}
 .om{display:flex;gap:12px;align-items:center}.om h3{font-size:24px;text-transform:uppercase}
+.read{font-size:15px;margin:10px 0 0;padding:8px 10px;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent);border-radius:3px}.read b{color:var(--accent)}
+.tape{margin:10px 0 0}.tape summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:15px;padding:4px 0;list-style:none}.tape summary::-webkit-details-marker{display:none}.tape summary:before{content:'▸ ';}.tape[open] summary:before{content:'▾ '}
+.tt{display:grid;grid-template-columns:1.6em 1fr max-content 1fr 1.6em;gap:3px 6px;align-items:center;font-size:14px;margin-top:6px}.tt .h{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.tt .l{text-align:center;color:var(--mute);white-space:nowrap;font-size:13px}.tt .v{text-align:center;font-variant-numeric:tabular-nums}.tt .v.w{font-weight:700;color:var(--ink)}.tt .v:not(.w){color:var(--mute)}
+.tt .b{height:7px;background:var(--panel2);border-radius:2px;position:relative;overflow:hidden}.tt .b i{position:absolute;top:0;bottom:0;border-radius:2px}.tt .b.me i{right:0;background:var(--blue)}.tt .b.him i{left:0;background:var(--red)}
 .of{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .of .btn{width:auto;padding:11px 26px}.purse{font-family:var(--disp);font-size:26px;display:block;color:var(--good)}.of small{color:var(--mute)}
 .opts{display:grid;gap:8px}.opts.two{grid-template-columns:1fr 1fr}
@@ -1773,8 +1778,9 @@ function liveStats(f) {
   const sh = f.rating - raw; for (const k of STATS) st[k] = clamp(st[k] + sh, 20, 99);
   return st;
 }
+function oppNow(save, offer) { return offer.opp.club ? offer.opp : (findFighter(save, offer.oppId) || offer.opp); }
 function oppSheet(save, offer) {
-  const o = offer.opp.club ? offer.opp : (findFighter(save, offer.oppId) || offer.opp);
+  const o = oppNow(save, offer);
   return { name: o.name, nick: o.nick, style: o.style, guard: o.guard || offer.opp.guard || 'standard', stance: o.stance, stats: liveStats(o), look: o.look, wear: 0, exp: o.record ? o.record.w + o.record.l + o.record.d : 0 };
 }
 function playerIQ(save) { const P = save.player; return Math.round(ringIQ({ stats: P.stats, exp: P.record.w + P.record.l + P.record.d })); }
@@ -2906,6 +2912,29 @@ const GUARD_SCOUT = {
   cross: 'Arms locked over his face. The ribs and liver are wide open.',
   handslow: 'Hands down, eyes up. Sharp straight shots, then make him work tired.'
 };
+/* ---------- tale of the tape: his numbers next to yours, and what the corner makes of it ---------- */
+const TAPE_HIM = { power: 'he hits harder than you', speed: 'his hands are quicker', accuracy: "he's the sharper puncher", defense: "he's harder to hit", footwork: 'he moves better', chin: 'he takes a shot better', body: 'he takes the body better', stamina: "he's got the bigger gas tank", recovery: 'he bounces back quicker', heart: "he won't break easy" };
+const TAPE_YOU = { power: 'you hit harder', speed: 'your hands are quicker', accuracy: "you're the sharper puncher", defense: "you're harder to hit", footwork: 'you move better', chin: 'you take a shot better', body: 'you take the body better', stamina: "you've got more gas", recovery: 'you bounce back quicker', heart: "you've got more heart" };
+const TAPE_HOLE = { power: 'No real pop, so you can walk through him.', speed: 'Slow hands. Beat him to the punch.', accuracy: "He's wild. Make him miss and make him pay.", defense: "He's there to be hit.", footwork: 'Flat feet. Cut the ring off.', chin: "Chin's a question. Test it early.", body: 'Soft downstairs. Dig to the body.', stamina: 'He fades late. Make it a long night.', recovery: 'Once he is hurt he stays hurt. Jump on him.', heart: 'He folds when it gets ugly. Break his will.' };
+const cap1 = t => t[0].toUpperCase() + t.slice(1);
+function cornerRead(me, him) {
+  const gap = ovr(him) - ovr(me);
+  const verdict = gap >= 8 ? "On paper he's a lot better than you." : gap >= 4 ? "He's the better fighter on paper." : gap > -4 ? 'Even fight on paper.' : gap > -8 ? "You're the better fighter on paper." : 'You should handle him.';
+  let hk = null, yk = null;
+  for (const k of STATS) { const d = him[k] - me[k]; if (d >= 4 && (!hk || d > him[hk] - me[hk])) hk = k; if (d <= -4 && (!yk || d < him[yk] - me[yk])) yk = k; }
+  const edge = hk && yk ? cap1(TAPE_HIM[hk]) + ', but ' + TAPE_YOU[yk] + '.' : hk ? cap1(TAPE_HIM[hk]) + '.' : yk ? cap1(TAPE_YOU[yk]) + '.' : '';
+  const avg = STATS.reduce((t, k) => t + him[k], 0) / STATS.length;
+  let lo = null; for (const k of STATS) if (him[k] - avg <= -6 && k !== yk && (!lo || him[k] < him[lo])) lo = k;
+  return [verdict, edge, lo ? TAPE_HOLE[lo] : ''].filter(Boolean).join(' ');
+}
+function tapeHtml(me, him, open) {
+  const rows = STATS.map(k => {
+    const a = Math.round(me[k]), b = Math.round(him[k]);
+    return `<span class="v ${a > b ? 'w' : ''}">${a}</span><span class="b me"><i style="width:${a}%"></i></span><span class="l">${STAT_LABEL[k]}</span><span class="b him"><i style="width:${b}%"></i></span><span class="v ${b > a ? 'w' : ''}">${b}</span>`;
+  }).join('');
+  return `<details class="tape" ${open ? 'open' : ''}><summary>Tale of the tape</summary><div class="tt"><span class="h" style="grid-column:1/3">You</span><span></span><span class="h" style="grid-column:4/6;text-align:right">Him</span>${rows}
+    <span class="v w">${ovr(me)}</span><span></span><span class="l"><b>Overall</b></span><span></span><span class="v w">${ovr(him)}</span></div></details>`;
+}
 function gLabel(g) { return (GUARDS[g] || GUARDS.standard).label; }
 // pot: his ceiling stats, if known. Fit at the ceiling is where the guard is headed
 function guardCard(stats, g, iq, pot) {
@@ -3193,6 +3222,8 @@ ACT.offers = () => {
         <h3>${esc(f.name)}</h3>${f.nick ? `<div class="nick">"${esc(f.nick)}"</div>` : ''}
         <div class="mute">${rec(f.record)} (${f.record.ko} KO), ${fr}, OVR ${Math.round(f.rating)}</div>
         <div class="mute">${STYLES[f.style].label}, ${gLabel(f.guard).toLowerCase()}, ${f.stance}, age ${Math.floor(f.age)}</div></div></div>
+      <p class="read"><b>Corner:</b> ${esc(cornerRead(save.player.stats, liveStats(f)))}</p>
+      ${tapeHtml(save.player.stats, liveStats(f))}
       <div class="of"><div><span class="purse">${money(o.purse)}</span><small>${o.rounds} rounds at ${esc(VENUE_NAMES[o.venue])}</small></div><button class="btn" data-act="sign" data-i="${i}">Sign</button></div>
     </div>`;
   }).join('');
@@ -3218,6 +3249,7 @@ function campScreen() {
   show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight camp</span><span class="cash">${money(P.money)}</span></div>
     <p class="mute">Eight weeks to get ready for ${esc(o.opp.name)} (${STYLES[o.opp.style].label.toLowerCase()}, ${gLabel(o.opp.guard).toLowerCase()}, OVR ${Math.round(o.opp.rating)}).</p>
     <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
+    ${tapeHtml(P.stats, liveStats(oppNow(save, o)))}
     <h4>Gym</h4><div class="opts">${GYMS.map((g, i) => `<button class="opt ${plan.gym === i ? 'on' : ''}" data-act="pgym" data-i="${i}" ${g.cost > P.money ? 'disabled' : ''}><b>${g.name}</b><span>${g.cost ? money(g.cost) + ' per camp' : 'Free'}</span><small>${g.note}</small></button>`).join('')}</div>
     <h4>Style and stance <span class="pts">a change uses a focus slot</span></h4>
     ${campStyles(P).length < 2 ? '' : `<div class="chips wrap">${campStyles(P).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>`}
