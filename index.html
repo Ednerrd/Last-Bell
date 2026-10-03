@@ -2148,14 +2148,16 @@ const Render = (() => {
       const sh = isLead ? (southpaw ? shN : shF) : (southpaw ? shF : shN);
       const G = isLead ? leadG : rearG;
       let T = P.zone === 'head' ? tgt.head : tgt.body;
-      // straights to the head travel flat: strip most of the depth lift, aim at the chin, cap the rise above the shoulder
-      if (P.kind === 'straight' && P.zone === 'head') {
-        const chinY = T.y - (tgt.dzy || 0) * .7 + S.headR * .85;
-        T = { x: T.x, y: clamp(chinY, sh.y - 6, sh.y + 16) };
-      }
+      // the knuckles stop on his face or ribs, not inside them. Straights travel flat to the chin (depth lift stripped,
+      // capped above the shoulder), hooks land on the side of the jaw, uppercuts come up under the chin
+      const gr = 7.2 * Math.sqrt(S.B), hr = tgt.hr || 10.5;
+      if (P.zone === 'head') {
+        if (P.kind === 'straight') T = { x: T.x - hr * .8 - gr * .8, y: clamp(T.y - (tgt.dzy || 0) * .7 + hr * .5, sh.y - 6, sh.y + 16) };
+        else if (P.kind === 'hook') T = { x: T.x - hr * .5 - gr * .55, y: T.y + hr * .35 };
+        else T = { x: T.x - hr * .55 - gr * .45, y: T.y + hr * .8 + gr * .35 };
+      } else T = { x: T.x - (tgt.tw || 11) - gr * .7, y: T.y };
       const reach = S.arm * 2 * .97; let dx = T.x - sh.x, dy = T.y - sh.y, d = Math.hypot(dx, dy);
-      if (P.cat === 'jab' && !v.feint && d > 1) { const go = Math.min(reach, d + 14); T = { x: sh.x + dx / d * go, y: sh.y + dy / d * go }; } // punch through him: the arm straightens
-      else if (d > reach) T = { x: sh.x + dx / d * reach, y: sh.y + dy / d * reach };
+      if (d > reach) T = { x: sh.x + dx / d * reach, y: sh.y + dy / d * reach };
       const kOf = p => v.feint ? Math.sin(Math.min(1, p) * Math.PI) * .35
         : P.cat === 'jab' ? jabK(p)
         : p < .35 ? -.18 * ease(p / .35) : p < .6 ? -.18 + 1.18 * (1 - Math.pow(1 - (p - .35) / .25, 3)) : 1 - ease((p - .6) / .4);
@@ -2192,7 +2194,8 @@ const Render = (() => {
       if (f <= 0) return ik(sh, g, S.arm, S.arm, b);
       const l1 = S.arm * (1 - .4 * f), e1 = ik(sh, g, l1, S.arm, 1), e2 = ik(sh, g, l1, S.arm, -1); return e1.y > e2.y ? e1 : e2;
     };
-    return { shN, shF, gN, gF, eN: elbow(shN, gN, bN, southpaw), eF: elbow(shF, gF, bF, !southpaw), trail, trailNear, stretch };
+    return { shN, shF, gN, gF, eN: elbow(shN, gN, bN, southpaw), eF: elbow(shF, gF, bF, !southpaw), trail, trailNear, stretch,
+      redo: A => { A.eN = elbow(A.shN, A.gN, bN, southpaw); A.eF = elbow(A.shF, A.gF, bF, !southpaw); } };
   }
   function limb(a, b, w, col) {
     ctx.lineCap = 'round';
@@ -2426,6 +2429,29 @@ const Render = (() => {
   }
   function toLocal(v, p) { const q = P3(v.x, v.z); return { x: (p.x - q.x) / q.s * v.dir, y: (p.y - q.y) / q.s }; }
   function toWorld(v, p) { const q = P3(v.x, v.z); return { x: q.x + p.x * v.dir * q.s, y: q.y + p.y * q.s }; }
+  // second pass, after both men are posed: his gloves come off where the other man actually is now
+  // (head, chest, gloves) and the arms are solved again
+  function settle(f, J, AR, i) {
+    const v = f[i], o = f[1 - i], A = AR[i], Jo = J[1 - i], Ao = AR[1 - i];
+    const busy = x => x.state === 'down' || x.state === 'slump' || x.state === 'clinch' || x.walk || x.sit;
+    if (busy(v) || busy(o) || J[i].dp > 0 || Jo.dp > 0) return;
+    const loc = p => toLocal(v, toWorld(o, p)), gr = 7.2 * Math.sqrt(J[i].S.B), gro = 7.2 * Math.sqrt(Jo.S.B);
+    const h = loc(Jo.head), hp = loc(Jo.hip), nk = loc(Jo.neck), og = [loc(Ao.gN), loc(Ao.gF)], tw = 10.5 * Math.pow(Jo.S.B, 1.5);
+    // push g out to distance R from c, always back toward his own side (never through the other man)
+    const out = (g, c, R) => { let dx = g.x - c.x, dy = g.y - c.y; const d = Math.hypot(dx, dy); if (d >= R) return g; if (dx > 0) dx = -dx; if (d < .01) { dx = -1; dy = 0; } const n = Math.hypot(dx, dy); return { x: c.x + dx / n * R, y: c.y + dy / n * R }; };
+    let moved = false;
+    for (const k of ['gN', 'gF']) {
+      let g = A[k];
+      const ux = nk.x - hp.x, uy = nk.y - hp.y, t = clamp(((g.x - hp.x) * ux + (g.y - hp.y) * uy) / (ux * ux + uy * uy), 0, 1);
+      for (const c of og) g = out(g, c, (gr + gro) * .78);
+      g = out(g, { x: hp.x + ux * t, y: hp.y + uy * t }, tw + gr * .6);
+      g = out(g, h, Jo.S.headR + gr * .85);
+      if (g !== A[k]) { moved = true; A[k] = g; }
+    }
+    if (!moved) return;
+    A.redo(A);
+    if (A.trail) A.trail[A.trail.length - 1] = A.trailNear ? A.gN : A.gF;
+  }
   // a punch that can't reach from where he stands brings him in with it (the view keeps them apart, see spreadView):
   // the distance is read when the punch starts, he steps in on the load, holds through contact and steps back out
   function lunge(v, J, o, Jo, dt) {
@@ -2676,7 +2702,16 @@ const Render = (() => {
     const J = f.map((v, i) => body(v, looks[i], view.t));
     f.forEach((v, i) => lunge(v, J[i], f[1 - i], J[1 - i], dt));
     const headW = f.map((v, i) => toWorld(v, J[i].head)), bodyW = f.map((v, i) => toWorld(v, L(J[i].hip, J[i].neck, .45)));
-    const AR = f.map((v, i) => { const o = 1 - i, q = P3(v.x, v.z), qo = P3(f[o].x, f[o].z); return arms(v, looks[i], J[i], { head: toLocal(v, headW[o]), body: toLocal(v, bodyW[o]), dzy: (qo.y - q.y) / q.s }, view.t); });
+    // he aims where the man is; once the man starts to slip, duck, pull or roll, the aim stays put and the punch misses
+    const aim = f.map((v, i) => {
+      const o = 1 - i, sm = v._sm || {}, ev = f[o].def && f[o].def !== 'block';
+      if (!v.aT || sm.amA !== v.aT || v.aP < (sm.amP || 0) - .05 || !sm.am) { sm.amA = v.aT; sm.am = null; }
+      sm.amP = v.aP;
+      if (!sm.am || !ev || v.aP < .12) sm.am = { h: headW[o], b: bodyW[o] };
+      return sm.am;
+    });
+    const AR = f.map((v, i) => { const o = 1 - i, q = P3(v.x, v.z), qo = P3(f[o].x, f[o].z); return arms(v, looks[i], J[i], { head: toLocal(v, aim[i].h), body: toLocal(v, aim[i].b), dzy: (qo.y - q.y) / q.s, hr: J[o].S.headR, tw: 10.5 * Math.pow(J[o].S.B, 1.5) }, view.t); });
+    settle(f, J, AR, 0); settle(f, J, AR, 1);
     if (view.ev) for (const e of view.ev) if (e.type === 'hit') spawnHit(e, f, J);
     // depth sort: far side first; a downed fighter goes under a standing one at the same depth
     const items = [0, 1].map(i => ({ z: (f[i].z || 0) - (f[i].state === 'down' ? 6 : 0), draw: () => drawFighter(f[i], looks[i], J[i], AR[i]) }));
