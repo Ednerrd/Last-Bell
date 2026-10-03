@@ -2462,7 +2462,9 @@ const Render = (() => {
       const ux = nk.x - hp.x, uy = nk.y - hp.y, t = clamp(((g.x - hp.x) * ux + (g.y - hp.y) * uy) / (ux * ux + uy * uy), 0, 1);
       if (k !== pk || o.def === 'block') for (const c of og) g = out(g, c, (gr + gro) * .78);
       g = out(g, { x: hp.x + ux * t, y: hp.y + uy * t }, tw + gr * .6);
-      g = out(g, h, Jo.S.headR + gr * .85);
+      if (k === pk && P.kind === 'straight' && P.zone === 'head') { const R = Jo.S.headR + gr * .85, dy = g.y - h.y;
+        if (Math.abs(dy) < R && Math.hypot(g.x - h.x, dy) < R) g = { x: h.x - Math.sqrt(R * R - dy * dy), y: g.y }; }
+      else g = out(g, h, Jo.S.headR + gr * .85);
       if (g !== A[k]) { moved = true; A[k] = g; }
     }
     if (!moved) return;
@@ -2470,14 +2472,16 @@ const Render = (() => {
     if (A.trail) A.trail[A.trail.length - 1] = A.trailNear ? A.gN : A.gF;
   }
   // heads and chests never overlap on screen: if leaning, ducking or stepping in puts them into each other,
-  // both lean back out by half (render only; not in a clinch or a knockdown)
+  // both lean back out by half, or all on the other man while one is landing a straight (render only; not in a clinch or a knockdown)
   function bodyPush(f, J) {
     const busy = x => x.state === 'down' || x.state === 'slump' || x.state === 'clinch' || x.walk || x.sit;
     if (busy(f[0]) || busy(f[1]) || J[0].dp > 0 || J[1].dp > 0) return;
     const front = (v, Jv) => { const G = Math.pow(Jv.S.B, 1.5), q = P3(v.x, v.z), fx = Math.max(Jv.head.x + Jv.S.headR * .9, Jv.neck.x + 9 * G, L(Jv.hip, Jv.neck, .66).x + 11 * G); return q.x + fx * v.dir * q.s; };
     const u = f[1].x >= f[0].x ? 1 : -1, ov = (front(f[0], J[0]) - front(f[1], J[1])) * u + 3;
     if (ov <= 0) return;
-    J.forEach((Jv, i) => { const m = Math.min(ov / 2, 14); for (const k of ['hip', 'neck', 'head', 'footF', 'footB']) Jv[k] = { x: Jv[k].x - m * (k === 'footB' ? .4 : k === 'footF' ? .7 : 1), y: Jv[k].y }; });
+    const st = v => { const P = v.aT && PUNCH[v.aT]; return P && P.kind === 'straight' && P.zone === 'head' && !v.feint && v.aP > .3 && v.aP < .8; };
+    const sh = [st(f[0]) ? 0 : st(f[1]) ? 1 : .5]; sh[1] = 1 - sh[0];
+    J.forEach((Jv, i) => { const m = Math.min(ov * sh[i], sh[i] > .5 ? 20 : 14); if (m <= 0) return; for (const k of ['hip', 'neck', 'head', 'footF', 'footB']) Jv[k] = { x: Jv[k].x - m * (k === 'footB' ? .4 : k === 'footF' ? .7 : 1), y: Jv[k].y }; });
   }
   // a punch that can't reach from where he stands brings him in with it (the view keeps them apart, see spreadView):
   // the distance is read when the punch starts, he steps in on the load, holds through contact and steps back out
@@ -2489,12 +2493,26 @@ const Render = (() => {
     const t = toLocal(v, toWorld(o, body ? L(Jo.hip, Jo.neck, .45) : Jo.head)), sh = { x: J.neck.x + 1, y: J.neck.y + 3 };
     const R = body ? 12 : Jo.S.headR + 6, f2 = P.kind === 'straight' ? 1 : .55;
     const dH = t.x - sh.x - R * f2, dV = body ? t.y - sh.y : clamp(t.y + Jo.S.headR * .85 - sh.y, -6, 16);
-    const need = clamp(Math.hypot(Math.max(0, dH), dV) - J.S.arm * 2 * .97, 0, P.cat === 'jab' ? 24 : 20);
+    let need = clamp(Math.hypot(Math.max(0, dH), dV) - J.S.arm * 2 * .97, 0, P.cat === 'jab' ? 24 : 20);
+    // straights to the head: plan for where his shoulder will be at contact (he leans and drives the shoulder into it,
+    // which the pose before the punch doesn't show yet) so the arm lands nearly locked out, not bent like a shove.
+    // Too close: he sits back a touch and the rest of the room comes from the other man rocking back off it
+    if (P.kind === 'straight' && !body) {
+      const rear = P.arm === 'rear', drive = P.cat === 'jab' ? .45 : 1, sp = v.stance === 'southpaw', near = rear ? !sp : sp;
+      const ext = p < .35 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .35) / .25, 3) : Math.max(0, 1 - ease((p - .6) / .4));
+      const tw = drive * (rear ? 1 : .7), go = (rear ? 6 : 3.5) + J.S.torso * (.12 + .12 * drive) * Math.cos(J.lean);
+      const shx = J.neck.x + (near ? 2 : -3) + go * (1 - ext) + 5 * tw + (P.cat === 'jab' ? 7 : 0), shy = J.neck.y + (near ? 4 : 2) - 1.5 * tw - (P.cat === 'jab' ? 2.2 : 0);
+      const gr = 7.2 * Math.sqrt(J.S.B), hr = Jo.S.headR, Tx = t.x - hr * .8 - gr * .8, Ty = t.y + hr * .5, R2 = J.S.arm * 2 * .93;
+      const dy = clamp(Ty - shy, -R2 * .6, R2 * .6);
+      need = clamp(Tx - shx - Math.sqrt(R2 * R2 - dy * dy), -22, P.cat === 'jab' ? 24 : 20);
+    }
     if (sm.lgA !== v.aT || p < (sm.lgP || 0) - .05) { sm.lgA = v.aT; sm.lgN = need; }
     else if (p < .4) sm.lgN += (need - sm.lgN) * (1 - Math.exp(-dt * 10));
     sm.lgP = p;
     const lk = p < .1 ? 0 : p < .42 ? ease((p - .1) / .32) : p < .66 ? 1 : 1 - ease((p - .66) / .34);
-    const lg = sm.lgN * lk * (v.feint ? .3 : 1); if (lg < .05) return;
+    let lg = sm.lgN * lk * (v.feint ? .3 : 1); if (Math.abs(lg) < .05) return;
+    if (lg < -8) { const r = lg + 8; lg = -8; if (!(o.state === 'down' || o.state === 'slump' || o.state === 'clinch' || o.walk || o.sit || Jo.dp > 0))
+      for (const k of ['hip', 'neck', 'head', 'footF', 'footB']) Jo[k] = { x: Jo[k].x + r * (k === 'footB' ? .3 : k === 'footF' ? .6 : k === 'head' ? 1.1 : 1), y: Jo[k].y }; }
     for (const k of ['hip', 'neck', 'head', 'footF']) J[k] = { x: J[k].x + lg * .85, y: J[k].y };
     J.neck.x += lg * .1; J.head.x += lg * .14; J.footB = { x: J.footB.x + lg * .6, y: J.footB.y }; // leans into it, the back foot follows most of the way
   }
