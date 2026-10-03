@@ -56,6 +56,7 @@ p{margin:6px 0}
 .slot-main{flex:1;text-align:left;background:none;border:0;padding:14px 16px;display:flex;flex-direction:column;gap:3px}
 .sn{font-family:var(--disp);font-size:22px}.st{color:var(--mute)}
 .slot .x{background:none;border:0;border-left:1px solid var(--line);color:var(--mute);padding:0 14px;font-size:14px}
+.code{width:100%;min-height:120px;font:13px/1.35 ui-monospace,Menlo,monospace;word-break:break-all;background:var(--panel);color:var(--ink);border:1.5px solid var(--line);border-radius:4px;padding:9px 10px;margin:10px 0;resize:vertical}
 /* create / hub */
 .create-top,.poster{display:flex;gap:14px;align-items:center;padding:14px}
 .create-top{padding:6px 0}
@@ -2859,6 +2860,35 @@ const Store = {
 let slots = Store.load(); let cur = -1; let save = null;
 function persist() { if (cur < 0 || !save) return; save.savedAt = Date.now(); slots[cur] = save; Store.push(cur); }
 
+/* ---------- backup codes: a whole career as text. Copy it out, paste it back on any device ---------- */
+const toB64 = u => { let t = ''; for (let i = 0; i < u.length; i += 0x8000) t += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(t); };
+const fromB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+const pipeBytes = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+const Backup = {
+  // LBz1. = gzipped (about a quarter of the size), LB1. = plain, for browsers without CompressionStream
+  async encode(s) {
+    const bytes = new TextEncoder().encode(JSON.stringify(s));
+    if (window.CompressionStream) { try { return 'LBz1.' + toB64(await pipeBytes(bytes, new CompressionStream('gzip'))); } catch (e) { } }
+    return 'LB1.' + toB64(bytes);
+  },
+  async decode(code) {
+    const m = String(code).replace(/\s+/g, '').match(/^LB(z?)1\.([A-Za-z0-9+/=]+)$/);
+    if (!m) throw new Error("That isn't a Last Bell backup code. Paste the whole thing, starting with LB.");
+    let bytes; try { bytes = fromB64(m[2]); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
+    if (m[1]) {
+      if (!window.DecompressionStream) throw new Error("This browser can't open compressed codes. Try a newer browser.");
+      try { bytes = await pipeBytes(bytes, new DecompressionStream('gzip')); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
+    }
+    let s; try { s = JSON.parse(new TextDecoder().decode(bytes)); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
+    if (!s || !s.player || !s.player.stats || !s.world || !Array.isArray(s.world.roster)) throw new Error('That code is missing pieces of the career.');
+    return migrateSave(s);
+  }
+};
+async function copyText(t, ta) {
+  try { await navigator.clipboard.writeText(t); return true; } catch (e) { }
+  try { ta.focus(); ta.select(); ta.setSelectionRange(0, t.length); return document.execCommand('copy'); } catch (e) { return false; }
+}
+
 /* ---------- shared bits ---------- */
 const GUARD_SCOUT = {
   standard: 'Textbook guard. No obvious hole, so just outwork him.',
@@ -2901,11 +2931,13 @@ function titleScreen() {
       <span class="sn">${P.nick ? `"${esc(P.nick)}" ` : ''}${esc(P.name)}</span>
       <span class="st">${rec(P.record)} (${P.record.ko} KO), age ${Math.floor(age(s))}, ${esc(status)}</span>
       ${P.belts.length ? `<span class="chips">${beltChips(P.belts)}</span>` : ''}</button>
+      <button class="x" data-act="backupSlot" data-i="${i}" aria-label="Backup slot ${i + 1}">Backup</button>
       <button class="x" data-act="delSlot" data-i="${i}" aria-label="Delete slot ${i + 1}">Delete</button></div>`;
   }).join('');
   show(`<div class="title-wrap">
     <div class="marquee"><div class="bulb"></div><h1>Last Bell</h1><p>An auto-boxing career. You build him, train him, pick his fights. Then you watch.</p></div>
     <div class="slots">${cards}</div>
+    <div class="row center"><button class="btn ghost sm" data-act="restore">Restore from a backup code</button></div>
     <div class="row center">${soundBtns()}</div>
   </div>`, 'title');
 }
@@ -2915,6 +2947,45 @@ ACT.delSlot = d => {
   const i = +d.i; const m = modal(`<h3>Delete this career?</h3><p class="mute">${esc(slots[i].player.name)} will be gone for good.</p><div class="row"><button class="btn ghost" data-close>Keep it</button><button class="btn danger" data-del>Delete</button></div>`);
   m.querySelector('[data-close]').onclick = closeModal;
   m.querySelector('[data-del]').onclick = () => { slots[i] = null; Store.push(i); closeModal(); titleScreen(); };
+};
+
+ACT.backupSlot = async d => {
+  const i = +d.i, s = slots[i]; if (!s) return;
+  const m = modal(`<h3>Backup code</h3><p class="mute">${esc(s.player.name)}, ${rec(s.player.record)}. Copy this and keep it somewhere safe (notes app, text it to yourself). Paste it into "Restore from a backup code" to bring him back, on this phone or any other.</p>
+    <textarea class="code" readonly aria-label="Backup code">Making the code…</textarea><p class="mute tiny" data-msg></p>
+    <div class="row"><button class="btn ghost" data-close>Done</button><button class="btn" data-copy disabled>Copy code</button></div>`);
+  m.querySelector('[data-close]').onclick = closeModal;
+  const ta = m.querySelector('textarea'), btn = m.querySelector('[data-copy]'), msg = m.querySelector('[data-msg]');
+  let code; try { code = await Backup.encode(s); } catch (e) { ta.value = ''; msg.textContent = "Couldn't make a code on this browser."; return; }
+  ta.value = code; btn.disabled = false; msg.textContent = `${Math.ceil(code.length / 1000)}k characters. Copy all of it.`;
+  ta.onfocus = () => ta.select();
+  btn.onclick = async () => { const ok = await copyText(code, ta); btn.textContent = ok ? 'Copied' : 'Select all and copy'; if (!ok) ta.select(); };
+};
+ACT.restore = () => {
+  let pickI = slots.findIndex(x => !x); if (pickI < 0) pickI = 0;
+  const m = modal(`<h3>Restore a career</h3><p class="mute">Paste a backup code, then pick the slot it goes in.</p>
+    <textarea class="code" aria-label="Backup code" placeholder="LBz1.…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+    <div class="seg small" data-slots></div><p class="alert small" data-err hidden></p>
+    <div class="row"><button class="btn ghost" data-close>Cancel</button><button class="btn" data-go>Restore</button></div>`);
+  const ta = m.querySelector('textarea'), err = m.querySelector('[data-err]'), go = m.querySelector('[data-go]'), seg = m.querySelector('[data-slots]');
+  const draw = () => {
+    seg.innerHTML = slots.map((x, i) => `<button class="${i === pickI ? 'on' : ''}" data-i="${i}">Slot ${i + 1}${x ? '' : ' (empty)'}</button>`).join('');
+    seg.querySelectorAll('button').forEach(b => b.onclick = () => { pickI = +b.dataset.i; draw(); });
+    go.textContent = slots[pickI] ? `Replace ${slots[pickI].player.name}` : 'Restore';
+    go.classList.toggle('danger', !!slots[pickI]);
+  };
+  draw(); ta.oninput = () => { err.hidden = true; };
+  m.querySelector('[data-close]').onclick = closeModal;
+  go.onclick = async () => {
+    err.hidden = true; go.disabled = true;
+    try {
+      const s = await Backup.decode(ta.value); s.savedAt = Date.now();
+      slots[pickI] = s; Store.push(pickI); closeModal(); titleScreen();
+      const ok = modal(`<h3>He's back</h3><p class="mute">${esc(s.player.name)}, ${rec(s.player.record)}, restored to slot ${pickI + 1}.</p><button class="btn" data-ok>OK</button>`);
+      ok.querySelector('[data-ok]').onclick = closeModal;
+    } catch (e) { err.textContent = e.message || 'That code did not work.'; err.hidden = false; go.disabled = false; }
+  };
+  setTimeout(() => ta.focus(), 50);
 };
 
 /* ---------- create ---------- */
