@@ -1948,7 +1948,8 @@ const Render = (() => {
       else { lean += .42 * k; hipY += 8 * k; hipX -= 3 * k; snap = .32 * k; }
     }
     if (v.state === 'stun') { lean += Math.sin(t * 8) * .18 - .1; hipY += 7; snap += Math.sin(t * 5) * .25; }
-    if (v.hurt && !still) hipY += 3;
+    if (v.hurt && !still) hipY += 3 + Math.max(0, Math.sin(t * 4.3)) * 2.5;       // legs going: knees dip and wobble
+    if (v.hitT > .3 && v.hitKind !== 'block' && (v.hitPow || 0) > .75) hipY += 6 * (v.hitT - .3) * (v.hitPow || 0); // big shot: knees buckle
     if (v.state === 'clinch') { lean += .55; hipY += 5; }
     if (v.state === 'slump') { hipY += 14; lean = .35; snap = .55; }
     if (v.def === 'roll') snap += .2 * ease(v.defP); // chin tucks behind the shoulder
@@ -1962,9 +1963,12 @@ const Render = (() => {
     }
     const hip = { x: hipX, y: hipY };
     const neck = { x: hip.x + Math.sin(lean) * S.torso, y: hip.y - Math.cos(lean) * S.torso };
-    const ha = lean * .6 + snap;
-    const head = { x: neck.x + Math.sin(ha) * (S.headR + 3), y: neck.y - Math.cos(ha) * (S.headR + 3) };
-    let footF = { x: 20 - pivot * 2, y: 0 }, footB = { x: -22 + heel * 5, y: -heel * 3 };
+    const ha = lean * .6 + snap + .14 * twist;                     // chin tucks down behind the punching shoulder
+    const breath = still ? 0 : Math.sin(ph * (2.2 + 1.6 * tir)) * (1 + 1.6 * tir);
+    neck.y -= breath * .7;                                            // shoulders rise and fall with the breath
+    const head = { x: neck.x + Math.sin(ha) * (S.headR + 3), y: neck.y - Math.cos(ha) * (S.headR + 3) + 1.4 * twist };
+    let footF = { x: 20 - pivot * 2, y: -pivot * .8 }, footB = { x: -22 + heel * 5, y: -heel * 1.2 };
+    if (v.aT && PUNCH[v.aT].arm === 'lead' && PUNCH[v.aT].kind === 'straight') footF.x += 3.5 * twist; // the jab comes with a step
     // shuffle step while moving: feet alternate, never cross
     const mvk = still ? 0 : clamp((v.mv || 0) / 55, 0, 1);
     if (mvk > .05 && !v.aT) {
@@ -1973,7 +1977,7 @@ const Render = (() => {
       footB.x += Math.sin(ph + Math.PI) * 4 * mvk; footB.y -= Math.max(0, Math.cos(ph + Math.PI)) * 2.2 * mvk;
     }
     if (v.state === 'stun') { footF.x = 14 + Math.sin(t * 6) * 4; footB.x = -18; footB.y = 0; }
-    const J = { hip, neck, head, ha, footF, footB, S, twist };
+    const J = { hip, neck, head, ha, footF, footB, S, twist, breath, heelB: heel * .55, pivotF: pivot * .32 };
     // lying pose blend
     const dp = v.state === 'down' ? ease(v.downP) : 0;
     if (dp > 0) {
@@ -1982,7 +1986,7 @@ const Render = (() => {
       J.ha = ha + (-1.57 - ha) * dp;
       J.footF = L(footF, { x: 34, y: -2 }, dp); J.footB = L(footB, { x: 26, y: -1 }, dp);
     }
-    J.dp = dp; J.lean = lean;
+    J.dp = dp; J.lean = lean; if (dp > 0) { J.heelB *= 1 - dp; J.pivotF *= 1 - dp; J.breath *= 1 - dp; }
     return J;
   }
   function arms(v, look, J, tgt, t) {
@@ -2020,6 +2024,12 @@ const Render = (() => {
       } else {                        // standard: lead hand floats, ready to jab
         leadG.x += Math.sin(ph * 2.6) * 1.5; leadG.y += Math.sin(ph * 5.2) * .6;
       }
+    }
+    // a clean shot knocks the gloves out of position; a body shot brings the elbows down to cover
+    if (live && v.hitT > 0 && v.hitKind !== 'block' && !v.aT) {
+      const k = v.hitT * v.hitT * (v.hitPow || .5);
+      if (v.hitZone === 'head') { leadG.x -= 7 * k; leadG.y += 9 * k; rearG.x -= 4 * k; rearG.y += 6 * k; }
+      else { leadG.y += 10 * k; leadG.x -= 3 * k; rearG.y += 12 * k; rearG.x -= 2 * k; }
     }
     // a worn-down guard sags and comes apart, a tired fighter's hands drop
     const sag = tir * (gd === 'handslow' ? 10 : 12) + (1 - gi) * 4;
@@ -2185,7 +2195,8 @@ const Render = (() => {
   function rim(a, b, w0, w1, alpha) {
     const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1; let nx = -dy / d, ny = dx / d; if (ny > 0) { nx = -nx; ny = -ny; }
     const o0 = w0 / 2 - 1.1, o1 = w1 / 2 - 1.1;
-    ctx.strokeStyle = `rgba(255,224,176,${alpha || .32})`; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    const up = .15 + .85 * Math.abs(ny); // light comes from above: an edge facing up catches it, a vertical side barely does
+    ctx.strokeStyle = `rgba(255,224,176,${(alpha || .32) * up})`; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(a.x + nx * o0 + dx * .12, a.y + ny * o0 + dy * .12); ctx.lineTo(b.x + nx * o1 - dx * .12, b.y + ny * o1 - dy * .12); ctx.stroke();
   }
   // muscle line: a short soft crease across a limb at fraction q
@@ -2265,7 +2276,7 @@ const Render = (() => {
     if (A.trail && !A.trailNear) drawTrail();
     armDraw(A.shF, A.eF, A.gF, true);
     // torso: chest, lats, waist
-    const tp = new Path2D(), T = torsoPts(J, G, TORSO); tp.moveTo(T[0].x, T[0].y); smooth(tp, T.concat([T[0]])); tp.closePath();
+    const br = 1 + .03 * (J.breath || 0), tp = new Path2D(), T = torsoPts(J, G, TORSO.map(([q, o]) => [q, q > .5 && o > 0 ? o * br : o])); tp.moveTo(T[0].x, T[0].y); smooth(tp, T.concat([T[0]])); tp.closePath();
     mass([tp], skin);
     // back half a touch darker, chest line, a hint of the obliques
     ctx.save(); ctx.clip(tp);
