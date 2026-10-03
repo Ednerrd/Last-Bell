@@ -2147,23 +2147,65 @@ const Render = (() => {
     }
     ctx.restore();
   }
+  // ---------- anatomy: tapered, muscled limbs and a real torso, all hung off the same joints
+  // width profile along a segment: w0 at a, w1 at b, plus a bulge on each side peaking at t (bp on the +normal side, bm on the -normal side)
+  function segPath(a, b, w0, w1, bp, bm, t, path, flat) {
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, nx = -uy, ny = ux, N = 4;
+    const bump = q => { const r = q < t ? q / t * .5 : .5 + (q - t) / (1 - t) * .5; return Math.sin(Math.PI * r); };
+    const side = sg => { const out = []; for (let i = 0; i <= N; i++) { const q = i / N, w = (w0 + (w1 - w0) * q) / 2 + bump(q) * (sg > 0 ? bp : bm); out.push({ x: a.x + dx * q + nx * w * sg, y: a.y + dy * q + ny * w * sg }); } return out; };
+    const P = side(1), M = side(-1).reverse(), an = Math.atan2(ny, nx);
+    const p = path || new Path2D();
+    p.moveTo(P[0].x, P[0].y); smooth(p, P);
+    if (flat) p.lineTo(M[0].x, M[0].y); else p.arc(b.x, b.y, w1 / 2, an, an + Math.PI, true); // flat = a hem, not a rounded end
+    smooth(p, M); p.arc(a.x, a.y, w0 / 2, an + Math.PI, an, true); p.closePath();
+    return p;
+  }
+  // catmull-rom through the points (the path is already at pts[0])
+  function smooth(p, pts) {
+    p.lineTo(pts[0].x, pts[0].y);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      p.bezierCurveTo(p1.x + (p2.x - p0.x) / 6, p1.y + (p2.y - p0.y) / 6, p2.x - (p3.x - p1.x) / 6, p2.y - (p3.y - p1.y) / 6, p2.x, p2.y);
+    }
+  }
+  // one silhouette: outline everything first, then fill, so the pieces merge with no seams
+  function mass(paths, col, ow) {
+    ctx.lineJoin = 'round'; ctx.strokeStyle = OUT; ctx.lineWidth = ow || 3;
+    for (const p of paths) ctx.stroke(p);
+    ctx.fillStyle = col; for (const p of paths) ctx.fill(p);
+  }
+  // torso as a shape in its own frame: s runs hip (0) to neck (1), o is the offset toward his front (+) or back (-)
+  function torsoPts(J, G, pts) {
+    const ux = J.neck.x - J.hip.x, uy = J.neck.y - J.hip.y, fx = -uy / J.S.torso, fy = ux / J.S.torso;
+    return pts.map(([q, o]) => ({ x: J.hip.x + ux * q + fx * o * G, y: J.hip.y + uy * q + fy * o * G }));
+  }
+  const TORSO = [[-.02, 9], [.22, 8.6], [.48, 9.6], [.66, 12.4], [.8, 12.2], [.93, 9.5], [1.04, 5], [1.07, -1], [1.02, -7.5], [.92, -11.5], [.72, -11.2], [.45, -9.6], [.2, -9.4], [-.02, -10]];
   function drawFighter(v, look, J, A) {
-    const B = J.S.B, skin = look.skin, skinD = shade(skin, -.28);
+    const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
     const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 ? -14 : 0, 2, J.dp > .5 ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     const kneeF = ik(J.hip, J.footF, J.S.thigh, J.S.shin, 1), kneeB = ik(J.hip, J.footB, J.S.thigh, J.S.shin, 1);
     const leg = (knee, foot, far) => {
-      const s = far ? skinD : skin;
-      limb(J.hip, knee, 11 * B, s); limb(knee, foot, 9 * B, s);
-      const bootTop = L(knee, foot, .55); limb(bootTop, foot, 9.5 * B, far ? shade(sh.c, -.3) : sh.c);
-      ctx.fillStyle = far ? shade(sh.c, -.3) : sh.c; ctx.strokeStyle = OUT; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(foot.x - 4, foot.y - 5, 14 * B, 6, 2.5) : ctx.rect(foot.x - 4, foot.y - 5, 14 * B, 6); ctx.fill(); ctx.stroke();
-      // trunk leg
-      limb(J.hip, L(J.hip, knee, .48), 13 * B, far ? shade(tr.c, -.3) : tr.c);
+      const s = far ? skinD : skin, ank = L(knee, foot, .93);
+      // thigh: quad in front (-normal side going down), hamstring behind. Shin: calf behind
+      mass([segPath(J.hip, knee, 14 * G, 8.6 * G, 1.4 * G, 2.4 * G, .38), segPath(knee, ank, 9 * G, 6 * G, 3 * G, .9 * G, .3)], s);
+      // boot with a sock band, and the sole
+      const bootTop = L(knee, foot, .56), bc = far ? shade(sh.c, -.3) : sh.c;
+      mass([segPath(bootTop, ank, 9.6 * G, 8.4 * G, .4, .4, .5)], bc, 2.6);
+      const band = segPath(L(knee, foot, .5), L(knee, foot, .6), 9.4 * G, 9.6 * G, 0, 0, .5); ctx.fillStyle = far ? '#a9a49a' : '#ece6da'; ctx.fill(band);
+      ctx.fillStyle = bc; ctx.strokeStyle = OUT; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(foot.x - 5 * B, foot.y - 5.5, 16 * B, 6.5, 3) : ctx.rect(foot.x - 5 * B, foot.y - 5.5, 16 * B, 6.5); ctx.fill(); ctx.stroke();
+      // trunk leg: loose, flares a little
+      mass([segPath(J.hip, L(J.hip, knee, .5), 14 * G, 15.4 * G, .3, .3, .5, null, true)], far ? shade(tr.c, -.3) : tr.c, 2.6);
     };
-    const armDraw = (sh_, el, g, far) => { const s = far ? skinD : skin; limb(sh_, el, 9 * B, s); limb(el, g, 8 * B, s); glove(g, el, far ? shade(gl.c, -.3) : gl.c, B, (A.trail && A.trailNear === !far) ? A.stretch : 0); };
+    // arm: delt cap, upper arm (biceps/triceps), forearm, glove
+    const armDraw = (sh_, el, g, far) => {
+      const s = far ? skinD : skin, wr = L(el, g, .78), dp = new Path2D(); dp.arc(sh_.x, sh_.y, 6.6 * G, 0, Math.PI * 2);
+      mass([dp, segPath(sh_, el, 10.6 * G, 7.4 * G, 1.6 * G, 1.6 * G, .42), segPath(el, wr, 7.8 * G, 6 * G, 1.3 * G, 1 * G, .3)], s);
+      glove(g, el, far ? shade(gl.c, -.3) : gl.c, B, (A.trail && A.trailNear === !far) ? A.stretch : 0);
+    };
     const drawTrail = () => {
       const tr_ = A.trail; if (!tr_ || tr_.length < 2) return;
       ctx.lineCap = 'round';
@@ -2177,27 +2219,29 @@ const Render = (() => {
     leg(kneeB, J.footB, true);
     if (A.trail && !A.trailNear) drawTrail();
     armDraw(A.shF, A.eF, A.gF, true);
-    // torso
-    const tw = 21 * B;
-    limb(J.hip, J.neck, tw, skin);
-    ctx.strokeStyle = 'rgba(255,232,196,.18)'; ctx.lineWidth = 3; ctx.beginPath();
-    const lx = Math.sin(J.lean) * 1, nx = J.neck.x + Math.cos(J.lean) * tw * .3, ny = J.neck.y + Math.sin(J.lean) * tw * .3;
-    ctx.moveTo(nx, ny + 2); ctx.lineTo(L(J.hip, J.neck, .45).x + Math.cos(J.lean) * tw * .3 + lx, L(J.hip, J.neck, .45).y); ctx.stroke();
-    // trunks block
-    const up = L(J.hip, J.neck, .3);
-    limb({ x: J.hip.x, y: J.hip.y + 3 }, up, tw + 4, tr.c);
+    // torso: chest, lats, waist
+    const tp = new Path2D(), T = torsoPts(J, G, TORSO); tp.moveTo(T[0].x, T[0].y); smooth(tp, T.concat([T[0]])); tp.closePath();
+    mass([tp], skin);
+    // back half a touch darker, chest line, a hint of the obliques
+    ctx.save(); ctx.clip(tp);
+    { const [g0, g1] = torsoPts(J, G, [[.5, 6], [.5, -12]]), gr = ctx.createLinearGradient(g0.x, g0.y, g1.x, g1.y);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.2)'); ctx.fillStyle = gr; ctx.fill(tp); } // turns away from the light toward his back
+    ctx.restore();
+    { const [p0, p1, p2] = torsoPts(J, G, [[.64, 12], [.6, 7], [.68, 2]]); ctx.strokeStyle = 'rgba(18,13,10,.55)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y); ctx.stroke(); }
+    { const [p0, p1, p2] = torsoPts(J, G, [[.48, 8.6], [.36, 5.5], [.26, 6.8]]); ctx.strokeStyle = 'rgba(18,13,10,.25)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y); ctx.stroke(); }
+    { const [p0, p1] = torsoPts(J, G, [[.95, 4], [.55, 7]]); ctx.strokeStyle = 'rgba(255,232,196,.2)'; ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke(); }
+    // trunks sit on the hips
+    const TR = torsoPts(J, G, [[.2, 10], [.04, 10.2], [-.08, 10], [-.1, 0], [-.08, -11], [.04, -11], [.2, -10]]);
+    const tk = new Path2D(); tk.moveTo(TR[0].x, TR[0].y); smooth(tk, TR); tk.closePath(); mass([tk], tr.c, 2.6);
     if (tr.pattern === 'spots') { ctx.fillStyle = 'rgba(40,24,10,.6)'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(J.hip.x - 7 + (i * 7) % 15, J.hip.y - 2 + (i % 3) * 4, 1.6, 0, 7); ctx.fill(); } }
-    const wb = L(J.hip, J.neck, .3); ctx.strokeStyle = tr.trim; ctx.lineWidth = 3.2; ctx.lineCap = 'butt';
-    const px = Math.cos(J.lean) * (tw + 4) / 2, py = Math.sin(J.lean) * (tw + 4) / 2;
-    ctx.beginPath(); ctx.moveTo(wb.x - px, wb.y - py); ctx.lineTo(wb.x + px, wb.y + py); ctx.stroke(); ctx.lineCap = 'round';
+    { const [w0, w1] = torsoPts(J, G, [[.18, 10.6], [.18, -10.6]]); ctx.strokeStyle = tr.trim; ctx.lineWidth = 3.4 * B; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(w0.x, w0.y); ctx.lineTo(w1.x, w1.y); ctx.stroke(); ctx.lineCap = 'round'; }
     // near side
     leg(kneeF, J.footF, false);
-    // neck
-    limb(J.neck, { x: J.head.x * .4 + J.neck.x * .6, y: J.head.y * .4 + J.neck.y * .6 }, 9 * B, skin);
+    // neck: thick on the big men
+    const nk = L(J.neck, J.head, .45); mass([segPath(J.neck, nk, 11 * G, 9.5 * G, .5, .5, .5)], skin, 2.4);
     drawHead(v, look, J, 0);
     if (A.trail && A.trailNear) drawTrail();
     armDraw(A.shN, A.eN, A.gN, false);
-    // sweat sheen when tired
     ctx.restore();
   }
   function toLocal(v, p) { const q = P3(v.x, v.z); return { x: (p.x - q.x) / q.s * v.dir, y: (p.y - q.y) / q.s }; }

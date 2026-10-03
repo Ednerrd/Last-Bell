@@ -20,7 +20,7 @@ engine → career → render → audio → commentary (`const Comm`) → ui part
 - `TUNE` object (engine top) holds the combat knobs. `DMG` is global damage. `CUT` holds cut/doctor params. `GUARDS` table holds guard factors.
 - Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career. `guardSkill()` scales perks; weaknesses always apply.
 - Ring IQ: `ringIQ(sheet)`, drives combo reading, ring cutting, escapes.
-- Render: `GUARD_POSE` table + per-guard idle/defense animation in `body()` and `arms()`. Pose smoothing via `v._sm` (per-fighter state in `SM`). Snapshot fields used: guard, defZ, defU, ctr, tired, gi, hitKind, hitT.
+- Render: `GUARD_POSE` table + per-guard idle/defense animation in `body()` and `arms()`. Anatomy (pass 1): `drawFighter` builds tapered, muscled limbs with `segPath` (width at each end + a bulge on each side), merges pieces with `mass()` (outline all, then fill), torso from the `TORSO` profile in its own hip→neck frame (`torsoPts`), trunks on the hips with flat hems. Girth `G = build^1.5`, so flyweights are wiry and heavyweights thick. Cost ~+1.5–2 ms/frame in headless (6.8 → ~8.5–9). Pose smoothing via `v._sm` (per-fighter state in `SM`). Snapshot fields used: guard, defZ, defU, ctr, tired, gi, hitKind, hitT.
 
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless. `PATCH="js code"` env var injects overrides (e.g. `PATCH="Object.assign(TUNE,{vol:.36});DMG=.32"`).
