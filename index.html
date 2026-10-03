@@ -2205,7 +2205,7 @@ const Render = (() => {
     // the elbow comes forward across the body toward us, so from the side the upper arm looks short; a punch stretches it back out
     const elbow = (sh, g, b, lead) => {
       const f = !tuck || b === 1 || J.dp > 0 ? 0 : punchLead === lead ? 1 - clamp(punchK * 1.6, 0, 1) : 1;
-      if (v.walk && !(J.sit > .05)) { const e1 = ik(sh, g, S.arm, S.arm, 1), e2 = ik(sh, g, S.arm, S.arm, -1); return e1.x > e2.x ? e1 : e2; } // hanging arm: a soft bend, elbow just in front
+      if (v.walk && !(J.sit > .05)) { const e1 = ik(sh, g, S.arm, S.arm, 1), e2 = ik(sh, g, S.arm, S.arm, -1); return e1.x < e2.x ? e1 : e2; } // hanging arm: a soft bend, elbow back, hand in front
       if (f <= 0) return ik(sh, g, S.arm, S.arm, b);
       const l1 = S.arm * (1 - .4 * f), e1 = ik(sh, g, l1, S.arm, 1), e2 = ik(sh, g, l1, S.arm, -1); return e1.y > e2.y ? e1 : e2;
     };
