@@ -2369,7 +2369,9 @@ const Render = (() => {
       // thigh: quad in front (-normal side going down), hamstring behind. Shin: calf behind
       mass([segPath(J.hip, knee, 14 * G, 8.6 * G, 1.4 * G, 2.4 * G, .38), segPath(knee, ank, 9 * G, 6 * G, 3 * G, .9 * G, .3)], s);
       if (!far) { crease(J.hip, knee, .9, 4 * G, .9, .28); crease(knee, ank, .45, 4 * G, .7, .22); rim(knee, ank, 9 * G, 6 * G, .26); }
-      boot(knee, foot, ank, far ? shade(sh.c, -.3) : sh.c, G, far ? footAngB : footAngF, far);
+      // an ankle only bends so far: once the shin leans well forward over the foot, the heel comes up onto the ball of the foot
+      const lean = Math.atan2(knee.x - foot.x, foot.y - knee.y), lift = Math.min(.75, Math.max(0, lean - (far ? .38 : .55)) * (far ? 1.1 : .8));
+      boot(knee, foot, ank, far ? shade(sh.c, -.3) : sh.c, G, Math.max(far ? footAngB : footAngF, lift), far);
       // trunk leg: loose, flares a little
       mass([segPath(J.hip, L(J.hip, knee, .5), 14 * G, 15.4 * G, .3, .3, .5, null, true)], far ? shade(tr.c, -.3) : tr.c, 2.6);
     };
