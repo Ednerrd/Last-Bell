@@ -1,0 +1,510 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0907">
+<title>Last Bell 3D Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0907;--ink:#f1e8d8;--mute:#a5967f;--accent:#f0b85a;--red:#c8392f;--blue:#4f86b8;--disp:'Anton',Impact,sans-serif;--ui:'Barlow Condensed','Arial Narrow',Arial,sans-serif}
+:root[data-theme="light"],:root[data-theme="dark"]{--bg:#0c0907}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c0907}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui);overflow:hidden;-webkit-user-select:none;user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 0;display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;pointer-events:none}
+.nm{font-family:var(--disp);font-size:18px;letter-spacing:.02em;text-transform:uppercase;line-height:1.05;text-shadow:0 1px 3px #000}
+.nm small{display:block;font-family:var(--ui);font-size:13px;color:var(--mute);text-transform:none;letter-spacing:0}
+.nm.r{text-align:right}.nm .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 6px 2px 0;vertical-align:middle}
+.bars{margin-top:5px;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}.bars i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.nm.r .bars i{margin-left:auto}
+.clock{text-align:center;font-family:var(--disp);font-size:24px;line-height:1;text-shadow:0 1px 3px #000}.clock small{display:block;font-family:var(--ui);font-size:13px;color:var(--mute)}
+.ctl{position:fixed;left:0;right:0;bottom:0;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.ctl button{font:700 16px var(--ui);color:var(--ink);background:rgba(20,15,11,.78);border:1.5px solid rgba(240,184,90,.45);border-radius:6px;padding:10px 14px;min-width:84px;backdrop-filter:blur(4px)}
+.ctl button:active{background:rgba(240,184,90,.25)}
+.big{position:fixed;left:16px;right:16px;top:38%;text-align:center;font-family:var(--disp);font-size:clamp(34px,11vw,64px);letter-spacing:.03em;color:var(--accent);text-shadow:0 3px 14px #000;opacity:0;transition:opacity .25s;pointer-events:none;text-transform:uppercase}
+.big small{display:block;font-family:var(--ui);font-size:18px;color:var(--ink);letter-spacing:0;text-transform:none}
+.big.on{opacity:1}
+.hint{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 66px);text-align:center;font-size:14px;color:var(--mute);pointer-events:none;transition:opacity .6s}
+.err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:18px}
+</style></head><body>
+<canvas id="c" aria-label="3D boxing ring with two fighters"></canvas>
+<div class="hud">
+  <div class="nm" id="n0"></div>
+  <div class="clock"><span id="ck">3:00</span><small id="rd">Round 1</small></div>
+  <div class="nm r" id="n1"></div>
+</div>
+<div class="big" id="big"></div>
+<div class="hint" id="hint">Drag to move the camera</div>
+<div class="ctl"><button id="bCam">Cam: TV</button><button id="bSpd">Speed 1x</button><button id="bNew">New fight</button></div>
+<div class="err" id="err">This test needs WebGL. Try another browser.</div>
+<script>
+/*@ENGINE@*/
+</script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
+
+/* ================= scene ================= */
+const cv = document.getElementById('c');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' }); }
+catch (e) { document.getElementById('err').style.display = 'flex'; throw e; }
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0907);
+scene.fog = new THREE.Fog(0x0c0907, 700, 1500);
+const camera = new THREE.PerspectiveCamera(34, 1, 5, 4000);
+
+scene.add(new THREE.HemisphereLight(0xfff0dc, 0x20160f, .75));
+const key = new THREE.SpotLight(0xfff1de, 3.2, 0, .62, .55, 0);
+key.position.set(0, 620, 80); key.target.position.set(0, 0, 0);
+key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.camera.near = 300; key.shadow.camera.far = 900; key.shadow.bias = -.0004; key.shadow.radius = 3;
+scene.add(key, key.target);
+const rimW = new THREE.DirectionalLight(0xffc98a, .55); rimW.position.set(-500, 220, -300); scene.add(rimW);
+const rimC = new THREE.DirectionalLight(0x8fb3ff, .35); rimC.position.set(500, 160, -200); scene.add(rimC);
+const fill = new THREE.DirectionalLight(0xfff4e6, .35); fill.position.set(0, 200, 600); scene.add(fill);
+
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const UP = V(0, 1, 0), Y = V(0, 1, 0);
+const std = (c, r, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r == null ? .6 : r, metalness: 0 }, extra || {}));
+function shade(m) { m.castShadow = true; m.receiveShadow = true; return m; }
+
+/* ---------- helpers ---------- */
+const _d = new THREE.Vector3();
+function placeSeg(m, a, b) { _d.subVectors(b, a); const L = _d.length() || 1e-4; m.position.addVectors(a, b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(Y, _d.multiplyScalar(1 / L)); m.scale.set(1, L, 1); }
+const _m4 = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3();
+// orient an object so local +Y = up, +Z = fwd (orthogonalized), +X = up x fwd
+function orient(o, up, fwd) {
+  _y.copy(up).normalize(); _z.copy(fwd).addScaledVector(_y, -fwd.dot(_y)); if (_z.lengthSq() < 1e-6) _z.set(0, 0, 1); _z.normalize();
+  _x.crossVectors(_y, _z); _m4.makeBasis(_x, _y, _z); o.quaternion.setFromRotationMatrix(_m4);
+}
+// two-bone IK: root S, target T, lengths a/b, pole hint. Returns [joint, reachedTarget]
+function ik(S, T, a, b, pole) {
+  const d = T.clone().sub(S); let L = d.length(); const dn = d.clone().multiplyScalar(1 / (L || 1));
+  L = clamp(L, Math.abs(a - b) + .5, a + b - .05);
+  const T2 = S.clone().addScaledVector(dn, L);
+  const x = (a * a + L * L - b * b) / (2 * L), h = Math.sqrt(Math.max(0, a * a - x * x));
+  const p = pole.clone().addScaledVector(dn, -pole.dot(dn)); if (p.lengthSq() < 1e-6) p.set(0, -1, 0); p.normalize();
+  return [S.clone().addScaledVector(dn, x).addScaledVector(p, h), T2];
+}
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const outC = t => 1 - Math.pow(1 - t, 3);
+const damp = (a, b, r, dt) => a + (b - a) * (1 - Math.exp(-r * dt));
+const dampV = (a, b, r, dt) => a.lerp(b, 1 - Math.exp(-r * dt));
+const gearC = (k, id) => (GEAR[k].find(g => g.id === id) || GEAR[k][0]);
+
+/* ---------- ring ---------- */
+const RX = RING + 14, RZ = ZR + 14, PX = RX + 4, PZ = RZ + 4, APRON = 26;
+function canvasTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d');
+  g.fillStyle = '#d8cdb9'; g.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '60,40,20' : '255,250,240'},${Math.random() * .05})`; g.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2); }
+  g.strokeStyle = 'rgba(120,40,30,.18)'; g.lineWidth = 10; g.beginPath(); g.arc(512, 512, 170, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = 'rgba(130,40,30,.22)'; g.font = '120px Anton, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAST BELL', 512, 520);
+  g.strokeStyle = 'rgba(60,40,25,.12)'; g.lineWidth = 6; g.strokeRect(30, 30, 964, 964);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+const ring = new THREE.Group(); scene.add(ring);
+{
+  const W = 2 * (PX + APRON), D = 2 * (PZ + APRON);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(W, D), std(0xffffff, .92, { map: canvasTexture() }));
+  top.rotation.x = -Math.PI / 2; top.receiveShadow = true; ring.add(top);
+  const skirt = new THREE.Mesh(new THREE.BoxGeometry(W, 34, D), std(0x1b2235, .8)); skirt.position.y = -17.2; ring.add(skirt);
+  const band = new THREE.Mesh(new THREE.BoxGeometry(W + .5, 3, D + .5), std(0xb07a2a, .5)); band.position.y = -3; ring.add(band);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), std(0x15100c, 1)); floor.rotation.x = -Math.PI / 2; floor.position.y = -34; floor.receiveShadow = true; scene.add(floor);
+  const postM = std(0x2a2a2e, .35, { metalness: .6 });
+  const corners = [[-1, -1, 0xb8302a], [1, 1, 0x2f62a8], [1, -1, 0xe8e2d6], [-1, 1, 0xe8e2d6]];
+  for (const [sx, sz, pc] of corners) {
+    const p = shade(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3, 70, 12), postM)); p.position.set(sx * PX, 35, sz * PZ); ring.add(p);
+    const pad = shade(new THREE.Mesh(new THREE.BoxGeometry(9, 44, 9), std(pc, .55))); pad.position.set(sx * (PX - 4), 38, sz * (PZ - 4)); pad.rotation.y = Math.PI / 4; ring.add(pad);
+  }
+  const ropeCols = [0x2f62a8, 0xece6da, 0xb8302a];
+  [22, 40, 58].forEach((h, i) => {
+    const m = std(ropeCols[i], .45);
+    const segR = (a, b) => { const r = shade(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 1, 10), m)); placeSeg(r, a, b); ring.add(r); };
+    segR(V(-PX, h, -PZ), V(PX, h, -PZ)); segR(V(-PX, h, PZ), V(PX, h, PZ)); segR(V(-PX, h, -PZ), V(-PX, h, PZ)); segR(V(PX, h, -PZ), V(PX, h, PZ));
+  });
+  // a lighting truss overhead and a few distant arena lights so the ring doesn't float in black
+  const truss = new THREE.Mesh(new THREE.BoxGeometry(2 * PX + 80, 6, 2 * PZ + 80), std(0x111111, .8)); truss.position.y = 430; scene.add(truss);
+  const lm = new THREE.MeshBasicMaterial({ color: 0xffe3b0 });
+  for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = 900 + (i % 3) * 60; const b = new THREE.Mesh(new THREE.SphereGeometry(5 + (i % 2) * 2, 8, 6), lm); b.position.set(Math.cos(a) * r, 120 + (i % 4) * 70, Math.sin(a) * r); scene.add(b); }
+}
+// corner stools (shown between rounds)
+function mkStool() {
+  const g = new THREE.Group(), m = std(0x6b4a2e, .6), lm = std(0x2a2a2e, .4, { metalness: .5 });
+  const seat = shade(new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 3, 16), m)); seat.position.y = 26; g.add(seat);
+  for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; const l = shade(new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 6), lm)); placeSeg(l, V(Math.cos(a) * 7, 25, Math.sin(a) * 7), V(Math.cos(a) * 9, 0, Math.sin(a) * 9)); g.add(l); }
+  g.visible = false; scene.add(g); return g;
+}
+
+/* ================= the fighter ================= */
+const GUARD3 = { // glove spots in (forward, height, toward lead side), crouch, blade angle (deg), forward lean, elbow tuck
+  standard: { L: [23, 80, 4], R: [12, 82, -5], c: 3, bl: 32, lean: 3, tuck: .35 },
+  high:     { L: [15, 89, 4], R: [12, 89, -4], c: 4, bl: 26, lean: 3, tuck: .9 },
+  peekaboo: { L: [12, 85, 4], R: [11, 85, -4], c: 8, bl: 16, lean: 7, tuck: .95 },
+  philly:   { L: [9, 60, -3], R: [9, 86, -7], c: 2, bl: 52, lean: 1, tuck: .5 },
+  cross:    { L: [13, 85, -5], R: [14, 78, 5], c: 5, bl: 22, lean: 4, tuck: .8 },
+  handslow: { L: [22, 57, 7], R: [12, 70, -4], c: 1, bl: 36, lean: -1, tuck: .2 }
+};
+class Boxer {
+  constructor(look, side) {
+    this.side = side; this.look = look;
+    this.hs = (look.h || 1) * 1.04; this.G = Math.pow(look.build || 1, 1.5) * .95 + .05;
+    const G = this.G, hs = this.hs;
+    const skin = std(look.skin, .62), tr = gearC('trunks', look.trunks), gl = gearC('gloves', look.gloves), sh = gearC('shoes', look.shoes);
+    const trunkM = std(tr.c, .42), trimM = std(tr.trim || '#ddd', .5), gloveM = std(gl.c, .28), cuffM = std(gl.trim || '#eee', .45), bootM = std(sh.c, .5), hairM = std(look.hairCol, .85);
+    const g = this.g = new THREE.Group(); scene.add(g);
+    const add = (geo, m) => { const o = shade(new THREE.Mesh(geo, m)); g.add(o); return o; };
+    const cyl = (r1, r2, m, seg) => add(new THREE.CylinderGeometry(r1, r2, 1, seg || 14), m); // r1 at the far end (b), r2 at a
+    const ball = (r, m) => add(new THREE.SphereGeometry(r, 16, 12), m);
+    // torso: a lathe from the waist (y=0) to the neck (y=1), chest flaring wide at the lats/pecs
+    const prof = [[.01, 0], [.6, 0], [.62, .14], [.6, .32], [.7, .55], [.9, .75], [1, .85], [.88, .93], [.42, 1]].map(([r, y]) => new THREE.Vector2(r, y));
+    this.torso = new THREE.Group(); g.add(this.torso);
+    const tm = shade(new THREE.Mesh(new THREE.LatheGeometry(prof, 22), skin)); tm.scale.set(13 * G, 1, 13 * G * .62); this.torso.add(tm); this.torsoMesh = tm;
+    for (const s of [-1, 1]) { const pec = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); pec.scale.set(5.4 * G, 3.9 * G, 2.4 * G); pec.position.set(s * 4.6 * G, .76, 5.6 * G); this.torso.add(pec); (this.pecs = this.pecs || []).push(pec); }
+    const abs = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); abs.scale.set(5.6 * G, 9 * G, 2 * G); abs.position.set(0, .4, 4.6 * G); this.torso.add(abs); this.abs = abs;
+    // trunks: a lathe around the hips, with a waistband
+    const tp = [[.01, -.02], [.9, 0], [1, .35], [.98, .78], [.92, 1]].map(([r, y]) => new THREE.Vector2(r, y));
+    this.trunks = new THREE.Group(); g.add(this.trunks);
+    const tk = shade(new THREE.Mesh(new THREE.LatheGeometry(tp, 22), trunkM)); tk.scale.set(12.2 * G, 15 * hs, 12.2 * G * .78); tk.position.y = -9 * hs; this.trunks.add(tk);
+    const wb = shade(new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 22, 1, true), trimM)); wb.scale.set(11.6 * G, 3.2, 11.6 * G * .78); wb.position.y = 5.2 * hs; this.trunks.add(wb);
+    this.legSleeve = [cyl(7.3 * G, 7.9 * G, trunkM), cyl(7.3 * G, 7.9 * G, trunkM)];
+    this.thigh = [cyl(4.8 * G, 7 * G, skin), cyl(4.8 * G, 7 * G, skin)];
+    this.knee = [ball(4.7 * G, skin), ball(4.7 * G, skin)];
+    this.shin = [cyl(3.3 * G, 4.6 * G, skin), cyl(3.3 * G, 4.6 * G, skin)];
+    this.calf = [ball(1, skin), ball(1, skin)];
+    this.bootShaft = [cyl(4.1 * G, 4.4 * G, bootM), cyl(4.1 * G, 4.4 * G, bootM)];
+    this.foot = [0, 1].map(() => { const f = shade(new THREE.Mesh(new THREE.CapsuleGeometry(3.6 * G, 8.5, 6, 12), bootM)); g.add(f); return f; });
+    this.sole = [0, 1].map(() => { const f = shade(new THREE.Mesh(new THREE.BoxGeometry(7.4 * G, 1.2, 15.5), std(0xe8e2d6, .7))); g.add(f); return f; });
+    this.delt = [ball(5.5 * G, skin), ball(5.5 * G, skin)];
+    this.trap = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); g.add(this.trap);
+    this.upper = [cyl(3.8 * G, 5 * G, skin), cyl(3.8 * G, 5 * G, skin)];
+    this.bicep = [ball(1, skin), ball(1, skin)];
+    this.elbowB = [ball(3.7 * G, skin), ball(3.7 * G, skin)];
+    this.fore = [cyl(3.1 * G, 4 * G, skin), cyl(3.1 * G, 4 * G, skin)];
+    this.glove = [0, 1].map(() => {
+      const o = new THREE.Group(); g.add(o);
+      const m = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 14), gloveM)); m.scale.set(1, .92, 1.22); m.position.z = 6.5; o.add(m);
+      const th = shade(new THREE.Mesh(new THREE.CapsuleGeometry(1.9, 4, 4, 8), gloveM)); th.position.set(4.6, 2.4, 6); th.rotation.x = Math.PI / 2.4; th.rotation.z = -.4; o.add(th); o.thumb = th;
+      const cuff = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.2, 6.5, 14), gloveM)); cuff.rotation.x = Math.PI / 2; cuff.position.z = 0; o.add(cuff);
+      const tr = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.55, 4.55, 1.6, 14), cuffM)); tr.rotation.x = Math.PI / 2; tr.position.z = -1.8; o.add(tr);
+      return o;
+    });
+    this.neck = cyl(4.8 * G, 5.6 * G, skin);
+    // head, built facing +Z
+    const hd = this.head = new THREE.Group(); g.add(hd);
+    const skull = shade(new THREE.Mesh(new THREE.SphereGeometry(8.4, 24, 18), skin)); skull.scale.set(.86, 1.06, .98); hd.add(skull);
+    const jaw = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 12), skin)); jaw.scale.set(.95, .78, 1); jaw.position.set(0, -4.4, 2.4); hd.add(jaw);
+    const nose = shade(new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 8), skin)); nose.scale.set(.85, 1.15, 1.1); nose.position.set(0, -1.2, 7.9); hd.add(nose);
+    const eyeM = new THREE.MeshStandardMaterial({ color: 0x1a120c, roughness: .3 }), browM = std(look.hairCol, .9);
+    for (const s of [-1, 1]) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(1.05, 10, 8), eyeM); e.position.set(s * 2.9, 1.2, 7.4); hd.add(e);
+      const br = new THREE.Mesh(new THREE.BoxGeometry(3.6, .9, 1.2), browM); br.position.set(s * 2.9, 3, 7.7); br.rotation.z = s * -.12; hd.add(br);
+      const ear = shade(new THREE.Mesh(new THREE.SphereGeometry(1.7, 10, 8), skin)); ear.scale.set(.5, 1, .8); ear.position.set(s * 7.2, 0, .4); hd.add(ear);
+    }
+    if (look.hair !== 'bald') {
+      const kind = look.hair, cap = new THREE.Mesh(new THREE.SphereGeometry(8.55, 22, 14, 0, Math.PI * 2, 0, kind === 'fade' || kind === 'buzz' ? Math.PI * .4 : Math.PI * .5), hairM);
+      cap.scale.set(.89, kind === 'afro' ? 1.22 : 1.08, 1.01); cap.position.set(0, kind === 'afro' ? 1.2 : .25, -.5); cap.rotation.x = -.3; cap.castShadow = true; hd.add(cap);
+    }
+    if (look.beard) { const bd = new THREE.Mesh(new THREE.SphereGeometry(6.8, 18, 12, 0, Math.PI * 2, Math.PI * .45, Math.PI * .5), hairM); bd.scale.set(.96, .9, 1.05); bd.position.set(0, -3.6, 2.6); hd.add(bd); }
+    this.stool = mkStool();
+    this.sm = null; this.t = Math.random() * 10; this.heading = side ? Math.PI : 0;
+  }
+  // build this frame's joint positions from the engine snapshot, then place every mesh
+  pose(s, op, opB, dt, cornerPt) {
+    const G = this.G, hs = this.hs, gd = GUARD3[s.guard] || GUARD3.standard; this.t += dt;
+    const pos = V(s.x, 0, s.z);
+    // facing: at the other man, or where he's walking
+    if (!this.prev) this.prev = pos.clone();
+    const vel = pos.clone().sub(this.prev).multiplyScalar(1 / Math.max(dt, 1e-3)); this.prev.copy(pos);
+    let want;
+    if (s.sit) want = Math.atan2(-s.x, -s.z);
+    else if (s.walk && vel.length() > 12) want = Math.atan2(vel.x, vel.z);
+    else want = Math.atan2(op.x - s.x, op.z - s.z);
+    let dh = want - this.heading; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
+    this.heading += dh * (1 - Math.exp(-(s.walk ? 6 : 14) * dt));
+    const fwd = V(Math.sin(this.heading), 0, Math.cos(this.heading)), left = V(fwd.z, 0, -fwd.x); // up x fwd
+    const lead = s.stance === 'southpaw' ? left.clone().negate() : left.clone();
+    const P = (f, u, l, base) => (base || pos).clone().addScaledVector(fwd, f).addScaledVector(UP, u * hs).addScaledVector(lead, l);
+    const sm = this.sm = this.sm || { c: gd.c, bl: gd.bl, lean: gd.lean, side: 0, back: 0, gl: [null, null], head: null, sit: 0, pole: [null, null] };
+    // ---- read the moment
+    const P_ = s.aT && PUNCH[s.aT] ? PUNCH[s.aT] : null, p = s.aP || 0;
+    let k = 0; if (P_) k = p < .14 ? 0 : p < .52 ? outC((p - .14) / .38) : p < .66 ? 1 : 1 - ease((p - .66) / .34);
+    if (s.feint) k *= .35;
+    const leadArm = P_ ? P_.arm === 'lead' : true, kind = P_ ? P_.kind : null;
+    const defE = s.def ? clamp(s.defP || 0, 0, 1) * clamp((1 - (s.defU || 0)) / .3, 0, 1) : 0;
+    const hit = clamp(s.hitT || 0, 0, 1) * (s.hitPow != null ? clamp(.5 + s.hitPow * .5, .4, 1.3) : 1);
+    const live = s.state !== 'down' && s.state !== 'slump';
+    const breathe = Math.sin(this.t * 2.2 + s.bob) * .6, bounce = (s.mv || s.walk) ? 0 : Math.sin(this.t * 7 + s.bob) * 1.1;
+    // ---- body targets
+    let c = gd.c + (s.tired || 0) * 2.5 + bounce, bl = gd.bl, lean = gd.lean, sideL = 0, back = 0;
+    if (P_) {
+      if (!leadArm) bl -= k * 52; else if (kind === 'hook') bl -= k * 34; else bl += k * 10;
+      lean += k * (P_.cat === 'power' ? 6 : 3); if (P_.zone === 'body') { c += k * 9; sideL += (leadArm ? 1 : -1) * k * 3; }
+      if (kind === 'upper') c += (p < .4 ? k * 6 : -k * 2);
+    }
+    if (s.def === 'slip') { const sg = ((s.bob * 7) | 0) % 2 ? 1 : -1; sideL += sg * 9 * defE; c += 3 * defE; }
+    if (s.def === 'roll') { c += 7 * defE; bl += 24 * defE; sideL -= 4 * defE; }
+    if (s.def === 'duck') { c += 13 * defE; lean += 6 * defE; }
+    if (s.def === 'pull') { back += 9 * defE; lean -= 6 * defE; }
+    if (s.def === 'block' && s.defZ === 'body') c += 4 * defE;
+    if (hit && s.hitZone === 'head') { back += 7 * hit; lean -= 4 * hit; }
+    if (hit && s.hitZone === 'body') { c += 6 * hit; lean += 5 * hit; }
+    if (s.hurt && live) { c += 3 + Math.sin(this.t * 5) * 2.5; sideL += Math.sin(this.t * 2.6) * 3; }
+    if (s.state === 'clinch') { lean += 8; c += 3; }
+    const sit = sm.sit = damp(sm.sit, s.sit ? 1 : 0, s.sit ? 3.2 : 7, dt);
+    const rate = P_ ? 30 : 12;
+    sm.c = damp(sm.c, c, rate, dt); sm.bl = damp(sm.bl, bl, P_ ? 26 : 10, dt); sm.lean = damp(sm.lean, lean, rate, dt); sm.side = damp(sm.side, sideL, 14, dt); sm.back = damp(sm.back, back, 16, dt);
+    if (s.walk) { sm.c = damp(sm.c, 0, 8, dt); sm.bl = damp(sm.bl, 8, 8, dt); sm.lean = damp(sm.lean, 1, 8, dt); }
+    // ---- feet (gait while moving)
+    const mv = clamp((s.mv || 0) / 40, 0, 1), ph = (s.gait || 0) * .085;
+    const vl = vel.lengthSq() > 4 ? vel.clone().normalize() : fwd.clone();
+    const stepA = Math.sin(ph) * 6 * mv, lift0 = Math.max(0, Math.cos(ph)) * 3 * mv, lift1 = Math.max(0, -Math.cos(ph)) * 3 * mv;
+    let fL, fR;
+    if (s.walk) { fL = P(Math.sin(ph) * 9 * mv, 0, 6).setY(lift0); fR = P(-Math.sin(ph) * 9 * mv, 0, -6).setY(lift1); }
+    else { fL = P(13, 0, 6.5).addScaledVector(vl, stepA).setY(lift0); fR = P(-13, 0, -7.5).addScaledVector(vl, -stepA * .6).setY(lift1); if (P_ && P_.cat === 'jab') fL.addScaledVector(fwd, 5 * k); }
+    // ---- hips, chest, head
+    let hip = P(-1 + sm.lean * .25 - sm.back * .4, 52 - sm.c, sm.side * .4); hip.y += breathe * .2;
+    const blR = THREE.MathUtils.degToRad(sm.bl);
+    const shLine = lead.clone().multiplyScalar(Math.cos(blR)).addScaledVector(fwd, Math.sin(blR)); // rear -> lead shoulder
+    let chest = hip.clone().addScaledVector(UP, 31 * hs).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side);
+    // knockdowns: buckle, sit, lie back. sitting on the stool between rounds
+    const dp = s.state === 'down' ? clamp(s.downP, 0, 1) : s.state === 'slump' ? clamp(s.downP, 0, .35) : 0;
+    let lie = 0;
+    if (dp > 0) {
+      const a = clamp(dp / .35, 0, 1), b = clamp((dp - .35) / .65, 0, 1); lie = b;
+      hip.y = lerp(hip.y, 9, outC(a)); hip.addScaledVector(fwd, -6 * a);
+      const tilt = b * 1.35, up2 = UP.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(fwd, -Math.sin(tilt));
+      chest = hip.clone().addScaledVector(up2, 30 * hs).addScaledVector(fwd, (1 - b) * 4);
+      fL = P(24 + 8 * b, 0, 9); fR = P(18 + 10 * b, 0, -9); fL.y = fR.y = 3 * (1 - a);
+    }
+    if (sit > .01 && cornerPt) {
+      const seat = V(cornerPt.x, 29, cornerPt.z).addScaledVector(fwd, -3);
+      hip.lerp(seat, sit); chest.lerp(seat.clone().addScaledVector(UP, 30 * hs).addScaledVector(fwd, -7), sit);
+      fL.lerp(seat.clone().addScaledVector(fwd, 22).addScaledVector(lead, 10).setY(0), sit); fR.lerp(seat.clone().addScaledVector(fwd, 22).addScaledVector(lead, -10).setY(0), sit);
+    }
+    const spineUp = chest.clone().sub(hip).normalize();
+    let headT = chest.clone().addScaledVector(spineUp, 11 * hs).addScaledVector(fwd, 1.5 - sm.back * .6);
+    if (hit && s.hitZone === 'head') headT.addScaledVector(fwd, -6 * hit).addScaledVector(lead, (s.hitKind === 'hook' ? 4 : 0) * hit).addScaledVector(UP, 2 * hit);
+    if (live && !s.walk && !P_) headT.addScaledVector(UP, -1.5); // chin down
+    if (P_ && live) headT.addScaledVector(lead, leadArm ? -2 * k : 2 * k);
+    sm.head = sm.head ? dampV(sm.head, headT, 22, dt) : headT.clone();
+    const headP = lie > 0 || sit > .5 ? headT : sm.head;
+    const shL = chest.clone().addScaledVector(shLine, 13.2 * G).addScaledVector(UP, -3.5), shR = chest.clone().addScaledVector(shLine, -13.2 * G).addScaledVector(UP, -3.5);
+    // ---- gloves
+    const gp = (a) => P(a[0], a[1] - sm.c, a[2]).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side).addScaledVector(UP, breathe * .4);
+    let gL = gp(gd.L), gR = gp(gd.R);
+    const tir = (s.tired || 0) * 7; gL.y -= tir; gR.y -= tir;
+    if (s.gi != null && s.gi < .5) { gL.y -= (.5 - s.gi) * 16; gR.y -= (.5 - s.gi) * 12; }
+    if (s.def === 'block' && defE > 0) {
+      const bz = s.defZ === 'body';
+      gL.lerp(P(12, (bz ? 64 : 88) - sm.c, 4.5), defE); gR.lerp(P(11, (bz ? 62 : 88) - sm.c, -4.5), defE);
+    }
+    if (hit && s.hitZone === 'head' && s.hitKind !== 'jab') { gL.addScaledVector(fwd, -3 * hit).addScaledVector(lead, 4 * hit); gR.addScaledVector(lead, -4 * hit); }
+    if (hit && s.hitZone === 'body') { gL.y -= 6 * hit; gR.y -= 6 * hit; }
+    if (P_ && live) {
+      const tgt = (P_.zone === 'body' ? opB.clone() : op.head.clone());
+      const arm = leadArm ? 0 : 1, from = arm ? gR : gL, sh = arm ? shR : shL, out = arm ? lead.clone().negate() : lead.clone();
+      const dir = tgt.clone().sub(sh).normalize();
+      let gT;
+      if (kind === 'straight') gT = from.clone().lerp(tgt.clone().addScaledVector(dir, -3), k);
+      else if (kind === 'hook') { gT = from.clone().lerp(tgt.clone().addScaledVector(out, 3), ease(k)); gT.addScaledVector(out, Math.sin(Math.PI * k) * 15).addScaledVector(UP, P_.zone === 'body' ? -2 : 2); }
+      else { gT = from.clone().lerp(tgt.clone().addScaledVector(UP, -2), ease(k)); gT.addScaledVector(UP, -Math.sin(Math.PI * Math.min(1, k * 1.2)) * 13).addScaledVector(fwd, -Math.sin(Math.PI * k) * 3); }
+      if (arm) gR = gT; else gL = gT;
+    }
+    if (s.state === 'clinch' && op.chest) {
+      const toOp = op.chest.clone().sub(chest).setY(0).normalize(), side = V(toOp.z, 0, -toOp.x);
+      gL = op.chest.clone().addScaledVector(toOp, 8).addScaledVector(side, 12).addScaledVector(UP, -6);
+      gR = op.chest.clone().addScaledVector(toOp, 6).addScaledVector(side, -12).addScaledVector(UP, -14);
+      headT.addScaledVector(toOp, 5).addScaledVector(lead, 5);
+    }
+    if (s.walk || sit > .3) {
+      const sw = Math.sin(ph) * 5 * mv;
+      const hang = (sh, o, sg) => sh.clone().addScaledVector(UP, -33 * hs).addScaledVector(lead, o).addScaledVector(fwd, 3 + sg * sw);
+      const kneeL = sit > .3 ? fL.clone().lerp(hip, .45).setY(30).addScaledVector(lead, 2) : null;
+      const wL = hang(shL, 3, 1), wR = hang(shR, -3, -1);
+      gL = sit > .3 ? wL.lerp(kneeL.clone().addScaledVector(UP, 6), sit) : wL;
+      gR = sit > .3 ? wR.lerp(fR.clone().lerp(hip, .45).setY(30).addScaledVector(UP, 6).addScaledVector(lead, -2), sit) : wR;
+    }
+    if (lie > .5) { gL = chest.clone().addScaledVector(lead, 24).addScaledVector(fwd, 6).setY(4); gR = chest.clone().addScaledVector(lead, -24).addScaledVector(fwd, 6).setY(4); }
+    // smooth the guard, not the punch
+    const gr = P_ ? 40 : 16;
+    for (const [i, gT] of [[0, gL], [1, gR]]) { const punching = P_ && (i === 0) === leadArm; sm.gl[i] = sm.gl[i] ? dampV(sm.gl[i], gT, punching ? 60 : gr, dt) : gT.clone(); }
+    gL = sm.gl[0]; gR = sm.gl[1];
+    // ---- arms via IK
+    const UA = 19.5 * hs, FA = 17.5 * hs, out0 = lead.clone(), out1 = lead.clone().negate();
+    const poleFor = (i) => {
+      const outS = i ? out1 : out0, punching = P_ && (i === 0) === leadArm;
+      if (punching && kind === 'hook') return outS.clone().addScaledVector(UP, .6);
+      if (punching && kind === 'upper') return UP.clone().negate().addScaledVector(fwd, -.4);
+      if (s.walk || sit > .3) return fwd.clone().negate().addScaledVector(outS, .3);
+      return UP.clone().negate().addScaledVector(outS, 1 - gd.tuck).addScaledVector(fwd, -.25);
+    };
+    const shs = [shL, shR], gls = [gL, gR];
+    for (let i = 0; i < 2; i++) {
+      const [el, wr] = ik(shs[i], gls[i], UA, FA, poleFor(i));
+      placeSeg(this.upper[i], shs[i], el); placeSeg(this.fore[i], el, wr);
+      this.delt[i].position.copy(shs[i]); this.elbowB[i].position.copy(el);
+      const mid = shs[i].clone().lerp(el, .45); this.bicep[i].position.copy(mid); const ad = el.clone().sub(shs[i]).normalize(); orient(this.bicep[i], ad, fwd); this.bicep[i].scale.set(4.4 * G, 7.5, 4.4 * G);
+      const gl = this.glove[i]; gl.position.copy(wr); orient(gl, UP.clone().addScaledVector(fwd, -.3), wr.clone().sub(el)); gl.thumb.position.x = (i ? 1 : -1) * (s.stance === 'southpaw' ? -1 : 1) * 4.6;
+    }
+    // ---- legs via IK (knees forward and a touch out)
+    const hipL = hip.clone().addScaledVector(lead, 6.5 * G).addScaledVector(fwd, 1), hipR = hip.clone().addScaledVector(lead, -6.5 * G).addScaledVector(fwd, -1);
+    const feet = [fL, fR], hips = [hipL, hipR];
+    for (let i = 0; i < 2; i++) {
+      const ank = feet[i].clone().setY(feet[i].y + 6);
+      const kp = (lie > .2 ? UP.clone() : fwd.clone()).addScaledVector(i ? out1 : out0, .35);
+      const [kn, an] = ik(hips[i], ank, 24.5 * hs, 23.5 * hs, kp);
+      placeSeg(this.thigh[i], hips[i], kn); placeSeg(this.shin[i], kn, an); this.knee[i].position.copy(kn);
+      placeSeg(this.legSleeve[i], hips[i].clone().addScaledVector(UP, 3), hips[i].clone().lerp(kn, .42));
+      const cm = kn.clone().lerp(an, .32); this.calf[i].position.copy(cm).addScaledVector(fwd, -1.6); orient(this.calf[i], an.clone().sub(kn), fwd); this.calf[i].scale.set(4.6 * G, 8, 4.8 * G);
+      placeSeg(this.bootShaft[i], an.clone().addScaledVector(UP, -4), an.clone().lerp(kn, .3));
+      const toe = (lie > .2 ? fwd.clone().multiplyScalar(.2).add(UP) : fwd.clone()).addScaledVector(i ? out1 : out0, .2).normalize();
+      const fc = an.clone().addScaledVector(UP, -2.6).addScaledVector(toe, 4.5);
+      if (lie <= .2) fc.y = Math.max(3.6 * G, an.y - 2.6);
+      this.foot[i].position.copy(fc); orient(this.foot[i], toe, UP); // capsule axis = Y, so point it along the foot
+      this.sole[i].position.copy(fc).setY(Math.max(.6, fc.y - 3.4 * G)); orient(this.sole[i], UP, toe); if (lie > .2) this.sole[i].visible = false; else this.sole[i].visible = true;
+    }
+    // ---- torso, trunks, neck, head
+    const neck = chest.clone().addScaledVector(spineUp, 3);
+    this.torso.position.copy(hip).addScaledVector(spineUp, 6 * hs);
+    orient(this.torso, spineUp, V(0, 0, 0).crossVectors(shLine.clone().multiplyScalar(s.stance === 'southpaw' ? -1 : 1), spineUp));
+    this.torso.scale.set(1, chest.distanceTo(hip) - 3 * hs, 1);
+    for (const pc of this.pecs) pc.scale.y = 3.9 * G / Math.max(10, this.torso.scale.y);
+    this.abs.scale.y = 9 * G / Math.max(10, this.torso.scale.y);
+    const hipFwd = fwd.clone().lerp(V(0, 0, 0).crossVectors(shLine.clone().multiplyScalar(s.stance === 'southpaw' ? -1 : 1), UP), .45);
+    this.trunks.position.copy(hip); orient(this.trunks, spineUp.clone().lerp(UP, .5), hipFwd);
+    const headUp = UP.clone().lerp(spineUp, .6);
+    this.trap.position.copy(chest).addScaledVector(spineUp, -2.5).addScaledVector(fwd, -1.5); orient(this.trap, spineUp, fwd); this.trap.scale.set(9 * G, 4.2 * G, 5 * G);
+    placeSeg(this.neck, neck.clone().addScaledVector(spineUp, -4), headP.clone().addScaledVector(headUp, -4));
+    this.head.position.copy(headP); orient(this.head, headUp, fwd.clone().addScaledVector(UP, lie > .5 ? 0 : -.05));
+    // stool
+    this.stool.visible = sit > .05 && !!cornerPt; if (cornerPt) this.stool.position.set(cornerPt.x, 0, cornerPt.z);
+    this.stool.scale.setScalar(clamp(sit * 1.4, .01, 1));
+    // what the other man aims at
+    this.jHead = headP; this.jChest = chest; this.jBody = hip.clone().lerp(chest, .55).addScaledVector(fwd, 6 * G);
+  }
+}
+
+/* ================= sweat / impact spray ================= */
+const SPRAY = []; const sprayM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .85 });
+for (let i = 0; i < 60; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(.7, 6, 4), sprayM.clone()); m.visible = false; scene.add(m); SPRAY.push({ m, v: V(0, 0, 0), life: 0 }); }
+function spray(at, dir, n, pow) {
+  for (let i = 0; i < n; i++) {
+    const s = SPRAY.find(x => x.life <= 0); if (!s) return;
+    s.m.position.copy(at); s.v.copy(dir).multiplyScalar(60 + Math.random() * 90 * pow).add(V((Math.random() - .5) * 60, Math.random() * 60, (Math.random() - .5) * 60));
+    s.life = .5 + Math.random() * .3; s.m.visible = true;
+  }
+}
+function tickSpray(dt) { for (const s of SPRAY) if (s.life > 0) { s.life -= dt; s.v.y -= 260 * dt; s.m.position.addScaledVector(s.v, dt); s.m.material.opacity = clamp(s.life * 2, 0, .85); if (s.life <= 0) s.m.visible = false; } }
+
+/* ================= fight ================= */
+let fight = null, boxers = [], speed = 1, acc = 0, cornerWait = 0, overT = 0, shake = 0;
+const $ = id => document.getElementById(id);
+function bigText(t, sub, ms) { const b = $('big'); b.innerHTML = t + (sub ? `<small>${sub}</small>` : ''); b.classList.add('on'); clearTimeout(bigText.h); if (ms) bigText.h = setTimeout(() => b.classList.remove('on'), ms); }
+function mkSheet(look) {
+  const style = pick(BASE_STYLES), guard = rollGuard(style);
+  return { name: pick(FIRST) + ' ' + pick(LAST), nick: '', style, guard, stance: R() < .25 ? 'southpaw' : 'orthodox', stats: genStats(ri(78, 86), style), wear: 0, exp: 20, look };
+}
+function newFight() {
+  boxers.forEach(b => { scene.remove(b.g); scene.remove(b.stool); });
+  const div = ri(2, 7), la = randLook(div), lb = randLook(div);
+  if (lb.trunks === la.trunks) lb.trunks = GEAR.trunks.find(t => t.id !== la.trunks && t.price === 0).id;
+  if (lb.gloves === la.gloves) lb.gloves = GEAR.gloves.find(t => t.id !== la.gloves).id;
+  const A = mkSheet(la), B = mkSheet(lb);
+  fight = new Fight(A, B, { rounds: 4 });
+  boxers = [new Boxer(la, 0), new Boxer(lb, 1)];
+  const tag = (S, i) => `<span class="dot" style="background:${i ? 'var(--blue)' : 'var(--red)'}"></span>${S.name}<small>${STYLES[S.style].label}, ${GUARDS[S.guard].label.toLowerCase()}, ${S.stance}</small><div class="bars"><i id="hb${i}" style="width:100%"></i></div>`;
+  $('n0').innerHTML = tag(A, 0); $('n1').innerHTML = tag(B, 1);
+  acc = 0; cornerWait = 0; overT = 0; $('big').classList.remove('on');
+}
+function events() {
+  for (const e of fight.events) {
+    if (e.type === 'hit' && !e.blocked && (e.dmg || 0) > 0) {
+      const d = boxers[e.d];
+      const big = (e.dmg || 0) > 4 || e.crit;
+      if (d && d.jHead && e.zone !== 'body') spray(d.jHead, d.jHead.clone().sub(boxers[1 - d.side].jChest || d.jHead).setY(0).normalize(), big ? 10 : 4, big ? 1 : .4);
+      if (big) shake = Math.max(shake, .35);
+    }
+    if (e.type === 'knockdown') { bigText('Down!', fight.f[e.d] ? fight.f[e.d].sheet.name + ' is down' : '', 1800); shake = .8; }
+    if (e.type === 'roundEnd' || e.type === 'corner') {}
+  }
+  fight.events = [];
+}
+
+/* ================= camera ================= */
+const CAMS = [
+  { n: 'TV', yaw: 0, pitch: .36, dist: 1 },
+  { n: 'Ringside', yaw: .18, pitch: .08, dist: .78 },
+  { n: 'High', yaw: .7, pitch: .72, dist: 1.25 },
+  { n: 'Corner', yaw: -2.35, pitch: .26, dist: .85 }
+];
+let sepS = 120, camI = 0, cam = { yaw: 0, pitch: .3, dist: 1, user: false }, tgt = V(0, 60, 0);
+function camFit(sep) { // distance so about 330 units of ring fit across the screen, portrait or landscape
+  const asp = innerWidth / innerHeight, vf = THREE.MathUtils.degToRad(camera.fov), hf = 2 * Math.atan(Math.tan(vf / 2) * asp);
+  return Math.max(Math.max(asp < 1 ? 150 : 300, (sep || 0) * 1.15 + 60) / Math.tan(hf / 2) / 2, 230);
+}
+function updCam(dt) {
+  const A = fight.f[0], B = fight.f[1], between = fight.phase === 'corner' || fight.phase === 'roundEnd';
+  const mid = V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
+  if (between) mid.set(0, 50, 0);
+  tgt.lerp(mid, 1 - Math.exp(-3 * dt));
+  if (!cam.user) { const C = CAMS[camI], tall = innerWidth < innerHeight ? .14 : 0; cam.yaw = damp(cam.yaw, C.yaw, 2.5, dt); cam.pitch = damp(cam.pitch, C.pitch + tall, 2.5, dt); cam.dist = damp(cam.dist, C.dist, 2.5, dt); }
+  sepS = damp(sepS, between ? 2 * RING : Math.hypot(A.x - B.x, A.z - B.z), 2, dt);
+  const D = camFit(sepS) * cam.dist;
+  const sx = shake > 0 ? (Math.random() - .5) * shake * 4 : 0, sy = shake > 0 ? (Math.random() - .5) * shake * 4 : 0; shake = Math.max(0, shake - dt * 2);
+  camera.position.set(tgt.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * D + sx, tgt.y + Math.sin(cam.pitch) * D + sy, tgt.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * D);
+  camera.lookAt(tgt);
+}
+// drag to orbit, pinch/wheel to zoom
+let drag = null;
+cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch }; cv.setPointerCapture(e.pointerId); $('hint').style.opacity = 0; });
+cv.addEventListener('pointermove', e => { if (!drag) return; cam.user = true; cam.yaw = drag.yaw - (e.clientX - drag.x) * .008; cam.pitch = clamp(drag.pitch + (e.clientY - drag.y) * .006, .03, 1.35); updCamBtn(); });
+cv.addEventListener('pointerup', () => { drag = null; });
+cv.addEventListener('wheel', e => { cam.user = true; cam.dist = clamp(cam.dist * (1 + e.deltaY * .001), .45, 2); updCamBtn(); e.preventDefault(); }, { passive: false });
+function updCamBtn() { $('bCam').textContent = 'Cam: ' + (cam.user ? 'Free' : CAMS[camI].n); }
+$('bCam').onclick = () => { if (cam.user) cam.user = false; else camI = (camI + 1) % CAMS.length; updCamBtn(); };
+$('bSpd').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $('bSpd').textContent = 'Speed ' + speed + 'x'; };
+$('bNew').onclick = () => newFight();
+setTimeout(() => { $('hint').style.opacity = 0; }, 5000);
+
+/* ================= loop ================= */
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+newFight();
+let last = performance.now(), fpsT = 0, fpsN = 0;
+const corners = [V(-RING + 8, 0, -ZR * .55 - 6), V(RING - 8, 0, ZR * .55 + 6)];
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (fight.phase === 'corner') {
+    cornerWait += dt;
+    if (cornerWait > 3.2) { cornerWait = 0; fight.nextRound(fight.aiStrategy(0), fight.aiStrategy(1)); bigText('Round ' + fight.round, '', 1300); }
+  } else if (fight.phase === 'over') {
+    if (!overT) { const r = fight.result, w = r.winner == null ? null : fight.f[r.winner].sheet.name; bigText(r.method === 'KO' ? 'Knockout' : r.method, w ? w + ' wins' + (r.decision ? '' : ', round ' + r.round) : 'Draw'); }
+    overT += dt; acc += dt; while (acc >= DT) { fight.step(DT); acc -= DT; } fight.events = [];
+    if (overT > 9) newFight();
+  } else {
+    acc += dt * speed;
+    while (acc >= DT && fight.phase !== 'corner' && fight.phase !== 'over') { fight.step(DT); acc -= DT; events(); }
+  }
+  const snap = fight.snap();
+  // poses: compute both, each aims at where the other was last frame
+  for (let i = 0; i < 2; i++) {
+    const o = boxers[1 - i], os = snap.f[1 - i];
+    const opHead = o.jHead || V(os.x, 88, os.z), opBody = o.jBody || V(os.x, 66, os.z);
+    boxers[i].pose(snap.f[i], { x: os.x, z: os.z, head: opHead, chest: o.jChest }, opBody, dt, corners[i]);
+  }
+  tickSpray(dt); updCam(dt);
+  fight.f.forEach((X, i) => { const el = $('hb' + i); if (el) el.style.width = clamp(X.head / Math.max(1, X.headMax) * 100, 0, 100) + '%'; });
+  const left = Math.max(0, ROUND_LEN - fight.clock); $('ck').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
+  $('rd').textContent = fight.phase === 'corner' ? 'Between rounds' : 'Round ' + fight.round + ' of ' + fight.rounds;
+  renderer.render(scene, camera);
+  fpsN++; fpsT += dt; if (fpsT > 1) { window.__fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
+}
+requestAnimationFrame(frame);
+window.__dbg = { cam, get fight() { return fight; }, boxers: () => boxers, THREE, camera, renderer, setCam: (i) => { camI = i; cam.user = false; updCamBtn(); } };
+</script>
+</body></html>

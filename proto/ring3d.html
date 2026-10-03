@@ -1,0 +1,2188 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0907">
+<title>Last Bell 3D Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0907;--ink:#f1e8d8;--mute:#a5967f;--accent:#f0b85a;--red:#c8392f;--blue:#4f86b8;--disp:'Anton',Impact,sans-serif;--ui:'Barlow Condensed','Arial Narrow',Arial,sans-serif}
+:root[data-theme="light"],:root[data-theme="dark"]{--bg:#0c0907}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c0907}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui);overflow:hidden;-webkit-user-select:none;user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 0;display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;pointer-events:none}
+.nm{font-family:var(--disp);font-size:18px;letter-spacing:.02em;text-transform:uppercase;line-height:1.05;text-shadow:0 1px 3px #000}
+.nm small{display:block;font-family:var(--ui);font-size:13px;color:var(--mute);text-transform:none;letter-spacing:0}
+.nm.r{text-align:right}.nm .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 6px 2px 0;vertical-align:middle}
+.bars{margin-top:5px;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}.bars i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.nm.r .bars i{margin-left:auto}
+.clock{text-align:center;font-family:var(--disp);font-size:24px;line-height:1;text-shadow:0 1px 3px #000}.clock small{display:block;font-family:var(--ui);font-size:13px;color:var(--mute)}
+.ctl{position:fixed;left:0;right:0;bottom:0;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.ctl button{font:700 16px var(--ui);color:var(--ink);background:rgba(20,15,11,.78);border:1.5px solid rgba(240,184,90,.45);border-radius:6px;padding:10px 14px;min-width:84px;backdrop-filter:blur(4px)}
+.ctl button:active{background:rgba(240,184,90,.25)}
+.big{position:fixed;left:16px;right:16px;top:38%;text-align:center;font-family:var(--disp);font-size:clamp(34px,11vw,64px);letter-spacing:.03em;color:var(--accent);text-shadow:0 3px 14px #000;opacity:0;transition:opacity .25s;pointer-events:none;text-transform:uppercase}
+.big small{display:block;font-family:var(--ui);font-size:18px;color:var(--ink);letter-spacing:0;text-transform:none}
+.big.on{opacity:1}
+.hint{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 66px);text-align:center;font-size:14px;color:var(--mute);pointer-events:none;transition:opacity .6s}
+.err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:18px}
+</style></head><body>
+<canvas id="c" aria-label="3D boxing ring with two fighters"></canvas>
+<div class="hud">
+  <div class="nm" id="n0"></div>
+  <div class="clock"><span id="ck">3:00</span><small id="rd">Round 1</small></div>
+  <div class="nm r" id="n1"></div>
+</div>
+<div class="big" id="big"></div>
+<div class="hint" id="hint">Drag to move the camera</div>
+<div class="ctl"><button id="bCam">Cam: TV</button><button id="bSpd">Speed 1x</button><button id="bNew">New fight</button></div>
+<div class="err" id="err">This test needs WebGL. Try another browser.</div>
+<script>
+/* ===== LAST BELL : engine ===== */
+const R = Math.random;
+const rnd = (a, b) => a + R() * (b - a);
+const ri = (a, b) => Math.floor(rnd(a, b + 1));
+const pick = a => a[Math.floor(R() * a.length)];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const gauss = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+function wpick(items, wfn) {
+  let tot = 0; const ws = items.map(i => { const w = Math.max(0, wfn(i)); tot += w; return w; });
+  if (tot <= 0) return items[0];
+  let r = R() * tot;
+  for (let i = 0; i < items.length; i++) { r -= ws[i]; if (r <= 0) return items[i]; }
+  return items[items.length - 1];
+}
+
+const STATS = ['power', 'speed', 'accuracy', 'defense', 'footwork', 'chin', 'body', 'stamina', 'recovery', 'heart'];
+const STAT_LABEL = { power: 'Power', speed: 'Hand speed', accuracy: 'Accuracy', defense: 'Head movement', footwork: 'Footwork', chin: 'Chin', body: 'Body toughness', stamina: 'Stamina', recovery: 'Recovery', heart: 'Heart' };
+const OVR_W = { power: .12, speed: .12, accuracy: .11, defense: .12, footwork: .09, chin: .11, body: .07, stamina: .10, recovery: .06, heart: .10 };
+function ovr(s) { let t = 0; for (const k of STATS) t += s[k] * OVR_W[k]; return Math.round(t); }
+
+const PUNCH = {
+  jab:      { name: 'jab',          dur: .30, dmg: 1.5, cost: 1.0, min: 36, max: 78, kind: 'straight', zone: 'head', arm: 'lead', cat: 'jab' },
+  cross:    { name: 'right hand',   dur: .40, dmg: 3.6, cost: 2.2, min: 36, max: 76, kind: 'straight', zone: 'head', arm: 'rear', cat: 'power' },
+  hook:     { name: 'hook',         dur: .46, dmg: 4.2, cost: 2.6, min: 22, max: 60, kind: 'hook',     zone: 'head', arm: 'lead', cat: 'power' },
+  uppercut: { name: 'uppercut',     dur: .48, dmg: 4.6, cost: 2.8, min: 18, max: 54, kind: 'upper',    zone: 'head', arm: 'rear', cat: 'power' },
+  bodyJab:  { name: 'jab downstairs', dur: .32, dmg: 1.4, cost: 1.0, min: 34, max: 76, kind: 'straight', zone: 'body', arm: 'lead', cat: 'body' },
+  bodyHook: { name: 'body hook',    dur: .48, dmg: 3.9, cost: 2.6, min: 20, max: 58, kind: 'hook',     zone: 'body', arm: 'lead', cat: 'body' }
+};
+// open: waits for openings (punches less until the other guy gives him something, then fires fast)
+// legs: footwork going back and sideways. stick: jabs the man walking in and stops his feet
+// hit: weight behind the power shots. ramp: turns the volume up when the fight calls for it
+// out: slides out on an angle when the other guy gets inside. inside: smothers you in close (no room to slip or counter)
+// special-style traits: eco (cheaper punches), angle (steps off after combos, he loses you), odd (hard to read, weird timing),
+// leap (lunges in from further out), swap (switches stance, resets your read), bodyX (body shots hurt more), pjab (jab on the way in),
+// spoil (ties up combos, dirty work in the clutches), grab (grabs when you get close, leans), bite (feints that make you commit)
+const STYLES = {
+  outboxer: { label: 'Out-boxer', desc: 'Fights on the outside behind the jab. Gets out when you get close.', range: 72, ret: .95, circ: .85, cutK: .25, aggr: .82, counter: .35, feint: 1.2, clinch: .8, gen: .3, legs: 1.3, stick: .7, out: 1,
+    bias: { speed: 2, footwork: 3, defense: 1, accuracy: 3, heart: 3, power: -3, chin: -1 } },
+  slugger: { label: 'Slugger', desc: 'Walks you down and sits on every shot. Fewer punches, all of them heavy.', range: 58, ret: .6, circ: .2, cutK: .85, aggr: .68, counter: .2, feint: .5, clinch: 1, gen: 0, legs: .92, hit: 1.3, inside: .7,
+    bias: { power: 10, chin: 7, heart: 2, speed: -2, footwork: -4, defense: -1 } },
+  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.15,
+    bias: { stamina: 7, heart: 4, body: 4, speed: 3, power: 4, defense: 2, footwork: -1 } },
+  counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .6, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
+    bias: { defense: 4, accuracy: 6, recovery: 2, heart: 3, chin: 2, stamina: -2, power: -5 } },
+  boxerpuncher: { label: 'Boxer-puncher', desc: 'A bit of everything. Boxes, then turns it up when the fight calls for it.', range: 66, ret: .8, circ: .5, cutK: .6, aggr: .8, counter: .45, feint: 1, clinch: .9, gen: .12, open: .3, ramp: .8,
+    bias: { power: 3, accuracy: 3, speed: 2, footwork: 3, heart: 2 } },
+  // special styles: one legend per division fights each of these. Beat him and you can learn it
+  volume: { label: 'Volume puncher', special: true, desc: 'Throws in bunches, round after round. Light hands, a gas tank that never empties.', range: 62, ret: .7, circ: .55, cutK: .7, aggr: 1.7, counter: .35, feint: .6, clinch: .8, gen: .1, hit: .82, eco: .78, ramp: .3,
+    bias: { stamina: 8, speed: 5, recovery: 4, power: -6, chin: -2 } },
+  angle: { label: 'Angle fighter', special: true, desc: 'Hits you, then he is gone. Steps off to the side and makes you turn to find him.', range: 64, ret: .85, circ: .9, cutK: .5, aggr: .82, counter: .42, feint: 1.3, clinch: .7, gen: .25, legs: 1.1, angle: 1,
+    bias: { footwork: 8, speed: 5, accuracy: 3, power: -4, chin: -3 } },
+  awkward: { label: 'Awkward', special: true, desc: 'Weird rhythm, hands low, punches from places you do not see coming. Hard to figure out.', range: 66, ret: .8, circ: .7, cutK: .4, aggr: .85, counter: .4, feint: 1.6, clinch: .8, gen: .1, odd: .8, leap: 4,
+    bias: { speed: 4, power: 4, defense: 3, accuracy: -4, stamina: -3 } },
+  switch: { label: 'Switch-hitter', special: true, desc: 'Orthodox, southpaw, orthodox again. Every time you figure him out, he changes.', range: 64, ret: .8, circ: .55, cutK: .6, aggr: .85, counter: .45, feint: 1, clinch: .85, gen: .15, swap: 1,
+    bias: { accuracy: 5, defense: 4, speed: 3, power: 1, stamina: -2 } },
+  body: { label: 'Body snatcher', special: true, desc: 'Breaks you down downstairs, one rib at a time. The head comes later.', range: 56, ret: .55, circ: .35, cutK: .95, aggr: 1.2, counter: .3, feint: .7, clinch: 1, gen: 0, inside: .6, bodyX: 1,
+    bias: { body: 5, power: 5, stamina: 5, heart: 4, speed: -3, footwork: -3 } },
+  pboxer: { label: 'Pressure boxer', special: true, desc: 'Walks you down behind a stiff jab and cuts the ring off. No wasted punches.', range: 60, ret: .65, circ: .3, cutK: 1.25, aggr: 1.05, counter: .35, feint: .8, clinch: .9, gen: .2, pjab: 1, hit: 1.18,
+    bias: { power: 6, chin: 5, stamina: 4, footwork: 2, speed: -3, defense: -3 } },
+  spoiler: { label: 'Veteran spoiler', special: true, desc: 'Old tricks. Ties you up, leans on you, sneaks shots in the clutches. Ugly and smart.', range: 64, ret: .85, circ: .45, cutK: .5, aggr: .7, counter: .5, feint: 1.2, clinch: 1.6, gen: .3, open: .5, spoil: 1,
+    bias: { defense: 6, accuracy: 5, recovery: 4, heart: 2, speed: -4, stamina: -2 } },
+  jabgrab: { label: 'Jab-and-grab', special: true, desc: 'Long jab, and the second you get close he grabs you and leans his weight on you.', range: 74, ret: .95, circ: .6, cutK: .35, aggr: .9, counter: .3, feint: .8, clinch: 1.4, gen: .35, legs: 1.1, stick: 1, grab: 1, hit: 1.15,
+    bias: { power: 6, accuracy: 4, footwork: 2, chin: -2, speed: -2, heart: -2 } },
+  feinter: { label: 'Feint master', special: true, desc: 'Feints you into knots, then hits whatever you leave open.', range: 64, ret: .85, circ: .7, cutK: .6, aggr: .92, counter: .45, feint: 2.6, clinch: .8, gen: .4, legs: 1.1, bite: 1,
+    bias: { speed: 4, accuracy: 4, footwork: 4, defense: 2, power: -3 } }
+};
+const BASE_STYLES = Object.keys(STYLES).filter(k => !STYLES[k].special);
+
+/* ---------- guards: how a fighter holds his hands. Picked at creation, fixed for the career ----------
+   head/body: passive block strength by zone. str/hook/up: block strength by punch type.
+   ev: head-movement evasion. ctr: counter chance. hold: how long the guard holds up under fire.
+   def: weights for which reactive defense he reaches for. skill: stats that make the guard work. */
+const GUARDS = {
+  standard: { label: 'Standard', desc: 'Lead hand out, rear hand home by the chin. No big holes, no big edges.',
+    head: 1, body: 1, str: 1, hook: 1, up: 1, ev: 1, ctr: 1, hold: 1, def: { block: 1, slip: 1, duck: 1, pull: 1 } },
+  high: { label: 'High guard', desc: 'Gloves glued to the temples, elbows tight. Hard to crack upstairs, but the body is open and he sees less.',
+    head: 1.15, body: .75, str: 1.15, hook: 1.2, up: .75, ev: .82, ctr: .85, hold: 1.1, def: { block: 2, slip: .6, duck: .7, pull: .6 } },
+  peekaboo: { label: 'Peek-a-boo', desc: 'Fists on the cheekbones, head always moving. Slips and rolls his way inside. Needs quick reflexes.',
+    head: 1, body: .7, str: 1, hook: 1.05, up: .8, ev: .98, ctr: 1, hold: 1, skill: ['defense', 'speed'], def: { block: 1, slip: 1.15, duck: 1.1, pull: .5 } },
+  philly: { label: 'Philly shell', desc: 'Lead arm across the belly, chin behind the shoulder. Rolls straights off the shoulder and fires back. Takes real reflexes and ring smarts.',
+    head: 1, body: 1.05, str: 1.12, hook: .8, up: .85, ev: 1, ctr: 1.05, hold: .85, skill: ['defense', 'speed', 'accuracy'], def: { block: .5, slip: 1, duck: .7, pull: 1.1, roll: 1.25 } },
+  cross: { label: 'Cross-arm', desc: 'Forearms locked across the face. Built for head shots and uppercuts. The ribs and liver hang out.',
+    head: 1.2, body: .66, str: 1.08, hook: 1.05, up: 1.45, ev: .8, ctr: .9, hold: 1.35, def: { block: 2.2, slip: .5, duck: .6, pull: .6 } },
+  handslow: { label: 'Hands low', desc: 'Gloves at the waist, eyes wide open. Sees everything and fires back, but pays for it when the legs go.',
+    head: .75, body: .9, str: .9, hook: .85, up: 1, ev: 1.3, ctr: 1.3, hold: .7, skill: ['defense', 'footwork', 'speed'], def: { block: .4, slip: 1.3, duck: .9, pull: 2 } }
+};
+// what a smart opponent throws into each guard
+const GUARD_HOLES = {
+  standard: {},
+  high: { bodyJab: 1.5, bodyHook: 1.7, uppercut: 1.35, jab: .8, cross: .85, hook: .9 },
+  peekaboo: { jab: 1.3, bodyJab: 1.25, bodyHook: 1.15, hook: .85, uppercut: .85 },
+  philly: { cross: 1.55, hook: .8, jab: .7, bodyJab: .75, bodyHook: 1.1, uppercut: 1.15 },
+  cross: { bodyHook: 1.7, bodyJab: 1.45, hook: 1.15, cross: .75, jab: .8, uppercut: .6 },
+  handslow: { jab: 1.3, cross: 1.2, hook: 1.1, bodyJab: .9 }
+};
+const GUARD_FEINT = { philly: 1.7, handslow: 1.6, peekaboo: 1.2 }; // counter-happy guards bite on feints
+const STYLE_GUARDS = {
+  outboxer: { standard: 3, handslow: 2, philly: 1.2, high: .6 },
+  slugger: { standard: 2, high: 2, cross: 1.4, peekaboo: .6 },
+  swarmer: { peekaboo: 2.4, high: 2, standard: 1, cross: .8 },
+  counter: { philly: 2.6, standard: 1.4, handslow: 1.2, high: .8 },
+  boxerpuncher: { standard: 3, high: 1.4, philly: 1, peekaboo: .6, handslow: .4 }
+};
+// a fighter still learning a style fights as a blend of the old one and the new one
+const STYLE_DEF = { legs: 1, hit: 1, ret: .7 };
+function blendStyle(sh) {
+  const to = STYLES[sh.style] || STYLES.boxerpuncher, from = sh.styleFrom && STYLES[sh.styleFrom], f = sh.styleFit == null ? 1 : clamp(sh.styleFit, 0, 1);
+  if (!from || f >= 1) return to;
+  const o = { label: to.label };
+  for (const k of new Set([...Object.keys(to), ...Object.keys(from)])) {
+    if (k === 'label' || k === 'bias' || k === 'desc') continue;
+    const d = STYLE_DEF[k] || 0; o[k] = lerp(from[k] != null ? from[k] : d, to[k] != null ? to[k] : d, f);
+  }
+  return o;
+}
+function domStyle(sh) { return sh.styleFrom && STYLES[sh.styleFrom] && (sh.styleFit == null ? 1 : sh.styleFit) < .5 ? sh.styleFrom : sh.style; }
+function comboW(F, c) { const sh = F.sheet, f = sh.styleFit == null ? 1 : sh.styleFit; return sh.styleFrom && f < 1 ? lerp(c.w[sh.styleFrom] || 0, c.w[sh.style] || 0, f) : c.w[sh.style] || 0; }
+Object.assign(STYLE_GUARDS, {
+  volume: { peekaboo: 2, high: 1.5, standard: 1 }, angle: { handslow: 2, standard: 2 }, awkward: { handslow: 3, philly: 1 },
+  switch: { standard: 2, philly: 1 }, body: { high: 2, peekaboo: 1.5 }, pboxer: { high: 2.5, standard: 1 },
+  spoiler: { philly: 2, high: 1.5 }, jabgrab: { standard: 2, high: 1 }, feinter: { standard: 2, handslow: 1 }
+});
+function rollGuard(style) { const w = STYLE_GUARDS[style] || { standard: 1 }; return wpick(Object.keys(w), k => w[k]); }
+// how well his stats support the guard: 0 = can't make it work, 1 = fully
+function guardSkill(stats, g) { const G = GUARDS[g] || GUARDS.standard; if (!G.skill) return 1; const v = G.skill.reduce((s, k) => s + stats[k], 0) / G.skill.length; return clamp((v - 50) / 32, 0, 1); }
+// ring IQ: technique stats plus experience. Not trained directly, it grows with fights
+function ringIQ(sh) {
+  const s = sh.stats, exp = sh.exp || 0;
+  return clamp(s.accuracy * .3 + s.defense * .3 + s.footwork * .25 + s.heart * .15 - 6 + Math.min(16, Math.sqrt(exp) * 3.2), 20, 99);
+}
+
+/* ---------- combo library. r: working range (L long, M mid, I inside). w: how much each style likes it ---------- */
+const COMBOS = [
+  ['jab', 'L', { outboxer: 3, counter: 2, boxerpuncher: 2, slugger: 1, swarmer: .6 }],
+  ['jab,jab', 'L', { outboxer: 2.4, boxerpuncher: 1.3, counter: 1, slugger: .5, swarmer: .5 }],
+  ['jab,cross', 'L', { outboxer: 2.2, boxerpuncher: 2.2, counter: 1.6, slugger: 1.4, swarmer: .9 }],
+  ['jab,jab,cross', 'L', { outboxer: 1.4, boxerpuncher: 1.2, counter: .7, slugger: .6, swarmer: .5 }],
+  ['cross', 'L', { counter: 1.6, slugger: 1.4, boxerpuncher: .9, outboxer: .8, swarmer: .4 }],
+  ['bodyJab', 'L', { outboxer: .9, counter: 1, boxerpuncher: .7, slugger: .4, swarmer: .5 }],
+  ['bodyJab,jab', 'L', { outboxer: 1, boxerpuncher: .8, counter: .7, slugger: .3, swarmer: .4 }],
+  ['jab,bodyJab', 'L', { outboxer: .7, boxerpuncher: .6, counter: .5, swarmer: .4, slugger: .3 }],
+  ['bodyJab,cross', 'L', { boxerpuncher: 1, outboxer: .8, counter: .8, slugger: .7, swarmer: .4 }],
+  ['jab,cross,hook', 'M', { boxerpuncher: 1.6, outboxer: .8, slugger: 1, swarmer: 1.2, counter: .7 }],
+  ['jab,jab,cross,hook', 'M', { boxerpuncher: .8, outboxer: .5, swarmer: .6, slugger: .4, counter: .3 }],
+  ['jab,hook', 'M', { boxerpuncher: .8, slugger: .8, swarmer: .7, counter: .6, outboxer: .5 }],
+  ['cross,hook', 'M', { slugger: 2, boxerpuncher: 1.2, swarmer: 1, counter: 1, outboxer: .5 }],
+  ['cross,hook,cross', 'M', { slugger: 1, boxerpuncher: .9, swarmer: .8, counter: .4, outboxer: .3 }],
+  ['jab,cross,bodyHook', 'M', { boxerpuncher: 1, swarmer: 1, slugger: .8, outboxer: .4, counter: .4 }],
+  ['jab,bodyHook,hook', 'M', { swarmer: 1.4, boxerpuncher: .9, slugger: .8, outboxer: .3, counter: .3 }],
+  ['cross,bodyHook', 'M', { slugger: .9, boxerpuncher: .8, swarmer: .8, counter: .5 }],
+  ['hook', 'I', { slugger: 2, swarmer: 1.2, counter: 1.2, boxerpuncher: .8, outboxer: .3 }],
+  ['bodyHook,hook', 'I', { swarmer: 2, slugger: 1.2, boxerpuncher: .9, counter: .4, outboxer: .2 }],
+  ['hook,hook', 'I', { swarmer: 1.4, slugger: .9, boxerpuncher: .5 }],
+  ['hook,uppercut', 'I', { slugger: 1, swarmer: 1, boxerpuncher: .9, counter: .5 }],
+  ['uppercut,hook', 'I', { slugger: 1.4, swarmer: 1.3, boxerpuncher: .8, counter: .6 }],
+  ['bodyHook,bodyHook,uppercut', 'I', { swarmer: 1, slugger: .5, boxerpuncher: .3 }],
+  ['uppercut,cross', 'I', { boxerpuncher: .7, slugger: .7, counter: .5, swarmer: .6 }],
+  ['hook,cross,hook', 'I', { swarmer: .9, slugger: .8, boxerpuncher: .6 }],
+  ['bodyHook,uppercut,hook', 'I', { swarmer: .9, slugger: .6, boxerpuncher: .4 }],
+  ['uppercut', 'I', { counter: .8, slugger: .6, swarmer: .5, boxerpuncher: .4 }],
+  ['bodyHook', 'I', { swarmer: .9, slugger: .7, boxerpuncher: .6, counter: .5, outboxer: .3 }]
+].map(([s, r, w]) => { const seq = s.split(','); return { key: s, seq, r, w, len: seq.length, body: seq.filter(p => PUNCH[p].zone === 'body').length, pow: seq.filter(p => PUNCH[p].cat === 'power').length }; });
+const RANGE_C = { L: [70, 14], M: [56, 12], I: [41, 12] };
+// special styles borrow a base style's combo menu and lean it: longer combos, more body, more jabs, more power
+const STYLE_COMBO = {
+  volume: { from: 'boxerpuncher', len: 1.35, jab: 1.1, pow: .95 }, angle: { from: 'boxerpuncher' }, awkward: { from: 'counter', pow: 1.15 },
+  switch: { from: 'boxerpuncher' }, body: { from: 'swarmer', body: 2.2 }, pboxer: { from: 'boxerpuncher', jab: 1.4 },
+  spoiler: { from: 'counter' }, jabgrab: { from: 'outboxer', jab: 1.2, pow: 1.1 }, feinter: { from: 'boxerpuncher' }
+};
+for (const k in STYLE_COMBO) { const m = STYLE_COMBO[k];
+  for (const c of COMBOS) { const b = c.w[m.from] || 0; if (!b) continue; const j = c.seq.filter(p => p === 'jab').length;
+    c.w[k] = b * Math.pow(m.len || 1, c.len - 1) * Math.pow(m.body || 1, c.body) * Math.pow(m.pow || 1, c.pow) * Math.pow(m.jab || 1, j); } }
+const kindOf = p => { const P = PUNCH[p]; return P.zone === 'body' ? 'body' : P.kind; }; // straight | hook | upper | body
+const LEVEL_SWAP = { jab: 'bodyJab', cross: 'bodyJab', hook: 'bodyHook', uppercut: 'bodyHook', bodyJab: 'jab', bodyHook: 'hook' };
+
+const STRATS = {
+  auto:     { label: "Corner's call", aggr: 1,    range: 0,   body: 1,   power: 1,   jab: 1,   def: 1,   clinch: 1,   counter: 1,   circ: 1 },
+  pressure: { label: 'Pressure',      aggr: 1.35, range: -12, body: 1.1, power: 1.1, jab: .9,  def: .85, clinch: .8,  counter: .8,  circ: .5, cut: .4 },
+  move:     { label: 'Box & move',    aggr: .85,  range: 12,  body: .8,  power: .75, jab: 1.7, def: 1.2, clinch: 1,   counter: 1.1, circ: 1.7 },
+  body:     { label: 'Go to the body',aggr: 1.1,  range: -6,  body: 2.6, power: 1,   jab: .8,  def: 1,   clinch: 1,   counter: 1,   circ: .8 },
+  counter:  { label: 'Counter',       aggr: .7,   range: 4,   body: .9,  power: 1,   jab: 1,   def: 1.3, clinch: 1,   counter: 1.8, circ: 1.2 },
+  ko:       { label: 'Go for the KO', aggr: 1.5,  range: -8,  body: .9,  power: 1.9, jab: .6,  def: .7,  clinch: .6,  counter: .8,  circ: .5, cut: .3 },
+  survive:  { label: 'Survive',       aggr: .5,   range: 18,  body: .8,  power: .8,  jab: 1.3, def: 1.5, clinch: 2.4, counter: 1.1, circ: 1.6 }
+};
+// in-round instructions from the corner: a short-lived tweak on top of the round plan. How much sinks in depends on the fighter
+const SHOUTS = {
+  jab:     { label: 'Jab!',        mods: { jab: 1.6, range: 4, def: 1.08 } },
+  body:    { label: 'Body!',       mods: { body: 2.3, range: -4 } },
+  press:   { label: 'Get on him!', mods: { aggr: 1.3, range: -10, cut: .3, circ: .7 } },
+  counter: { label: 'Counter!',    mods: { aggr: .72, counter: 1.4 } },
+  move:    { label: 'Move!',       mods: { aggr: .85, range: 10, circ: 1.7, def: 1.1 } },
+  hands:   { label: 'Hands up!',   mods: { aggr: .78, def: 1.15, power: .82, clinch: 1.35 } }
+};
+// which round plans a corner reaches for with each style (when nothing in the fight says otherwise)
+const STYLE_PLANS = {
+  outboxer: { auto: 6, move: 2.5, counter: 1.5 },
+  counter: { auto: 6, counter: 2.5, move: 1.5 },
+  swarmer: { auto: 6, pressure: 2.5, body: 1.5 },
+  slugger: { auto: 6, pressure: 2, body: 1.5, counter: .5 },
+  boxerpuncher: { auto: 6, pressure: 1, body: 1, counter: 1, move: 1 },
+  volume: { auto: 6, pressure: 2, body: 1 }, angle: { auto: 6, move: 1.5, counter: 1 }, awkward: { auto: 6, counter: 2 },
+  switch: { auto: 6, counter: 1, move: 1 }, body: { auto: 6, body: 3, pressure: 1 }, pboxer: { auto: 6, pressure: 3 },
+  spoiler: { auto: 6, counter: 2, move: 1 }, jabgrab: { auto: 6, move: 2 }, feinter: { auto: 6, counter: 1, move: 1 }
+};
+const STYLE_IN = { at: 54, ev: .4, ctr: .5 };
+const STYLE_ANGLE = { p: .17, lost: .32, react: .6, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
+const STYLE_ODD = { react: .08, read: .25 };                                 // awkward: less time to react, his read is half as useful
+const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
+const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2 };            // spoiler: tie up a combo coming, dirty shots/s in the clinch, foul chance per dirty shot, stamina drain/s
+const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
+const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
+const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
+const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
+const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
+const SHOUT_EDGE = { atk: .6, def: .5, ctr: 1.1, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
+// a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
+function orderPow(F) { const o = F.order; if (!o) return 0; const f = o.fit - SHOUT_EDGE.bar; return o.q * (f < 0 ? f * SHOUT_EDGE.bad : f) * Math.min(1, o.t / (SHOUT_LEN * .3)); }
+function atkEdge(A, P) {
+  const o = A.order; if (!o) return 0;
+  const on = o.k === 'jab' ? P.cat === 'jab' : o.k === 'body' ? P.zone === 'body' : o.k === 'press' ? P.cat === 'power' : o.k === 'counter' ? A.counterWin > 0 : false;
+  return on ? orderPow(A) * SHOUT_EDGE.atk : 0;
+}
+function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 'hands') ? orderPow(D) * SHOUT_EDGE.def : 0; }
+function ctrEdge(D) { const o = D.order; return o && o.k === 'counter' ? Math.max(.2, 1 + orderPow(D) * SHOUT_EDGE.ctr) : 1; }
+// round plan with the current shout mixed in, scaled by how well he took it and fading near the end
+function sgOf(F) {
+  const base = STRATS[F.strategy] || STRATS.auto, o = F.order;
+  if (!o) return base;
+  const q = o.q * Math.min(1, o.t / (SHOUT_LEN * .3)), m = SHOUTS[o.k].mods, out = Object.assign({}, base);
+  for (const k in m) out[k] = SHOUT_ADD[k] ? (out[k] || 0) + m[k] * q : (out[k] == null ? 1 : out[k]) * (1 + (m[k] - 1) * q);
+  return out;
+}
+
+const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30;
+// 2D ring: x is left/right on screen, z is depth (+ toward camera)
+function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
+function dist(A, B) { return Math.hypot(B.x - A.x, B.z - A.z); }
+const inRing = (x, z, m) => Math.abs(x) <= RING - (m || 0) && Math.abs(z) <= ZR - (m || 0);
+// how far he can travel from (x,z) along direction (dx,dz) before the ropes: the real escape lane
+function freeRun(x, z, dx, dz) {
+  let t = 999;
+  if (dx > 1e-3) t = Math.min(t, (RING - x) / dx); else if (dx < -1e-3) t = Math.min(t, (-RING - x) / dx);
+  if (dz > 1e-3) t = Math.min(t, (ZR - z) / dz); else if (dz < -1e-3) t = Math.min(t, (-ZR - z) / dz);
+  return Math.max(0, t);
+}
+let DMG = 0.35; // global tuning
+const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
+
+const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
+function cutChance(D, dmg, crit) {
+  const size = dmg / 4, wear = 1 - D.headMax / 100;
+  let p = (CUT.fresh + CUT.worn * Math.pow(wear, CUT.wearPow)) * size * size;
+  p *= 1 + D.cut * CUT.reopen;
+  if (crit) p += CUT.crit * (.3 + wear);
+  return Math.min(.35, p);
+}
+function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1); }
+function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
+// guard factor: bonuses only count as far as his skill supports the guard, weaknesses always count
+function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
+function gdw(F, kind) { const f = GUARDS[F.guard].def[kind]; if (f == null) return kind === 'roll' ? 0 : 1; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
+const iqK = F => clamp((F.iq - 35) / 55, 0, 1);
+// how well his guard covers this punch (≈ .5 weak .. 1.6 strong)
+function coverF(D, P) { return P.zone === 'body' ? gf(D, 'body') : gf(D, 'head') * gf(D, P.kind === 'straight' ? 'str' : P.kind === 'hook' ? 'hook' : 'up'); }
+// blocked shot: a strong guard absorbs more, a cracked guard lets more leak through
+function blockLeak(D, P, m) { m = clamp(m / Math.pow(coverF(D, P), .8), .12, .95); return m + (1 - m) * (1 - D.gi) * .6; }
+
+function nightForm(stats) {
+  if (!TUNE.form) return stats;
+  const day = gauss() * TUNE.form, o = {};
+  for (const k of STATS) o[k] = clamp(stats[k] + day + gauss() * TUNE.form * .5, 15, 99);
+  return o;
+}
+// new stance: rusty for a while (lead hand, footwork, the angles all feel wrong)
+function stanceRust(s, sh) { const f = sh.stanceFit == null ? 1 : sh.stanceFit; if (f >= 1) return s; const r = (1 - f) * 8; return Object.assign({}, s, { accuracy: s.accuracy - r, defense: s.defense - r, footwork: s.footwork - r * .5 }); }
+function mkF(sheet, side) {
+  return {
+    sheet, s: stanceRust(nightForm(sheet.stats), sheet), st: blendStyle(sheet), sk: domStyle(sheet), stance: sheet.stance, side, lostT: 0, swapT: 0, biteT: 0, warn: 0, dir: side === 0 ? 1 : -1, x: side === 0 ? -120 : 120, z: 0, vx: 0, vz: 0,
+    want: 64, spd: 60, circ: .5, circDir: R() < .5 ? 1 : -1, slideT: 0, cutting: false, inMul: 1,
+    head: 100, headMax: 100, body: 100, stam: 100, stamMax: 100,
+    state: 'idle', act: null, queue: [], def: null, defT: 0, defP: 0, pendingDef: null,
+    decT: .4 + R() * .4, stunT: 0, hitT: 0, hitZone: 'head', hitPow: 0,
+    kdR: 0, kd: 0, cut: 0, unanswered: 0, unT: 0, counterWin: 0, downP: 0,
+    strategy: 'auto', bob: R() * 6,
+    tot: { thrown: { jab: 0, power: 0, body: 0 }, landed: { jab: 0, power: 0, body: 0 }, dmg: 0, taken: 0 },
+    rs: null,
+    // guard + ring IQ
+    guard: GUARDS[sheet.guard] ? sheet.guard : 'standard', gSkill: 1, iq: ringIQ(sheet), gi: 1, giWarn: 0, defZ: 'head',
+    trapT: 0, bait: 0, fakeT: 0, spin: false, esc: null, exitAfter: false, resetT: 0, lastRes: null, lastCombo: null,
+    // what he has learned about the other guy this fight: per punch kind thrown / avoided, per punch type thrown / landed
+    read: newRead()
+  };
+}
+function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
+function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {} }; }
+
+class Fight {
+  constructor(A, B, opts) {
+    opts = opts || {};
+    this.rounds = opts.rounds || 10;
+    this.cutman = [opts.cutmanA != null ? opts.cutmanA : .4, opts.cutmanB != null ? opts.cutmanB : .4];
+    this.f = [mkF(A, 0), mkF(B, 1)];
+    this.f[0].op = this.f[1]; this.f[1].op = this.f[0];
+    this.f.forEach(F => { F.gSkill = guardSkill(F.s, F.guard); });
+    this.lull = 0; this.lead = 0;
+    this.f.forEach(F => F.rs = newRS());
+    this.round = 1; this.clock = 0; this.phase = 'intro'; this.phaseT = 0; this.t = 0;
+    this.events = []; this.result = null; this.cards = [[], [], []];
+    this.judgeBias = [0, 0, 0]; this.robbery = false;
+    this.judgeLean = [0, 1, 2].map(() => gauss() * TUNE.jLean); // each judge's taste: some like pressure, some like clean boxing
+    if (R() < 0.02) { this.judgeBias[ri(0, 2)] = (R() < .5 ? 1 : -1) * 2.6; this.robbery = true; }
+    this.kdState = null; this.clinchT = 0; this.rec = []; this.replay = null; this.recAfter = 0;
+    this.roundLog = []; this.stepEv = [];
+  }
+  emit(type, data) { const e = Object.assign({ type, t: this.t, round: this.round, clock: this.clock }, data || {}); this.events.push(e); this.stepEv.push(e); }
+  clockStr() { const s = Math.max(0, Math.floor(this.clock)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+  step(dt) {
+    dt = dt || DT;
+    this.t += dt; this.phaseT += dt; this.stepEv = [];
+    const [A, B] = this.f;
+    switch (this.phase) {
+      case 'intro':
+      case 'intro2': {
+        this.walkTo(A, -62, 0, dt, 70); this.walkTo(B, 62, 0, dt, 70);
+        if (this.phaseT > (this.phase === 'intro' ? 2.4 : 1.2)) {
+          this.phase = 'fight'; this.phaseT = 0; this.f.forEach(F => { F.walkDir = 0; });
+          this.emit('bell', { start: true }); this.emit('roundStart');
+        }
+        break;
+      }
+      case 'fight': {
+        for (const F of this.f) {
+          const o = F.order; if (!o) continue;
+          F.used = F.used || {}; F.used[o.k] = (F.used[o.k] || 0) + dt; // how long the other corner has been looking at this call
+          if ((o.t -= dt) <= 0) { if (!o.ack) this.emit('ignored', { a: F.side, k: o.k }); F.order = null; }
+        }
+        if (this.clinchT > 0) this.updateClinch(dt);
+        else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt); }
+        this.physics();
+        if (this.phase === 'fight') {
+          this.clock += dt * CLOCK;
+          if (this.clock >= ROUND_LEN) { this.clock = ROUND_LEN; this.endRound(); }
+        }
+        break;
+      }
+      case 'kd': this.updateKD(dt); break;
+      case 'roundEnd': {
+        this.walkTo(A, -RING + 14, -ZR * .55, dt, 72); this.walkTo(B, RING - 14, ZR * .55, dt, 72);
+        this.f.forEach(F => { F.hitT = Math.max(0, F.hitT - dt * 3); });
+        if (A.arrived && B.arrived) this.cornerT = (this.cornerT || 0) + dt; else this.cornerT = 0;
+        if ((this.phaseT > 1.2 && this.cornerT > .9) || this.phaseT > 5) {
+          if (this.round >= this.rounds) this.decision();
+          else { this.phase = 'corner'; this.phaseT = 0; this.emit('corner'); }
+        }
+        break;
+      }
+      case 'over': {
+        this.f.forEach(F => {
+          F.hitT = Math.max(0, F.hitT - dt * 3);
+          if (F.state === 'down') F.downP = Math.min(1, F.downP + dt * 2);
+          if (F.state === 'slump') F.downP = Math.min(.35, F.downP + dt * .6);
+        });
+        break;
+      }
+    }
+    // record for replay
+    if (this.phase === 'fight' || this.phase === 'kd' || this.recAfter > 0 || this.phase === 'over') {
+      this.rec.push(this.snap());
+      if (this.rec.length > 330) this.rec.shift();
+      if (this.recAfter > 0) {
+        this.recAfter -= dt;
+        if (this.recAfter <= 0) { this.replay = this.rec.slice(-280); this.recAfter = 0; }
+      }
+    }
+  }
+  snap() {
+    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, downP: F.downP, rise: !!(this.kdState && this.kdState.who === F.side && (this.kdState.rising || this.kdState.standing)), walk: this.phase === 'roundEnd' || this.phase === 'corner', sit: this.phase === 'corner' || (this.phase === 'roundEnd' && F.arrived && (this.cornerT || 0) > .25) ? 1 : 0, cut: F.cut, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
+  }
+  walkTo(F, x, z, dt, sp) {
+    const dx = x - F.x, dz = z - F.z, d = Math.hypot(dx, dz); F.vx = F.vz = 0;
+    const walking = d > 2 && F.state !== 'down' && F.state !== 'slump';
+    if (d > 2) { const m = Math.min(d, sp * dt) / d; F.x += dx * m; F.z += dz * m; }
+    if (F.state !== 'down' && F.state !== 'slump') F.state = walking ? 'move' : 'idle';
+    F.mv = walking ? sp : 0; if (walking) F.gait = (F.gait || 0) + sp * dt; // real steps, not a slide
+    F.arrived = !walking;
+    F.act = null; F.queue = []; F.def = null; F.pendingDef = null;
+    this.face();
+    F.walkDir = walking && Math.abs(dx) > 6 ? (dx > 0 ? 1 : -1) : 0; // turns and walks where he is going; faces the ring again once he gets there
+    this.face();
+  }
+  face() { for (const F of this.f) { const dx = F.op.x - F.x; if (F.walkDir) F.dir = F.walkDir; else if (Math.abs(dx) > 5) F.dir = dx > 0 ? 1 : -1; } }
+  physics() {
+    const [A, B] = this.f;
+    for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
+    const v = vec(A, B);
+    if (v.d < MIN_D) {
+      const mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2, h = MIN_D / 2;
+      A.x = mx - v.ux * h; A.z = mz - v.uz * h; B.x = mx + v.ux * h; B.z = mz + v.uz * h;
+      for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
+    }
+    this.face();
+  }
+  // wall directly behind F (relative to the opponent)
+  atRopes(F, m) { const v = vec(F, F.op), k = m || 16; return !inRing(F.x - v.ux * k, F.z - v.uz * k); }
+  cornered(F) { return Math.abs(F.x) > RING - 26 && Math.abs(F.z) > ZR - 22; }
+  trapped(F) { return this.atRopes(F) || this.cornered(F); }
+  // trap clocks + ring generalship (who is dictating where the fight happens)
+  ringControl(dt) {
+    for (const F of this.f) {
+      const O = F.op, d = dist(F, O);
+      if (F.state !== 'down' && d < 92 && this.trapped(F)) { F.trapT += dt; F.rs.trap += dt; }
+      else F.trapT = Math.max(0, F.trapT - dt * 2.2);
+      if (F.trapT > 2.6 && F.trapT - dt <= 2.6 && O.cutting) this.emit('cutoff', { a: O.side, d: F.side });
+    }
+    for (const F of this.f) {
+      const O = F.op;
+      if (O.trapT > .4 && F.trapT === 0) F.rs.ctrl += dt;
+      else if (Math.hypot(O.x, O.z * 1.3) - Math.hypot(F.x, F.z * 1.3) > 40) F.rs.ctrl += dt * .4;
+    }
+  }
+  // best way out: try angles off the line to him (past his shoulder up to straight sideways and a bit back),
+  // take the longest open lane he isn't covering. In a corner the only lanes are diagonals past his shoulder
+  escDir(F, spin) {
+    const O = F.op, v = vec(F, O), px = -v.uz, pz = v.ux, k = iqK(F), olat = O.vx * px + O.vz * pz;
+    let best = null, bs = -1e9;
+    for (const s of [1, -1]) for (const a of spin ? [40, 55, 70] : [50, 65, 80, 95, 110]) {
+      const r = a * Math.PI / 180, dx = v.ux * Math.cos(r) + px * s * Math.sin(r), dz = v.uz * Math.cos(r) + pz * s * Math.sin(r);
+      const sc = Math.min(150, freeRun(F.x, F.z, dx, dz)) - (O.cutting && olat * s > 4 ? 40 * k : 0) - (a < 60 ? 12 : 0) + (R() - .5) * 60 * (1 - k);
+      if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
+    }
+    return best;
+  }
+  // continuous footwork: hold preferred range, circle, cut the ring off, get back to center
+  footwork(F, dt) {
+    const O = F.op, v = vec(F, O), px = -v.uz, pz = v.ux, k = iqK(F);
+    const err = v.d - F.want;
+    let radial = clamp(err / 12, -1, 1) * F.spd * (err > 0 ? F.inMul : .95 * (F.legs || 1));
+    let lat = F.circ * F.circDir * F.spd * .75 * (F.legs || 1);
+    if (F.stopT > 0) { F.stopT -= dt; if (radial > 0) radial = -F.spd * .25; } // ate a jab walking in: his feet stop
+    if (F.slideT > 0) {
+      F.slideT -= dt;
+      const e = F.esc;
+      if (e) {
+        // escape run along the chosen lane; a fake first sells the opposite side
+        let ex = e.x, ez = e.z, sp = F.spd * (F.spin ? 2.4 : 1.9);
+        if (F.fakeT > 0) { F.fakeT -= dt; const dp = ex * v.ux + ez * v.uz; ex = 2 * dp * v.ux - ex; ez = 2 * dp * v.uz - ez; sp *= .7; }
+        F.vx = ex * sp; F.vz = ez * sp; F.state = 'move';
+        if (F.slideT <= 0) { F.spin = false; F.esc = null; F.resetT = Math.max(F.resetT, .9); }
+        return;
+      }
+      lat = F.circDir * F.spd * 1.9; radial = Math.min(radial, 0) * .3;
+      if (F.slideT <= 0) F.resetT = Math.max(F.resetT, .8);
+    }
+    else if (F.cutting) {
+      // cut the ring off: stand between him and the open ring (center), leading his movement. Smarter = earlier
+      const lead = .2 + .45 * k, ex0 = -O.x + O.vx * lead, ez0 = (-O.z + O.vz * lead) * .45, el = Math.hypot(ex0, ez0);
+      if (el > 8) {
+        const ex = ex0 / el, ez = ez0 / el, tx = O.x + ex * F.want, tz = O.z + ez * F.want;
+        const dx = tx - F.x, dz = tz - F.z, dd = Math.hypot(dx, dz) || 1, sp = Math.min(F.spd * 1.1, dd * 3);
+        const cr = (dx / dd * sp) * v.ux + (dz / dd * sp) * v.uz, cl = (dx / dd * sp) * px + (dz / dd * sp) * pz;
+        const b = clamp(F.cutK, 0, 1) * (.45 + .45 * k);
+        radial = lerp(radial, cr, b * .5); lat = lerp(lat, cl, b);
+      } else {
+        const olat = O.vx * px + O.vz * pz;
+        lat = olat * F.cutK * (O.slideT > 0 ? .35 : 1) + lat * .25;
+      }
+    }
+    // broadcast axis: the fight settles back side-on to the camera (pivots override this)
+    if (F.slideT <= 0) lat += 1.6 * F.spd * v.uz * v.ux;
+    // drift back to center: after a break, in a lull, and always a little for ring generals
+    if (F.slideT <= 0 && !F.cutting) {
+      const cw = (F.resetT > 0 ? .9 : 0) + (this.lull > 1.3 ? .3 : 0) + (F.st.gen || 0) * (.4 + .6 * k);
+      const cx = -F.x, cz = -F.z * 1.3, cd = Math.hypot(cx, cz);
+      if (cw > 0 && cd > 25) lat += ((cx * px + cz * pz) / cd) * F.spd * cw * clamp(cd / 80, .3, 1);
+    }
+    if (F.resetT > 0) F.resetT -= dt;
+    let vx = v.ux * radial + px * lat, vz = v.uz * radial + pz * lat;
+    // backing up: angle off instead of reversing straight into the ropes
+    if (radial < 0 && !inRing(F.x + vx * .5, F.z + vz * .5, 6)) {
+      const sgn = freeRun(F.x, F.z, px, pz) >= freeRun(F.x, F.z, -px, -pz) ? 1 : -1;
+      vx = px * sgn * F.spd * .9 + v.ux * radial * .2; vz = pz * sgn * F.spd * .9 + v.uz * radial * .2;
+    }
+    F.vx = vx; F.vz = vz;
+    F.state = Math.hypot(vx, vz) > 3 ? 'move' : 'idle';
+  }
+
+  updateF(F, dt) {
+    const O = F.op;
+    F.hitT = Math.max(0, F.hitT - dt * 3.2);
+    F.counterWin = Math.max(0, F.counterWin - dt);
+    if (F.lostT > 0) F.lostT -= dt;
+    if (F.biteT > 0) F.biteT -= dt;
+    if (F.st.swap && F.state !== 'punch' && (F.swapT += dt) > STYLE_SWAP.every * rnd(.6, 1.4)) this.swapStance(F);
+    if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
+    const regen = (1.3 + F.s.stamina / 100 * 2.9) * (0.45 + 0.55 * Math.max(0, F.body) / 100);
+    if (F.state !== 'punch') F.stam = Math.min(F.stamMax, F.stam + regen * dt);
+    if (F.state !== 'stun' && F.head > 0) F.head = Math.min(F.headMax, F.head + (0.25 + F.s.recovery / 100 * 0.5) * TUNE.regen * dt * (F.hitT > 0 ? 0 : 1));
+    // guard integrity comes back once the pressure stops; a tired fighter can't get his hands all the way back up
+    { const cap = .5 + .5 * stamFac(F) * (F.head > F.headMax * .3 ? 1 : .8);
+      F.gi = F.gi < cap ? Math.min(cap, F.gi + dt * (.05 + F.s.recovery / 1000) * (F.hitT > 0 ? .2 : 1)) : Math.max(cap, F.gi - dt * .05); }
+    if (F.bait > 0) { F.bait -= dt; if (F.head < F.headMax * .45 || F.gi < .35 || !this.trapped(F)) F.bait = 0; }
+    if (F.state === 'stun') {
+      F.stunT -= dt; { const v = vec(F, O); F.vx = -v.ux * 10; F.vz = -v.uz * 10; }
+      if (F.stunT <= 0) { F.state = 'idle'; F.vx = F.vz = 0; F.decT = .15; }
+    }
+    if (F.pendingDef) {
+      F.pendingDef.at -= dt;
+      if (F.pendingDef.at <= 0) { F.def = F.pendingDef.kind; F.defT = F.pendingDef.dur; F.defD = F.defT; F.defP = 0; F.pendingDef = null; }
+    }
+    if (F.def) { F.defT -= dt; F.defP = Math.min(1, F.defP + dt * 10); if (F.defT <= 0) F.def = null; }
+    if (F.state === 'punch' && F.act) {
+      const a = F.act; a.t += dt; const p = a.t / a.dur;
+      if (!a.done && !a.feint && p >= 0.6) { a.done = true; this.resolve(F, O, a); if (this.phase !== 'fight') return; }
+      if (F.state !== 'punch' || !F.act) { /* interrupted */ }
+      else {
+        const ret = (F.st.ret || .7) * (F.strategy === 'pressure' || F.strategy === 'ko' ? .6 : 1);
+        const sp_ = p < 0.6 ? a.step / (a.dur * 0.6) : -a.step * ret / (a.dur * 0.4);
+        F.vx = a.ux * sp_; F.vz = a.uz * sp_;
+        if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.queue.length) this.nextInCombo(F); }
+        else if (p >= 1) { F.state = 'idle'; F.act = null; F.vx = F.vz = 0; if (F.queue.length && F.stam > 2) this.nextInCombo(F); else this.comboDone(F); }
+        else if (a.done && p >= 0.82 && F.queue.length && F.stam > 2) { F.act = null; F.state = 'idle'; this.nextInCombo(F); }
+      }
+    }
+    if (F.state === 'idle' || F.state === 'move') {
+      if (F.stickT > 0) F.stickT -= dt;
+      else if (this.stickJab(F, dt)) return;
+      this.footwork(F, dt);
+      F.decT -= dt;
+      if (F.decT <= 0) this.decide(F);
+    }
+    F.x += F.vx * dt; F.z += F.vz * dt;
+    F.mv = Math.hypot(F.vx, F.vz); if (F.state === 'move') F.gait = (F.gait || 0) + F.mv * dt;
+  }
+
+  decide(F) {
+    const O = F.op, st = F.st, sg = sgOf(F);
+    const v = vec(F, O), d = v.d, k = iqK(F);
+    const sf = stamFac(F);
+    const hurtMe = F.head < F.headMax * 0.32;
+    const hurtOp = O.state === 'stun' || O.head < O.headMax * 0.3;
+    const trapped = this.trapped(F), oTrapped = this.trapped(O);
+    let aggr = st.aggr * sg.aggr * (0.5 + 0.5 * sf);
+    if (hurtOp) aggr *= (F.strategy === 'survive' ? 1.2 : 1.8);
+    if (hurtMe) aggr *= 0.55;
+    if (F.bait > 0) aggr *= .5; // lying on the ropes, waiting to counter
+    if (F.lostT > 0) aggr *= .3;  // he stepped off to the side: find him first
+    if (st.open) aggr *= lerp(1, STYLE_OPEN.idle + STYLE_OPEN.boost * this.opening(F), st.open);
+    if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
+    // range intent
+    let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0);
+    if (hurtOp) want -= 14;
+    if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
+    F.want = clamp(want + rnd(-4, 4), 40, 86);
+    F.spd = (34 + F.s.footwork * 0.6) * (0.7 + 0.3 * sf) * (hurtMe ? .85 : 1);
+    F.legs = st.legs || 1;
+    F.inMul = hurtOp ? 1.3 : 1;
+    // lateral intent
+    F.circ = st.circ * (sg.circ || 1) * (0.6 + F.s.footwork / 250) * (hurtMe ? 1.3 : 1);
+    F.cutK = st.cutK + (sg.cut || 0);
+    // pressure fighters cut the ring off; smart ones also do it when he is pinned and looking for the exit
+    F.cutting = !hurtMe && F.cutK > .55 && (O.circ > .35 || O.slideT > 0 || (oTrapped && k > .45)) && R() < .7 + .2 * k;
+    if (F.order && (F.cutting || oTrapped)) this.ack(F, 'press');
+    if (R() < .06) F.circDir *= -1;
+    // keep the action mostly side-on to the camera: if the pair is turning deep, circle back
+    if (F.slideT <= 0 && Math.abs(v.uz) > .8) {
+      const px = -v.uz, pz = v.ux, test = sg_ => Math.abs((O.z - (F.z + pz * sg_ * 10)) / Math.hypot(O.x - (F.x + px * sg_ * 10), O.z - (F.z + pz * sg_ * 10)));
+      F.circDir = test(1) < test(-1) ? 1 : -1;
+    }
+    // don't circle into the ropes
+    { const px = -v.uz, pz = v.ux; if (!inRing(F.x + px * F.circDir * 26, F.z + pz * F.circDir * 26, 4) && F.slideT <= 0) F.circDir *= -1; }
+    // clinch: hurt or gassed, or smothering a guy who has him pinned
+    let clP = 0;
+    if (d < 50 && (hurtMe || sf < 0.62)) clP = 0.28;
+    if (d < 52 && trapped && F.trapT > 1.4 && F.bait <= 0) clP = Math.max(clP, .08 + .1 * k);
+    if (clP && R() < clP * st.clinch * sg.clinch * (1.25 - F.s.heart / 200)) { this.startClinch(F); return; }
+    if (st.grab && d < STYLE_GRAB.at && !hurtOp && O.state !== 'stun' && R() < STYLE_GRAB.p * st.grab * (.5 + .5 * k)) { this.startClinch(F); return; } // inside his jab: grab and lean
+    // on the ropes: get out (or stay there on purpose)
+    if (trapped && d < 84 && F.slideT <= 0 && F.bait <= 0 && !this.tryBait(F, k, hurtMe)) {
+      const urge = .05 + F.s.footwork / 100 * .17 + k * .13 + F.trapT * (.15 + .24 * k) - (O.cutting ? .1 : 0) - (hurtMe ? .1 : 0);
+      if (R() < urge && this.escape(F, v, d, hurtMe, sf, sg)) return;
+    }
+    F.decT = (0.22 + R() * 0.42) * (1.25 - F.s.speed / 100 * 0.5) * TUNE.pace;
+    if (st.out && !hurtOp && d < F.want - STYLE_OUT.gap) {
+      aggr *= STYLE_OUT.aggr;                       // he doesn't want to trade in there
+      if (!trapped && F.slideT <= 0 && R() < st.out * STYLE_OUT.p * (.4 + .6 * k) * (.5 + F.s.footwork / 200) && this.stepOut(F, v)) return;
+    }
+    if (d < 86 && R() < aggr * TUNE.vol) {
+      const combo = this.pickCombo(F, d, sg, hurtOp);
+      if (combo) { F.queue = combo.slice(1); this.startPunch(F, combo[0]); F.decT = (0.15 + R() * .3) * TUNE.pace; return; }
+    }
+    // feints: worth more against counter-happy guards and guys who bite on everything
+    const Rd = F.read, thT = Rd.th.straight + Rd.th.hook + Rd.th.upper + Rd.th.body;
+    const fv = lerp(1, (GUARD_FEINT[O.guard] || 1) * (1 + clamp(Rd.reacts / Math.max(6, thT) - .35, 0, .6)), k);
+    if (d < 86 && R() < 0.07 * st.feint * fv) { this.startFeint(F); return; }
+    if (d < 86 && R() < (F.s.defense / 100) * 0.22 * sg.def * (F.bait > 0 ? 1.6 : 1)) { F.def = 'block'; F.defZ = 'head'; F.defT = .3 + R() * .4; F.defD = F.defT; F.defP = 0; }
+  }
+  // switch-hitter: flips stance; everything the other man had figured out is half wrong now
+  swapStance(F) {
+    F.swapT = 0; F.stance = F.stance === 'southpaw' ? 'orthodox' : 'southpaw';
+    const Rd = F.op.read; for (const g of ['th', 'av']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
+    for (const g of ['thr', 'land']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
+    F.op.lostT = Math.max(F.op.lostT, STYLE_SWAP.lost * F.st.swap);
+    this.emit('switch', { a: F.side, st: F.stance });
+  }
+  // angle fighter: combo done, step off to the side before he can answer
+  angleOff(F) {
+    const O = F.op, v = vec(F, O), px = -v.uz, pz = v.ux; let best = null, bs = -1;
+    for (const s of [1, -1]) for (const a of [75, 95]) {
+      const r = a * Math.PI / 180, dx = v.ux * Math.cos(r) + px * s * Math.sin(r), dz = v.uz * Math.cos(r) + pz * s * Math.sin(r);
+      const sc = Math.min(100, freeRun(F.x, F.z, dx, dz)) + R() * 15; if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
+    }
+    if (!best || bs < 40) return;
+    F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .26 + F.s.footwork / 500; F.decT = Math.min(F.decT, .3);
+    O.lostT = Math.max(O.lostT, STYLE_ANGLE.lost * F.st.angle);
+    this.emit('angle', { a: F.side, d: O.side });
+  }
+  // outside fighter: he got inside, slide out on a diagonal to where the open ring is
+  stepOut(F, v) {
+    const px = -v.uz, pz = v.ux; let best = null, bs = -1;
+    for (const s of [1, -1]) for (const a of [100, 120, 140]) {
+      const r = a * Math.PI / 180, dx = v.ux * Math.cos(r) + px * s * Math.sin(r), dz = v.uz * Math.cos(r) + pz * s * Math.sin(r);
+      const sc = Math.min(120, freeRun(F.x, F.z, dx, dz)) + R() * 20;
+      if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
+    }
+    if (!best || bs < 60) return false;
+    F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .3 + F.s.footwork / 400; F.decT = .2;
+    return true;
+  }
+  // how open the other guy is right now: just threw, just missed, gassed, guard breaking down
+  opening(F) {
+    const O = F.op, since = this.t - (O.lastPT || -9);
+    let o = 0;
+    if (O.state !== 'punch' && since < .55) o = O.lastRes === 'evaded' ? 1 : .75;
+    if (O.stam < O.stamMax * .4) o = Math.max(o, .5);
+    if (O.gi < .45) o = Math.max(o, .55);
+    return o;
+  }
+  // when a boxer-puncher sits down and lets his hands go
+  rampSig(F, oTrapped) {
+    const O = F.op, lead = F.side === 0 ? this.lead : -this.lead;
+    let r = 0;
+    if (O.stam < O.stamMax * .45) r = .7;
+    if (O.gi < .45 || oTrapped) r = Math.max(r, .6);
+    if (lead < -1 && this.round > this.rounds / 2) r = Math.max(r, .8);
+    return r;
+  }
+  // stick: he steps into range, eat a jab on the way in
+  stickJab(F, dt) {
+    const st = F.st; if (!st.stick || F.slideT > 0 || F.bait > 0) return false;
+    const O = F.op, v = vec(F, O), d = v.d, appr = -(O.vx * v.ux + O.vz * v.uz);
+    if (appr < 18 || d > Math.min(F.want, PUNCH.jab.max + 4) || d < PUNCH.jab.min + 10 || O.state === 'stun' || O.state === 'clinch') return false;
+    if (R() > st.stick * STYLE_STICK * (.5 + .5 * iqK(F)) * stamFac(F) * dt) return false;
+    F.stickT = .7; F.queue = R() < .3 ? ['jab'] : [];
+    this.startPunch(F, 'jab'); if (F.act) F.act.stick = true; F.decT = .25 + R() * .2;
+    return true;
+  }
+  // rope-a-dope: some fighters choose to stay on the ropes and counter
+  tryBait(F, k, hurtMe) {
+    if (hurtMe || F.gi < .6 || k < .45 || F.trapT > .9 || F.baitR) return false;
+    const g = { philly: 1.5, high: 1.3, cross: 1.3, peekaboo: .8 }[F.guard] || .5;
+    const p = .14 * k * g * (F.sk === 'counter' ? 1.8 : F.sk === 'boxerpuncher' ? 1 : .5);
+    if (R() < p) { F.bait = 2.2 + R() * 2.8; F.baitR = 1; F.cutting = false; this.emit('bait', { a: F.side }); return true; }
+    return false;
+  }
+  // get off the ropes: pivot out, roll under and spin, or punch his way out
+  escape(F, v, d, hurtMe, sf, sg) {
+    const O = F.op, k = iqK(F), st = F.st;
+    const w = {
+      pivot: .8 + F.s.footwork / 100,
+      spin: d < 62 ? (F.s.defense / 100) * (F.guard === 'peekaboo' ? 1.8 : 1) * (.35 + k) : 0,
+      punch: d < 76 && !hurtMe && sf > .5 ? st.aggr * sg.aggr * .9 : 0
+    };
+    const how = wpick(Object.keys(w), x => w[x]);
+    if (how === 'punch') {
+      const combo = this.pickCombo(F, d, sg, false);
+      if (!combo) return false;
+      F.queue = combo.slice(1); F.exitAfter = true; F.cutting = false;
+      this.startPunch(F, combo[0]); F.decT = .2;
+      this.emit('escape', { a: F.side, how }); return true;
+    }
+    const e = this.escDir(F, how === 'spin'); if (!e) return false;
+    F.esc = e; F.circDir = e.s; F.cutting = false; F.spin = how === 'spin';
+    F.slideT = (how === 'spin' ? .42 : .45) + F.s.footwork / 300;
+    if (how === 'pivot' && O.cutting && k > .55 && R() < .45) { F.fakeT = .14; F.slideT += .14; } // fake one way, go the other
+    F.decT = .25;
+    this.emit('escape', { a: F.side, how }); if (F.order) this.ack(F, 'move');
+    return true;
+  }
+  // combo finished: if he punched his way off the ropes, now slide out
+  comboDone(F) {
+    if (F.st.angle && F.slideT <= 0 && !this.trapped(F) && F.state !== 'stun' && R() < F.st.angle * STYLE_ANGLE.p * (.4 + .6 * iqK(F))) this.angleOff(F);
+    { const D = F.op, op = D.st.open;
+      if (op && (D.state === 'idle' || D.state === 'move') && D.slideT <= 0 && R() < op * (.45 + .45 * iqK(D)))
+        D.decT = Math.min(D.decT, (.05 + (1 - D.s.speed / 100) * .14) * (1.25 - .45 * iqK(D))); }
+    if (F.exitAfter && this.trapped(F)) { const e = this.escDir(F, false); if (e) { F.esc = e; F.circDir = e.s; F.slideT = .4 + F.s.footwork / 300; F.spin = false; } }
+    F.exitAfter = false;
+  }
+  // next punch in the combo, adjusted to what just happened
+  nextInCombo(F) {
+    const O = F.op, k = iqK(F), last = F.lastRes, d = dist(F, O);
+    let nx = F.queue.shift();
+    // walked into a counter, or he is sitting on one: bail out
+    if (last === 'countered' || (last === 'evaded' && O.counterWin > 0)) {
+      if (R() < .3 + .5 * k) { F.queue = []; F.decT = .1 + R() * .15; this.comboDone(F); return; }
+    }
+    const lp = F.lastP && PUNCH[F.lastP];
+    if (last === 'blocked' && lp && PUNCH[nx].zone === lp.zone && LEVEL_SWAP[nx] && R() < .6 * k) nx = LEVEL_SWAP[nx]; // he is covering that level: switch
+    else if (last === 'evaded' && F.lastDef === 'slip' && d < 60 && R() < .5 * k) nx = 'hook';                 // hook where he slipped to
+    else if (last === 'evaded' && F.lastDef === 'duck' && d < 54 && R() < .5 * k) nx = 'uppercut';             // he ducks, come up the middle
+    // he is hurt: keep the punches coming
+    if (last === 'landed' && (O.state === 'stun' || O.head < O.headMax * .25) && F.queue.length === 0 && F.stam > 12 && R() < .35 + .45 * k)
+      F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
+    this.startPunch(F, nx);
+  }
+  pickCombo(F, d, sg, hurtOp) {
+    const O = F.op, k = iqK(F), Rd = F.read;
+    const ok = COMBOS.filter(c => { if (!comboW(F, c)) return false; const P = PUNCH[c.seq[0]]; const step = (P.kind === 'straight' ? 10 : 6) + (P.cat !== 'jab' ? F.st.leap || 0 : 0); return d <= P.max + step && d >= P.min - 6; });
+    if (!ok.length) return null;
+    const holes = GUARD_HOLES[O.guard] || {};
+    const lead = F.side === 0 ? this.lead : -this.lead, late = this.round > this.rounds - 3;
+    const softBody = O.stam < O.stamMax * .45 || O.body < 55;
+    const c = wpick(ok, c => {
+      const n = c.len; let w = comboW(F, c);
+      const rc = RANGE_C[c.r]; w *= .25 + Math.exp(-Math.pow((d - rc[0]) / rc[1], 2));
+      for (const p of c.seq) { const P = PUNCH[p]; if (P.zone === 'body') w *= Math.pow(sg.body, 1 / n); if (P.cat === 'power') w *= Math.pow(sg.power * (hurtOp ? 1.8 : 1), 1 / n); if (p === 'jab') w *= Math.pow(sg.jab, 1 / n); }
+      if (hurtOp && n >= 3) w *= 1.5;
+      if (F.stam < 25 && n > 2) w *= .3; else if (F.stam < 40 && n > 3) w *= .5;
+      // the read: guard holes, what he keeps avoiding, what keeps landing, the scorecards
+      let read = 1;
+      for (const p of c.seq) {
+        let f = holes[p] || 1;
+        const kd = kindOf(p), th = Rd.th[kd];
+        if (th >= 3) f *= clamp(1 + (.45 - Rd.av[kd] / th) * 1.2, .6, 1.4);
+        const tp = Rd.thr[p] || 0; if (tp >= 4) f *= clamp(.8 + (Rd.land[p] || 0) / tp * 1.1, .8, 1.5);
+        read *= Math.pow(f, 1 / n);
+      }
+      if (softBody) read *= 1 + c.body * .25;
+      if (late && lead > 2.5) read *= n <= 2 ? 1.25 : .7;   // up on the cards: stay smart
+      if (late && lead < -2.5) read *= 1 + c.pow * .2;       // down: needs something big
+      if (c.key === F.lastCombo) read *= .65;               // don't show him the same look twice
+      w *= lerp(1, read, k * (1 - STYLE_ODD.read * (O.st.odd || 0))); // an awkward man is hard to read
+      w *= 1 + (R() - .5) * (1 - k) * .8;                   // low IQ: noisy choices
+      return w;
+    });
+    F.lastCombo = c.key;
+    return c.seq.slice();
+  }
+  startPunch(F, type) {
+    const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
+    const v = vec(F, F.op);
+    F.act = { type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
+    { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
+    if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
+    if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
+    F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0;
+    F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
+    F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
+    F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
+    this.react(F.op, F, P);
+    this.emit('throw', { a: F.side, p: type });
+    if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
+  }
+  startFeint(F) {
+    { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz }; }
+    F.state = 'punch'; F.def = null;
+    this.react(F.op, F, PUNCH.jab, true);
+    if (F.st.bite && F.op.pendingDef) F.biteT = STYLE_BITE.t; // he bit: the real one is coming into whatever he opened
+    if (R() < .7) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
+    this.emit('feint', { a: F.side });
+  }
+  react(D, A, P) {
+    if (D.state === 'stun' || D.state === 'down' || D.state === 'clinch') return;
+    if (D.state === 'punch' && D.act && D.act.t / D.act.dur > 0.25) return;
+    const sgD = sgOf(D);
+    let ch = ((D.s.defense * .6 + D.s.footwork * .2 + D.s.speed * .2) / 100) * TUNE.react * stamFac(D) * sgD.def;
+    if (this.atRopes(D)) ch *= D.bait > 0 ? 1.05 : .7;
+    if (D.head < D.headMax * .3) ch *= .75;
+    ch *= (1.15 - A.s.accuracy / 100 * .35);
+    ch *= .92 + .16 * iqK(D);
+    ch *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
+    if (D.lostT > 0) ch *= STYLE_ANGLE.react;
+    if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
+    if (D.st.spoil && A.queue.length && D.state !== 'punch' && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) { this.startClinch(D); return; } // sees the combo coming, ties him up
+    if (R() > ch) return;
+    A.read.reacts++;
+    // which defense he reaches for depends on his guard
+    let kind;
+    if (P.zone === 'body') kind = wpick(['block', 'pull'], k => ({ block: 65 * gdw(D, 'block') * Math.min(1.2, gf(D, 'body')), pull: 35 * gdw(D, 'pull') })[k]);
+    else if (P.kind === 'straight') kind = wpick(['slip', 'block', 'pull', 'duck', 'roll'], k => ({ slip: D.s.defense * gdw(D, 'slip'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), duck: D.s.defense * .4 * gdw(D, 'duck'), roll: 55 * gdw(D, 'roll') })[k]);
+    else if (P.kind === 'hook') kind = wpick(['duck', 'block', 'pull', 'roll'], k => ({ duck: D.s.defense * gdw(D, 'duck'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), roll: 22 * gdw(D, 'roll') })[k]);
+    else kind = wpick(['block', 'pull'], k => ({ block: 60 * gdw(D, 'block'), pull: D.s.footwork * gdw(D, 'pull') })[k]);
+    if (D.state === 'punch') { D.act = null; D.queue = []; D.state = 'idle'; }
+    D.pendingDef = { kind, at: 0.05 + (1 - D.s.speed / 100) * 0.13, dur: .34 }; D.defZ = P.zone;
+    if (D.order) this.ack(D, kind === 'block' || kind === 'roll' ? 'hands' : kind === 'pull' ? 'move' : '');
+    if (kind === 'pull') { const v = vec(D, A); D.vx = -v.ux * 55; D.vz = -v.uz * 55; }
+  }
+  // counter shot(s) fired off a miss or out of the guard
+  pickCounter(D, d, roll) {
+    const k = iqK(D);
+    if (roll) return d < 60 && R() < .35 ? ['cross', 'hook'] : ['cross'];
+    if (d < 54) { const c = pick([['hook'], ['uppercut'], ['cross'], ['hook', 'cross'], ['uppercut', 'hook'], ['cross', 'hook']]); return R() < .4 + .4 * k ? c : c.slice(0, 1); }
+    return R() < .3 * k ? ['cross', 'hook'] : ['cross'];
+  }
+  resolve(A, D, a) {
+    const P = PUNCH[a.type]; const d = dist(A, D);
+    if (D.state === 'down') return;
+    if (d > P.max + 4 + (P.cat !== 'jab' ? A.st.leap || 0 : 0) || d < P.min - 10) { this.miss(A, D, a, 'range'); return; }
+    // raw skill: low accuracy/speed fighters throw wild and miss clean air, worse when tired
+    if (D.state !== 'stun') {
+      const skill = A.s.accuracy * .7 + A.s.speed * .3;
+      const wild = clamp((TUNE.wildAt - skill) / 100 * TUNE.wild, 0, .42) * (P.cat === 'jab' ? .8 : P.cat === 'power' ? 1.15 : 1) * (1.6 - .6 * stamFac(A));
+      if (R() < wild) { this.miss(A, D, a, 'wild'); return; }
+      a.load = wild;
+    }
+    let mult = 1, evaded = false, blocked = false, rolled = false;
+    const def = D.def;
+    if (def && D.state !== 'stun') {
+      if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25); blocked = true; }
+      else if (def === 'roll') { // shoulder roll: straights glance off, hooks get half caught, uppercuts split it
+        if (P.zone === 'body') { mult = blockLeak(D, P, .5); blocked = true; }
+        else if (P.kind === 'straight') { const lead = a.type === 'cross' && A.prevP !== 'jab'; if (R() < .38 + .22 * D.gSkill - (lead ? .22 : 0)) { evaded = true; rolled = true; } else { mult = blockLeak(D, P, .35); blocked = true; } }
+        else if (P.kind === 'hook') { if (R() < .35) mult = 1; else { mult = blockLeak(D, P, .55); blocked = true; } }
+        else mult = 1.1;
+      }
+      else if (def === 'duck') { if (P.zone === 'head' && P.kind !== 'upper') evaded = true; else if (P.kind === 'upper') mult = D.guard === 'peekaboo' ? 1.6 : 1.4; }
+      else if (def === 'slip') { if (P.zone === 'head' && P.kind === 'straight') evaded = true; else if (P.kind === 'hook') mult = 1.15; }
+      else if (def === 'pull') { if (R() < (P.zone === 'head' ? .8 : .5)) evaded = true; }
+    } else if (D.state !== 'stun' && D.state !== 'clinch') {
+      let ev = TUNE.ev + (P.cat === 'jab' ? TUNE.jabEv : 0) + (D.s.defense * .5 + D.s.footwork * .3 - A.s.accuracy * .5 - A.s.speed * .3) / TUNE.evDiv;
+      ev = clamp(ev, .06, .5) * stamFac(D) * (this.atRopes(D) ? .75 : 1) * gf(D, 'ev') * (D.guard === 'handslow' ? stamFac(D) : 1);
+      if (D.state === 'punch') ev *= .45;
+      if (a.stick) ev *= STYLE_STICK_EV;
+      ev += TUNE.moveEv * clamp((D.mv - 30) / 50, 0, 1) * gf(D, 'ev');                     // a moving target is harder to find
+      { const ins = A.st.inside; if (ins && d < STYLE_IN.at) ev *= 1 - STYLE_IN.ev * ins; } // smothered: no room to slip in there
+      const setup = (A.prevP === 'jab' && P.cat !== 'jab' ? 1 - TUNE.setup : 1) * (1 - STYLE_OPEN.edge * (a.open || 0)); // the jab hides the right hand behind it; a shot into an opening finds him recovering
+      ev *= setup;
+      if (D.lostT > 0) ev *= STYLE_ANGLE.ev;
+      if (P.cat !== 'jab') ev = Math.min(.7, ev + TUNE.reach * clamp((d - P.max + TUNE.reachIn) / TUNE.reachIn, 0, 1) * gf(D, 'ev')); // reaching for a power shot from the outside: he sees it coming
+      ev *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
+      if (R() < ev) evaded = true;
+      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)))) {
+        blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
+        D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; // show the guard catching it
+      }
+    }
+    if (evaded) { this.miss(A, D, a, 'evade', rolled ? 'roll' : def); return; }
+    A.lastRes = blocked ? 'blocked' : 'landed';
+    if (blocked) {
+      A.read.av[kindOf(a.type)]++;
+      // every blocked shot wears the guard down; a heavy hand breaks it faster
+      const shot = P.dmg * (0.5 + A.s.power / 100), was = D.gi;
+      D.gi = Math.max(0, D.gi - shot * .04 / GUARDS[D.guard].hold);
+      if (was >= .35 && D.gi < .35 && this.t - D.giWarn > 8) { D.giWarn = this.t; this.emit('guardCrack', { a: A.side, d: D.side }); }
+    } else A.read.land[a.type] = (A.read.land[a.type] || 0) + 1;
+    let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A));
+    if (P.cat !== 'jab') dmg *= A.st.hit || 1;
+    if (P.zone === 'body' && A.st.bodyX) dmg *= 1 + .25 * A.st.bodyX;
+    if (a.stick && !blocked && D.state !== 'stun') { D.stopT = .45; D.decT = Math.max(D.decT, .2); }
+    const caught = D.state === 'punch' && !blocked;
+    if (caught) dmg *= 1.3;
+    if (A.counterWin > 0 && !blocked) dmg *= 1.2;
+    let crit = false;
+    if (!blocked && R() < 0.05 + A.s.accuracy / 2000) { dmg *= 1.75; crit = true; }
+    dmg *= rnd(.8, 1.2) * mult;
+    // sloppy D eats them flush; wild throwers load up when they do land
+    dmg *= 1 + clamp((75 - D.s.defense) / 100, 0, .4) * TUNE.flush + (a.load || 0) * TUNE.load;
+    const tough = P.zone === 'head' ? (0.55 + effChin(D) / 100 * .9) : (0.55 + D.s.body / 100 * .9);
+    dmg /= tough;
+    if (P.zone === 'head') { D.head -= dmg; D.headMax = Math.max(10, D.headMax - dmg * TUNE.wear); }
+    else { D.body -= dmg * 1.1; D.stamMax = Math.max(30, D.stamMax - dmg * .25); D.stam = Math.max(0, D.stam - dmg * .9); D.head -= dmg * .15; }
+    A.tot.dmg += dmg; D.tot.taken += dmg; A.rs.dmg += dmg;
+    if (!blocked) {
+      A.tot.landed[P.cat]++;
+      if (P.cat === 'jab') A.rs.landedJab++; else if (P.cat === 'power') A.rs.landedPow++; else A.rs.landedBody++;
+      A.unanswered = 0; A.unT = 0;
+      if (P.cat !== 'jab' && (D.state === 'stun' || D.head < D.headMax * .2)) { D.unanswered++; D.unT = 2.5; }
+      const h = A.rs.home; h[a.type] = (h[a.type] || 0) + 1;
+      if (h[a.type] === (P.cat === 'jab' ? 10 : 6) && !A.rs.homeSaid.any) { A.rs.homeSaid.any = 1; this.emit('home', { a: A.side, p: a.type }); }
+    }
+    D.hitT = 1; D.hitZone = P.zone; D.hitKind = blocked ? 'block' : P.kind; D.hitPow = clamp(dmg / 7, .2, 1.3);
+    this.emit('hit', { a: A.side, d: D.side, zone: P.zone, dmg, blocked, crit, kind: P.kind, p: a.type, caught, counter: A.counterWin > 0, x: D.x, cut: D.cut });
+    // cuts: shot size x accumulated damage. Fresh face + regular shot = very slim; beat-up face + big shot = real risk
+    if (P.zone === 'head' && !blocked && dmg > 1.5 && R() < cutChance(D, dmg, crit)) {
+      const was = D.cut; D.cut = Math.min(10, D.cut + 1 + R() * 2);
+      this.emit('cut', { d: D.side, sev: D.cut, fresh: was < 0.5 });
+      if (was < 5 && D.cut >= 5) this.emit('cutWorse', { d: D.side, sev: D.cut });
+    } else if (P.zone === 'head' && !blocked && D.cut > .5 && dmg > 1.2 && R() < CUT.onEye) {
+      // clean shots that land on an open cut tear it wider
+      const was = D.cut; D.cut = Math.min(10, D.cut + CUT.widen * dmg * (crit ? 1.8 : 1) * rnd(.6, 1.4));
+      if (was < 5 && D.cut >= 5) this.emit('cutWorse', { d: D.side, sev: D.cut });
+    }
+    if (!blocked || dmg > 6) {
+      if (P.zone === 'head') {
+        if (D.head <= 0) { this.knockdown(D, A, 'head'); return; }
+        // flash knockdown: a clean counter or a shot he walks into can drop a fresh man
+        const dn = dmg * .45 / DMG; // shot danger, independent of the attrition setting
+        if (TUNE.flash && P.cat === 'power' && dn > 2.2 && D.state !== 'stun') {
+          const fk = TUNE.flash * ((dn - 2.2) / 3) * (1.35 - effChin(D) / 100) * (caught || A.counterWin > 0 ? 2.5 : 1) * (crit ? 2 : 1);
+          if (R() < fk) { this.knockdown(D, A, 'head'); return; }
+          if (R() < fk * 2.2) this.stun(D);
+        }
+        if (dn > TUNE.kdAt) {
+          const frac = 1 - clamp(D.head / D.headMax, 0, 1);
+          const kc = ((dn - TUNE.kdBase) / TUNE.kdDiv) * Math.pow(frac, 1.6) * (1.35 - effChin(D) / 100) * 0.9 + (crit ? .04 : 0);
+          if (R() < kc) { this.knockdown(D, A, 'head'); return; }
+          if (D.state !== 'stun' && R() < kc * 2.6 + (crit ? .12 : 0)) this.stun(D);
+        }
+      } else if (D.body <= 0 || (dmg > 5 && D.body < 18 && R() < .22)) { this.knockdown(D, A, 'body'); return; }
+    }
+    if (D.unanswered >= 5 && R() < .2 + (D.unanswered - 5) * .15) {
+      D.state = 'slump'; D.act = null; D.queue = []; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'unanswered' }); this.recAfter = 1.1;
+      return;
+    }
+    // fire back out of the guard (tap-block counter)
+    if (blocked && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
+      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D);
+      if (R() < p) { const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
+    }
+  }
+  miss(A, D, a, why, def) {
+    const P = PUNCH[a.type];
+    A.stam = Math.max(0, A.stam - P.cost * .35);
+    this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type });
+    A.lastRes = 'evaded'; A.lastDef = def || null;
+    if (why === 'evade') A.read.av[kindOf(a.type)]++;
+    if (why === 'evade' && D.state !== 'stun' && D.state !== 'down') {
+      const st = D.st, sg = sgOf(D);
+      const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1) * ctrEdge(D)
+        * (P.cat === 'jab' ? TUNE.jabCtr : 1) // a jab snaps back: much harder to counter than a missed hook
+        * (A.st.inside && dist(A, D) < STYLE_IN.at ? 1 - STYLE_IN.ctr * A.st.inside : 1); // no room to counter a man on your chest
+      if (R() < Math.min(.95, ch) && D.state !== 'punch') {
+        D.counterWin = .6; D.def = null; D.pendingDef = null;
+        const c = this.pickCounter(D, dist(A, D), def === 'roll');
+        D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter');
+        A.lastRes = 'countered';
+      }
+    }
+  }
+  stun(D) {
+    D.state = 'stun'; D.stunT = (.7 + R() * .9) * (1.3 - D.s.heart / 100 * .5); D.act = null; D.queue = []; D.def = null; D.pendingDef = null;
+    this.emit('stun', { d: D.side });
+  }
+  startClinch(F) {
+    const O = F.op; if (O.state === 'down') return;
+    for (const X of this.f) { X.state = 'clinch'; X.act = null; X.queue = []; X.def = null; X.pendingDef = null; X.vx = X.vz = 0; X.slideT = 0; X.esc = null; X.spin = false; }
+    this.clinchT = 1.1 + R() * 1.2; this.clinchBy = F.side; this.emit('clinch', { c: F.side, lean: !!F.st.grab });
+  }
+  updateClinch(dt) {
+    const [A, B] = this.f; this.clinchT -= dt;
+    const v = vec(A, B), mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2;
+    A.x = lerp(A.x, mx - v.ux * MIN_D / 2, .15); A.z = lerp(A.z, mz - v.uz * MIN_D / 2, .15); B.x = lerp(B.x, mx + v.ux * MIN_D / 2, .15); B.z = lerp(B.z, mz + v.uz * MIN_D / 2, .15);
+    for (const F of this.f) { F.hitT = Math.max(0, F.hitT - dt * 3); F.stam = Math.min(F.stamMax, F.stam + (2.5 + F.s.stamina / 40) * dt); }
+    for (const F of this.f) {
+      const O = F.op;
+      const lean = (F.st.grab && this.clinchBy === F.side ? STYLE_GRAB.lean * F.st.grab : 0) + (F.st.spoil ? STYLE_SPOIL.lean * F.st.spoil : 0);
+      if (lean) O.stam = Math.max(0, O.stam - lean * dt);                                   // leaning his weight on him
+      if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt) this.dirtyShot(F, O);   // holding and hitting
+    }
+    if (this.clinchT <= 0) {
+      for (const F of this.f) { F.state = 'idle'; F.decT = .3 + R() * .3; F.resetT = 1.2; F.trapT *= .3; F.bait = 0; }
+      // the ref pulls them apart and back toward the middle
+      const cx = -mx * .18, cz = -mz * .18;
+      A.x += cx - v.ux * 20; A.z += cz - v.uz * 20; B.x += cx + v.ux * 20; B.z += cz + v.uz * 20; this.emit('break');
+    }
+  }
+  // a short shot in the clutches: the judges may see it, the ref may not like it
+  dirtyShot(F, O) {
+    const dmg = PUNCH.hook.dmg * DMG * .35 * (0.5 + F.s.power / 100) * rnd(.7, 1.2) / (0.55 + effChin(O) / 100 * .9);
+    O.head = Math.max(1, O.head - dmg); F.rs.dmg += dmg; F.rs.landedPow++; F.tot.landed.power++; F.tot.thrown.power++; F.rs.thrown++; F.rs.thrownPow++; O.hitT = .6; O.hitZone = 'head'; O.hitKind = 'hook'; O.hitPow = .3;
+    if (R() < STYLE_SPOIL.foul) {
+      F.warn++;
+      const ded = F.warn >= 3 && R() < .5;
+      if (ded) F.rs.ded++;
+      this.emit('foul', { a: F.side, d: O.side, ded });
+    }
+  }
+  knockdown(D, A, zone) {
+    D.state = 'down'; D.downP = 0; D.act = null; D.queue = []; D.def = null; D.pendingDef = null; D.vx = D.vz = 0; D.stunT = 0; D.slideT = 0; D.esc = null; D.spin = false;
+    A.act = null; A.queue = []; A.state = 'idle'; A.vx = A.vz = 0; A.def = null; A.slideT = 0; A.esc = null; A.spin = false;
+    D.kdR++; D.kd++; D.rs.kd++; this.clinchT = 0;
+    if (TUNE.kdHurt) { D.head = Math.min(D.head, D.headMax * (TUNE.kdHurt + D.s.heart / 500)); D.headMax = Math.max(10, D.headMax - 3); } // even a flash knockdown scrambles him
+    this.phase = 'kd'; this.phaseT = 0;
+    const K = this.kdState = { who: D.side, count: 0, tick: -0.5, getUp: null, rising: false, zone, standing: false };
+    if (D.kdR >= 3) K.three = true;
+    else {
+      const p = clamp(0.2 + D.s.heart / 100 * .5 + (D.headMax / 100) * .3 - (D.kdR - 1) * .2 - (D.kd - 1) * .06 - (zone === 'body' ? .05 : 0) + Math.max(0, D.head) / 100 * .3, .03, .96);
+      if (R() < p) K.getUp = clamp(Math.round(9 - p * 6 + rnd(-1, 1.5)), 2, 9);
+    }
+    this.emit('knockdown', { a: A.side, d: D.side, zone, n: D.kd });
+    this.recAfter = 1.2;
+  }
+  updateKD(dt) {
+    const K = this.kdState, D = this.f[K.who], A = D.op;
+    if (!K.rising && !K.standing) D.downP = Math.min(1, D.downP + dt * 2.2);
+    { let tx = D.x + (A.x > D.x ? 1 : -1) * 120; if (Math.abs(tx) > RING - 10) tx = D.x - (A.x > D.x ? 1 : -1) * 120; tx = clamp(tx, -RING + 10, RING - 10);
+      const tz = clamp(-D.z * .5, -ZR + 10, ZR - 10), dx = tx - A.x, dz = tz - A.z, dd = Math.hypot(dx, dz);
+      if (dd > 2) { const m = Math.min(dd, 70 * dt) / dd; A.x += dx * m; A.z += dz * m; } }
+    A.hitT = Math.max(0, A.hitT - dt * 3); D.hitT = Math.max(0, D.hitT - dt * 3);
+    if (K.three) { if (this.phaseT > 1.8) { this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'three' }); } return; }
+    K.tick += dt;
+    if (K.tick >= .95) {
+      K.tick = 0; K.count++; this.emit('count', { n: K.count, d: D.side });
+      if (K.getUp !== null && K.count >= K.getUp && !K.rising && !K.standing) { K.rising = true; this.emit('rising', { d: D.side, n: K.count }); }
+      if (K.count >= 10 && !K.standing) { this.end(A.side, 'KO'); return; }
+      if (K.standing && K.count >= 8) {
+        if (D.headMax < 22 || (D.kd >= 4 && R() < .6) || (D.head < 5 && R() < .4)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
+        D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
+        if (K.zone === 'body') D.body = Math.max(D.body, 22);
+        D.stunT = 0; D.decT = .3; A.decT = .3;
+        const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.f[0].x <= this.f[1].x ? 1 : -1;
+        this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.face();
+        this.phase = 'fight'; this.phaseT = 0; this.kdState = null;
+        this.emit('resume');
+      }
+    }
+    if (K.rising) {
+      D.downP = Math.max(0, D.downP - dt * 1.5);
+      if (D.downP <= 0) { K.rising = false; K.standing = true; this.emit('up', { d: D.side, n: K.count }); }
+    }
+  }
+  endRound() {
+    this.phase = 'roundEnd'; this.phaseT = 0; this.clinchT = 0;
+    this.emit('bell', { end: true });
+    this.scoreRound();
+    this.emit('roundEnd');
+  }
+  scoreRound() {
+    const [A, B] = this.f;
+    // ring generalship (controlling where the fight happens) is a small nod, not a round-winner on its own
+    const sc = F => F.rs.landedPow * 1.0 + F.rs.landedJab * .45 + F.rs.landedBody * .75 + F.rs.dmg * .07 + F.rs.thrown * .025 + F.rs.ctrl * .015;
+    const sa = sc(A), sb = sc(B);
+    const log = { r: this.round, a: Object.assign({}, A.rs), b: Object.assign({}, B.rs), cards: [] };
+    const shared = gauss() * TUNE.jNoise * TUNE.jShare;
+    for (let j = 0; j < 3; j++) {
+      const diff = sa - sb + shared + gauss() * TUNE.jNoise * (1 - TUNE.jShare) + this.judgeBias[j] + this.judgeLean[j];
+      let pa = 10, pb = 10;
+      if (Math.abs(diff) < TUNE.evenAt && R() < TUNE.even) { /* even */ }
+      else if (diff > 0) pb = 9; else pa = 9;
+      pa -= A.rs.kd + A.rs.ded; pb -= B.rs.kd + B.rs.ded;
+      if (A.rs.kd && B.rs.kd === 0 && pa === 9 && pb === 9) pb = 10;
+      if (B.rs.kd && A.rs.kd === 0 && pa === 9 && pb === 9) pa = 10;
+      if (pa > 10) pa = 10; if (pb > 10) pb = 10;
+      this.cards[j].push([pa, pb]); log.cards.push([pa, pb]);
+    }
+    this.roundLog.push(log);
+    this.lead = this.cardTotals().reduce((s, t) => s + (t[0] - t[1]), 0) / 3;
+  }
+  cardTotals() { return this.cards.map(c => c.reduce((s, r) => [s[0] + r[0], s[1] + r[1]], [0, 0])); }
+  // UI calls this after the corner break
+  nextRound(stratA, stratB) {
+    const [A, B] = this.f;
+    for (const F of this.f) {
+      const rec = F.s.recovery / 100;
+      F.head = Math.min(F.headMax, F.head + (F.headMax - F.head) * (.25 + rec * .35) + 3);
+      F.head = Math.max(F.head, 8);
+      F.body = Math.min(100, F.body + (100 - F.body) * (.15 + rec * .2));
+      F.stam = Math.min(F.stamMax, F.stam + (F.stamMax - F.stam) * (.5 + rec * .4));
+      // the cutman slows the bleeding and closes it a little; he can't make a bad cut go away
+      F.cut = Math.max(0, F.cut - this.cutman[F.side] * CUT.cutman * rnd(.7, 1.2));
+      if (F.cut < .4) F.cut = 0;
+      F.kdR = 0; F.rs = newRS(); F.hitT = 0; F.state = 'idle'; F.unanswered = 0; F.downP = 0;
+      F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.fakeT = 0; F.exitAfter = false; F.resetT = 0;
+      // memory fades a bit between rounds, the most recent round counts most
+      const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6;
+    }
+    // doctor / corner stoppages
+    const tot = this.cardTotals(); const lead0 = tot.reduce((s, t) => s + (t[0] - t[1]), 0) / 3;
+    for (const F of this.f) {
+      if (F.cut >= CUT.doc - 1) {
+        if (R() < clamp((F.cut - CUT.doc) / CUT.docSpan, 0, .9)) { this.emit('doctor', { d: F.side }); F.state = 'slump'; this.end(F.op.side, 'TKO (cut)'); return false; }
+        this.emit('doctorLook', { d: F.side });
+      }
+      const behind = F.side === 0 ? lead0 < -1 : lead0 > 1;
+      if (F.headMax < 26 && behind && R() < .5) { this.emit('rtd', { d: F.side }); F.state = 'slump'; this.end(F.op.side, 'RTD'); return false; }
+    }
+    A.strategy = stratA || 'auto'; B.strategy = stratB || 'auto'; A.order = B.order = null;
+    for (const F of this.f) for (const k in F.used) F.used[k] *= .6; // the other corner adjusts, but he forgets some of it over the break
+    this.round++; this.clock = 0; this.phase = 'intro2'; this.phaseT = 0;
+    this.emit('nextRound');
+    return true;
+  }
+  decision() {
+    const tot = this.cardTotals();
+    const w = tot.map(t => t[0] > t[1] ? 0 : t[1] > t[0] ? 1 : -1);
+    const c0 = w.filter(x => x === 0).length, c1 = w.filter(x => x === 1).length, cd = w.filter(x => x === -1).length;
+    let winner = null, method;
+    if (c0 === 3 || c1 === 3) { winner = c0 === 3 ? 0 : 1; method = 'UD'; }
+    else if ((c0 === 2 && c1 === 1) || (c1 === 2 && c0 === 1)) { winner = c0 === 2 ? 0 : 1; method = 'SD'; }
+    else if ((c0 === 2 && cd === 1) || (c1 === 2 && cd === 1)) { winner = c0 === 2 ? 0 : 1; method = 'MD'; }
+    else { winner = null; method = c0 === 1 && c1 === 1 ? 'Split draw' : cd === 3 ? 'Draw' : 'Majority draw'; }
+    this.result = { winner, method, round: this.round, time: '3:00', cards: tot, decision: true };
+    this.phase = 'over'; this.phaseT = 0; this.emit('end', { result: this.result });
+  }
+  end(winner, method) {
+    if (this.phase === 'over' && this.result) return;
+    this.result = { winner, method, round: this.round, time: this.clockStr(), cards: this.cardTotals(), decision: false };
+    const L = this.f[1 - winner]; if (L.state !== 'down') L.state = 'slump';
+    this.f[winner].act = null; this.f[winner].state = 'idle';
+    this.phase = 'over'; this.phaseT = 0; this.emit('end', { result: this.result });
+  }
+  // the corner yells an instruction mid-round. A corner that never shuts up gets tuned out
+  shout(side, k) {
+    const F = this.f[side];
+    if (this.phase !== 'fight' || !SHOUTS[k]) return null;
+    F.spam = (F.spam || 0) * Math.exp(-(this.t - (F.spamT || 0)) / 10) + 1; F.spamT = this.t;
+    const hurt = F.state === 'stun' || F.head < F.headMax * .3;
+    const q = clamp(.45 + .35 * iqK(F) + F.s.heart / 500, .3, 1) * (hurt ? .55 : 1) / (1 + .4 * Math.max(0, F.spam - 1.5));
+    F.order = { k, t: SHOUT_LEN, q, fit: this.shoutFit(F, k), ack: false };
+    this.emit('shout', { a: side, k, q, fit: F.order.fit });
+    return F.order;
+  }
+  // how right the call is for what is happening right now, 0..1. The corner sees what the fighter can't
+  shoutFit(F, k) { return this.shoutRead(F, k) * Math.exp(-((F.used && F.used[k]) || 0) / 60); } // same look over and over: the other corner adjusts
+  shoutRead(F, k) {
+    const O = F.op, holes = GUARD_HOLES[O.guard] || {}, gas = X => X.stam / Math.max(1, X.stamMax);
+    const hurt = X => X.state === 'stun' || X.head < X.headMax * .35;
+    const pace = X => X.rs.thrown / Math.max(30, this.clock) * ROUND_LEN;                   // punches per round, this round
+    const style = X => X.sk;
+    switch (k) {
+      case 'jab': return clamp(Math.max(((holes.jab || 1) - 1) * 2.5, /swarmer|slugger/.test(style(O)) ? .6 : 0, O.cutting ? .7 : 0, hurt(F) ? 0 : .1), 0, 1);
+      case 'body': return clamp(Math.max(((holes.bodyHook || 1) - 1) * 1.4, O.body < 60 ? .8 : 0, gas(O) < .5 ? .7 : 0), 0, 1);
+      case 'press': return clamp(Math.max(hurt(O) ? 1 : 0, gas(O) < .45 ? .8 : 0, this.trapped(O) ? .6 : 0, O.headMax < 60 ? .6 : 0) * (hurt(F) ? .3 : 1), 0, 1);
+      case 'counter': return clamp(Math.max((pace(O) - 60) / 30, /pressure|ko/.test(O.strategy) ? .7 : 0, /swarmer|slugger/.test(style(O)) ? .5 : 0), 0, 1);
+      case 'move': return clamp(Math.max(this.trapped(F) ? .9 : 0, gas(F) < .45 ? .7 : 0, O.cutting ? .45 : 0, hurt(F) ? .5 : 0), 0, 1);
+      case 'hands': return clamp(Math.max(hurt(F) ? 1 : 0, O.rs.landedPow / Math.max(30, this.clock) * ROUND_LEN > 12 ? .7 : 0, F.gi < .4 ? .4 : 0), 0, 1);
+    }
+    return 0;
+  }
+  // he does what the corner said (once per shout, for the commentary)
+  ack(F, k) { const o = F.order; if (o && !o.ack && o.k === k && R() < o.q) { o.ack = true; this.emit('heard', { a: F.side, k }); } }
+  // AI corner logic for any side
+  aiStrategy(side) {
+    const F = this.f[side], O = F.op;
+    const tot = this.cardTotals(); const lead = tot.reduce((s, t) => s + (side === 0 ? t[0] - t[1] : t[1] - t[0]), 0) / 3;
+    const left = this.rounds - this.round;
+    if (lead <= -3 && left <= 3) return 'ko';
+    if (F.headMax < 45 || F.head < 35) return lead > 2 ? 'move' : 'survive';
+    if (O.headMax < 50 || O.head < 40) return 'ko';
+    if (O.body < 45) return 'body';
+    if (F.stam < F.stamMax * .5) return 'move';
+    if (lead >= 4 && left <= 3) return 'move';
+    if (F.rs.trap > 16 && F.sk !== 'swarmer' && iqK(F) > .4) return 'move';   // stop living on the ropes
+    if ((O.guard === 'high' || O.guard === 'cross') && R() < .35 * (.5 + iqK(F))) return 'body'; // his hands are up, go downstairs
+    return wpick(Object.keys(STYLE_PLANS[F.sk] || STYLE_PLANS.boxerpuncher), k => (STYLE_PLANS[F.sk] || STYLE_PLANS.boxerpuncher)[k]);
+  }
+}
+
+
+/* ===== LAST BELL : career ===== */
+const DIVS = [
+  { key: 'fly', name: 'Flyweight', lb: '112 lb', pay: .55, build: .84 },
+  { key: 'bantam', name: 'Bantamweight', lb: '118 lb', pay: .6, build: .87 },
+  { key: 'feather', name: 'Featherweight', lb: '126 lb', pay: .7, build: .9 },
+  { key: 'light', name: 'Lightweight', lb: '135 lb', pay: .85, build: .94 },
+  { key: 'welter', name: 'Welterweight', lb: '147 lb', pay: 1, build: .98 },
+  { key: 'middle', name: 'Middleweight', lb: '160 lb', pay: 1, build: 1.03 },
+  { key: 'lightheavy', name: 'Light heavyweight', lb: '175 lb', pay: .9, build: 1.08 },
+  { key: 'cruiser', name: 'Cruiserweight', lb: '200 lb', pay: .85, build: 1.13 },
+  { key: 'heavy', name: 'Heavyweight', lb: '200+ lb', pay: 1.5, build: 1.2 }
+];
+const ORGS = [
+  { k: 'WPC', name: 'World Prize Council', c: '#c9a24a' },
+  { k: 'GRF', name: 'Global Ring Federation', c: '#9b2a24' },
+  { k: 'IFU', name: 'International Fist Union', c: '#4b7896' },
+  { k: 'RUO', name: 'Ring Union Organization', c: '#3f7a52' }
+];
+const TIERS = {
+  club: { label: 'Club show', venue: 'gym', purse: [500, 1600] },
+  regional: { label: 'Regional card', venue: 'hall', purse: [3000, 14000] },
+  tv: { label: 'TV undercard', venue: 'civic', purse: [25000, 120000] },
+  main: { label: 'Main event', venue: 'coliseum', purse: [150000, 650000] },
+  title: { label: 'World title fight', venue: 'vegas', purse: [700000, 4500000] }
+};
+const VENUE_NAMES = { gym: 'Back Room Gym', hall: 'Union Hall', civic: 'Civic Arena', coliseum: 'The Coliseum', vegas: 'Desert Crown Arena, Las Vegas' };
+const GYMS = [
+  { name: 'Garage gym', cost: 0, mult: .6, cut: .25, note: 'Free. Rusted bags, no cutman worth the name.' },
+  { name: 'Neighborhood club', cost: 400, mult: .85, cut: .35, note: 'Real coaches, real sparring.' },
+  { name: 'Pro training center', cost: 6000, mult: 1.1, cut: .5, note: 'Strength staff and a good cutman.' },
+  { name: 'Elite fight camp', cost: 45000, mult: 1.35, cut: .62, note: 'Where champions get built.' }
+];
+const FOCUS = {
+  power: { label: 'Strength & power', stats: ['power', 'body'] },
+  speed: { label: 'Speed drills', stats: ['speed', 'footwork'] },
+  technique: { label: 'Pads & technique', stats: ['accuracy', 'defense'] },
+  conditioning: { label: 'Roadwork', stats: ['stamina', 'recovery'] },
+  toughness: { label: 'Neck & core', stats: ['chin', 'heart'] },
+  sparring: { label: 'Hard sparring', stats: ['accuracy', 'defense', 'heart', 'footwork'], small: true }
+};
+const INTENSITY = [
+  { k: 'light', label: 'Light', mult: .7, inj: .3 },
+  { k: 'normal', label: 'Normal', mult: 1, inj: 1 },
+  { k: 'hard', label: 'Hard', mult: 1.35, inj: 2.2 }
+];
+const ADDONS = {
+  sci: { label: 'Sports science team', cost: 12000, desc: 'Slows decline, lowers injury risk, heals wear' },
+  spar: { label: 'Elite sparring partners', cost: 7000, desc: 'Bigger gains on your focus' }
+};
+const INJURIES = [
+  { k: 'cut', name: 'Bad cut over the eye', weeks: 5 },
+  { k: 'hand', name: 'Broken hand', weeks: 12 },
+  { k: 'rib', name: 'Cracked rib', weeks: 9 },
+  { k: 'conc', name: 'Concussion', weeks: 10, perm: { chin: -3 } },
+  { k: 'ankle', name: 'Sprained ankle', weeks: 6 },
+  { k: 'shoulder', name: 'Torn shoulder', weeks: 14, perm: { power: -2 } }
+];
+const GEAR = {
+  trunks: [
+    { id: 't_black', name: 'Black', c: '#201c19', trim: '#8a7558', price: 0 },
+    { id: 't_ox', name: 'Oxblood', c: '#7a1c1c', trim: '#e6dac2', price: 0 },
+    { id: 't_navy', name: 'Navy', c: '#1d2b47', trim: '#c9a24a', price: 250 },
+    { id: 't_white', name: 'White', c: '#e4ddd0', trim: '#8e1b1b', price: 450 },
+    { id: 't_forest', name: 'Forest', c: '#1e3d2e', trim: '#dcc06a', price: 800 },
+    { id: 't_royal', name: 'Royal', c: '#3b2455', trim: '#d9b54a', price: 3500 },
+    { id: 't_leopard', name: 'Leopard', c: '#a77a3e', trim: '#2a1a0c', price: 12000, pattern: 'spots' },
+    { id: 't_gold', name: 'Gold', c: '#b98a2f', trim: '#2a1d0e', price: 40000 }
+  ],
+  gloves: [
+    { id: 'g_red', name: 'Red', c: '#a3201f', price: 0 },
+    { id: 'g_black', name: 'Black', c: '#1f1b19', price: 0 },
+    { id: 'g_white', name: 'White', c: '#e7e1d6', price: 300 },
+    { id: 'g_blue', name: 'Blue', c: '#24477a', price: 300 },
+    { id: 'g_green', name: 'Green', c: '#2b5a3a', price: 900 },
+    { id: 'g_pink', name: 'Pink', c: '#c76a8a', price: 2000 },
+    { id: 'g_gold', name: 'Gold', c: '#c9982f', price: 60000 }
+  ],
+  shoes: [
+    { id: 's_black', name: 'Black boots', c: '#1c1917', price: 0 },
+    { id: 's_white', name: 'White boots', c: '#e6e0d5', price: 0 },
+    { id: 's_red', name: 'Red boots', c: '#8f1f1d', price: 200 },
+    { id: 's_gold', name: 'Gold boots', c: '#b98a2f', price: 15000 }
+  ]
+};
+const SKINS = ['#f0c8a4', '#deab83', '#c48a60', '#a66f4a', '#875336', '#6a3e27', '#4c2b1b'];
+const HAIRS = ['bald', 'buzz', 'flat', 'crop', 'braids', 'mohawk'];
+const HAIR_COLS = ['#17100b', '#2a1a10', '#4a2e18', '#6e4a29', '#b28d5a', '#8c8c8c'];
+const FIRST = ['Marcus', 'Danny', 'Ray', 'Luis', 'Tommy', 'Andre', 'Kofi', 'Mateo', 'Jalen', 'Viktor', 'Sean', 'Emeka', 'Hector', 'Kenji', 'Darnell', 'Rico', 'Pavel', 'Isaiah', 'Javier', 'Callum', 'Tariq', 'Bobby', 'Nikolai', 'Ernesto', 'Malik', 'Jimmy', 'Rafael', 'Deshawn', 'Omar', 'Lennox', 'Felix', 'Cesar', 'Terrence', 'Miguel', 'Aaron', 'Dmitri', 'Quinton', 'Santiago', 'Reggie', 'Paolo', 'Dante', 'Tyrone', 'Kwame', 'Arturo', 'Noel', 'Jun', 'Manny', 'Eli'];
+const LAST = ['Reyes', 'Okafor', 'Kowalski', 'Mendoza', 'Brooks', 'Sullivan', 'Tanaka', 'Haddad', 'Ivanov', 'Delgado', 'Mensah', 'Price', 'Castillo', 'Whitaker', 'Navarro', 'Petrov', 'Boateng', 'Garza', 'McKinnon', 'Duarte', 'Holloway', 'Santos', 'Adeyemi', 'Romero', 'Kovac', 'Banks', 'Ortega', 'Fitzgerald', 'Moreno', 'Asante', 'Vega', 'Lindqvist', 'Carter', 'Herrera', 'Novak', 'Grant', 'Salazar', 'Ochoa', 'Pryor', 'Dela Cruz', 'Bautista', 'Murphy', 'Esposito', 'Kim', 'Nakamura', 'Dlamini'];
+const NICKS = ['The Hammer', 'Iron', 'Smooth', 'The Butcher', 'Bad News', 'Lights Out', 'The Professor', 'Machete', 'Silk', 'The Truth', 'Dynamite', 'Ghost', 'Tank', 'Mean Streak', 'The Surgeon', 'Pitbull', 'Cobra', 'Hands of Stone', 'Brickhouse', 'Showtime', 'The Mechanic', 'Rocket', 'Cold Water', 'Thunder', 'Razor', 'The Saint', 'Bulldozer', 'Quicksilver', 'No Mercy', 'Sledge'];
+
+let _id = 1;
+const uid = p => p + (Date.now() % 100000) + '_' + (_id++) + '_' + Math.floor(R() * 1e4);
+
+function randLook(divIdx) {
+  const div = DIVS[divIdx];
+  return {
+    skin: pick(SKINS), hair: pick(HAIRS), hairCol: pick(HAIR_COLS), beard: R() < .3,
+    trunks: pick(GEAR.trunks.slice(0, 6)).id, gloves: pick(GEAR.gloves.slice(0, 5)).id, shoes: pick(GEAR.shoes.slice(0, 3)).id,
+    build: div.build * rnd(.96, 1.04), h: rnd(.95, 1.05)
+  };
+}
+function genStats(rating, style) {
+  const b = STYLES[style].bias; const s = {};
+  for (const k of STATS) s[k] = Math.round(clamp(rating + (b[k] || 0) + gauss() * 5, 20, 99));
+  const adj = rating - ovr(s);
+  for (const k of STATS) s[k] = Math.round(clamp(s[k] + adj, 20, 99));
+  return s;
+}
+function genRecord(points) {
+  const w = Math.max(3, Math.round(points / 14 + rnd(2, 10)));
+  const l = Math.max(0, Math.round(rnd(0, 4) + (R() < .3 ? rnd(0, 4) : 0)));
+  return { w, l, d: R() < .3 ? ri(1, 2) : 0, ko: Math.round(w * rnd(.3, .8)) };
+}
+function genFighter(divIdx, rating, points, age) {
+  const style = pick(BASE_STYLES);
+  return {
+    id: uid('f'), name: pick(FIRST) + ' ' + pick(LAST), nick: R() < .7 ? pick(NICKS) : '',
+    style, guard: rollGuard(style), stance: R() < .22 ? 'southpaw' : 'orthodox', rating, stats: genStats(rating, style),
+    points: Math.round(points), age: age || ri(22, 34), record: genRecord(points), look: randLook(divIdx)
+  };
+}
+// ---------- legends: one per division, the only man in the world who fights his style. Beat him and it is yours to learn ----------
+const LEGENDS = [
+  { name: 'Román Gonzalo', nick: 'Chocolatito', style: 'volume', guard: 'high', stance: 'orthodox', rating: 91, age: 31, rec: [50, 3, 41] },
+  { name: 'Vasyl Lomachuk', nick: 'Hi-Tech', style: 'angle', guard: 'standard', stance: 'southpaw', rating: 92, age: 30, rec: [17, 2, 11] },
+  { name: 'Nazir Hameed', nick: 'The Prince', style: 'awkward', guard: 'handslow', stance: 'southpaw', rating: 89, age: 27, rec: [36, 0, 31] },
+  { name: 'Terrance Crawfield', nick: 'Bud', style: 'switch', guard: 'standard', stance: 'orthodox', rating: 91, age: 33, rec: [40, 0, 31] },
+  { name: 'Ricky Hattersley', nick: 'The Hitman', style: 'body', guard: 'peekaboo', stance: 'orthodox', rating: 89, age: 29, rec: [45, 1, 32] },
+  { name: 'Gennadi Golovko', nick: 'Triple G', style: 'pboxer', guard: 'high', stance: 'orthodox', rating: 91, age: 34, rec: [42, 1, 37] },
+  { name: 'Bernie Hoskins', nick: 'The Alien', style: 'spoiler', guard: 'philly', stance: 'orthodox', rating: 90, age: 40, rec: [55, 7, 32] },
+  { name: 'Oleks Usykenko', nick: 'The Cat', style: 'feinter', guard: 'standard', stance: 'southpaw', rating: 91, age: 33, rec: [21, 0, 14] },
+  { name: 'Vlad Klitchenko', nick: 'Dr. Steelhammer', style: 'jabgrab', guard: 'standard', stance: 'orthodox', rating: 91, age: 32, rec: [64, 5, 53] }
+];
+function genLegend(divIdx) {
+  const L = LEGENDS[divIdx]; if (!L) return null;
+  const f = genFighter(divIdx, L.rating, 400 + rnd(0, 25), L.age);
+  return Object.assign(f, { id: 'L' + divIdx, name: L.name, nick: L.nick, style: L.style, guard: L.guard, stance: L.stance, legend: true, stats: genStats(L.rating, L.style), record: { w: L.rec[0], l: L.rec[1], d: 0, ko: L.rec[2] } });
+}
+// every division has its legend, and he stays near the top
+function ensureLegend(roster, divIdx) {
+  if (!roster.some(f => f.legend)) { const lg = genLegend(divIdx); if (lg) roster.push(lg); }
+  roster.sort((a, b) => b.points - a.points);
+  const i = roster.findIndex(f => f.legend);
+  if (i > 4) { roster[i].points = roster[4].points + 1; roster.sort((a, b) => b.points - a.points); }
+  return roster;
+}
+function genRoster(divIdx) {
+  const r = [];
+  for (let i = 0; i < 40; i++) {
+    const t = i / 39;
+    const rating = Math.round(clamp(lerp(88, 58, Math.pow(t, .8)) + gauss() * 2.5, 55, 93));
+    r.push(genFighter(divIdx, rating, lerp(430, 40, Math.pow(t, .9)) + rnd(-8, 8)));
+  }
+  r.sort((a, b) => b.points - a.points);
+  return ensureLegend(r, divIdx);
+}
+function genStars(skipDiv) {
+  const out = [];
+  for (let i = 0; i < 14; i++) {
+    let d; do { d = ri(0, DIVS.length - 1); } while (d === skipDiv);
+    out.push({ id: uid('s'), name: pick(FIRST) + ' ' + pick(LAST), div: d, rating: ri(84, 95), belts: ri(0, 4), unbeaten: R() < .25 });
+  }
+  return out;
+}
+
+function newCareer(p) {
+  // p: {name, nick, div, style, stance, stats, look, pot}
+  const roster = genRoster(p.div);
+  const belts = {};
+  ORGS.forEach((o, i) => { belts[o.k] = roster[i < 2 ? 0 : i - 1].id; }); // top guy may hold two
+  return {
+    v: 1, savedAt: Date.now(), week: 0,
+    player: {
+      id: 'P', name: p.name, nick: p.nick || '', div: p.div, style: p.style, baseStyle: p.style, guard: p.guard || 'standard', stance: p.stance,
+      stats: p.stats, pot: p.pot, look: p.look, startAge: p.age || 21,
+      record: { w: 0, l: 0, d: 0, ko: 0 }, points: 0, money: 800, gym: 0, wear: 0,
+      injury: null, belts: [], history: [], earnings: 0, owned: ['t_black', 't_ox', 'g_red', 'g_black', 's_black', 's_white'],
+      retired: false, peakRank: null, titleDefenses: 0, campDone: false
+    },
+    world: { div: p.div, roster, belts, stars: genStars(p.div) },
+    pending: null
+  };
+}
+function age(save) { return save.player.startAge + save.week / 52; }
+function rankList(save) {
+  const P = save.player;
+  const list = save.world.roster.map(f => ({ id: f.id, name: f.name, points: f.points, rating: f.rating, record: f.record, f }));
+  list.push({ id: 'P', name: P.name, points: P.points, rating: ovr(P.stats), record: P.record, isPlayer: true });
+  list.sort((a, b) => b.points - a.points);
+  return list;
+}
+function playerRank(save) { return rankList(save).findIndex(e => e.isPlayer) + 1; }
+function beltsOf(save, id) { return ORGS.filter(o => save.world.belts[o.k] === id).map(o => o.k); }
+function findFighter(save, id) { return save.world.roster.find(f => f.id === id); }
+
+function p4p(save) {
+  const P = save.player; const out = [];
+  save.world.stars.forEach(s => out.push({ name: s.name, div: DIVS[s.div].name, score: s.rating + s.belts * 2.5 + (s.unbeaten ? 3 : 0), belts: s.belts }));
+  LEGENDS.forEach((L, d) => { if (d !== save.world.div) out.push({ name: L.name, div: DIVS[d].name, score: L.rating + 3, belts: 0 }); });
+  save.world.roster.slice(0, 6).forEach(f => { const b = beltsOf(save, f.id).length; out.push({ name: f.name, div: DIVS[save.world.div].name, score: f.rating + b * 2.5 + (f.record.l === 0 ? 3 : 0), belts: b }); });
+  const pr = playerRank(save);
+  if (pr <= 15) out.push({ name: P.name, div: DIVS[P.div].name, score: ovr(P.stats) + P.belts.length * 2.5 + (P.record.l === 0 && P.record.w > 12 ? 3 : 0) - (pr > 5 ? 3 : 0), belts: P.belts.length, isPlayer: true });
+  out.sort((a, b) => b.score - a.score);
+  return out.slice(0, 10);
+}
+
+function purseFor(save, tier, oppPoints, isTitle) {
+  const T = TIERS[tier]; const P = save.player; const div = DIVS[P.div];
+  const caps = { club: 35, regional: 110, tv: 240, main: 430, title: 430 };
+  const q = clamp((Math.max(P.points, oppPoints) / caps[tier]) * .7 + R() * .3 + (P.belts.length ? .25 : 0), 0, 1);
+  let v = lerp(T.purse[0], T.purse[1], q) * div.pay;
+  if (isTitle && P.belts.length) v *= 1 + P.belts.length * .3;
+  return Math.round(v / 50) * 50;
+}
+function tierFor(save, oppPoints, title) {
+  if (title) return 'title';
+  const p = Math.max(save.player.points, oppPoints || 0);
+  return p < 35 ? 'club' : p < 110 ? 'regional' : p < 240 ? 'tv' : 'main';
+}
+function roundsFor(save, tier) {
+  if (tier === 'club') return save.player.record.w + save.player.record.l < 3 ? 4 : 6;
+  return { regional: 8, tv: 10, main: R() < .5 ? 10 : 12, title: 12 }[tier];
+}
+function genOffers(save) {
+  const P = save.player; if (P.injury) return [];
+  const pO = ovr(P.stats); const offers = [];
+  const mk = (opp, title, label) => {
+    const tier = tierFor(save, opp.points, !!(title && title.length));
+    return { opp, oppId: opp.id, title: title || [], tier, label: label || TIERS[tier].label, rounds: roundsFor(save, tier), purse: purseFor(save, tier, opp.points, !!(title && title.length)), venue: TIERS[tier].venue };
+  };
+  if (P.points < 30) {
+    [[-12, -5, 'Tune-up'], [-6, 1, 'Even match'], [-1, 6, 'Step up']].forEach(([a, b, lbl]) => {
+      const r = clamp(pO + ri(a, b), 30, 75);
+      const f = genFighter(P.div, r, rnd(2, 28), ri(19, 36));
+      f.record = { w: ri(0, 8), l: ri(0, 9), d: R() < .2 ? 1 : 0, ko: 0 }; f.record.ko = Math.round(f.record.w * rnd(.2, .7)); f.club = true;
+      offers.push(mk(f, null, lbl));
+    });
+    return offers;
+  }
+  const list = rankList(save).filter(e => !e.isPlayer); const r = playerRank(save) - 1;
+  const take = (lo, hi) => { const c = list.slice(clamp(lo, 0, list.length - 1), clamp(hi, 1, list.length)); return c.length ? pick(c).f : null; };
+  const used = new Set();
+  const add = (f, title, lbl) => { if (f && !used.has(f.id)) { used.add(f.id); offers.push(mk(f, title, lbl)); return true; } return false; };
+  // defenses / title shots
+  if (P.belts.length) {
+    const contender = list[0].f; const b = P.belts.slice();
+    add(contender, b, 'Mandatory defense');
+  }
+  if (r <= 4) {
+    const notMine = ORGS.filter(o => !P.belts.includes(o.k)).map(o => o.k);
+    if (notMine.length) {
+      const holderId = save.world.belts[notMine[0]];
+      const holder = findFighter(save, holderId);
+      if (holder) { const onLine = beltsOf(save, holder.id).filter(k => !P.belts.includes(k)); add(holder, P.belts.length ? onLine.concat(P.belts) : onLine, P.belts.length ? 'Unification' : 'Title shot'); }
+    }
+  }
+  let tries = 0;
+  while (offers.length < 3 && tries++ < 20) {
+    const k = offers.length;
+    if (k === 0) add(take(r + 2, r + 9), null, 'Tune-up');
+    else if (k === 1) add(take(r - 2, r + 3), null, 'Even match');
+    else add(take(r - 8, r - 1), null, 'Step up');
+    if (tries > 6 && offers.length < 3) add(take(0, list.length), null, 'Open offer');
+  }
+  return offers.slice(0, 3);
+}
+
+const STYLE_LEARN = { first: .55, camp: .3, fight: .08 }; // fluency: first camp of a new style/stance, each camp after, each fight
+function learnRate(P, G) { return G.mult * (.8 + .4 * clamp((ringIQ({ stats: P.stats, exp: P.record.w + P.record.l + P.record.d }) - 35) / 55, 0, 1)); }
+function settleStyle(P, notes) {
+  if (P.styleFrom && P.styleFit >= 1) { delete P.styleFrom; P.styleFit = 1; if (notes) notes.push('The ' + STYLES[P.style].label.toLowerCase() + ' style is his now. He fights it like he was born to.'); }
+  if (P.stanceFit != null && P.stanceFit >= 1) { delete P.stanceFit; if (notes) notes.push('Fighting ' + P.stance + ' feels natural now.'); }
+}
+// his style is locked in: the one he was built with, plus any legend's style he has earned
+function campStyles(P) { return Array.from(new Set([P.baseStyle || P.style, ...(P.unlocked || [])])); }
+function campCost(plan) { let c = GYMS[plan.gym].cost; if (plan.sci) c += ADDONS.sci.cost; if (plan.spar) c += ADDONS.spar.cost; return c; }
+function runCamp(save, plan) {
+  // plan: {gym, focus:[k,k], intensity, sci, spar} or null for rest
+  const P = save.player; const a = age(save); const before = Object.assign({}, P.stats); const notes = [];
+  const G = GYMS[plan.gym]; const I = INTENSITY.find(i => i.k === plan.intensity) || INTENSITY[1];
+  const ageGain = a < 26 ? 1.15 : a < 30 ? 1 : a < 33 ? .75 : a < 36 ? .45 : .2;
+  const focused = new Set();
+  plan.focus.forEach(fk => {
+    const F = FOCUS[fk]; if (!F) return;
+    F.stats.forEach(k => {
+      focused.add(k);
+      const room = Math.max(0, 1 - P.stats[k] / Math.max(P.stats[k] + 1, P.pot[k]));
+      let g = 5 * G.mult * I.mult * ageGain * Math.pow(room, .5) * rnd(.7, 1.3) * (F.small ? .55 : 1) * (plan.spar ? 1.2 : 1);
+      if (k === 'chin') g *= .35;
+      P.stats[k] = Math.min(P.pot[k], P.stats[k] + g);
+    });
+  });
+  const decayBase = (0.08 + Math.max(0, a - 29) * 0.35) * (plan.sci ? .6 : 1);
+  STATS.forEach(k => { if (!focused.has(k)) P.stats[k] = Math.max(20, P.stats[k] - decayBase * rnd(.4, 1.4)); });
+  if (P.wear > 30) P.stats.chin = Math.max(20, P.stats.chin - (P.wear - 30) * .006);
+  if (plan.sci) P.wear = Math.max(0, P.wear - 3);
+  let injury = null;
+  const injCh = .03 * I.inj * (plan.sci ? .5 : 1) * (plan.focus.includes('sparring') ? 1.6 : 1);
+  if (R() < injCh) { injury = Object.assign({}, pick(INJURIES.filter(i => i.k !== 'conc'))); injury.weeks = Math.round(injury.weeks * .7); injury.source = 'camp'; P.injury = injury; notes.push('Got hurt in camp: ' + injury.name.toLowerCase() + '. Fight is off.'); }
+  // new style / new stance: takes a focus slot, and he is only part of the way there after one camp
+  const lm = learnRate(P, G);
+  if (plan.learn && plan.learn !== P.style && STYLES[plan.learn] && campStyles(P).includes(plan.learn)) {
+    const f = P.styleFrom ? P.styleFit : 1;
+    if (plan.learn === P.styleFrom) { P.styleFrom = P.style; P.styleFit = Math.max(.5, 1 - f); }
+    else { P.styleFrom = P.styleFrom && f < .5 ? P.styleFrom : P.style; P.styleFit = STYLE_LEARN.first * lm; }
+    P.style = plan.learn;
+    notes.push('Started learning the ' + STYLES[P.style].label.toLowerCase() + ' style. About ' + Math.round(P.styleFit * 100) + '% there. It will still look like the old him on fight night.');
+  } else if (P.styleFrom) { P.styleFit = Math.min(1, P.styleFit + STYLE_LEARN.camp * lm); notes.push('The ' + STYLES[P.style].label.toLowerCase() + ' style is coming along: ' + Math.round(P.styleFit * 100) + '%.'); }
+  if (plan.stance) {
+    P.stanceFit = P.stanceFit != null && P.stanceFit < 1 ? Math.max(.5, 1 - P.stanceFit) : STYLE_LEARN.first * lm;
+    P.stance = P.stance === 'southpaw' ? 'orthodox' : 'southpaw';
+    notes.push('Switched to ' + P.stance + '. Still rusty: ' + Math.round(P.stanceFit * 100) + '%.');
+  } else if (P.stanceFit != null) P.stanceFit = Math.min(1, P.stanceFit + STYLE_LEARN.camp * lm);
+  settleStyle(P, notes);
+  P.money -= campCost(plan);
+  save.week += 8;
+  P.campDone = !injury;
+  const delta = {}; STATS.forEach(k => delta[k] = P.stats[k] - before[k]);
+  worldSim(save, 8);
+  return { delta, injury, notes };
+}
+function rest(save) {
+  const P = save.player; const a = age(save); const wk = P.injury ? Math.min(P.injury.weeks, 8) : 6;
+  const decay = (0.15 + Math.max(0, a - 29) * 0.45) * 1.3;
+  const before = Object.assign({}, P.stats);
+  STATS.forEach(k => P.stats[k] = Math.max(20, P.stats[k] - decay * rnd(.5, 1.4) * (wk / 6)));
+  P.wear = Math.max(0, P.wear - 4);
+  if (P.injury) { P.injury.weeks -= wk; if (P.injury.weeks <= 0) P.injury = null; }
+  save.week += wk; worldSim(save, wk);
+  const delta = {}; STATS.forEach(k => delta[k] = P.stats[k] - before[k]);
+  return { weeks: wk, delta, healed: !P.injury };
+}
+
+function applyResult(save, offer, fight) {
+  const P = save.player; const res = fight.result; const me = fight.f[0];
+  const opp = offer.opp.club ? offer.opp : (findFighter(save, offer.oppId) || offer.opp);
+  const win = res.winner === 0, draw = res.winner == null, loss = res.winner === 1;
+  const stop = !res.decision; const out = { notes: [], pointsBefore: P.points, rankBefore: playerRank(save) };
+  const isTitle = offer.title.length > 0;
+  if (!draw) { const me = { name: P.name, isPlayer: true, wins: [] }; noteFight(win ? me : opp, win ? opp : me, { ko: stop, t: isTitle ? offer.title.filter(k => win ? save.world.belts[k] === opp.id : true) : [], r: win ? (opp.club ? null : rankList(save).findIndex(e => e.id === opp.id) + 1) : out.rankBefore, wk: save.week }); }
+  else { if (opp.wins === undefined) seedResume(opp); opp.last = { w: null, n: P.name, wk: save.week, you: true }; }
+  if (win) { P.record.w++; if (stop) P.record.ko++; } else if (loss) P.record.l++; else P.record.d++;
+  if (opp.record) { if (loss) { opp.record.w++; if (stop) opp.record.ko++; } else if (win) opp.record.l++; else opp.record.d++; }
+  const op = opp.points || 0;
+  if (win) { const g = 8 + op * .16 + (stop ? 3 : 0) + (isTitle ? 30 : 0); P.points += g; if (!opp.club) opp.points = Math.max(0, opp.points - (4 + g * .3)); }
+  else if (loss) { const l = 5 + Math.max(0, P.points - op) * .12 + P.points * .06; P.points = Math.max(0, P.points - l); if (!opp.club) opp.points += 6 + P.points * .1; }
+  else { P.points += 2; if (!opp.club) opp.points += 2; }
+  P.money += offer.purse; P.earnings += offer.purse;
+  if (win && opp.legend && STYLES[opp.style]) {
+    P.beatLegends = Array.from(new Set([...(P.beatLegends || []), opp.id]));
+    if (!(P.unlocked || []).includes(opp.style)) {
+      P.unlocked = [...(P.unlocked || []), opp.style];
+      out.notes.push('You beat ' + opp.name + '. Nobody else in the world fights like him, and now you can learn it: the ' + STYLES[opp.style].label.toLowerCase() + ' style is unlocked in camp.');
+    }
+  }
+  if (P.styleFrom) P.styleFit = Math.min(1, P.styleFit + STYLE_LEARN.fight);
+  if (P.stanceFit != null) P.stanceFit = Math.min(1, P.stanceFit + STYLE_LEARN.fight);
+  settleStyle(P, out.notes);
+  // belts
+  if (isTitle) {
+    if (win) {
+      offer.title.forEach(k => { if (!P.belts.includes(k)) { P.belts.push(k); out.notes.push('New ' + k + ' world champion.'); } else { P.titleDefenses++; } save.world.belts[k] = 'P'; });
+      P.titleDivs = Array.from(new Set([...(P.titleDivs || []), P.div]));
+      if (P.titleDivs.length > 1) out.notes.push(['', '', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'][P.titleDivs.length] + '-division world champion.');
+    } else if (loss) {
+      offer.title.forEach(k => { if (P.belts.includes(k)) { P.belts = P.belts.filter(b => b !== k); out.notes.push('Lost the ' + k + ' belt.'); } save.world.belts[k] = opp.id; });
+    }
+  }
+  // damage, wear, injury
+  const taken = me.tot.taken; const kds = me.kd;
+  P.wear = Math.min(100, P.wear + taken * .007 + kds * 1.2 + (loss && stop ? 2 : 0));
+  const injCh = clamp((taken - 160) / 900 + P.wear / 600 + kds * .03, 0, .4);
+  let injury = null;
+  if (R() < injCh) {
+    injury = Object.assign({}, kds >= 2 || (loss && stop && R() < .4) ? INJURIES.find(i => i.k === 'conc') : pick(INJURIES.filter(i => i.k !== 'conc')));
+    if (me.cut > 4 && R() < .5) injury = Object.assign({}, INJURIES[0]);
+    if (injury.perm) for (const k in injury.perm) P.stats[k] = Math.max(20, P.stats[k] + injury.perm[k]);
+    P.injury = injury; out.notes.push('Injury: ' + injury.name.toLowerCase() + ' (' + injury.weeks + ' weeks out).');
+  }
+  // ring experience
+  const xp = ['accuracy', 'defense', 'heart', 'footwork', 'recovery'];
+  for (let i = 0; i < 2; i++) { const k = pick(xp); P.stats[k] = Math.min(P.pot[k], P.stats[k] + rnd(.2, win ? .9 : .5) * (age(save) < 31 ? 1 : .4)); }
+  const recWeeks = 2 + Math.round(taken / 90);
+  save.week += 1 + recWeeks;
+  if (P.injury) { P.injury.weeks = Math.max(0, P.injury.weeks - recWeeks); if (P.injury.weeks === 0) P.injury = null; }
+  P.campDone = false;
+  const entry = {
+    wk: save.week, opp: opp.name, oppId: opp.id, oppRec: opp.record ? `${opp.record.w}-${opp.record.l}-${opp.record.d}` : '', r: win ? 'W' : loss ? 'L' : 'D',
+    method: res.method, dec: res.decision, round: res.round, time: res.time, venue: VENUE_NAMES[offer.venue], purse: offer.purse, title: offer.title.slice(), cards: res.cards
+  };
+  P.history.unshift(entry);
+  worldSim(save, 1 + recWeeks);
+  out.rankAfter = playerRank(save); out.pointsAfter = P.points; out.taken = taken; out.injury = injury;
+  P.peakRank = P.peakRank ? Math.min(P.peakRank, out.rankAfter) : out.rankAfter;
+  save.pending = null;
+  return out;
+}
+
+function worldSim(save, weeks) {
+  const W = save.world; const n = Math.max(1, Math.round(weeks / 2));
+  for (let i = 0; i < n; i++) {
+    const L = W.roster; if (L.length < 4) break;
+    const a = ri(0, L.length - 1); let b = clamp(a + ri(-5, 5), 0, L.length - 1); if (b === a) b = (a + 1) % L.length;
+    const A = L[a], B = L[b]; const aw = (A.rating - B.rating) + gauss() * 6 > 0;
+    const Wn = aw ? A : B, Ls = aw ? B : A, ko = R() < .55;
+    Wn.record.w++; Ls.record.l++; if (ko) Wn.record.ko++;
+    const g = 6 + Ls.points * .1; Wn.points += g; Ls.points = Math.max(5, Ls.points - (4 + g * .3));
+    // belts change hands sometimes
+    const took = []; ORGS.forEach(o => { if (W.belts[o.k] === Ls.id && R() < .5) { W.belts[o.k] = Wn.id; took.push(o.k); } });
+    noteFight(Wn, Ls, { ko, t: took, r: (aw ? b : a) + 1, wk: save.week });
+  }
+  W.roster.forEach(f => {
+    f.age += weeks / 52; if (f.legend) return; // legends don't fade
+    const drift = f.age < 27 ? rnd(0, .25) : f.age > 32 ? -rnd(0, .3) : rnd(-.1, .1);
+    f.rating = Math.round(clamp(f.rating + drift * weeks / 4, 50, 95) * 10) / 10;
+  });
+  // retirements -> new prospects
+  for (let i = W.roster.length - 1; i >= 0; i--) {
+    const f = W.roster[i];
+    if (!f.legend && ((f.age > 37 && R() < .08 * weeks / 4) || f.rating < 54)) {
+      const held = ORGS.filter(o => W.belts[o.k] === f.id);
+      W.roster.splice(i, 1);
+      const nf = genFighter(save.player.div, ri(60, 74), rnd(30, 70), ri(20, 24)); W.roster.push(nf);
+      held.forEach(o => { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; W.belts[o.k] = top.id; });
+    }
+  }
+  ensureLegend(W.roster, W.div);
+  W.stars.forEach(s => { s.rating = clamp(s.rating + rnd(-.4, .35) * weeks / 6, 78, 97); });
+}
+
+function playerSheet(save) {
+  const P = save.player;
+  return { name: P.name, nick: P.nick, style: P.style, styleFrom: P.styleFrom, styleFit: P.styleFit, guard: P.guard || 'standard', stance: P.stance, stanceFit: P.stanceFit, stats: Object.assign({}, P.stats), look: P.look, wear: P.wear, exp: P.record.w + P.record.l + P.record.d };
+}
+// worldSim moves a fighter's rating (young men improve, old men fade) but never touched his stats, so after a few years
+// the OVR on the card could be 10 off from the man in the ring. His stats follow his rating (OVR_W sums to 1, so +1 to every stat = +1 OVR)
+function liveStats(f) {
+  const st = Object.assign({}, f.stats); if (f.rating == null) return st;
+  let raw = 0; for (const k of STATS) raw += st[k] * OVR_W[k];
+  const sh = f.rating - raw; for (const k of STATS) st[k] = clamp(st[k] + sh, 20, 99);
+  return st;
+}
+// ---------- resumes: what the world knows about a man (notable wins, last fight, belts). His real numbers need scouting ----------
+const fakeName = () => pick(FIRST) + ' ' + pick(LAST);
+// men made before resumes existed get a believable past: better men have bigger wins
+function seedResume(f, belts) {
+  const pts = f.points || 0, rc = f.record || { w: 0, l: 0, ko: 0 }, koR = rc.w ? rc.ko / rc.w : .5;
+  const n = f.legend ? 3 : f.club ? 0 : pts > 300 ? ri(2, 3) : pts > 160 ? ri(1, 2) : pts > 70 ? ri(0, 1) : 0;
+  f.wins = [];
+  for (let i = 0; i < Math.min(n, rc.w); i++) f.wins.push({ n: fakeName(), ko: R() < koR, r: pts > 300 ? ri(1, 8) : ri(4, 18), t: [] });
+  const bl = (belts || []).slice(); if (f.legend && !bl.length) bl.push(pick(ORGS).k);
+  if (bl.length) { if (!f.wins.length) f.wins.push({ n: fakeName(), ko: R() < koR, r: ri(1, 3), t: [] }); f.wins[0].t = bl; f.wins[0].r = ri(1, 3); }
+  if (!f.last && rc.w + rc.l > 0) { const lost = R() < rc.l / (rc.w + rc.l) * 1.2; f.last = { w: lost ? 0 : 1, n: fakeName(), ko: R() < (lost ? .35 : koR) }; }
+}
+function resumeOf(save, f) { if (f.wins === undefined) seedResume(f, f.club ? [] : beltsOf(save, f.id)); return f; }
+// a result goes on both men's resumes. A win is notable if he beat a top-10 man, a legend, took a belt, or beat you
+function noteFight(W, L, o) {
+  if (W.wins === undefined) seedResume(W); if (L.wins === undefined) seedResume(L);
+  W.last = { w: 1, n: L.name, ko: o.ko, wk: o.wk, you: !!L.isPlayer }; L.last = { w: 0, n: W.name, ko: o.ko, wk: o.wk, you: !!W.isPlayer };
+  if ((o.t && o.t.length) || (o.r && o.r <= 10) || L.legend || L.isPlayer) W.wins = [{ n: L.name, ko: o.ko, r: o.r, t: o.t || [], wk: o.wk, you: !!L.isPlayer }, ...W.wins].slice(0, 3);
+  if (o.t && o.t.length && !L.isPlayer) L.exBelts = Array.from(new Set([...(L.exBelts || []), ...o.t.filter(k => !(W.exBelts || []).includes(k))]));
+}
+// you know a man's real numbers if you fought him or paid for film in the last year
+const SCOUT_FOR = 52, SCOUT_CAP = { club: 150, regional: 1000, tv: 5000, main: 15000, title: 25000 };
+function scoutCost(offer) { return Math.max(100, Math.round(Math.min(offer.purse * .08, SCOUT_CAP[offer.tier] || 1000) / 50) * 50); }
+function isScouted(save, f) {
+  const P = save.player; if (f.scouted) return true;
+  const wk = (P.scout || {})[f.id]; if (wk != null && save.week - wk <= SCOUT_FOR) return true;
+  return P.history.some(h => h.oppId ? h.oppId === f.id : h.opp === f.name);
+}
+function scoutHim(save, offer) {
+  const P = save.player, f = oppNow(save, offer), c = scoutCost(offer);
+  if (P.money < c || isScouted(save, f)) return false;
+  P.money -= c; if (offer.opp.club) offer.opp.scouted = true; else (P.scout = P.scout || {})[f.id] = save.week;
+  return true;
+}
+function oppNow(save, offer) { return offer.opp.club ? offer.opp : (findFighter(save, offer.oppId) || offer.opp); }
+function oppSheet(save, offer) {
+  const o = oppNow(save, offer);
+  return { name: o.name, nick: o.nick, style: o.style, guard: o.guard || offer.opp.guard || 'standard', stance: o.stance, stats: liveStats(o), look: o.look, wear: 0, exp: o.record ? o.record.w + o.record.l + o.record.d : 0 };
+}
+function playerIQ(save) { const P = save.player; return Math.round(ringIQ({ stats: P.stats, exp: P.record.w + P.record.l + P.record.d })); }
+// older saves: give everyone a guard that fits his style
+function migrateSave(s) {
+  if (!s) return s;
+  if (!s.player.guard) s.player.guard = rollGuard(s.player.style);
+  if (!s.world.away) s.world.away = {};
+  if (!s.player.baseStyle) s.player.baseStyle = !STYLES[s.player.style].special ? s.player.style : s.player.styleFrom && !STYLES[s.player.styleFrom].special ? s.player.styleFrom : 'boxerpuncher';
+  ensureLegend(s.world.roster, s.world.div);
+  s.world.roster.forEach(f => { if (!f.guard) f.guard = rollGuard(f.style); });
+  if (s.pending && s.pending.offer && s.pending.offer.opp && !s.pending.offer.opp.guard) {
+    const live = s.world.roster.find(f => f.id === s.pending.offer.oppId);
+    s.pending.offer.opp.guard = live ? live.guard : rollGuard(s.pending.offer.opp.style);
+  }
+  return s;
+}
+// ---------- weight classes: one fighter, many divisions. Each division keeps its own world while he is away ----------
+const DIV_MOVE = { up: { power: -2, chin: -1, speed: 1 }, down: { power: 1, chin: 1, stamina: -3, recovery: -2 }, keep: .6 };
+function divMoveOk(save, to) { const P = save.player; return to >= 0 && to < DIVS.length && Math.abs(to - P.div) === 1 && !save.pending && !P.retired && !P.injury; }
+function changeDiv(save, to) {
+  const P = save.player, W = save.world, from = P.div, notes = [];
+  if (!divMoveOk(save, to)) return null;
+  W.away = W.away || {};
+  // he vacates: the belts go to the top man in the old division
+  const held = ORGS.filter(o => W.belts[o.k] === 'P');
+  if (held.length) { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; held.forEach(o => { W.belts[o.k] = top.id; }); notes.push('Vacated the ' + held.map(o => o.k).join(', ') + ' ' + DIVS[from].name.toLowerCase() + (held.length > 1 ? ' belts.' : ' belt.')); }
+  P.belts = [];
+  W.away[from] = { roster: W.roster, belts: W.belts, week: save.week };
+  const back = W.away[to];
+  if (back) { W.roster = back.roster; W.belts = back.belts; delete W.away[to]; }
+  else { W.roster = genRoster(to); W.belts = {}; ORGS.forEach((o, i) => { W.belts[o.k] = W.roster[i < 2 ? 0 : i - 1].id; }); }
+  W.div = to; P.div = to;
+  if (back) worldSim(save, Math.min(52, save.week - back.week));
+  W.stars = W.stars.filter(s => s.div !== to);
+  // the body changes: bigger men hit harder going up, the cut drains you going down
+  const ch = DIV_MOVE[to > from ? 'up' : 'down'];
+  for (const k in ch) { P.stats[k] = clamp(P.stats[k] + ch[k], 20, 99); P.pot[k] = clamp(P.pot[k] + ch[k], 20, 99); }
+  P.look.build = P.look.build * DIVS[to].build / DIVS[from].build;
+  P.points = Math.round(P.points * DIV_MOVE.keep);
+  P.divs = Array.from(new Set([...(P.divs || [from]), to]));
+  notes.push((to > from ? 'Moved up' : 'Moved down') + ' to ' + DIVS[to].name.toLowerCase() + ' (' + DIVS[to].lb + '). Ranked #' + playerRank(save) + ' here.');
+  notes.push(to > from ? 'Bigger men up here. His power will not carry the same, but he is the quicker man.' : 'He hits harder at this weight, but the cut takes something out of his gas tank.');
+  return notes;
+}
+function gearItem(kind, id) { return GEAR[kind].find(g => g.id === id) || GEAR[kind][0]; }
+
+
+
+</script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
+
+/* ================= scene ================= */
+const cv = document.getElementById('c');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' }); }
+catch (e) { document.getElementById('err').style.display = 'flex'; throw e; }
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0907);
+scene.fog = new THREE.Fog(0x0c0907, 700, 1500);
+const camera = new THREE.PerspectiveCamera(34, 1, 5, 4000);
+
+scene.add(new THREE.HemisphereLight(0xfff0dc, 0x20160f, .75));
+const key = new THREE.SpotLight(0xfff1de, 3.2, 0, .62, .55, 0);
+key.position.set(0, 620, 80); key.target.position.set(0, 0, 0);
+key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.camera.near = 300; key.shadow.camera.far = 900; key.shadow.bias = -.0004; key.shadow.radius = 3;
+scene.add(key, key.target);
+const rimW = new THREE.DirectionalLight(0xffc98a, .55); rimW.position.set(-500, 220, -300); scene.add(rimW);
+const rimC = new THREE.DirectionalLight(0x8fb3ff, .35); rimC.position.set(500, 160, -200); scene.add(rimC);
+const fill = new THREE.DirectionalLight(0xfff4e6, .35); fill.position.set(0, 200, 600); scene.add(fill);
+
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const UP = V(0, 1, 0), Y = V(0, 1, 0);
+const std = (c, r, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r == null ? .6 : r, metalness: 0 }, extra || {}));
+function shade(m) { m.castShadow = true; m.receiveShadow = true; return m; }
+
+/* ---------- helpers ---------- */
+const _d = new THREE.Vector3();
+function placeSeg(m, a, b) { _d.subVectors(b, a); const L = _d.length() || 1e-4; m.position.addVectors(a, b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(Y, _d.multiplyScalar(1 / L)); m.scale.set(1, L, 1); }
+const _m4 = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3();
+// orient an object so local +Y = up, +Z = fwd (orthogonalized), +X = up x fwd
+function orient(o, up, fwd) {
+  _y.copy(up).normalize(); _z.copy(fwd).addScaledVector(_y, -fwd.dot(_y)); if (_z.lengthSq() < 1e-6) _z.set(0, 0, 1); _z.normalize();
+  _x.crossVectors(_y, _z); _m4.makeBasis(_x, _y, _z); o.quaternion.setFromRotationMatrix(_m4);
+}
+// two-bone IK: root S, target T, lengths a/b, pole hint. Returns [joint, reachedTarget]
+function ik(S, T, a, b, pole) {
+  const d = T.clone().sub(S); let L = d.length(); const dn = d.clone().multiplyScalar(1 / (L || 1));
+  L = clamp(L, Math.abs(a - b) + .5, a + b - .05);
+  const T2 = S.clone().addScaledVector(dn, L);
+  const x = (a * a + L * L - b * b) / (2 * L), h = Math.sqrt(Math.max(0, a * a - x * x));
+  const p = pole.clone().addScaledVector(dn, -pole.dot(dn)); if (p.lengthSq() < 1e-6) p.set(0, -1, 0); p.normalize();
+  return [S.clone().addScaledVector(dn, x).addScaledVector(p, h), T2];
+}
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const outC = t => 1 - Math.pow(1 - t, 3);
+const damp = (a, b, r, dt) => a + (b - a) * (1 - Math.exp(-r * dt));
+const dampV = (a, b, r, dt) => a.lerp(b, 1 - Math.exp(-r * dt));
+const gearC = (k, id) => (GEAR[k].find(g => g.id === id) || GEAR[k][0]);
+
+/* ---------- ring ---------- */
+const RX = RING + 14, RZ = ZR + 14, PX = RX + 4, PZ = RZ + 4, APRON = 26;
+function canvasTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d');
+  g.fillStyle = '#d8cdb9'; g.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '60,40,20' : '255,250,240'},${Math.random() * .05})`; g.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2); }
+  g.strokeStyle = 'rgba(120,40,30,.18)'; g.lineWidth = 10; g.beginPath(); g.arc(512, 512, 170, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = 'rgba(130,40,30,.22)'; g.font = '120px Anton, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAST BELL', 512, 520);
+  g.strokeStyle = 'rgba(60,40,25,.12)'; g.lineWidth = 6; g.strokeRect(30, 30, 964, 964);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+const ring = new THREE.Group(); scene.add(ring);
+{
+  const W = 2 * (PX + APRON), D = 2 * (PZ + APRON);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(W, D), std(0xffffff, .92, { map: canvasTexture() }));
+  top.rotation.x = -Math.PI / 2; top.receiveShadow = true; ring.add(top);
+  const skirt = new THREE.Mesh(new THREE.BoxGeometry(W, 34, D), std(0x1b2235, .8)); skirt.position.y = -17.2; ring.add(skirt);
+  const band = new THREE.Mesh(new THREE.BoxGeometry(W + .5, 3, D + .5), std(0xb07a2a, .5)); band.position.y = -3; ring.add(band);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), std(0x15100c, 1)); floor.rotation.x = -Math.PI / 2; floor.position.y = -34; floor.receiveShadow = true; scene.add(floor);
+  const postM = std(0x2a2a2e, .35, { metalness: .6 });
+  const corners = [[-1, -1, 0xb8302a], [1, 1, 0x2f62a8], [1, -1, 0xe8e2d6], [-1, 1, 0xe8e2d6]];
+  for (const [sx, sz, pc] of corners) {
+    const p = shade(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3, 70, 12), postM)); p.position.set(sx * PX, 35, sz * PZ); ring.add(p);
+    const pad = shade(new THREE.Mesh(new THREE.BoxGeometry(9, 44, 9), std(pc, .55))); pad.position.set(sx * (PX - 4), 38, sz * (PZ - 4)); pad.rotation.y = Math.PI / 4; ring.add(pad);
+  }
+  const ropeCols = [0x2f62a8, 0xece6da, 0xb8302a];
+  [22, 40, 58].forEach((h, i) => {
+    const m = std(ropeCols[i], .45);
+    const segR = (a, b) => { const r = shade(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 1, 10), m)); placeSeg(r, a, b); ring.add(r); };
+    segR(V(-PX, h, -PZ), V(PX, h, -PZ)); segR(V(-PX, h, PZ), V(PX, h, PZ)); segR(V(-PX, h, -PZ), V(-PX, h, PZ)); segR(V(PX, h, -PZ), V(PX, h, PZ));
+  });
+  // a lighting truss overhead and a few distant arena lights so the ring doesn't float in black
+  const truss = new THREE.Mesh(new THREE.BoxGeometry(2 * PX + 80, 6, 2 * PZ + 80), std(0x111111, .8)); truss.position.y = 430; scene.add(truss);
+  const lm = new THREE.MeshBasicMaterial({ color: 0xffe3b0 });
+  for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = 900 + (i % 3) * 60; const b = new THREE.Mesh(new THREE.SphereGeometry(5 + (i % 2) * 2, 8, 6), lm); b.position.set(Math.cos(a) * r, 120 + (i % 4) * 70, Math.sin(a) * r); scene.add(b); }
+}
+// corner stools (shown between rounds)
+function mkStool() {
+  const g = new THREE.Group(), m = std(0x6b4a2e, .6), lm = std(0x2a2a2e, .4, { metalness: .5 });
+  const seat = shade(new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 3, 16), m)); seat.position.y = 26; g.add(seat);
+  for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; const l = shade(new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 6), lm)); placeSeg(l, V(Math.cos(a) * 7, 25, Math.sin(a) * 7), V(Math.cos(a) * 9, 0, Math.sin(a) * 9)); g.add(l); }
+  g.visible = false; scene.add(g); return g;
+}
+
+/* ================= the fighter ================= */
+const GUARD3 = { // glove spots in (forward, height, toward lead side), crouch, blade angle (deg), forward lean, elbow tuck
+  standard: { L: [23, 80, 4], R: [12, 82, -5], c: 3, bl: 32, lean: 3, tuck: .35 },
+  high:     { L: [15, 89, 4], R: [12, 89, -4], c: 4, bl: 26, lean: 3, tuck: .9 },
+  peekaboo: { L: [12, 85, 4], R: [11, 85, -4], c: 8, bl: 16, lean: 7, tuck: .95 },
+  philly:   { L: [9, 60, -3], R: [9, 86, -7], c: 2, bl: 52, lean: 1, tuck: .5 },
+  cross:    { L: [13, 85, -5], R: [14, 78, 5], c: 5, bl: 22, lean: 4, tuck: .8 },
+  handslow: { L: [22, 57, 7], R: [12, 70, -4], c: 1, bl: 36, lean: -1, tuck: .2 }
+};
+class Boxer {
+  constructor(look, side) {
+    this.side = side; this.look = look;
+    this.hs = (look.h || 1) * 1.04; this.G = Math.pow(look.build || 1, 1.5) * .95 + .05;
+    const G = this.G, hs = this.hs;
+    const skin = std(look.skin, .62), tr = gearC('trunks', look.trunks), gl = gearC('gloves', look.gloves), sh = gearC('shoes', look.shoes);
+    const trunkM = std(tr.c, .42), trimM = std(tr.trim || '#ddd', .5), gloveM = std(gl.c, .28), cuffM = std(gl.trim || '#eee', .45), bootM = std(sh.c, .5), hairM = std(look.hairCol, .85);
+    const g = this.g = new THREE.Group(); scene.add(g);
+    const add = (geo, m) => { const o = shade(new THREE.Mesh(geo, m)); g.add(o); return o; };
+    const cyl = (r1, r2, m, seg) => add(new THREE.CylinderGeometry(r1, r2, 1, seg || 14), m); // r1 at the far end (b), r2 at a
+    const ball = (r, m) => add(new THREE.SphereGeometry(r, 16, 12), m);
+    // torso: a lathe from the waist (y=0) to the neck (y=1), chest flaring wide at the lats/pecs
+    const prof = [[.01, 0], [.6, 0], [.62, .14], [.6, .32], [.7, .55], [.9, .75], [1, .85], [.88, .93], [.42, 1]].map(([r, y]) => new THREE.Vector2(r, y));
+    this.torso = new THREE.Group(); g.add(this.torso);
+    const tm = shade(new THREE.Mesh(new THREE.LatheGeometry(prof, 22), skin)); tm.scale.set(13 * G, 1, 13 * G * .62); this.torso.add(tm); this.torsoMesh = tm;
+    for (const s of [-1, 1]) { const pec = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); pec.scale.set(5.4 * G, 3.9 * G, 2.4 * G); pec.position.set(s * 4.6 * G, .76, 5.6 * G); this.torso.add(pec); (this.pecs = this.pecs || []).push(pec); }
+    const abs = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); abs.scale.set(5.6 * G, 9 * G, 2 * G); abs.position.set(0, .4, 4.6 * G); this.torso.add(abs); this.abs = abs;
+    // trunks: a lathe around the hips, with a waistband
+    const tp = [[.01, -.02], [.9, 0], [1, .35], [.98, .78], [.92, 1]].map(([r, y]) => new THREE.Vector2(r, y));
+    this.trunks = new THREE.Group(); g.add(this.trunks);
+    const tk = shade(new THREE.Mesh(new THREE.LatheGeometry(tp, 22), trunkM)); tk.scale.set(12.2 * G, 15 * hs, 12.2 * G * .78); tk.position.y = -9 * hs; this.trunks.add(tk);
+    const wb = shade(new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 22, 1, true), trimM)); wb.scale.set(11.6 * G, 3.2, 11.6 * G * .78); wb.position.y = 5.2 * hs; this.trunks.add(wb);
+    this.legSleeve = [cyl(7.3 * G, 7.9 * G, trunkM), cyl(7.3 * G, 7.9 * G, trunkM)];
+    this.thigh = [cyl(4.8 * G, 7 * G, skin), cyl(4.8 * G, 7 * G, skin)];
+    this.knee = [ball(4.7 * G, skin), ball(4.7 * G, skin)];
+    this.shin = [cyl(3.3 * G, 4.6 * G, skin), cyl(3.3 * G, 4.6 * G, skin)];
+    this.calf = [ball(1, skin), ball(1, skin)];
+    this.bootShaft = [cyl(4.1 * G, 4.4 * G, bootM), cyl(4.1 * G, 4.4 * G, bootM)];
+    this.foot = [0, 1].map(() => { const f = shade(new THREE.Mesh(new THREE.CapsuleGeometry(3.6 * G, 8.5, 6, 12), bootM)); g.add(f); return f; });
+    this.sole = [0, 1].map(() => { const f = shade(new THREE.Mesh(new THREE.BoxGeometry(7.4 * G, 1.2, 15.5), std(0xe8e2d6, .7))); g.add(f); return f; });
+    this.delt = [ball(5.5 * G, skin), ball(5.5 * G, skin)];
+    this.trap = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); g.add(this.trap);
+    this.upper = [cyl(3.8 * G, 5 * G, skin), cyl(3.8 * G, 5 * G, skin)];
+    this.bicep = [ball(1, skin), ball(1, skin)];
+    this.elbowB = [ball(3.7 * G, skin), ball(3.7 * G, skin)];
+    this.fore = [cyl(3.1 * G, 4 * G, skin), cyl(3.1 * G, 4 * G, skin)];
+    this.glove = [0, 1].map(() => {
+      const o = new THREE.Group(); g.add(o);
+      const m = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 14), gloveM)); m.scale.set(1, .92, 1.22); m.position.z = 6.5; o.add(m);
+      const th = shade(new THREE.Mesh(new THREE.CapsuleGeometry(1.9, 4, 4, 8), gloveM)); th.position.set(4.6, 2.4, 6); th.rotation.x = Math.PI / 2.4; th.rotation.z = -.4; o.add(th); o.thumb = th;
+      const cuff = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.2, 6.5, 14), gloveM)); cuff.rotation.x = Math.PI / 2; cuff.position.z = 0; o.add(cuff);
+      const tr = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.55, 4.55, 1.6, 14), cuffM)); tr.rotation.x = Math.PI / 2; tr.position.z = -1.8; o.add(tr);
+      return o;
+    });
+    this.neck = cyl(4.8 * G, 5.6 * G, skin);
+    // head, built facing +Z
+    const hd = this.head = new THREE.Group(); g.add(hd);
+    const skull = shade(new THREE.Mesh(new THREE.SphereGeometry(8.4, 24, 18), skin)); skull.scale.set(.86, 1.06, .98); hd.add(skull);
+    const jaw = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 12), skin)); jaw.scale.set(.95, .78, 1); jaw.position.set(0, -4.4, 2.4); hd.add(jaw);
+    const nose = shade(new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 8), skin)); nose.scale.set(.85, 1.15, 1.1); nose.position.set(0, -1.2, 7.9); hd.add(nose);
+    const eyeM = new THREE.MeshStandardMaterial({ color: 0x1a120c, roughness: .3 }), browM = std(look.hairCol, .9);
+    for (const s of [-1, 1]) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(1.05, 10, 8), eyeM); e.position.set(s * 2.9, 1.2, 7.4); hd.add(e);
+      const br = new THREE.Mesh(new THREE.BoxGeometry(3.6, .9, 1.2), browM); br.position.set(s * 2.9, 3, 7.7); br.rotation.z = s * -.12; hd.add(br);
+      const ear = shade(new THREE.Mesh(new THREE.SphereGeometry(1.7, 10, 8), skin)); ear.scale.set(.5, 1, .8); ear.position.set(s * 7.2, 0, .4); hd.add(ear);
+    }
+    if (look.hair !== 'bald') {
+      const kind = look.hair, cap = new THREE.Mesh(new THREE.SphereGeometry(8.55, 22, 14, 0, Math.PI * 2, 0, kind === 'fade' || kind === 'buzz' ? Math.PI * .4 : Math.PI * .5), hairM);
+      cap.scale.set(.89, kind === 'afro' ? 1.22 : 1.08, 1.01); cap.position.set(0, kind === 'afro' ? 1.2 : .25, -.5); cap.rotation.x = -.3; cap.castShadow = true; hd.add(cap);
+    }
+    if (look.beard) { const bd = new THREE.Mesh(new THREE.SphereGeometry(6.8, 18, 12, 0, Math.PI * 2, Math.PI * .45, Math.PI * .5), hairM); bd.scale.set(.96, .9, 1.05); bd.position.set(0, -3.6, 2.6); hd.add(bd); }
+    this.stool = mkStool();
+    this.sm = null; this.t = Math.random() * 10; this.heading = side ? Math.PI : 0;
+  }
+  // build this frame's joint positions from the engine snapshot, then place every mesh
+  pose(s, op, opB, dt, cornerPt) {
+    const G = this.G, hs = this.hs, gd = GUARD3[s.guard] || GUARD3.standard; this.t += dt;
+    const pos = V(s.x, 0, s.z);
+    // facing: at the other man, or where he's walking
+    if (!this.prev) this.prev = pos.clone();
+    const vel = pos.clone().sub(this.prev).multiplyScalar(1 / Math.max(dt, 1e-3)); this.prev.copy(pos);
+    let want;
+    if (s.sit) want = Math.atan2(-s.x, -s.z);
+    else if (s.walk && vel.length() > 12) want = Math.atan2(vel.x, vel.z);
+    else want = Math.atan2(op.x - s.x, op.z - s.z);
+    let dh = want - this.heading; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
+    this.heading += dh * (1 - Math.exp(-(s.walk ? 6 : 14) * dt));
+    const fwd = V(Math.sin(this.heading), 0, Math.cos(this.heading)), left = V(fwd.z, 0, -fwd.x); // up x fwd
+    const lead = s.stance === 'southpaw' ? left.clone().negate() : left.clone();
+    const P = (f, u, l, base) => (base || pos).clone().addScaledVector(fwd, f).addScaledVector(UP, u * hs).addScaledVector(lead, l);
+    const sm = this.sm = this.sm || { c: gd.c, bl: gd.bl, lean: gd.lean, side: 0, back: 0, gl: [null, null], head: null, sit: 0, pole: [null, null] };
+    // ---- read the moment
+    const P_ = s.aT && PUNCH[s.aT] ? PUNCH[s.aT] : null, p = s.aP || 0;
+    let k = 0; if (P_) k = p < .14 ? 0 : p < .52 ? outC((p - .14) / .38) : p < .66 ? 1 : 1 - ease((p - .66) / .34);
+    if (s.feint) k *= .35;
+    const leadArm = P_ ? P_.arm === 'lead' : true, kind = P_ ? P_.kind : null;
+    const defE = s.def ? clamp(s.defP || 0, 0, 1) * clamp((1 - (s.defU || 0)) / .3, 0, 1) : 0;
+    const hit = clamp(s.hitT || 0, 0, 1) * (s.hitPow != null ? clamp(.5 + s.hitPow * .5, .4, 1.3) : 1);
+    const live = s.state !== 'down' && s.state !== 'slump';
+    const breathe = Math.sin(this.t * 2.2 + s.bob) * .6, bounce = (s.mv || s.walk) ? 0 : Math.sin(this.t * 7 + s.bob) * 1.1;
+    // ---- body targets
+    let c = gd.c + (s.tired || 0) * 2.5 + bounce, bl = gd.bl, lean = gd.lean, sideL = 0, back = 0;
+    if (P_) {
+      if (!leadArm) bl -= k * 52; else if (kind === 'hook') bl -= k * 34; else bl += k * 10;
+      lean += k * (P_.cat === 'power' ? 6 : 3); if (P_.zone === 'body') { c += k * 9; sideL += (leadArm ? 1 : -1) * k * 3; }
+      if (kind === 'upper') c += (p < .4 ? k * 6 : -k * 2);
+    }
+    if (s.def === 'slip') { const sg = ((s.bob * 7) | 0) % 2 ? 1 : -1; sideL += sg * 9 * defE; c += 3 * defE; }
+    if (s.def === 'roll') { c += 7 * defE; bl += 24 * defE; sideL -= 4 * defE; }
+    if (s.def === 'duck') { c += 13 * defE; lean += 6 * defE; }
+    if (s.def === 'pull') { back += 9 * defE; lean -= 6 * defE; }
+    if (s.def === 'block' && s.defZ === 'body') c += 4 * defE;
+    if (hit && s.hitZone === 'head') { back += 7 * hit; lean -= 4 * hit; }
+    if (hit && s.hitZone === 'body') { c += 6 * hit; lean += 5 * hit; }
+    if (s.hurt && live) { c += 3 + Math.sin(this.t * 5) * 2.5; sideL += Math.sin(this.t * 2.6) * 3; }
+    if (s.state === 'clinch') { lean += 8; c += 3; }
+    const sit = sm.sit = damp(sm.sit, s.sit ? 1 : 0, s.sit ? 3.2 : 7, dt);
+    const rate = P_ ? 30 : 12;
+    sm.c = damp(sm.c, c, rate, dt); sm.bl = damp(sm.bl, bl, P_ ? 26 : 10, dt); sm.lean = damp(sm.lean, lean, rate, dt); sm.side = damp(sm.side, sideL, 14, dt); sm.back = damp(sm.back, back, 16, dt);
+    if (s.walk) { sm.c = damp(sm.c, 0, 8, dt); sm.bl = damp(sm.bl, 8, 8, dt); sm.lean = damp(sm.lean, 1, 8, dt); }
+    // ---- feet (gait while moving)
+    const mv = clamp((s.mv || 0) / 40, 0, 1), ph = (s.gait || 0) * .085;
+    const vl = vel.lengthSq() > 4 ? vel.clone().normalize() : fwd.clone();
+    const stepA = Math.sin(ph) * 6 * mv, lift0 = Math.max(0, Math.cos(ph)) * 3 * mv, lift1 = Math.max(0, -Math.cos(ph)) * 3 * mv;
+    let fL, fR;
+    if (s.walk) { fL = P(Math.sin(ph) * 9 * mv, 0, 6).setY(lift0); fR = P(-Math.sin(ph) * 9 * mv, 0, -6).setY(lift1); }
+    else { fL = P(13, 0, 6.5).addScaledVector(vl, stepA).setY(lift0); fR = P(-13, 0, -7.5).addScaledVector(vl, -stepA * .6).setY(lift1); if (P_ && P_.cat === 'jab') fL.addScaledVector(fwd, 5 * k); }
+    // ---- hips, chest, head
+    let hip = P(-1 + sm.lean * .25 - sm.back * .4, 52 - sm.c, sm.side * .4); hip.y += breathe * .2;
+    const blR = THREE.MathUtils.degToRad(sm.bl);
+    const shLine = lead.clone().multiplyScalar(Math.cos(blR)).addScaledVector(fwd, Math.sin(blR)); // rear -> lead shoulder
+    let chest = hip.clone().addScaledVector(UP, 31 * hs).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side);
+    // knockdowns: buckle, sit, lie back. sitting on the stool between rounds
+    const dp = s.state === 'down' ? clamp(s.downP, 0, 1) : s.state === 'slump' ? clamp(s.downP, 0, .35) : 0;
+    let lie = 0;
+    if (dp > 0) {
+      const a = clamp(dp / .35, 0, 1), b = clamp((dp - .35) / .65, 0, 1); lie = b;
+      hip.y = lerp(hip.y, 9, outC(a)); hip.addScaledVector(fwd, -6 * a);
+      const tilt = b * 1.35, up2 = UP.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(fwd, -Math.sin(tilt));
+      chest = hip.clone().addScaledVector(up2, 30 * hs).addScaledVector(fwd, (1 - b) * 4);
+      fL = P(24 + 8 * b, 0, 9); fR = P(18 + 10 * b, 0, -9); fL.y = fR.y = 3 * (1 - a);
+    }
+    if (sit > .01 && cornerPt) {
+      const seat = V(cornerPt.x, 29, cornerPt.z).addScaledVector(fwd, -3);
+      hip.lerp(seat, sit); chest.lerp(seat.clone().addScaledVector(UP, 30 * hs).addScaledVector(fwd, -7), sit);
+      fL.lerp(seat.clone().addScaledVector(fwd, 22).addScaledVector(lead, 10).setY(0), sit); fR.lerp(seat.clone().addScaledVector(fwd, 22).addScaledVector(lead, -10).setY(0), sit);
+    }
+    const spineUp = chest.clone().sub(hip).normalize();
+    let headT = chest.clone().addScaledVector(spineUp, 11 * hs).addScaledVector(fwd, 1.5 - sm.back * .6);
+    if (hit && s.hitZone === 'head') headT.addScaledVector(fwd, -6 * hit).addScaledVector(lead, (s.hitKind === 'hook' ? 4 : 0) * hit).addScaledVector(UP, 2 * hit);
+    if (live && !s.walk && !P_) headT.addScaledVector(UP, -1.5); // chin down
+    if (P_ && live) headT.addScaledVector(lead, leadArm ? -2 * k : 2 * k);
+    sm.head = sm.head ? dampV(sm.head, headT, 22, dt) : headT.clone();
+    const headP = lie > 0 || sit > .5 ? headT : sm.head;
+    const shL = chest.clone().addScaledVector(shLine, 13.2 * G).addScaledVector(UP, -3.5), shR = chest.clone().addScaledVector(shLine, -13.2 * G).addScaledVector(UP, -3.5);
+    // ---- gloves
+    const gp = (a) => P(a[0], a[1] - sm.c, a[2]).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side).addScaledVector(UP, breathe * .4);
+    let gL = gp(gd.L), gR = gp(gd.R);
+    const tir = (s.tired || 0) * 7; gL.y -= tir; gR.y -= tir;
+    if (s.gi != null && s.gi < .5) { gL.y -= (.5 - s.gi) * 16; gR.y -= (.5 - s.gi) * 12; }
+    if (s.def === 'block' && defE > 0) {
+      const bz = s.defZ === 'body';
+      gL.lerp(P(12, (bz ? 64 : 88) - sm.c, 4.5), defE); gR.lerp(P(11, (bz ? 62 : 88) - sm.c, -4.5), defE);
+    }
+    if (hit && s.hitZone === 'head' && s.hitKind !== 'jab') { gL.addScaledVector(fwd, -3 * hit).addScaledVector(lead, 4 * hit); gR.addScaledVector(lead, -4 * hit); }
+    if (hit && s.hitZone === 'body') { gL.y -= 6 * hit; gR.y -= 6 * hit; }
+    if (P_ && live) {
+      const tgt = (P_.zone === 'body' ? opB.clone() : op.head.clone());
+      const arm = leadArm ? 0 : 1, from = arm ? gR : gL, sh = arm ? shR : shL, out = arm ? lead.clone().negate() : lead.clone();
+      const dir = tgt.clone().sub(sh).normalize();
+      let gT;
+      if (kind === 'straight') gT = from.clone().lerp(tgt.clone().addScaledVector(dir, -3), k);
+      else if (kind === 'hook') { gT = from.clone().lerp(tgt.clone().addScaledVector(out, 3), ease(k)); gT.addScaledVector(out, Math.sin(Math.PI * k) * 15).addScaledVector(UP, P_.zone === 'body' ? -2 : 2); }
+      else { gT = from.clone().lerp(tgt.clone().addScaledVector(UP, -2), ease(k)); gT.addScaledVector(UP, -Math.sin(Math.PI * Math.min(1, k * 1.2)) * 13).addScaledVector(fwd, -Math.sin(Math.PI * k) * 3); }
+      if (arm) gR = gT; else gL = gT;
+    }
+    if (s.state === 'clinch' && op.chest) {
+      const toOp = op.chest.clone().sub(chest).setY(0).normalize(), side = V(toOp.z, 0, -toOp.x);
+      gL = op.chest.clone().addScaledVector(toOp, 8).addScaledVector(side, 12).addScaledVector(UP, -6);
+      gR = op.chest.clone().addScaledVector(toOp, 6).addScaledVector(side, -12).addScaledVector(UP, -14);
+      headT.addScaledVector(toOp, 5).addScaledVector(lead, 5);
+    }
+    if (s.walk || sit > .3) {
+      const sw = Math.sin(ph) * 5 * mv;
+      const hang = (sh, o, sg) => sh.clone().addScaledVector(UP, -33 * hs).addScaledVector(lead, o).addScaledVector(fwd, 3 + sg * sw);
+      const kneeL = sit > .3 ? fL.clone().lerp(hip, .45).setY(30).addScaledVector(lead, 2) : null;
+      const wL = hang(shL, 3, 1), wR = hang(shR, -3, -1);
+      gL = sit > .3 ? wL.lerp(kneeL.clone().addScaledVector(UP, 6), sit) : wL;
+      gR = sit > .3 ? wR.lerp(fR.clone().lerp(hip, .45).setY(30).addScaledVector(UP, 6).addScaledVector(lead, -2), sit) : wR;
+    }
+    if (lie > .5) { gL = chest.clone().addScaledVector(lead, 24).addScaledVector(fwd, 6).setY(4); gR = chest.clone().addScaledVector(lead, -24).addScaledVector(fwd, 6).setY(4); }
+    // smooth the guard, not the punch
+    const gr = P_ ? 40 : 16;
+    for (const [i, gT] of [[0, gL], [1, gR]]) { const punching = P_ && (i === 0) === leadArm; sm.gl[i] = sm.gl[i] ? dampV(sm.gl[i], gT, punching ? 60 : gr, dt) : gT.clone(); }
+    gL = sm.gl[0]; gR = sm.gl[1];
+    // ---- arms via IK
+    const UA = 19.5 * hs, FA = 17.5 * hs, out0 = lead.clone(), out1 = lead.clone().negate();
+    const poleFor = (i) => {
+      const outS = i ? out1 : out0, punching = P_ && (i === 0) === leadArm;
+      if (punching && kind === 'hook') return outS.clone().addScaledVector(UP, .6);
+      if (punching && kind === 'upper') return UP.clone().negate().addScaledVector(fwd, -.4);
+      if (s.walk || sit > .3) return fwd.clone().negate().addScaledVector(outS, .3);
+      return UP.clone().negate().addScaledVector(outS, 1 - gd.tuck).addScaledVector(fwd, -.25);
+    };
+    const shs = [shL, shR], gls = [gL, gR];
+    for (let i = 0; i < 2; i++) {
+      const [el, wr] = ik(shs[i], gls[i], UA, FA, poleFor(i));
+      placeSeg(this.upper[i], shs[i], el); placeSeg(this.fore[i], el, wr);
+      this.delt[i].position.copy(shs[i]); this.elbowB[i].position.copy(el);
+      const mid = shs[i].clone().lerp(el, .45); this.bicep[i].position.copy(mid); const ad = el.clone().sub(shs[i]).normalize(); orient(this.bicep[i], ad, fwd); this.bicep[i].scale.set(4.4 * G, 7.5, 4.4 * G);
+      const gl = this.glove[i]; gl.position.copy(wr); orient(gl, UP.clone().addScaledVector(fwd, -.3), wr.clone().sub(el)); gl.thumb.position.x = (i ? 1 : -1) * (s.stance === 'southpaw' ? -1 : 1) * 4.6;
+    }
+    // ---- legs via IK (knees forward and a touch out)
+    const hipL = hip.clone().addScaledVector(lead, 6.5 * G).addScaledVector(fwd, 1), hipR = hip.clone().addScaledVector(lead, -6.5 * G).addScaledVector(fwd, -1);
+    const feet = [fL, fR], hips = [hipL, hipR];
+    for (let i = 0; i < 2; i++) {
+      const ank = feet[i].clone().setY(feet[i].y + 6);
+      const kp = (lie > .2 ? UP.clone() : fwd.clone()).addScaledVector(i ? out1 : out0, .35);
+      const [kn, an] = ik(hips[i], ank, 24.5 * hs, 23.5 * hs, kp);
+      placeSeg(this.thigh[i], hips[i], kn); placeSeg(this.shin[i], kn, an); this.knee[i].position.copy(kn);
+      placeSeg(this.legSleeve[i], hips[i].clone().addScaledVector(UP, 3), hips[i].clone().lerp(kn, .42));
+      const cm = kn.clone().lerp(an, .32); this.calf[i].position.copy(cm).addScaledVector(fwd, -1.6); orient(this.calf[i], an.clone().sub(kn), fwd); this.calf[i].scale.set(4.6 * G, 8, 4.8 * G);
+      placeSeg(this.bootShaft[i], an.clone().addScaledVector(UP, -4), an.clone().lerp(kn, .3));
+      const toe = (lie > .2 ? fwd.clone().multiplyScalar(.2).add(UP) : fwd.clone()).addScaledVector(i ? out1 : out0, .2).normalize();
+      const fc = an.clone().addScaledVector(UP, -2.6).addScaledVector(toe, 4.5);
+      if (lie <= .2) fc.y = Math.max(3.6 * G, an.y - 2.6);
+      this.foot[i].position.copy(fc); orient(this.foot[i], toe, UP); // capsule axis = Y, so point it along the foot
+      this.sole[i].position.copy(fc).setY(Math.max(.6, fc.y - 3.4 * G)); orient(this.sole[i], UP, toe); if (lie > .2) this.sole[i].visible = false; else this.sole[i].visible = true;
+    }
+    // ---- torso, trunks, neck, head
+    const neck = chest.clone().addScaledVector(spineUp, 3);
+    this.torso.position.copy(hip).addScaledVector(spineUp, 6 * hs);
+    orient(this.torso, spineUp, V(0, 0, 0).crossVectors(shLine.clone().multiplyScalar(s.stance === 'southpaw' ? -1 : 1), spineUp));
+    this.torso.scale.set(1, chest.distanceTo(hip) - 3 * hs, 1);
+    for (const pc of this.pecs) pc.scale.y = 3.9 * G / Math.max(10, this.torso.scale.y);
+    this.abs.scale.y = 9 * G / Math.max(10, this.torso.scale.y);
+    const hipFwd = fwd.clone().lerp(V(0, 0, 0).crossVectors(shLine.clone().multiplyScalar(s.stance === 'southpaw' ? -1 : 1), UP), .45);
+    this.trunks.position.copy(hip); orient(this.trunks, spineUp.clone().lerp(UP, .5), hipFwd);
+    const headUp = UP.clone().lerp(spineUp, .6);
+    this.trap.position.copy(chest).addScaledVector(spineUp, -2.5).addScaledVector(fwd, -1.5); orient(this.trap, spineUp, fwd); this.trap.scale.set(9 * G, 4.2 * G, 5 * G);
+    placeSeg(this.neck, neck.clone().addScaledVector(spineUp, -4), headP.clone().addScaledVector(headUp, -4));
+    this.head.position.copy(headP); orient(this.head, headUp, fwd.clone().addScaledVector(UP, lie > .5 ? 0 : -.05));
+    // stool
+    this.stool.visible = sit > .05 && !!cornerPt; if (cornerPt) this.stool.position.set(cornerPt.x, 0, cornerPt.z);
+    this.stool.scale.setScalar(clamp(sit * 1.4, .01, 1));
+    // what the other man aims at
+    this.jHead = headP; this.jChest = chest; this.jBody = hip.clone().lerp(chest, .55).addScaledVector(fwd, 6 * G);
+  }
+}
+
+/* ================= sweat / impact spray ================= */
+const SPRAY = []; const sprayM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .85 });
+for (let i = 0; i < 60; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(.7, 6, 4), sprayM.clone()); m.visible = false; scene.add(m); SPRAY.push({ m, v: V(0, 0, 0), life: 0 }); }
+function spray(at, dir, n, pow) {
+  for (let i = 0; i < n; i++) {
+    const s = SPRAY.find(x => x.life <= 0); if (!s) return;
+    s.m.position.copy(at); s.v.copy(dir).multiplyScalar(60 + Math.random() * 90 * pow).add(V((Math.random() - .5) * 60, Math.random() * 60, (Math.random() - .5) * 60));
+    s.life = .5 + Math.random() * .3; s.m.visible = true;
+  }
+}
+function tickSpray(dt) { for (const s of SPRAY) if (s.life > 0) { s.life -= dt; s.v.y -= 260 * dt; s.m.position.addScaledVector(s.v, dt); s.m.material.opacity = clamp(s.life * 2, 0, .85); if (s.life <= 0) s.m.visible = false; } }
+
+/* ================= fight ================= */
+let fight = null, boxers = [], speed = 1, acc = 0, cornerWait = 0, overT = 0, shake = 0;
+const $ = id => document.getElementById(id);
+function bigText(t, sub, ms) { const b = $('big'); b.innerHTML = t + (sub ? `<small>${sub}</small>` : ''); b.classList.add('on'); clearTimeout(bigText.h); if (ms) bigText.h = setTimeout(() => b.classList.remove('on'), ms); }
+function mkSheet(look) {
+  const style = pick(BASE_STYLES), guard = rollGuard(style);
+  return { name: pick(FIRST) + ' ' + pick(LAST), nick: '', style, guard, stance: R() < .25 ? 'southpaw' : 'orthodox', stats: genStats(ri(78, 86), style), wear: 0, exp: 20, look };
+}
+function newFight() {
+  boxers.forEach(b => { scene.remove(b.g); scene.remove(b.stool); });
+  const div = ri(2, 7), la = randLook(div), lb = randLook(div);
+  if (lb.trunks === la.trunks) lb.trunks = GEAR.trunks.find(t => t.id !== la.trunks && t.price === 0).id;
+  if (lb.gloves === la.gloves) lb.gloves = GEAR.gloves.find(t => t.id !== la.gloves).id;
+  const A = mkSheet(la), B = mkSheet(lb);
+  fight = new Fight(A, B, { rounds: 4 });
+  boxers = [new Boxer(la, 0), new Boxer(lb, 1)];
+  const tag = (S, i) => `<span class="dot" style="background:${i ? 'var(--blue)' : 'var(--red)'}"></span>${S.name}<small>${STYLES[S.style].label}, ${GUARDS[S.guard].label.toLowerCase()}, ${S.stance}</small><div class="bars"><i id="hb${i}" style="width:100%"></i></div>`;
+  $('n0').innerHTML = tag(A, 0); $('n1').innerHTML = tag(B, 1);
+  acc = 0; cornerWait = 0; overT = 0; $('big').classList.remove('on');
+}
+function events() {
+  for (const e of fight.events) {
+    if (e.type === 'hit' && !e.blocked && (e.dmg || 0) > 0) {
+      const d = boxers[e.d];
+      const big = (e.dmg || 0) > 4 || e.crit;
+      if (d && d.jHead && e.zone !== 'body') spray(d.jHead, d.jHead.clone().sub(boxers[1 - d.side].jChest || d.jHead).setY(0).normalize(), big ? 10 : 4, big ? 1 : .4);
+      if (big) shake = Math.max(shake, .35);
+    }
+    if (e.type === 'knockdown') { bigText('Down!', fight.f[e.d] ? fight.f[e.d].sheet.name + ' is down' : '', 1800); shake = .8; }
+    if (e.type === 'roundEnd' || e.type === 'corner') {}
+  }
+  fight.events = [];
+}
+
+/* ================= camera ================= */
+const CAMS = [
+  { n: 'TV', yaw: 0, pitch: .36, dist: 1 },
+  { n: 'Ringside', yaw: .18, pitch: .08, dist: .78 },
+  { n: 'High', yaw: .7, pitch: .72, dist: 1.25 },
+  { n: 'Corner', yaw: -2.35, pitch: .26, dist: .85 }
+];
+let sepS = 120, camI = 0, cam = { yaw: 0, pitch: .3, dist: 1, user: false }, tgt = V(0, 60, 0);
+function camFit(sep) { // distance so about 330 units of ring fit across the screen, portrait or landscape
+  const asp = innerWidth / innerHeight, vf = THREE.MathUtils.degToRad(camera.fov), hf = 2 * Math.atan(Math.tan(vf / 2) * asp);
+  return Math.max(Math.max(asp < 1 ? 150 : 300, (sep || 0) * 1.15 + 60) / Math.tan(hf / 2) / 2, 230);
+}
+function updCam(dt) {
+  const A = fight.f[0], B = fight.f[1], between = fight.phase === 'corner' || fight.phase === 'roundEnd';
+  const mid = V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
+  if (between) mid.set(0, 50, 0);
+  tgt.lerp(mid, 1 - Math.exp(-3 * dt));
+  if (!cam.user) { const C = CAMS[camI], tall = innerWidth < innerHeight ? .14 : 0; cam.yaw = damp(cam.yaw, C.yaw, 2.5, dt); cam.pitch = damp(cam.pitch, C.pitch + tall, 2.5, dt); cam.dist = damp(cam.dist, C.dist, 2.5, dt); }
+  sepS = damp(sepS, between ? 2 * RING : Math.hypot(A.x - B.x, A.z - B.z), 2, dt);
+  const D = camFit(sepS) * cam.dist;
+  const sx = shake > 0 ? (Math.random() - .5) * shake * 4 : 0, sy = shake > 0 ? (Math.random() - .5) * shake * 4 : 0; shake = Math.max(0, shake - dt * 2);
+  camera.position.set(tgt.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * D + sx, tgt.y + Math.sin(cam.pitch) * D + sy, tgt.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * D);
+  camera.lookAt(tgt);
+}
+// drag to orbit, pinch/wheel to zoom
+let drag = null;
+cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch }; cv.setPointerCapture(e.pointerId); $('hint').style.opacity = 0; });
+cv.addEventListener('pointermove', e => { if (!drag) return; cam.user = true; cam.yaw = drag.yaw - (e.clientX - drag.x) * .008; cam.pitch = clamp(drag.pitch + (e.clientY - drag.y) * .006, .03, 1.35); updCamBtn(); });
+cv.addEventListener('pointerup', () => { drag = null; });
+cv.addEventListener('wheel', e => { cam.user = true; cam.dist = clamp(cam.dist * (1 + e.deltaY * .001), .45, 2); updCamBtn(); e.preventDefault(); }, { passive: false });
+function updCamBtn() { $('bCam').textContent = 'Cam: ' + (cam.user ? 'Free' : CAMS[camI].n); }
+$('bCam').onclick = () => { if (cam.user) cam.user = false; else camI = (camI + 1) % CAMS.length; updCamBtn(); };
+$('bSpd').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $('bSpd').textContent = 'Speed ' + speed + 'x'; };
+$('bNew').onclick = () => newFight();
+setTimeout(() => { $('hint').style.opacity = 0; }, 5000);
+
+/* ================= loop ================= */
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+newFight();
+let last = performance.now(), fpsT = 0, fpsN = 0;
+const corners = [V(-RING + 8, 0, -ZR * .55 - 6), V(RING - 8, 0, ZR * .55 + 6)];
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (fight.phase === 'corner') {
+    cornerWait += dt;
+    if (cornerWait > 3.2) { cornerWait = 0; fight.nextRound(fight.aiStrategy(0), fight.aiStrategy(1)); bigText('Round ' + fight.round, '', 1300); }
+  } else if (fight.phase === 'over') {
+    if (!overT) { const r = fight.result, w = r.winner == null ? null : fight.f[r.winner].sheet.name; bigText(r.method === 'KO' ? 'Knockout' : r.method, w ? w + ' wins' + (r.decision ? '' : ', round ' + r.round) : 'Draw'); }
+    overT += dt; acc += dt; while (acc >= DT) { fight.step(DT); acc -= DT; } fight.events = [];
+    if (overT > 9) newFight();
+  } else {
+    acc += dt * speed;
+    while (acc >= DT && fight.phase !== 'corner' && fight.phase !== 'over') { fight.step(DT); acc -= DT; events(); }
+  }
+  const snap = fight.snap();
+  // poses: compute both, each aims at where the other was last frame
+  for (let i = 0; i < 2; i++) {
+    const o = boxers[1 - i], os = snap.f[1 - i];
+    const opHead = o.jHead || V(os.x, 88, os.z), opBody = o.jBody || V(os.x, 66, os.z);
+    boxers[i].pose(snap.f[i], { x: os.x, z: os.z, head: opHead, chest: o.jChest }, opBody, dt, corners[i]);
+  }
+  tickSpray(dt); updCam(dt);
+  fight.f.forEach((X, i) => { const el = $('hb' + i); if (el) el.style.width = clamp(X.head / Math.max(1, X.headMax) * 100, 0, 100) + '%'; });
+  const left = Math.max(0, ROUND_LEN - fight.clock); $('ck').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
+  $('rd').textContent = fight.phase === 'corner' ? 'Between rounds' : 'Round ' + fight.round + ' of ' + fight.rounds;
+  renderer.render(scene, camera);
+  fpsN++; fpsT += dt; if (fpsT > 1) { window.__fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
+}
+requestAnimationFrame(frame);
+window.__dbg = { cam, get fight() { return fight; }, boxers: () => boxers, THREE, camera, renderer, setCam: (i) => { camI = i; cam.user = false; updCamBtn(); } };
+</script>
+</body></html>
