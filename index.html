@@ -2426,6 +2426,25 @@ const Render = (() => {
   }
   function toLocal(v, p) { const q = P3(v.x, v.z); return { x: (p.x - q.x) / q.s * v.dir, y: (p.y - q.y) / q.s }; }
   function toWorld(v, p) { const q = P3(v.x, v.z); return { x: q.x + p.x * v.dir * q.s, y: q.y + p.y * q.s }; }
+  // a punch that can't reach from where he stands brings him in with it (the view keeps them apart, see spreadView):
+  // the distance is read when the punch starts, he steps in on the load, holds through contact and steps back out
+  function lunge(v, J, o, Jo, dt) {
+    const sm = v._sm; if (!sm) return;
+    const P = v.aT && PUNCH[v.aT];
+    if (!P || J.dp > 0 || J.sit > .05 || v.walk || v.state === 'slump' || v.state === 'clinch') { sm.lgA = null; return; }
+    const p = v.aP, body = P.zone === 'body';
+    const t = toLocal(v, toWorld(o, body ? L(Jo.hip, Jo.neck, .45) : Jo.head)), sh = { x: J.neck.x + 1, y: J.neck.y + 3 };
+    const R = body ? 12 : Jo.S.headR + 6, f2 = P.kind === 'straight' ? 1 : .55;
+    const dH = t.x - sh.x - R * f2, dV = body ? t.y - sh.y : clamp(t.y + Jo.S.headR * .85 - sh.y, -6, 16);
+    const need = clamp(Math.hypot(Math.max(0, dH), dV) - J.S.arm * 2 * .97, 0, P.cat === 'jab' ? 30 : 26);
+    if (sm.lgA !== v.aT || p < (sm.lgP || 0) - .05) { sm.lgA = v.aT; sm.lgN = need; }
+    else if (p < .4) sm.lgN += (need - sm.lgN) * (1 - Math.exp(-dt * 10));
+    sm.lgP = p;
+    const lk = p < .1 ? 0 : p < .42 ? ease((p - .1) / .32) : p < .66 ? 1 : 1 - ease((p - .66) / .34);
+    const lg = sm.lgN * lk * (v.feint ? .3 : 1); if (lg < .05) return;
+    for (const k of ['hip', 'neck', 'head', 'footF']) J[k] = { x: J[k].x + lg * .85, y: J[k].y };
+    J.neck.x += lg * .1; J.head.x += lg * .14; J.footB = { x: J.footB.x + lg * .4, y: J.footB.y }; // leans into it, the back foot follows halfway
+  }
   // ---------- scene
   function drawBackground(V, venue, camX, t, excite) {
     ctx.fillStyle = V.wall; ctx.fillRect(0, 0, W, H);
@@ -2655,6 +2674,7 @@ const Render = (() => {
     const f = view.f; const looks = view.looks;
     f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt; });
     const J = f.map((v, i) => body(v, looks[i], view.t));
+    f.forEach((v, i) => lunge(v, J[i], f[1 - i], J[1 - i], dt));
     const headW = f.map((v, i) => toWorld(v, J[i].head)), bodyW = f.map((v, i) => toWorld(v, L(J[i].hip, J[i].neck, .45)));
     const AR = f.map((v, i) => { const o = 1 - i, q = P3(v.x, v.z), qo = P3(f[o].x, f[o].z); return arms(v, looks[i], J[i], { head: toLocal(v, headW[o]), body: toLocal(v, bodyW[o]), dzy: (qo.y - q.y) / q.s }, view.t); });
     if (view.ev) for (const e of view.ev) if (e.type === 'hit') spawnHit(e, f, J);
@@ -3467,7 +3487,7 @@ function handleEvents() {
 }
 // referee: always in the ring, on the far side, shadowing the action
 function refTick(fs, info, dt) {
-  const r = FX.ref || (FX.ref = { x: 0, z: -40, face: 1, pose: 'watch', pulse: 0, walk: 0, stride: 0, side: 1, sideT: 6 });
+  const r = FX.ref || (FX.ref = { x: 0, z: -40, face: 1, pose: 'watch', pulse: 0, walk: 0, stride: 0, side: 1 });
   const mx = (fs[0].x + fs[1].x) / 2, mz = ((fs[0].z || 0) + (fs[1].z || 0)) / 2;
   const zA = fs[0].z || 0, zB = fs[1].z || 0;
   // stand on the far side of the action; if they are on the back ropes, come around the front
@@ -3478,13 +3498,18 @@ function refTick(fs, info, dt) {
   else if (info.clinch) { tx = mx; tz = Math.max(-ZR + 2, Math.min(zA, zB) - 12); sp = 130; pose = 'break'; }
   else if (info.neutral) { tx = 0; tz = -ZR * .6; sp = 45; face = 1; }
   else {
-    r.sideT -= dt; if (r.sideT <= 0) { r.side *= -1; r.sideT = 5 + Math.random() * 7; }
-    // a lane beside the pair, clear of the fighter's back and arms (depth barely separates them on screen)
-    const off = Math.max(66, gap + 52) + (Math.min(zA, zB) - 40 < -ZR + 2 ? 14 : 0);
-    tx = mx + r.side * off;
-    if (Math.abs(tx) > RING - 8) { r.side *= -1; tx = mx + r.side * off; }
-    if (Math.abs(tx) > RING - 8) { tx = mx; tz = Math.max(-ZR + 2, Math.min(zA, zB) - 70); } // both lanes blocked (they are far apart): deep behind the middle
+    // a lane just outside the pair, behind their backs. He keeps his side and only changes when the ropes squeeze him out
+    const lo = Math.min(fs[0].x, fs[1].x), hi = Math.max(fs[0].x, fs[1].x), off = 54, XL = RING - 8;
+    const room = sd => sd > 0 ? XL - (hi + off) : (lo - off) + XL;
+    if (room(r.side) < -12 && room(-r.side) > room(r.side)) r.side *= -1;
+    tx = r.side > 0 ? hi + off : lo - off;
+    if (room(r.side) < -12) { tx = mx; tz = Math.max(-ZR + 2, Math.min(zA, zB) - 70); } // both lanes blocked (they are far apart): deep behind the middle
     if (Math.abs(mx - r.x) > 6) face = mx > r.x ? 1 : -1;
+  }
+  // never walk through them: if the way to his spot crosses the pair, go around the back
+  if (pose === 'watch' || pose === 'count' || pose === 'wave') {
+    const lo = Math.min(fs[0].x, fs[1].x) - 30, hi = Math.max(fs[0].x, fs[1].x) + 30;
+    if (Math.abs(tx - r.x) > 20 && ((r.x > lo && r.x < hi) || (r.x <= lo && tx > lo) || (r.x >= hi && tx < hi))) tz = Math.min(tz, Math.max(-ZR + 2, Math.min(zA, zB) - 60));
   }
   tx = clamp(tx, -RING + 4, RING - 4); tz = clamp(tz, -ZR + 2, ZR - 2);
   const dx = tx - r.x, dz = tz - r.z, dd = Math.hypot(dx, dz), m = dd > 0 ? Math.min(dd, sp * dt) / dd : 0;
@@ -3510,9 +3535,26 @@ function blendSnap(a, b, t) {
     return o;
   }) };
 }
+// the engine's distances put the drawn fighters chest to chest, so the view spreads them apart along the ring
+// (less on the inside, none in a clinch or between rounds; during a knockdown only the standing man moves;
+// the ropes push the room onto the other man). Punches step in to reach (Render: lunge)
+function spreadView(fs, dt) {
+  const st = FX.sp || (FX.sp = { pad: 0, w: .5 }), A = Object.assign({}, fs[0]), B = Object.assign({}, fs[1]);
+  const dx = B.x - A.x, u = dx < 0 ? -1 : 1, d = Math.hypot(dx, (B.z || 0) - (A.z || 0));
+  const kd = A.state === 'down' || B.state === 'down';
+  const want = A.sit || B.sit || A.walk || B.walk || A.state === 'clinch' || B.state === 'clinch' ? 0 : 20 * clamp((d - 32) / 24, 0, 1);
+  if (!kd) st.pad += (want - st.pad) * (1 - Math.exp(-dt * (want < st.pad ? 9 : 4)));
+  const w0 = kd ? (A.state === 'down' ? 0 : B.state === 'down' ? 1 : .5) : .5;
+  st.w += (w0 - st.w) * (1 - Math.exp(-dt * 5));
+  const XL = RING - 10, mv = (f, m) => { const x = clamp(f.x + m, -XL, XL), r = (m - (x - f.x)) * Math.sign(m || 1); f.x = x; return r; };
+  const rA = mv(A, -u * st.pad * st.w), rB = mv(B, u * (st.pad * (1 - st.w) + Math.max(0, rA)));
+  if (rB > 0) mv(A, -u * rB);
+  return [A, B];
+}
 function liveView() {
   if (FX.mode !== 'live') FX.sPrev = FX.sCur = null;
-  const s = FX.sCur ? blendSnap(FX.sPrev, FX.sCur, clamp(FX.acc / DT, 0, 1)) : F.snap(); const A = F.f[0], B = F.f[1];
+  const s = FX.sCur ? blendSnap(FX.sPrev, FX.sCur, clamp(FX.acc / DT, 0, 1)) : F.snap();
+  const fs = spreadView(s.f, FX.rdt || .016), A = fs[0], B = fs[1];
   const mid = (A.x + B.x) / 2; FX.cam += (clamp(mid, -70, 70) - FX.cam) * .08;
   { const zt = F.phase === 'corner' || (F.phase === 'roundEnd' && F.phaseT > .8) ? 1.02 : 1.32; FX.zoom += (zt - FX.zoom) * .06; } // pull back so both corners fit between rounds
   const info = {};
@@ -3520,8 +3562,8 @@ function liveView() {
   else if (F.phase === 'over' && F.result && !F.result.decision && F.phaseT < 3.5) info.wave = 1 - F.result.winner;
   else if (F.clinchT > 0) info.clinch = true;
   else if (F.phase !== 'fight') info.neutral = true;
-  const ref = refTick(F.f, info, FX.rdt || .016);
-  return { f: s.f, looks: FX.looks, t: FX.t, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: FX.excite, ref, ev: FX.ev.splice(0), flash: FX.flash };
+  const ref = refTick(fs, info, FX.rdt || .016);
+  return { f: fs, looks: FX.looks, t: FX.t, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: FX.excite, ref, ev: FX.ev.splice(0), flash: FX.flash };
 }
 function updHud() {
   F.f.forEach((X, i) => {
@@ -3557,7 +3599,7 @@ function loop(ts) {
   } else if (FX.mode === 'replay') {
     const R_ = FX.rpData; FX.rp += Math.min(.5, rawDt) * 60 * (FX.rp < 50 ? .55 : .3); const i = Math.min(R_.length - 1, Math.floor(FX.rp));
     const ev = []; for (let k = FX.rpLast + 1; k <= i; k++) for (const e of R_[k].ev) if (e.type === 'hit') ev.push(e);
-    FX.rpLast = i; const s = R_[i];
+    FX.rpLast = i; const s = { f: spreadView(R_[i].f, FX.rdt) };
     const loser = s.f[1 - F.result.winner]; FX.zoom += (1.7 - FX.zoom) * .05; FX.cam += (clamp(loser.x, -70, 70) - FX.cam) * .06;
     const ri_ = {}; const dn = s.f.findIndex(x => x.state === 'down'), sl = s.f.findIndex(x => x.state === 'slump');
     if (dn >= 0) { ri_.down = dn; ri_.pulse = Math.min(1, (FX.t % .95) / .5); } else if (sl >= 0) ri_.wave = sl;
