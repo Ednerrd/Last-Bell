@@ -1,4 +1,4 @@
-# Research: Fight Night Champion and The Thrill of the Fight
+# Research: Fight Night Round 4, Fight Night Champion, The Thrill of the Fight, Undisputed
 
 Done Oct 2026 for the 3D plan (`proto/PLAN.md`).
 
@@ -118,6 +118,168 @@ Done Oct 2026 for the 3D plan (`proto/PLAN.md`).
 
 ---
 
+## Fight Night Round 4 (EA Canada, 2009)
+
+Metacritic 88, GameSpot 9.0. Many fans still call it the most "sim" Fight Night; Champion was later called "dumbed down".
+
+### Physics and animation
+- **Engine:** new in-house physics layer. Every punch is "procedurally animated on the fly". Most likely authored clips bent at runtime by physics and collision [?].
+- **Speed:** 60 fps, physics at **120 Hz**.
+- **Contact:** reads speed, direction, angle, how much the glove touched, the distance and position of the two men, height and reach, and the deflection off a face or glove.
+  - Outcomes run from "face crunchers" to semi-solid shots to **glancing blows that barely make contact**.
+  - Shots land on the nose, chin, cheek, forehead, neck, shoulders, even the back of the head.
+  - **Clean shots were the minority** (in Round 3 almost everything landed solid).
+  - A partly blocked punch can leak through the guard.
+- **Momentum:** walking into a punch makes it heavier; rolling or moving away makes it lighter. A duck can still get clipped on top of the head.
+- **Full-body collision:** arms don't pass through each other and can **get tangled**.
+- **Inside fighting (the headline feature):**
+  - Round 3 had an invisible wall between the boxers. Round 4 let them lean on each other, push, and put "Tyson's head in Ali's chest and throw bombs".
+  - Slips keep forward momentum, so a man can get inside while slipping.
+- **Hit reactions:** fighters absorb shots more and contort less. A big stun = camera zoom + the fighter flashes yellow.
+- **Knockdowns:** physics-varied falls [?]. **The big complaint:** the fall didn't match his condition. A man fell like he was finished, then got up fresh. Fans wanted a wobble after he rises.
+
+### Fight systems
+- **Three bars:** health, stamina, block.
+  - Head shots drain health. Body shots and missed punches drain stamina.
+  - **Low stamina makes head shots hit much harder**, so body work sets up the knockout.
+  - The block meter wears down: an overused guard gets knocked aside and lets punches through.
+- **Defence and counters:**
+  - Round 3's parry → haymaker counter was cut as "gamey".
+  - A counter is now a well-timed block or dodge that does extra damage.
+  - On high difficulty it became a counter-punching spamfest.
+- **Power shots:**
+  - Haymakers are a modifier on any punch.
+  - **Flash KOs are no longer a special move**; they come out of the physics (clean shot, right spot, right moment).
+- **Corner between rounds:**
+  - **Points earned from the round:** e.g. +12 for landing over 60%, plus points for dodges, stuns, knockdowns and getting up.
+  - The points are spent on health, stamina or cuts.
+  - Eye cuts can stop fights.
+- **Get-up:** balance mini-game. About four knockdowns until it's effectively impossible.
+- **Sliders the sim community lived in:**
+  - power, damage, toughness, counter window;
+  - ref foul and damage awareness;
+  - CPU offense, defense and output.
+  - "Fred's sim sliders" turned power down to 7 so that jabs wouldn't stun.
+- **AI "R.E.A.L."** (Record, Evaluate, Adapt, Learn), styled from classic fight footage.
+  - **Praised:** it plays to each fighter's strengths.
+  - **Hated:**
+    - it read button inputs (instant blocks, inhuman counters);
+    - its defence switched on and off within a round.
+- **Patch (Sept 2009):** haymakers cost more stamina, and spamming bob-and-weave drains stamina. The community argued "patched vs unpatched" for years.
+
+### Legacy mode (first appearance)
+- **Ladder:** Bum → Prospect → Contender → Champion → Ring Legend → GOAT, with goals at each step. GOAT needs about a 90% win rate, #1 pound-for-pound, 100% popularity and title defences.
+- **What it had:**
+  - a 50-man division;
+  - a calendar and an email inbox;
+  - pound-for-pound rankings;
+  - unifying belts;
+  - year-end awards.
+- **Training and weight:**
+  - Six training mini-games; auto-train caps at about 50%.
+  - Young fighters gain more from training.
+  - Moving up a weight class only as champion, at most two divisions.
+- **Criticized:**
+  - no money or purses;
+  - popularity was meaningless;
+  - **the fighter's look never aged**;
+  - no rivals or story;
+  - frustrating mini-games.
+
+### Presentation
+- **Bodies and damage:**
+  - muscles ripple on punches;
+  - sweat builds and sprays;
+  - bruises, cuts, blood spray, swelling.
+- **HUD:** the bars came back, but could be turned off to read the fighter instead.
+- **Replays:** slow-motion KO replay with a crunch and the face rippling. A free replay camera.
+- **Roster:** 48 licensed boxers.
+- **Commentary:** Tessitore and Atlas. **Hated for repeating** ("best round I've ever seen" every round), but liked for actual opinions about the sport.
+
+---
+
+## Undisputed (Steel City Interactive, Early Access 2023, 1.0 Oct 2024)
+
+Built in **Unity** (Undisputed 2 is being rebuilt in Unreal 5). OpenCritic 7.3, IGN 6. Steam recent reviews fell to 58% at 1.0. Support ended after update 2.0 (Oct 2025) and the studio moved to the sequel.
+
+### Tech and animation
+- **Body scans** of real boxers; mocap with Roy Jones Jr. and others.
+- **60+ punches** from multiple angles, plus feints and a power modifier.
+- **Footwork (the selling point):**
+  - "Loose" movement is bouncier and evades better, but he takes more damage.
+  - **When gassed he goes "flat-footed" automatically**: sluggish, no bounce.
+- **Movement was locked into states:**
+  - 4-direction steps;
+  - **no punching or slipping while moving**;
+  - animations had to finish before the next action.
+  - It read as clunky and robotic. The sequel's headline fix is 8-way movement with punching and weaving on the move.
+- **Hit detection was the longest-running complaint:**
+  - "a punch lands or misses and the result doesn't align with what I've seen on the screen";
+  - punches going **over the head at close range** (fixed 9 months after launch);
+  - **a punch on the glove or shoulder looked the same as a flush one.**
+- **Punch feel:**
+  - "Pillow fists", all arm, "uppercut… all arm, zero lower body, no impact".
+  - FNC still wins on impact.
+- **Knockdowns:** few fall animations, floppy ragdolls against the ropes ("ragdoll boxing").
+
+### Fight systems
+- **Stamina:**
+  - Heart rate rises with output and drains energy (praised as smart).
+  - Short-term vs long-term stamina; body shots drain it.
+  - Blocked punches cost less than misses but more than landed punches.
+  - Complaint: legends gassed by round 6.
+- **Two health bars** (head and body) decide when he's **dazed**. A dazed man recovers if the attacker doesn't follow up within about 1 second [?].
+- **Flash knockdowns** only happen when the victim's short-term stamina is under 30%; a flash KO needs under 20% (community explanation).
+- **Get-up mini-game:** holding triggers to line up meters, widely hated.
+- **Damage:**
+  - The Dec 2023 update added blood on the face, chest and trunks, blood-tinged sweat, more cut spots and deeper bruising.
+  - **The ref stops it when an eye is swollen shut**; the hired cutman works on it between rounds.
+  - Before the update: "where is the facial damage?!"
+- **AI:**
+  - **"Frustration" and "Under Pressure" meters**: a frustrated fighter throws headbutts and low blows.
+  - Four archetypes (boxer-puncher, slugger, swarmer, outside fighter).
+  - Complaints:
+    - passive (shells up all fight) or a "counter-punching machine" (138 counters to 18);
+    - online body-uppercut spam;
+    - the jab as the weakest punch.
+- **Judges:** big "the judges are a joke" threads (one judge wildly off, robbed after a knockdown). A patch toned down how much each judge's taste counts.
+- **No sim sliders**, though players asked for them.
+- **No CPU-vs-CPU watch mode** either. Players asked for exactly that: "train fighters, watch their rise and fall and retirement". **That's Last Bell's whole premise.**
+
+### Career
+- **Start:** an amateur tournament sets your starting rank.
+- **Team:** hire a coach (which stats can improve, injury healing), a cutman and a manager (negotiation).
+- **Fight offers:** negotiate purse share, promotion budget, camp length, rematch clauses and media.
+- **Camp:** 4 weeks picked from menus (no mini-games). Random camp injuries and a weight cut.
+- **Belts:** national → continental → world → unified → undisputed.
+- **The world lives on:** AI fighters train, fight, get hurt, cancel and retire.
+- **Criticized:** "spreadsheet-style menus", "no drama", no rivalries, press or story, repetitive.
+
+### Presentation and reception
+- **Roster and commentary:**
+  - 70+ licensed fighters and 14 venues.
+  - Commentary panned: the same lines "hundreds of times", calls that don't match the action.
+  - "Lack of in-ring drama"; the sequel lists ring walks and cinematics as focus areas.
+- **Liked:**
+  - footwork and defense ("better than FNC" there);
+  - feints;
+  - the heart-rate stamina;
+  - the models and the roster.
+- **Disliked:**
+  - punch feel;
+  - hit detection that doesn't match what you see;
+  - the AI extremes;
+  - locked movement;
+  - knockdown animations and the get-up mini-game;
+  - netcode;
+  - judging;
+  - commentary;
+  - **paid day-one DLC** with current champions locked behind it;
+  - support ending early.
+- **Community verdict:** Undisputed wins on movement and sim depth; Fight Night Champion wins on **punch weight, impact, cinematic knockdowns and polish**.
+
+---
+
 ## What Last Bell takes from this
 
 ### For the 3D plan (render only, no balance change)
@@ -144,6 +306,31 @@ Done Oct 2026 for the 3D plan (`proto/PLAN.md`).
 15. **Corner scene that reflects the round:** cutman on the eye that's swelling, the fighter slumping harder in late rounds.
 16. **Optional "analyst view":** colour-coded impact flashes (blue → red) for people who want to read the damage.
 
+**Added from Round 4 and Undisputed:**
+17. **Glancing is the common case** (Round 4). Clean, flush shots should be the minority on screen too.
+    - Add a near-miss band: a late slip gets clipped on the crown, a punch skims the shoulder.
+    - An arm tangle: both throw at once and the arms cross and stop.
+18. **What you see must match what the engine decided** (Undisputed's worst complaint). Each result gets its own pose, sound and effect:
+    - a blocked glove pops;
+    - a shoulder roll glances off;
+    - a flush shot snaps the head.
+    - Never show a glove sinking into a face on a block.
+19. **Power comes from the legs and hips** (Undisputed's "pillow fists"):
+    - hips turn and the back heel turns over;
+    - uppercuts drive up from a knee dip;
+    - a short hit-stop on flush power shots.
+    - Never all arm.
+20. **No movement locked into states:** punches blend on top of a stepping lower body, so men punch and slip while moving. Close range gets the hardest clip testing (Undisputed's over-the-head bug).
+21. **Gassed = flat-footed** (Undisputed): the bounce goes, the feet plant, the hands sag. **The guard wears down** (Round 4's block meter): late in a fight the gloves sit lower and wider and get knocked aside.
+22. **The knockdown and the rise match his condition** (Round 4's big complaint):
+    - choose the fall from how bad the shot was;
+    - the rise speed from how much he has left;
+    - a man who barely beats the count wobbles on the restart.
+    - Falls are hand-made with variety (into the ropes, a delayed fall, a flash knockdown he pops right up from). Not floppy ragdolls.
+23. **Inside work as its own look** (Round 4): heads on chests, shoulders leaning, short shots. Not a clinch, but `bodyPush` relaxes almost to touching.
+24. **The broadcast package:** a ring walk, an intro card, corner chatter, a slow-motion knockout replay. Undisputed's "no drama" was a top complaint, and they're cheap next to what they add.
+25. **Visible aging on the 3D model** (Round 4's fighter never aged): greying hair, a thicker middle, a slower idle bounce late in a career.
+
 ### Engine ideas (separate from 3D; each needs sims before and after, and its own commits)
 - **Regional fatigue (RAF):** lead arm, rear arm, legs. The jabber's lead hand drops late, the swarmer's legs go. It gives readable knobs without changing overall output.
 - **Gate flash KOs:** puncher power over a floor, and the victim mid-combo or low on gas, or walking in.
@@ -152,12 +339,52 @@ Done Oct 2026 for the 3D plan (`proto/PLAN.md`).
 - **Daze meter:** a fast-draining daze meter alongside the slow damage that already builds (`wear`/`kdHurt`). Compare against what the engine already does before changing anything.
 - **Career storylines (Champion mode):** a hurt hand carried from the last fight, a cut from camp, a hometown ref. The coach's shouts become how you handle them.
 - **Fight challenges (Legacy):** bonus for "drop him before round 5", "take little damage", "open a cut". Gives a watch-only player stakes inside each fight.
-- **Avoid:** training minigames (the most hated part of Legacy) and quietly toning damage down later.
+- **Momentum** (Round 4): walking into a punch makes it heavier, moving away lighter. The engine already has footwork velocity; check it before adding anything.
+- **Low stamina makes head shots hurt more** (Round 4), so body work sets up the knockout. Compare with what `wear`/gas already do.
+- **Corner recovery earned in the round** (Round 4's points): the corner's work between rounds scales with how the round went.
+- **Frustration / pressure meter** (Undisputed): a frustrated or trapped man fouls and retreats. It fits the spoiler's foul logic and the commentary.
+- **"Fight settings" sliders for sim fans** (Round 4's community lived in them; Undisputed didn't have them): power, ref stoppage strictness, cut frequency, output, mapped onto TUNE/DMG/CUT. Results only count as "official" on defaults, if that matters.
+- **Judging check** (Undisputed's "judges are a joke"): keep per-judge taste small, show the cards, and have commentary call close rounds before the cards come out.
+- **Commentary pool size:** a no-repeat window per fight and per career, and never call a shot that didn't land (both Fight Night and Undisputed got panned for repetition).
+- **Career drama between fights** (Undisputed's "spreadsheet menus"): rivalries, callouts, rematch clauses, injury stories, press lines. Resumes and legends already exist; turn them into story.
+- **Avoid:**
+  - training minigames (the most hated part of Legacy);
+  - get-up minigames (hated in all three);
+  - quietly toning damage down later;
+  - paywalls or locking core content;
+  - superhuman AI reads (Round 4) and AI that's all passive or all counters (Undisputed).
 
 ---
 
 ## Sources
-**Fight Night:**
+**Round 4:**
+- https://www.gamespot.com/articles/fight-night-round-4-the-physics-of-fighting/1100-6233939/
+- https://www.gamespot.com/articles/fight-night-round-4-first-look/1100-6206056/
+- https://www.gamespot.com/reviews/fight-night-round-4-review/1900-6212739/
+- https://www.ea.com/en-gb/news/real-ai-in-fight-night-round-4
+- https://www.ea.com/news/fight-night-round-4-producer-mike-mahar
+- https://www.espn.com/espn/thelife/videogames/news/story?id=3968745
+- https://pacejmiller.wordpress.com/2009/08/03/review-fight-night-round-4-part-ii-gameplay/
+- https://pacejmiller.wordpress.com/2009/08/06/review-fight-night-round-4-part-iii-legacy-mode/
+- https://gamefaqs.gamespot.com/boards/946195-fight-night-round-4/50243586 (sim sliders)
+- https://www.shacknews.com/article/59440/fight-night-round-4-update
+
+**Undisputed:**
+- https://en.wikipedia.org/wiki/Undisputed_(video_game)
+- https://opencritic.com/game/17418/undisputed
+- https://www.pushsquare.com/reviews/ps5/undisputed
+- https://www.forbes.com/sites/brianmazique/2023/02/05/undisputed-boxing-early-access-the-good-the-bad-and-the-bottom-line/
+- https://www.forbes.com/sites/brianmazique/2024/10/11/undisputed-review-5-things-id-like-to-see-in-a-future-update/
+- https://blog.playstation.com/2024/10/02/undisputed-launches-oct-11-how-body-scans-deliver-boxing-authenticity/
+- https://playundisputed.com/news/womens-revolution-update
+- https://www.operationsports.com/undisputed-patch-1-4-4-has-punch-tracking-improvements-return-of-flash-kos-and-more
+- https://www.operationsports.com/undisputed-update-2-0-arrives-on-october-28-full-details-and-patch-notes/
+- https://www.operationsports.com/undisputed-developers-confirm-no-more-updates-as-sequel-enters-production/
+- https://forums.operationsports.com/forums/boxing/1012416-whats-better-fight-night-champion-vs-undisputed-lets-keep-real-2.html
+- https://steamcommunity.com/app/1451190/discussions/0/3759977946668425919/ (judges)
+- https://steamcommunity.com/app/1451190/discussions/0/3766734182330079704/ (get-up)
+
+**Fight Night Champion:**
 - https://blog.playstation.com/2011/01/04/fight-night-champion-full-spectrum-punch-control-saves-your-thumbs-controllers/
 - https://www.ea.com/news/managing-your-stamina
 - https://www.ea.com/news/fight-night-champion-art-blog
