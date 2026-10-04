@@ -158,6 +158,9 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .corner .ch{font-family:var(--disp);font-size:20px;color:#f0b85a}
 .cst{display:grid;grid-template-columns:1fr 3.5em 3.5em;gap:2px 8px;font-size:15px}.cst b{text-align:right}.cst span{color:#a09280}
 .corner .cut{color:#cfc4ad;font-size:15px;margin:0}.corner .adv{margin:0;font-size:16px}
+.corner .notes{margin:0;padding-left:18px;font-size:14px;color:#cfc4ad}.corner .notes li{margin:1px 0}
+.corner .talk{display:flex;gap:6px}.corner .talk input{flex:1;min-width:0;background:#1c1510;color:#ece4d6;border:1px solid rgba(236,228,214,.3);border-radius:4px;padding:8px;font:inherit;font-size:16px}
+.corner .say{margin:0;font-size:16px}.corner .say b{color:#f0b85a}.corner .plan{margin:0;font-size:14px;color:#a09280}.corner .mute{opacity:.7}
 .corner .chip{color:#ece4d6;border-color:rgba(236,228,214,.25);padding:5px 10px;font-size:15px}
 .corner .chip.on{color:#f0b85a;border-color:#f0b85a}.corner .chip.sug:not(.on){border-color:#f0b85a}
 .corner .btn{background:#f0b85a;color:#1a120a;padding:10px}
@@ -3539,6 +3542,7 @@ ACT.shout = d => {
   else if ((o.fit >= .7 || o.fit < .2) && F.t - (FX.callT || -99) > 8) { FX.callT = F.t; feed(pick(o.fit >= .7 ? CALL_GOOD : CALL_BAD), o.fit >= .7); }
 };
 function updShouts() {
+  if (FX.cornerCall && FX.mode === 'live' && F.phase === 'fight') { const k = FX.cornerCall; FX.cornerCall = null; if (F.shout(0, k)) yell(pick(YELLS[k])); } // the first call the coach gave him in the corner
   const box = $('#shouts'); if (!box) return;
   const live = FX.mode === 'live' && F.phase === 'fight', o = F.f[0].order;
   box.classList.toggle('off', !live);
@@ -3748,28 +3752,151 @@ function cutmanLine() {
   if (d > .2) return 'Cutman: Some swelling. Nothing we can not handle.';
   return 'Cutman: Face is clean. Keep it that way.';
 }
+/* ---------- talk to your fighter (corner) ---------- */
+// the coach's notes: what kept happening last round, in plain words. The coach reads them, and so does Claude
+const PUNCH_PL = { jab: 'jabs', cross: 'right hands', hook: 'hooks', uppercut: 'uppercuts', bodyJab: 'jabs to the body', bodyHook: 'body hooks' };
+const pName = p => (PUNCH[p] || {}).name || p;
+function topOf(o) { let k = null, n = 0; for (const x in o || {}) if (o[x] > n) { n = o[x]; k = x; } return [k, n]; }
+function roundNotes() {
+  const me = F.f[0], op = F.f[1], rl = F.roundLog[F.roundLog.length - 1]; if (!rl) return [];
+  const a = rl.a, b = rl.b, out = [], gas = X => X.stam / Math.max(1, X.stamMax);
+  const [ok, on] = topOf(b.over); if (on >= 2) { const [p, q] = ok.split('>'); out.push(`He landed his ${pName(p)} while you threw the ${pName(q)}, ${on} times.`); }
+  const [hk, hn] = topOf(b.home); if (hn >= 4) out.push(`His ${pName(hk)} landed ${hn} times.`);
+  if (b.ctrL >= 2) out.push(`He landed ${b.ctrL} counters.`);
+  const [mk, mn] = topOf(a.made); if (mn >= 4) out.push(`He made you miss ${mn} ${PUNCH_PL[mk]}.`);
+  const [yk, yn] = topOf(a.home); if (yn >= 4) out.push(`Your ${pName(yk)} landed ${yn} times.`);
+  if (a.trap * CLOCK > 25) out.push(`You spent ${Math.round(a.trap * CLOCK)} seconds on the ropes.`);
+  if (b.trap * CLOCK > 25) out.push(`You had him on the ropes for ${Math.round(b.trap * CLOCK)} seconds.`);
+  if (a.thrown < b.thrown * .7) out.push(`He outworked you, ${b.thrown} punches to ${a.thrown}.`);
+  else if (b.thrown < a.thrown * .7) out.push(`You outworked him, ${a.thrown} punches to ${b.thrown}.`);
+  if (gas(me) < .5) out.push("You're breathing hard.");
+  if (gas(op) < .5) out.push("He's breathing hard.");
+  if (op.body < 60) out.push('His body is softening up.');
+  if (me.body < 60) out.push('The body shots are getting to you.');
+  return out;
+}
+// the coach talks in his own words. Claude turns them into a round plan + a first call from the same menu as the buttons,
+// so words can't buy anything the buttons can't: the call is still scored against the moment (shoutFit)
+let sampleP = null;
+const getSample = () => sampleP || (sampleP = window.claude && claude.use ? claude.use('sample').catch(() => null) : Promise.resolve(null));
+const TALK_PLAN = [
+  ['survive', /surviv|hold him|clinch|tie him up|get through (this|the round)|grab|smother/],
+  ['ko', /knock (him )?out|\bko\b|finish (him|it)|take him out|put him away|go for (it|the kill)|he'?s hurt/],
+  ['body', /body|rib|stomach|downstairs|liver|belly|midsection/],
+  ['counter', /counter|make him miss|let him come|be patient|patien|wait for|slip and/],
+  ['move', /move|feet|footwork|angle|circle|stay outside|keep (your )?distance|off the ropes|box him|stick and/],
+  ['pressure', /pressure|press|walk him|cut (off )?the ring|get on him|back him up|more punches|work rate|throw more|busier|let your hands go|attack/]
+];
+const TALK_CALL = [['hands', /hands up|keep your hands|chin down|tight|protect/], ['jab', /jab/], ['body', /body|rib|downstairs|liver/],
+  ['counter', /counter|make him miss/], ['move', /move|feet|angle|ropes|circle/], ['press', /pressure|get on him|walk him|cut (off )?the ring|back him up/]];
+const TALK_OK = ['Got you, coach.', 'Heard. I got it.', "Alright. Let's go.", 'Yeah. I see it.'];
+function talkWords(txt) {
+  const t = txt.toLowerCase(); const plan = (TALK_PLAN.find(([, re]) => re.test(t)) || ['auto'])[0];
+  const call = (TALK_CALL.find(([, re]) => re.test(t)) || [null])[0];
+  return { plan, call, reply: pick(TALK_OK) };
+}
+function talkPrompt(txt) {
+  const me = F.f[0], op = F.f[1], rl = F.roundLog[F.roundLog.length - 1] || { a: {}, b: {} }, a = rl.a, b = rl.b;
+  const S = X => STYLES[X.sheet.style] || STYLES[X.sk] || {}, r = save.player.record;
+  const ld = X => (X.landedJab || 0) + (X.landedPow || 0) + (X.landedBody || 0);
+  const cond = [];
+  if (me.head < me.headMax * .4 || me.headMax < 45) cond.push('you are hurt');
+  if (me.stam < me.stamMax * .5) cond.push('you are tired');
+  if (me.cut > .3) cond.push('you have a cut' + (me.cut > 4 ? ' that is bad' : ''));
+  if (op.head < op.headMax * .4 || op.headMax < 50) cond.push('he is hurt');
+  if (op.stam < op.stamMax * .5) cond.push('he is tired');
+  const lead = F.lead > .7 ? 'You are probably ahead' : F.lead < -.7 ? 'You are probably behind' : 'It is close';
+  const said = (FX.talk || []).slice(-3).map(x => `Round ${x.r}: coach said "${x.txt}", you answered "${x.reply}"`).join('\n') || 'nothing yet';
+  return `You are a professional boxer in a boxing game. Your coach talks to you in the corner between rounds. Turn what the coach says into a plan the game understands, then answer him in your own voice.
+
+You may only choose from these.
+plan (how you fight next round):
+- auto: keep fighting your own way
+- pressure: walk him down, cut off the ring, throw more
+- move: box and move, jab, circle, stay outside
+- body: go to the body
+- counter: be patient, make him miss and counter
+- ko: go for the knockout, load up on power shots (risky, you open up)
+- survive: hold, move, get through the round
+call (what you do first when the bell rings), or null:
+- jab, body, press (get on him), counter, move, hands (hands up, tighten up)
+
+Rules:
+- Pick what the coach asked for, not what you think is best. If he is only firing you up or is vague, use plan "auto" and call null.
+- If his read clashes with the notes below, still follow it, but you can say so briefly in your reply.
+- The reply is 1 or 2 short sentences, under 25 words, spoken like a fighter between rounds. Plain text, no emojis, no swearing. Never promise a knockout.
+
+You: ${me.sheet.name}, ${S(me).label || me.sk}. ${S(me).desc || ''} Record ${r.w}-${r.l}${r.d ? '-' + r.d : ''}. Heart ${Math.round(me.s.heart)}/100 (high heart = fiery and proud, low = quiet and doubtful). Ring IQ ${Math.round(me.iq)}/100.
+Opponent: ${op.sheet.name}, ${S(op).label || op.sk}, ${(GUARDS[op.guard] || {}).label || op.guard} guard.
+Round ${F.round} of ${F.rounds} just ended. ${lead}.
+Last round: you landed ${ld(a)} of ${a.thrown || 0} (${(a.landedPow || 0) + (a.landedBody || 0)} power), he landed ${ld(b)} of ${b.thrown || 0} (${(b.landedPow || 0) + (b.landedBody || 0)} power). Knockdowns: you ${a.kd || 0}, him ${b.kd || 0}.
+Notes: ${roundNotes().join(' ') || 'nothing stood out'}
+Condition: ${cond.join(', ') || 'both fresh enough'}.
+Earlier this fight:
+${said}
+
+The coach says: "${txt}"
+
+Answer with JSON only: {"plan": "<one plan>", "call": "<one call or null>", "reply": "<your answer>"}`;
+}
+async function talkClaude(txt, signal) {
+  const sample = await getSample(); if (!sample) return null;
+  const out = await sample.json(talkPrompt(txt), { modelTier: 'quick', cache: false, signal });
+  if (!out || typeof out !== 'object') return null;
+  const plan = STRATS[out.plan] ? out.plan : 'auto', call = SHOUTS[out.call] ? out.call : null;
+  const reply = String(out.reply || '').replace(/\s+/g, ' ').trim().slice(0, 220) || pick(TALK_OK);
+  return { plan, call, reply, ai: true };
+}
+function talkShow(res) {
+  const box = $('#talkout'); if (!box) return;
+  const nm = esc(F.f[0].sheet.name.split(' ').slice(-1)[0]);
+  box.innerHTML = `<p class="say"><b>${nm}:</b> “${esc(res.reply)}”</p><p class="plan">Plan: ${esc(STRATS[res.plan].label)}${res.call ? ' · At the bell: ' + esc(SHOUT_BTN[res.call]) : ''}</p>`;
+  FX.strat = res.plan;
+  FX.cornerCall = res.call;
+  if (Comm.voice) Comm.say({ text: res.reply, kind: 'color', pri: 1 });
+}
+ACT.talk = async () => {
+  const inp = $('#talkin'); if (!inp || FX.mode !== 'corner') return;
+  const txt = inp.value.replace(/\s+/g, ' ').trim().slice(0, 400); if (!txt || FX.talkBusy) return;
+  FX.cornerHold = true; FX.talkTxt = txt; inp.value = ''; inp.blur();
+  const ctl = new AbortController(); FX.talkBusy = ctl; const r0 = F.round;
+  $('#talkout').innerHTML = `<p class="say mute">“${esc(txt)}”</p><p class="plan mute">He's listening…</p>`;
+  let res = null;
+  try { res = await talkClaude(txt, ctl.signal); }
+  catch (e) { if (e && e.code === 'not_granted') sampleP = Promise.resolve(null); }
+  if (FX.talkBusy !== ctl) return; FX.talkBusy = null;   // he went out for the next round without an answer
+  if (FX.mode !== 'corner' || F.round !== r0) return;
+  if (!res) res = talkWords(txt);
+  (FX.talk = FX.talk || []).push({ r: F.round, txt, reply: res.reply });
+  talkShow(res);
+};
+ACT.talkHold = () => { FX.cornerHold = true; const bar = $('#ctbar'); if (bar) bar.parentNode.style.visibility = 'hidden'; };
 function openCorner() {
-  FX.mode = 'corner'; const rl = F.roundLog[F.roundLog.length - 1]; const [adv, sug] = cornerAdvice();
+  FX.mode = 'corner'; FX.cornerHold = false; FX.cornerCall = null; FX.talkBusy = null; const rl = F.roundLog[F.roundLog.length - 1]; const [adv] = cornerAdvice(); const notes = roundNotes().slice(0, 4);
   const a = rl.a, b = rl.b; const ln = (x) => `${x.landedJab + x.landedPow + x.landedBody}/${x.thrown}`;
   showCorner(`<div class="corner">
     <div class="ch">After round ${F.round} of ${F.rounds}</div>
     <div class="cst"><span></span><b>You</b><b>Him</b><span>Landed</span><b>${ln(a)}</b><b>${ln(b)}</b><span>Power</span><b>${a.landedPow + a.landedBody}</b><b>${b.landedPow + b.landedBody}</b><span>Knockdowns</span><b>${a.kd}</b><b>${b.kd}</b></div>
     <p class="cut">${esc(cutmanLine())}</p>
     <p class="adv">Trainer: “${esc(adv)}”</p>
-    <div class="chips wrap">${Object.keys(STRATS).map(k => `<button class="chip ${FX.strat === k ? 'on' : ''} ${k === sug ? 'sug' : ''}" data-act="strat" data-v="${k}">${STRATS[k].label}</button>`).join('')}</div>
+    ${notes.length ? `<ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    <div class="talk"><input id="talkin" type="text" maxlength="400" enterkeyhint="send" autocomplete="off" placeholder="Talk to him (or use the mic)" aria-label="Talk to your fighter"><button class="chip" data-act="talk">Tell him</button></div>
+    <div id="talkout"><p class="plan">Plan: ${esc(STRATS[FX.strat].label)}. Tell him what you see and he'll adjust.</p></div>
     <div class="ctimer"><i id="ctbar"></i></div>
     <button class="btn" data-act="nextRound">Next round</button>
   </div>`);
   FX.cornerStart = performance.now();
-  const tick = () => { if (FX.mode !== 'corner') return; const p = (performance.now() - FX.cornerStart) / 10000; const bar = $('#ctbar'); if (bar) bar.style.width = Math.max(0, 100 - p * 100) + '%'; if (p >= 1) ACT.nextRound(); else requestAnimationFrame(tick); };
+  const tick = () => { if (FX.mode !== 'corner') return; if (FX.cornerHold) { FX.cornerStart = performance.now(); requestAnimationFrame(tick); return; } const p = (performance.now() - FX.cornerStart) / 10000; const bar = $('#ctbar'); if (bar) bar.style.width = Math.max(0, 100 - p * 100) + '%'; if (p >= 1) ACT.nextRound(); else requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
+  const inp = $('#talkin'); if (inp) { inp.onfocus = ACT.talkHold; inp.oninput = ACT.talkHold; inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); ACT.talk(); } }; }
+  getSample();
   if (Comm.voice) Comm.say({ text: adv, kind: 'color', pri: 1 });
 }
 function showCorner(html) { const c = $('#cbox'); c.innerHTML = html; c.classList.add('show'); $('#feed').style.display = 'none'; c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 function hideCorner() { const c = $('#cbox'); if (c) { c.classList.remove('show'); c.innerHTML = ''; } const f = $('#feed'); if (f) f.style.display = ''; }
-ACT.strat = (d, b) => { FX.strat = d.v; b.parentNode.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); };
 ACT.nextRound = () => {
   if (FX.mode !== 'corner') return;
+  if (FX.talkBusy) { FX.talkBusy.abort(); FX.talkBusy = null; const w = talkWords(FX.talkTxt || ''); FX.strat = w.plan; FX.cornerCall = w.call; } // no time for an answer: he goes with what he heard
   hideCorner(); FX.mode = 'live';
   const ok = F.nextRound(FX.strat === 'auto' ? F.aiStrategy(0) : FX.strat, F.aiStrategy(1)); // corner's call: the corner reads the fight and his style
   handleEvents();

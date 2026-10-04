@@ -31,7 +31,7 @@ Create your fighter → camp (train, spar, prepare for *this* opponent) → figh
 ## Ed's follow-up (Oct 2026): talk to him, and the bond
 > I mean, obviously, it's fighter to code connection where, um, and it's like, it's kind of, I don't know if I'm going to do it this way, but it's just an idea where the fighter, if you don't want to work with him or he's getting like, eh, then you get to move on and create another fighter. You don't have multiple, I mean, you can have multiple fighters in your roster, but that's a kind of a bit more complex thing. But what you said before, know what's going wrong. That's, that's the only way you'll know is actually watching the, them fight together where he can be like he's landing too many jabs or or maybe you, have, you tell it through, not AI, but through a text. Be like, you're throwing, maybe that's the way to do it is telling the fighter through text or through like voice or whatever is that you're doing this wrong, this wrong, and then AI can read that and be like, hey, and adjust to what you said instead of like text lines.
 
-### How it could work (idea, not built)
+### How it could work (corner talk BUILT Oct 2026: notes + text/voice + Claude, round-plan buttons removed; bond and in-round talk not built)
 - **Talk to your fighter.** In the corner (and later during the round), the coach types or speaks in his own words. Voice works through the phone keyboard's mic button. The published page asks Claude through the artifact `sample` capability (available on Ed's account; the viewer's own usage pays; the first call asks consent; `modelTier: 'quick'`). Claude gets:
   - the coach's words;
   - the fight facts (round stats, what keeps happening, the cards, cuts);
