@@ -10,6 +10,7 @@ Claude Code can NOT publish there. When a version is ready, Ed uploads `index.ht
 **Talk to your fighter needs the `sample` capability:** the next live publish must declare db + user + sample (`{db:{},user:{},sample:{}}`). Without sample the corner talk still works on a simple keyword matcher.
 Published-page rules: external scripts only from cdnjs/jsdelivr/tailwind/jquery CDNs, fonts from Google Fonts, no other network calls. Keep it one file.
 Private preview for Ed (Claude Code can publish here): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo (sample + db + user).
+Fight lab for Ed (straight into a fight, no menus): https://claude.ai/artifact/QhC1gMrw1pSabzuLzMw7Ev. Rebuild with `node tools/lab.js`, publish `lab.html` (no capabilities needed). Republish after every combat change.
 
 ## Working rules
 - Small, chunked edits. Commit after each working step (git is the safety net).
