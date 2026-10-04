@@ -709,7 +709,7 @@ class Fight {
     if (F.ropeT > 0) F.ropeT -= dt;
     // a pull off a punch: the feet keep going back for a beat instead of footwork taking them straight back
     if (F.pullT > 0) { vx = F.pullX * 55; vz = F.pullZ * 55; }
-    F.wmv = Math.hypot(vx, vz); this.feet(F, vx, vz, dt, 4 + 24 * (F.st.ret || .7) * (F.legs || 1));
+    this.feet(F, vx, vz, dt, 4 + 24 * (F.st.ret || .7) * (F.legs || 1));
     F.state = Math.hypot(vx, vz) > 3 ? 'move' : 'idle';
   }
   // feet accelerate toward the wanted velocity instead of snapping to it

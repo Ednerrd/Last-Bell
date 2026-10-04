@@ -18,7 +18,7 @@ Full detail: `research/combat_research.md` (Fight Night, Undisputed, Thrill of t
 2. ✅ **R: always smooth the base pose.** Add hit, wind-up and stun motion on top after the smoothing.
 3. ✅ **R: punch easing.** Accelerate into contact with a small overshoot, retract over 1.5–2x the extension time. Glove smear on the fastest frames.
 4. ✅ **R: frame-rate safety (120Hz S25).** Camera, zoom and shake on dt; the KO erupt mode on the accumulator; blended replay.
-5. **E: footwork acceleration.** Ease velocity toward its target, lock the rope-escape side for ~.4 s, smooth the cut-off tracking, sine-shaped punch step, a pull that really moves.
+5. ✅ **E: footwork acceleration.** Ease velocity toward its target, lock the rope-escape side for ~.4 s, smooth the cut-off tracking, sine-shaped punch step, a pull that really moves.
 6. **E: no pass-through.** Keep the left-right order; animate the turn.
 7. **R: uppercut curve fix, close-range spacing.**
 8. **E: rhythm.** Burst-and-reset pacing (real activity ratios), feel-out moments, shorter wind-up on chained punches and counters.

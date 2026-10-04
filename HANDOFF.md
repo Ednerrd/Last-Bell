@@ -19,7 +19,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 - **Engine changes:**
   - Run sims before and after (`node tests/audit.js 500` plus style/guard checks per CLAUDE.md targets).
   - Never mix balance and visual changes in one commit.
-  - For render-only changes, `node tests/same.js 200` must stay at hash **28b0494a**.
+  - For render-only changes, `node tests/same.js 200` must stay at hash **f00751e1** (changed by step 5).
 - **Don't** build the bond/trust system (future).
 
 ## Where we are
