@@ -221,8 +221,13 @@ const PUNCH = {
   hook:     { name: 'hook',         dur: .46, dmg: 4.2, cost: 2.6, min: 22, max: 60, kind: 'hook',     zone: 'head', arm: 'lead', cat: 'power' },
   uppercut: { name: 'uppercut',     dur: .48, dmg: 4.6, cost: 2.8, min: 18, max: 54, kind: 'upper',    zone: 'head', arm: 'rear', cat: 'power' },
   bodyJab:  { name: 'jab downstairs', dur: .32, dmg: 1.4, cost: 1.0, min: 34, max: 76, kind: 'straight', zone: 'body', arm: 'lead', cat: 'body' },
-  bodyHook: { name: 'body hook',    dur: .48, dmg: 3.9, cost: 2.6, min: 20, max: 58, kind: 'hook',     zone: 'body', arm: 'lead', cat: 'body' }
+  bodyHook: { name: 'body hook',    dur: .48, dmg: 3.9, cost: 2.6, min: 20, max: 58, kind: 'hook',     zone: 'body', arm: 'lead', cat: 'body' },
+  rhook:    { name: 'right hook',   dur: .50, dmg: 4.4, cost: 2.8, min: 20, max: 56, kind: 'hook',     zone: 'head', arm: 'rear', cat: 'power' },
+  lupper:   { name: 'lead uppercut', dur: .42, dmg: 3.9, cost: 2.4, min: 16, max: 50, kind: 'upper',   zone: 'head', arm: 'lead', cat: 'power' },
+  bodyCross: { name: 'right hand to the body', dur: .42, dmg: 3.3, cost: 2.2, min: 34, max: 72, kind: 'straight', zone: 'body', arm: 'rear', cat: 'body' }
 };
+// trainers' numbers: 1 jab, 2 right hand, 3 lead hook, 4 rear hook, 5 lead uppercut, 6 rear uppercut; b = to the body
+const PNUM = { 1: 'jab', 2: 'cross', 3: 'hook', 4: 'rhook', 5: 'lupper', 6: 'uppercut', '1b': 'bodyJab', '2b': 'bodyCross', '3b': 'bodyHook' };
 // open: waits for openings (punches less until the other guy gives him something, then fires fast)
 // legs: footwork going back and sideways. stick: jabs the man walking in and stops his feet
 // hit: weight behind the power shots. ramp: turns the volume up when the fight calls for it
@@ -284,11 +289,11 @@ const GUARDS = {
 // what a smart opponent throws into each guard
 const GUARD_HOLES = {
   standard: {},
-  high: { bodyJab: 1.5, bodyHook: 1.7, uppercut: 1.35, jab: .8, cross: .85, hook: .9 },
-  peekaboo: { jab: 1.3, bodyJab: 1.25, bodyHook: 1.15, hook: .85, uppercut: .85 },
-  philly: { cross: 1.55, hook: .8, jab: .7, bodyJab: .75, bodyHook: 1.1, uppercut: 1.15 },
-  cross: { bodyHook: 1.7, bodyJab: 1.45, hook: 1.15, cross: .75, jab: .8, uppercut: .6 },
-  handslow: { jab: 1.3, cross: 1.2, hook: 1.1, bodyJab: .9 }
+  high: { bodyJab: 1.5, bodyHook: 1.7, uppercut: 1.35, jab: .8, cross: .85, hook: .9, rhook: .9, lupper: 1.35, bodyCross: 1.5 },
+  peekaboo: { jab: 1.3, bodyJab: 1.25, bodyHook: 1.15, hook: .85, uppercut: .85, rhook: .85, lupper: .85, bodyCross: 1.2 },
+  philly: { cross: 1.55, hook: .8, jab: .7, bodyJab: .75, bodyHook: 1.1, uppercut: 1.15, rhook: 1.2, lupper: .9, bodyCross: 1.2 },
+  cross: { bodyHook: 1.7, bodyJab: 1.45, hook: 1.15, cross: .75, jab: .8, uppercut: .6, rhook: 1.15, lupper: .6, bodyCross: 1.6 },
+  handslow: { jab: 1.3, cross: 1.2, hook: 1.1, bodyJab: .9, rhook: 1.15, lupper: 1.1 }
 };
 const GUARD_FEINT = { philly: 1.7, handslow: 1.6, peekaboo: 1.2 }; // counter-happy guards bite on feints
 const STYLE_GUARDS = {
@@ -327,36 +332,49 @@ function ringIQ(sh) {
 }
 
 /* ---------- combo library. r: working range (L long, M mid, I inside). w: how much each style likes it ---------- */
+// real combinations, written in trainers' numbers (PNUM). '|' = a beat before the next punch (touch jab, then the 2).
+// Flow: hands alternate, levels change, every punch sets up the next. L/M/I = long, mid, inside range
 const COMBOS = [
-  ['jab', 'L', { outboxer: 3, counter: 2, boxerpuncher: 2, slugger: 1, swarmer: .6 }],
-  ['jab,jab', 'L', { outboxer: 2.4, boxerpuncher: 1.3, counter: 1, slugger: .5, swarmer: .5 }],
-  ['jab,cross', 'L', { outboxer: 2.2, boxerpuncher: 2.2, counter: 1.6, slugger: 1.4, swarmer: .9 }],
-  ['jab,jab,cross', 'L', { outboxer: 1.4, boxerpuncher: 1.2, counter: .7, slugger: .6, swarmer: .5 }],
-  ['cross', 'L', { counter: 1.6, slugger: 1.4, boxerpuncher: .9, outboxer: .8, swarmer: .4 }],
-  ['bodyJab', 'L', { outboxer: .9, counter: 1, boxerpuncher: .7, slugger: .4, swarmer: .5 }],
-  ['bodyJab,jab', 'L', { outboxer: 1, boxerpuncher: .8, counter: .7, slugger: .3, swarmer: .4 }],
-  ['jab,bodyJab', 'L', { outboxer: .7, boxerpuncher: .6, counter: .5, swarmer: .4, slugger: .3 }],
-  ['bodyJab,cross', 'L', { boxerpuncher: 1, outboxer: .8, counter: .8, slugger: .7, swarmer: .4 }],
-  ['jab,cross,hook', 'M', { boxerpuncher: 1.6, outboxer: .8, slugger: 1, swarmer: 1.2, counter: .7 }],
-  ['jab,jab,cross,hook', 'M', { boxerpuncher: .8, outboxer: .5, swarmer: .6, slugger: .4, counter: .3 }],
-  ['jab,hook', 'M', { boxerpuncher: .8, slugger: .8, swarmer: .7, counter: .6, outboxer: .5 }],
-  ['cross,hook', 'M', { slugger: 2, boxerpuncher: 1.2, swarmer: 1, counter: 1, outboxer: .5 }],
-  ['cross,hook,cross', 'M', { slugger: 1, boxerpuncher: .9, swarmer: .8, counter: .4, outboxer: .3 }],
-  ['jab,cross,bodyHook', 'M', { boxerpuncher: 1, swarmer: 1, slugger: .8, outboxer: .4, counter: .4 }],
-  ['jab,bodyHook,hook', 'M', { swarmer: 1.4, boxerpuncher: .9, slugger: .8, outboxer: .3, counter: .3 }],
-  ['cross,bodyHook', 'M', { slugger: .9, boxerpuncher: .8, swarmer: .8, counter: .5 }],
-  ['hook', 'I', { slugger: 2, swarmer: 1.2, counter: 1.2, boxerpuncher: .8, outboxer: .3 }],
-  ['bodyHook,hook', 'I', { swarmer: 2, slugger: 1.2, boxerpuncher: .9, counter: .4, outboxer: .2 }],
-  ['hook,hook', 'I', { swarmer: 1.4, slugger: .9, boxerpuncher: .5 }],
-  ['hook,uppercut', 'I', { slugger: 1, swarmer: 1, boxerpuncher: .9, counter: .5 }],
-  ['uppercut,hook', 'I', { slugger: 1.4, swarmer: 1.3, boxerpuncher: .8, counter: .6 }],
-  ['bodyHook,bodyHook,uppercut', 'I', { swarmer: 1, slugger: .5, boxerpuncher: .3 }],
-  ['uppercut,cross', 'I', { boxerpuncher: .7, slugger: .7, counter: .5, swarmer: .6 }],
-  ['hook,cross,hook', 'I', { swarmer: .9, slugger: .8, boxerpuncher: .6 }],
-  ['bodyHook,uppercut,hook', 'I', { swarmer: .9, slugger: .6, boxerpuncher: .4 }],
-  ['uppercut', 'I', { counter: .8, slugger: .6, swarmer: .5, boxerpuncher: .4 }],
-  ['bodyHook', 'I', { swarmer: .9, slugger: .7, boxerpuncher: .6, counter: .5, outboxer: .3 }]
-].map(([s, r, w]) => { const seq = s.split(','); return { key: s, seq, r, w, len: seq.length, body: seq.filter(p => PUNCH[p].zone === 'body').length, pow: seq.filter(p => PUNCH[p].cat === 'power').length }; });
+  ['1', 'L', { outboxer: 3.5, counter: 2.3, boxerpuncher: 2.3, slugger: 1.2, swarmer: .7 }],
+  ['1-1', 'L', { outboxer: 2.4, boxerpuncher: 1.3, counter: 1, slugger: .5, swarmer: .5 }],
+  ['1-2', 'L', { outboxer: 2.2, boxerpuncher: 2.4, counter: 1.6, slugger: 1.4, swarmer: 1 }],
+  ['1|2', 'L', { outboxer: .8, boxerpuncher: .7, counter: .8, slugger: .5, swarmer: .2 }],
+  ['1-1-2', 'L', { outboxer: 1.4, boxerpuncher: 1.2, counter: .7, slugger: .6, swarmer: .5 }],
+  ['2', 'L', { counter: 1.6, slugger: 1.4, boxerpuncher: .9, outboxer: .8, swarmer: .4 }],
+  ['1b', 'L', { outboxer: .9, counter: 1, boxerpuncher: .7, slugger: .4, swarmer: .5 }],
+  ['1b-1', 'L', { outboxer: 1, boxerpuncher: .8, counter: .7, slugger: .3, swarmer: .4 }],
+  ['1-1b', 'L', { outboxer: .7, boxerpuncher: .6, counter: .5, swarmer: .4, slugger: .3 }],
+  ['1b-2', 'L', { boxerpuncher: .8, outboxer: .7, counter: .7, slugger: .6, swarmer: .3 }],
+  ['1-2b', 'L', { boxerpuncher: .7, outboxer: .5, counter: .5, slugger: .6, swarmer: .2 }],
+  ['1-2-3', 'M', { boxerpuncher: 1.6, outboxer: .8, slugger: 1, swarmer: 1.2, counter: .7 }],
+  ['1-2-3-2', 'M', { boxerpuncher: 1, swarmer: .4, slugger: .6, outboxer: .4, counter: .4 }],
+  ['1-1-2-3', 'M', { boxerpuncher: .5, outboxer: .4, swarmer: .4, slugger: .2, counter: .2 }],
+  ['1-3', 'M', { boxerpuncher: .8, slugger: .8, swarmer: .7, counter: .6, outboxer: .5 }],
+  ['2-3', 'M', { slugger: 2, boxerpuncher: 1.2, swarmer: 1, counter: 1, outboxer: .5 }],
+  ['2-3-2', 'M', { slugger: 1, boxerpuncher: .9, swarmer: .8, counter: .4, outboxer: .3 }],
+  ['3-2', 'M', { slugger: .8, boxerpuncher: .7, swarmer: .3, counter: .6, outboxer: .3 }],
+  ['1-2-3b', 'M', { boxerpuncher: 1, swarmer: 1, slugger: .8, outboxer: .4, counter: .4 }],
+  ['1-3b-3', 'M', { swarmer: 1.4, boxerpuncher: .9, slugger: .8, outboxer: .3, counter: .3 }],
+  ['2-3b', 'M', { slugger: .9, boxerpuncher: .8, swarmer: .8, counter: .5 }],
+  ['1-2b-3', 'M', { boxerpuncher: .7, swarmer: .3, slugger: .5, counter: .4, outboxer: .3 }],
+  ['2b-3', 'M', { swarmer: .3, slugger: .6, boxerpuncher: .5, counter: .3 }],
+  ['1-6-3-2', 'M', { boxerpuncher: .45, swarmer: .2, slugger: .3, counter: .2 }],
+  ['3', 'I', { slugger: 2, swarmer: 1.2, counter: 1.2, boxerpuncher: .8, outboxer: .3 }],
+  ['3b-3', 'I', { swarmer: 2, slugger: 1.2, boxerpuncher: .9, counter: .4, outboxer: .2 }],
+  ['3b-2', 'I', { swarmer: .25, slugger: .5, boxerpuncher: .5, counter: .3 }],
+  ['3-3', 'I', { swarmer: 1.4, slugger: .9, boxerpuncher: .5 }],
+  ['3-6', 'I', { slugger: 1, swarmer: 1, boxerpuncher: .9, counter: .5 }],
+  ['6-3', 'I', { slugger: 1.4, swarmer: 1.3, boxerpuncher: .8, counter: .6 }],
+  ['5-2', 'I', { boxerpuncher: .7, counter: .6, swarmer: .3, slugger: .5 }],
+  ['3-4', 'I', { swarmer: .35, slugger: .7, boxerpuncher: .3 }],
+  ['3b-3b-6', 'I', { swarmer: 1, slugger: .5, boxerpuncher: .3 }],
+  ['6-2', 'I', { boxerpuncher: .7, slugger: .7, counter: .5, swarmer: .6 }],
+  ['3-2-3', 'I', { swarmer: .9, slugger: .8, boxerpuncher: .6 }],
+  ['3b-6-3', 'I', { swarmer: .9, slugger: .6, boxerpuncher: .4 }],
+  ['6', 'I', { counter: .8, slugger: .6, swarmer: .5, boxerpuncher: .4 }],
+  ['4', 'I', { slugger: .5, swarmer: .2 }],
+  ['3b', 'I', { swarmer: .9, slugger: .7, boxerpuncher: .6, counter: .5, outboxer: .3 }]
+].map(([s, r, w]) => { const seq = s.split(/[-|]/).map(n => PNUM[n]); const q = []; s.split('-').forEach(x => x.split('|').forEach((n, i) => { if (i) q.push('~'); q.push(PNUM[n]); })); return { key: s, seq, q, r, w, len: seq.length, body: seq.filter(p => PUNCH[p].zone === 'body').length, pow: seq.filter(p => PUNCH[p].cat === 'power').length }; });
 const RANGE_C = { L: [70, 14], M: [56, 12], I: [41, 12] };
 // special styles borrow a base style's combo menu and lean it: longer combos, more body, more jabs, more power
 const STYLE_COMBO = {
@@ -368,7 +386,9 @@ for (const k in STYLE_COMBO) { const m = STYLE_COMBO[k];
   for (const c of COMBOS) { const b = c.w[m.from] || 0; if (!b) continue; const j = c.seq.filter(p => p === 'jab').length;
     c.w[k] = b * Math.pow(m.len || 1, c.len - 1) * Math.pow(m.body || 1, c.body) * Math.pow(m.pow || 1, c.pow) * Math.pow(m.jab || 1, j); } }
 const kindOf = p => { const P = PUNCH[p]; return P.zone === 'body' ? 'body' : P.kind; }; // straight | hook | upper | body
-const LEVEL_SWAP = { jab: 'bodyJab', cross: 'bodyJab', hook: 'bodyHook', uppercut: 'bodyHook', bodyJab: 'jab', bodyHook: 'hook' };
+const LEVEL_SWAP = { jab: 'bodyJab', cross: 'bodyJab', hook: 'bodyHook', rhook: 'bodyCross', uppercut: 'bodyHook', lupper: 'bodyHook', bodyJab: 'jab', bodyCross: 'cross', bodyHook: 'hook' };
+// southpaw vs orthodox (open stance): the jabs tangle, the rear straight goes down the middle, the lead hook comes from outside
+const OPEN_W = { jab: .8, cross: 1.3, bodyCross: 1.15, hook: 1.15, lupper: .9 };
 
 const STRATS = {
   auto:     { label: "Corner's call", aggr: 1,    range: 0,   body: 1,   power: 1,   jab: 1,   def: 1,   clinch: 1,   counter: 1,   circ: 1 },
@@ -716,9 +736,10 @@ class Fight {
         F.vx = a.ux * sp_; F.vz = a.uz * sp_;
         if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.queue.length) this.nextInCombo(F); }
         else if (p >= 1) { F.state = 'idle'; F.act = null; F.vx = F.vz = 0; if (F.queue.length && F.stam > 2) this.nextInCombo(F); else this.comboDone(F); }
-        else if (a.done && p >= 0.82 && F.queue.length && F.stam > 2) { F.act = null; F.state = 'idle'; this.nextInCombo(F); }
+        else if (a.done && F.queue.length && F.stam > 2 && F.queue[0] !== '~' && p >= .82) { F.act = null; F.state = 'idle'; this.nextInCombo(F); }
       }
     }
+    if (F.beatT > 0 && (F.beatT -= dt) <= 0) { F.beatT = 0; if (F.state === 'idle' || F.state === 'move') { if (F.queue.length && F.stam > 2) { this.nextInCombo(F); if (F.state === 'punch') return; } else this.comboDone(F); } }
     if (F.state === 'idle' || F.state === 'move') {
       if (F.stickT > 0) F.stickT -= dt;
       else if (this.stickJab(F, dt)) return;
@@ -897,6 +918,7 @@ class Fight {
   nextInCombo(F) {
     const O = F.op, k = iqK(F), last = F.lastRes, d = dist(F, O);
     let nx = F.queue.shift();
+    if (nx === '~') { F.beatT = .1 + R() * .12; F.decT = Math.max(F.decT, F.beatT + .3); return; } // a beat: touch, then the real one
     // walked into a counter, or he is sitting on one: bail out
     if (last === 'countered' || (last === 'evaded' && O.counterWin > 0)) {
       if (R() < .3 + .5 * k) { F.queue = []; F.decT = .1 + R() * .15; this.comboDone(F); return; }
@@ -926,7 +948,7 @@ class Fight {
       // the read: guard holes, what he keeps avoiding, what keeps landing, the scorecards
       let read = 1;
       for (const p of c.seq) {
-        let f = holes[p] || 1;
+        let f = (holes[p] || 1) * (F.stance !== O.stance ? OPEN_W[p] || 1 : 1);
         const kd = kindOf(p), th = Rd.th[kd];
         if (th >= 3) f *= clamp(1 + (.45 - Rd.av[kd] / th) * 1.2, .6, 1.4);
         const tp = Rd.thr[p] || 0; if (tp >= 4) f *= clamp(.8 + (Rd.land[p] || 0) / tp * 1.1, .8, 1.5);
@@ -941,7 +963,7 @@ class Fight {
       return w;
     });
     F.lastCombo = c.key;
-    return c.seq.slice();
+    return c.q.slice();
   }
   startPunch(F, type) {
     const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
@@ -997,7 +1019,7 @@ class Fight {
     const k = iqK(D);
     if (roll) return d < 60 && R() < .35 ? ['cross', 'hook'] : ['cross'];
     if (d < 54) { const c = pick([['hook'], ['uppercut'], ['cross'], ['hook', 'cross'], ['uppercut', 'hook'], ['cross', 'hook']]); return R() < .4 + .4 * k ? c : c.slice(0, 1); }
-    return R() < .3 * k ? ['cross', 'hook'] : ['cross'];
+    return R() < .3 * k ? ['cross', 'hook'] : ['cross']; // slip, 2-3: the smart ones follow the counter up
   }
   resolve(A, D, a) {
     const P = PUNCH[a.type]; const d = dist(A, D);
