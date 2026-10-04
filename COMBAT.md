@@ -14,10 +14,10 @@ Full detail: `research/combat_research.md` (Fight Night, Undisputed, Thrill of t
 - The rhythm is a metronome: an exchange every ~2.5 s, never a reset or feel-out, and fighters almost never pause.
 
 ## Plan (one commit each; R = render only, no sims needed; E = engine, `same.js` + audit before/after)
-1. **R: combo hand-off blend.** When a new punch starts, fade the old pose's offset (hips, head, gloves, lunge) out over ~40 ms. Same for cancelled punches.
-2. **R: always smooth the base pose.** Add hit, wind-up and stun motion on top after the smoothing.
-3. **R: punch easing.** Accelerate into contact with a small overshoot, retract over 1.5–2x the extension time. Glove smear on the fastest frames.
-4. **R: frame-rate safety (120Hz S25).** Camera, zoom and shake on dt; the KO erupt mode on the accumulator; blended replay.
+1. ✅ **R: combo hand-off blend.** When a new punch starts, fade the old pose's offset (hips, head, gloves, lunge) out over ~40 ms. Same for cancelled punches.
+2. ✅ **R: always smooth the base pose.** Add hit, wind-up and stun motion on top after the smoothing.
+3. ✅ **R: punch easing.** Accelerate into contact with a small overshoot, retract over 1.5–2x the extension time. Glove smear on the fastest frames.
+4. ✅ **R: frame-rate safety (120Hz S25).** Camera, zoom and shake on dt; the KO erupt mode on the accumulator; blended replay.
 5. **E: footwork acceleration.** Ease velocity toward its target, lock the rope-escape side for ~.4 s, smooth the cut-off tracking, sine-shaped punch step, a pull that really moves.
 6. **E: no pass-through.** Keep the left-right order; animate the turn.
 7. **R: uppercut curve fix, close-range spacing.**
@@ -25,3 +25,5 @@ Full detail: `research/combat_research.md` (Fight Night, Undisputed, Thrill of t
 9. **E: contact quality.** Clean / glancing / smothered / blocked, each with its own look and hit-stop (2–3 frames on a jab, 4–6 on power, 8–10 on a knockdown, ~0 when blocked).
 10. **E: smarter AI.** Pick targets around the guard (high guard opens the body, low hands open the head), a fading memory of what hurt him, styles that differ in rhythm and range as well as numbers.
 11. **R + E: footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet (bouncy when fresh, flat when tired).
+
+Fighter DNA cards (CompuBox + breakdowns, search summaries only): `research/fighters_a.md` (Stevenson, Lomachenko, Benavidez, Inoue, Usyk), `research/fighters_b.md` (Crawford, Bivol, Canelo, Nakatani, Bam, Mayweather, Tyson, Haney, Ennis). Feeds step 10 and the gym's fighter DNA.
