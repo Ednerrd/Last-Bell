@@ -2220,6 +2220,7 @@ const Render = (() => {
       if (gd === 'handslow' && P.cat === 'jab') lean -= .05 * ext;     // flicks it from the hip, head stays back
       if (gd === 'philly' && v.ctr && P.arm === 'rear') { lean += .08 * ext; twist *= 1.15; } // comes off the roll with everything
     }
+    const b0 = [lean, hipY, hipX];   // hits, stuns and buckling knees ride on top of the smoothed base pose (below)
     if (v.hitT > 0) {
       const k = v.hitT * v.hitT * (v.hitPow || .5);
       if (v.hitKind === 'block') { lean -= .12 * k; hipX -= 3 * k; }
@@ -2233,6 +2234,7 @@ const Render = (() => {
     if (v.state === 'stun') { lean += Math.sin(t * 8) * .18 - .1; hipY += 7; snap += Math.sin(t * 5) * .25; }
     if (v.hurt && !still) hipY += 3 + Math.max(0, Math.sin(t * 4.3)) * 2.5;       // legs going: knees dip and wobble
     if (v.hitT > .3 && v.hitKind !== 'block' && (v.hitPow || 0) > .75) hipY += 6 * (v.hitT - .3) * (v.hitPow || 0); // big shot: knees buckle
+    const hd = [lean - b0[0], hipY - b0[1], hipX - b0[2]]; lean = b0[0]; hipY = b0[1]; hipX = b0[2];
     if (v.state === 'clinch') { lean += .5 + Math.sin(ph * 2.3) * .05; hipY += 5; snap += .35; hipX += 2; } // leaning on him, head tucked beside his
     if (v.state === 'slump') { hipY += 14; lean = .35; snap = .55; }
     if (v.def === 'roll') snap += .2 * ease(v.defP); // chin tucks behind the shoulder
@@ -2246,10 +2248,11 @@ const Render = (() => {
     // blend between poses so blocks, slips and resets flow instead of snapping. Hits and punches stay crisp
     if (v._sm) {
       const sm = v._sm, dt = v._dt || 1 / 60;
-      const imm = sm.lean == null || still || v.hitT > .15 || v.state === 'stun' || (v.aT && !v.ctr);
+      const imm = sm.lean == null || still || (v.aT && !v.ctr);
       if (!imm) { const r = 1 - Math.exp(-dt * (v.def ? 30 : v.aT ? 14 : 16)); lean = sm.lean + (lean - sm.lean) * r; hipY = sm.hipY + (hipY - sm.hipY) * r; hipX = sm.hipX + (hipX - sm.hipX) * r; }
       sm.lean = lean; sm.hipY = hipY; sm.hipX = hipX;
     }
+    if (v.state !== 'slump' && !v.walk && !(sit > 0)) { lean += hd[0]; hipY += hd[1]; hipX += hd[2]; }
     const hip = { x: hipX, y: hipY };
     const neck = { x: hip.x + Math.sin(lean) * S.torso, y: hip.y - Math.cos(lean) * S.torso };
     const ha = lean * .6 + snap + .14 * twist;                     // chin tucks down behind the punching shoulder
