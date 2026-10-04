@@ -1516,7 +1516,7 @@ function ensureLegend(roster, divIdx) {
   if (i > 4) { roster[i].points = roster[4].points + 1; roster.sort((a, b) => b.points - a.points); }
   return roster;
 }
-function genRoster(divIdx) {
+function genRoster(divIdx, gym) {
   const r = [];
   for (let i = 0; i < 40; i++) {
     const t = i / 39;
@@ -1524,7 +1524,7 @@ function genRoster(divIdx) {
     r.push(genFighter(divIdx, rating, lerp(430, 40, Math.pow(t, .9)) + rnd(-8, 8)));
   }
   r.sort((a, b) => b.points - a.points);
-  return ensureLegend(r, divIdx);
+  return gym ? ensureStars(r, divIdx) : ensureLegend(r, divIdx);
 }
 function genStars(skipDiv) {
   const out = [];
@@ -1557,7 +1557,8 @@ function age(save) { return save.player.startAge + save.week / 52; }
 function rankList(save) {
   const P = save.player;
   const list = save.world.roster.map(f => ({ id: f.id, name: f.name, points: f.points, rating: f.rating, record: f.record, f }));
-  list.push({ id: 'P', name: P.name, points: P.points, rating: ovr(P.stats), record: P.record, isPlayer: true });
+  // a gym can have more than one man in the division: stablemates are ranked too (they never fight each other)
+  (save.G ? save.G.fighters.filter(m => m.div === P.div && !m.retired) : [P]).forEach(m => list.push({ id: m.id, name: m.name, points: m.points, rating: ovr(m.stats), record: m.record, isPlayer: m === P, gym: m !== P }));
   list.sort((a, b) => b.points - a.points);
   return list;
 }
@@ -1566,6 +1567,7 @@ function beltsOf(save, id) { return ORGS.filter(o => save.world.belts[o.k] === i
 function findFighter(save, id) { return save.world.roster.find(f => f.id === id); }
 
 function p4p(save) {
+  if (save.G) return gymP4P(save.G);
   const P = save.player; const out = [];
   save.world.stars.forEach(s => out.push({ name: s.name, div: DIVS[s.div].name, score: s.rating + s.belts * 2.5 + (s.unbeaten ? 3 : 0), belts: s.belts }));
   LEGENDS.forEach((L, d) => { if (d !== save.world.div) out.push({ name: L.name, div: DIVS[d].name, score: L.rating + 3, belts: 0 }); });
@@ -1609,7 +1611,7 @@ function genOffers(save) {
     });
     return offers;
   }
-  const list = rankList(save).filter(e => !e.isPlayer); const r = playerRank(save) - 1;
+  const list = rankList(save).filter(e => !e.isPlayer && !e.gym); const r = playerRank(save) - 1;
   const take = (lo, hi) => { const c = list.slice(clamp(lo, 0, list.length - 1), clamp(hi, 1, list.length)); return c.length ? pick(c).f : null; };
   const used = new Set();
   const add = (f, title, lbl) => { if (f && !used.has(f.id)) { used.add(f.id); offers.push(mk(f, title, lbl)); return true; } return false; };
@@ -1731,7 +1733,7 @@ function applyResult(save, offer, fight) {
   // belts
   if (isTitle) {
     if (win) {
-      offer.title.forEach(k => { if (!P.belts.includes(k)) { P.belts.push(k); out.notes.push('New ' + k + ' world champion.'); } else { P.titleDefenses++; } save.world.belts[k] = 'P'; });
+      offer.title.forEach(k => { if (!P.belts.includes(k)) { P.belts.push(k); out.notes.push('New ' + k + ' world champion.'); } else { P.titleDefenses++; } save.world.belts[k] = P.id; });
       P.titleDivs = Array.from(new Set([...(P.titleDivs || []), P.div]));
       if (P.titleDivs.length > 1) out.notes.push(['', '', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'][P.titleDivs.length] + '-division world champion.');
     } else if (loss) {
@@ -1769,6 +1771,7 @@ function applyResult(save, offer, fight) {
 }
 
 function worldSim(save, weeks) {
+  if (save.gymView) return; // a gym runs its divisions on its own weekly clock
   const W = save.world; const n = Math.max(1, Math.round(weeks / 2));
   for (let i = 0; i < n; i++) {
     const L = W.roster; if (L.length < 4) break;
@@ -1792,12 +1795,12 @@ function worldSim(save, weeks) {
     if (!f.legend && ((f.age > 37 && R() < .08 * weeks / 4) || f.rating < 54)) {
       const held = ORGS.filter(o => W.belts[o.k] === f.id);
       W.roster.splice(i, 1);
-      const nf = genFighter(save.player.div, ri(60, 74), rnd(30, 70), ri(20, 24)); W.roster.push(nf);
+      const nf = genFighter(W.div, ri(60, 74), rnd(30, 70), ri(20, 24)); W.roster.push(nf);
       held.forEach(o => { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; W.belts[o.k] = top.id; });
     }
   }
-  ensureLegend(W.roster, W.div);
-  W.stars.forEach(s => { s.rating = clamp(s.rating + rnd(-.4, .35) * weeks / 6, 78, 97); });
+  if (W.gym) ensureStars(W.roster, W.div); else ensureLegend(W.roster, W.div);
+  (W.stars || []).forEach(s => { s.rating = clamp(s.rating + rnd(-.4, .35) * weeks / 6, 78, 97); });
 }
 
 function playerSheet(save) {
@@ -1854,7 +1857,7 @@ function oppSheet(save, offer) {
 function playerIQ(save) { const P = save.player; return Math.round(ringIQ({ stats: P.stats, exp: P.record.w + P.record.l + P.record.d })); }
 // older saves: give everyone a guard that fits his style
 function migrateSave(s) {
-  if (!s) return s;
+  if (!s || s.mode === 'gym') return s;
   if (!s.player.guard) s.player.guard = rollGuard(s.player.style);
   if (!s.world.away) s.world.away = {};
   if (!s.player.baseStyle) s.player.baseStyle = !STYLES[s.player.style].special ? s.player.style : s.player.styleFrom && !STYLES[s.player.styleFrom].special ? s.player.styleFrom : 'boxerpuncher';
@@ -1874,7 +1877,7 @@ function changeDiv(save, to) {
   if (!divMoveOk(save, to)) return null;
   W.away = W.away || {};
   // he vacates: the belts go to the top man in the old division
-  const held = ORGS.filter(o => W.belts[o.k] === 'P');
+  const held = ORGS.filter(o => W.belts[o.k] === P.id);
   if (held.length) { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; held.forEach(o => { W.belts[o.k] = top.id; }); notes.push('Vacated the ' + held.map(o => o.k).join(', ') + ' ' + DIVS[from].name.toLowerCase() + (held.length > 1 ? ' belts.' : ' belt.')); }
   P.belts = [];
   W.away[from] = { roster: W.roster, belts: W.belts, week: save.week };
@@ -1896,6 +1899,175 @@ function changeDiv(save, to) {
 }
 function gearItem(kind, id) { return GEAR[kind].find(g => g.id === id) || GEAR[kind][0]; }
 
+
+/* ---------- the gym: you are the coach. A stable of fighters, one calendar, a week at a time ---------- */
+// the 2026 pound-for-pound top 10 (The Ring, June 2026), names changed a little. Each one sits near the top of his division
+const P4P_2026 = [
+  { name: 'Naoki Inouye', nick: 'The Monster', div: 2, style: 'boxerpuncher', guard: 'standard', stance: 'orthodox', rating: 95, age: 33, rec: [33, 0, 27] },
+  { name: 'Aleksandr Usykov', nick: 'The Cat', div: 8, style: 'feinter', guard: 'standard', stance: 'southpaw', rating: 94, age: 39, rec: [25, 0, 17] },
+  { name: 'Shakir Stephenson', nick: '', div: 3, style: 'counter', guard: 'philly', stance: 'southpaw', rating: 93, age: 29, rec: [25, 0, 11] },
+  { name: 'Jessie Rodrigues', nick: 'Bam', div: 1, style: 'boxerpuncher', guard: 'standard', stance: 'southpaw', rating: 93, age: 26, rec: [24, 0, 17] },
+  { name: 'Daniel Benavides', nick: 'The Mexican Monster', div: 7, style: 'swarmer', guard: 'high', stance: 'orthodox', rating: 92, age: 29, rec: [32, 0, 26] },
+  { name: 'Dmitri Bivolov', nick: '', div: 6, style: 'outboxer', guard: 'standard', stance: 'orthodox', rating: 92, age: 35, rec: [25, 1, 12] },
+  { name: 'Junta Nakatano', nick: 'Big Bang', div: 1, style: 'boxerpuncher', guard: 'standard', stance: 'southpaw', rating: 91, age: 28, rec: [32, 1, 24] },
+  { name: 'Devon Haynie', nick: 'The Dream', div: 4, style: 'jabgrab', guard: 'standard', stance: 'orthodox', rating: 91, age: 27, rec: [33, 0, 15] },
+  { name: 'Jaren Ennison', nick: 'Boots', div: 5, style: 'switch', guard: 'standard', stance: 'orthodox', rating: 92, age: 29, rec: [36, 0, 32] },
+  { name: 'Oscar Collado', nick: 'El Pupilo', div: 0, style: 'body', guard: 'standard', stance: 'southpaw', rating: 90, age: 29, rec: [15, 0, 12] }
+];
+function genStar(i) {
+  const S = P4P_2026[i], f = genFighter(S.div, S.rating, 410 + rnd(0, 30), S.age);
+  return Object.assign(f, { id: 'S' + i, name: S.name, nick: S.nick, style: S.style, guard: S.guard, stance: S.stance, legend: true, star: true, stats: genStats(S.rating, S.style), record: { w: S.rec[0], l: S.rec[1], d: 0, ko: S.rec[2] } });
+}
+function ensureStars(roster, divIdx) {
+  P4P_2026.forEach((S, i) => { if (S.div === divIdx && !roster.some(f => f.id === 'S' + i)) roster.push(genStar(i)); });
+  roster.sort((a, b) => b.points - a.points);
+  roster.forEach((f, i) => { if (f.star && i > 4) f.points = roster[4].points + 1; });
+  return roster.sort((a, b) => b.points - a.points);
+}
+// your gym's level: what the fighters train with, how many you can take on, what it costs to keep the lights on
+const GYM_LV = [
+  { cost: 0, cap: 3, upkeep: 0 }, { cost: 6000, cap: 3, upkeep: 80 }, { cost: 60000, cap: 4, upkeep: 700 }, { cost: 400000, cap: 5, upkeep: 4500 }
+];
+const GYM_CUT = .15; // the coach's share of a purse
+const GYM_REP = [[0, 'Nobody knows you yet'], [8, 'Known around town'], [20, 'The local fight gym'], [40, 'Regional name'], [65, 'National name'], [85, 'World famous']];
+const repLabel = r => GYM_REP.filter(x => r >= x[0]).pop()[1];
+const WALKIN = {
+  raw: { label: 'Raw beginner', fee: 0, note: 'Never had a pro fight. Shape him however you want.' },
+  journey: { label: 'Journeyman', fee: 500, note: 'Been around. Tough, limited, set in his ways.' },
+  vet: { label: 'Veteran', fee: 3000, rep: 15, note: 'Was a contender once. Knows everything, has a few years left.' },
+  pro: { label: 'Ranked pro', fee: 25000, rep: 35, note: 'A ranked fighter looking for a new trainer. He comes with habits and an ego.' }
+};
+function newGym(o) {
+  const G = { mode: 'gym', v: 1, savedAt: Date.now(), week: 0, nextId: 1, gym: { name: o.name, town: o.town, rep: 0, money: 3000, level: 0 }, worlds: {}, fighters: [], walkins: [], log: [] };
+  G.walkins = [genWalkin(G, 'raw'), genWalkin(G, 'raw'), genWalkin(G, 'journey')];
+  return G;
+}
+function worldFor(G, d) {
+  if (!G.worlds[d]) {
+    const roster = genRoster(d, true), belts = {};
+    ORGS.forEach((o, i) => { belts[o.k] = roster[i < 2 ? 0 : i - 1].id; });
+    G.worlds[d] = { div: d, roster, belts, gym: true };
+  }
+  return G.worlds[d];
+}
+// one fighter seen the way the career code expects a save (player, world, week, pending)
+function fv(G, P) {
+  return {
+    G, gymView: true, player: P, world: worldFor(G, P.div),
+    get week() { return G.week; }, set week(v) { P.busy = Math.max(P.busy || 0, v - G.week); },
+    get pending() { return P.booked; }, set pending(v) { P.booked = v; if (!v) P.fightWk = null; }
+  };
+}
+// the coach pays for everything: a fighter's money is the gym's money (not saved on him)
+function bindGym(G) {
+  G.fighters.forEach(P => { Object.defineProperty(P, 'money', { get: () => G.gym.money, set: v => { G.gym.money = v; }, enumerable: false, configurable: true }); P.gym = G.gym.level; });
+  return G;
+}
+function genWalkin(G, kind) {
+  const W = WALKIN[kind], div = ri(0, DIVS.length - 1);
+  const base = { kind, id: uid('w'), div, fee: W.fee, wk: G.week };
+  if (kind === 'raw') {
+    const stats = {}, pot = {}, top = 74 + G.gym.rep * .15;
+    for (const k of STATS) { stats[k] = ri(34, 46); pot[k] = Math.round(clamp(top + gauss() * 7, stats[k] + 15, 97)); }
+    return Object.assign(base, { name: pick(FIRST) + ' ' + pick(LAST), nick: '', style: pick(BASE_STYLES), guard: 'standard', stance: R() < .2 ? 'southpaw' : 'orthodox', stats, pot, age: ri(17, 21), record: { w: 0, l: 0, d: 0, ko: 0 }, points: 0, look: randLook(div), wear: 0 });
+  }
+  if (kind === 'pro') {
+    const Wd = worldFor(G, div), held = new Set(Object.values(Wd.belts));
+    const c = Wd.roster.slice(8, 22).filter(f => !f.legend && !held.has(f.id)); const f = c.length ? pick(c) : null;
+    if (f) return Object.assign(base, { from: f.id, name: f.name, nick: f.nick, style: f.style, guard: f.guard, stance: f.stance, stats: liveStats(f), age: Math.floor(f.age), record: Object.assign({}, f.record), points: f.points, look: f.look, wear: ri(5, 20) });
+    kind = 'vet'; base.kind = 'vet'; base.fee = WALKIN.vet.fee;
+  }
+  const rating = kind === 'vet' ? ri(66, 76) : ri(54, 64);
+  const f = genFighter(div, rating, kind === 'vet' ? rnd(30, 80) : rnd(8, 30), kind === 'vet' ? ri(32, 37) : ri(25, 33));
+  f.record = kind === 'vet' ? { w: ri(20, 32), l: ri(3, 8), d: ri(0, 2), ko: 0 } : { w: ri(6, 14), l: ri(4, 12), d: ri(0, 2), ko: 0 }; f.record.ko = Math.round(f.record.w * rnd(.3, .7));
+  return Object.assign(base, { name: f.name, nick: f.nick, style: f.style, guard: f.guard, stance: f.stance, stats: f.stats, age: f.age, record: f.record, points: Math.round(f.points), look: f.look, wear: kind === 'vet' ? ri(20, 40) : ri(8, 25) });
+}
+function rollWalkins(G) {
+  const r = G.gym.rep, out = [genWalkin(G, 'raw')];
+  const kinds = ['journey', 'raw']; if (r >= WALKIN.vet.rep) kinds.push('vet', 'vet'); if (r >= WALKIN.pro.rep) kinds.push('pro', 'pro');
+  while (out.length < 3) out.push(genWalkin(G, pick(kinds)));
+  return out;
+}
+const gymCap = G => GYM_LV[G.gym.level].cap;
+function signWalkin(G, w, pickd) {
+  if (G.fighters.filter(m => !m.retired).length >= gymCap(G) || G.gym.money < w.fee) return null;
+  const c = pickd || {};
+  if (w.from) { const Wd = worldFor(G, w.div), i = Wd.roster.findIndex(f => f.id === w.from); if (i >= 0) Wd.roster.splice(i, 1); }
+  const style = w.kind === 'raw' && c.style ? c.style : w.style;
+  const P = {
+    id: 'G' + G.nextId++, kind: w.kind, name: w.name, nick: w.nick || '', div: w.kind === 'raw' && c.div != null ? c.div : w.div, style, baseStyle: style,
+    guard: w.kind === 'raw' && c.guard ? c.guard : w.guard, stance: w.kind === 'raw' && c.stance ? c.stance : w.stance,
+    stats: Object.assign({}, w.stats), pot: w.pot ? Object.assign({}, w.pot) : Object.fromEntries(STATS.map(k => [k, Math.min(97, Math.round(w.stats[k] + (w.kind === 'pro' ? ri(1, 5) : ri(0, 3))))])),
+    look: w.look, startAge: w.age - G.week / 52, record: Object.assign({}, w.record), points: w.points, gym: G.gym.level, wear: w.wear,
+    injury: null, belts: [], history: [], earnings: 0, owned: ['t_black', 't_ox', 'g_red', 'g_black', 's_black', 's_white'],
+    retired: false, peakRank: null, titleDefenses: 0, campDone: false,
+    plan: { focus: ['technique', 'conditioning'], intensity: 'normal' }, booked: null, fightWk: null, busy: 0, joinWk: G.week
+  };
+  G.gym.money -= w.fee; G.fighters.push(P); G.walkins = G.walkins.filter(x => x !== w); bindGym(G);
+  return P;
+}
+// a week in the gym for one fighter: train on his plan, or heal, or rest
+function trainWeek(G, P, notes) {
+  if (P.injury) { P.injury.weeks--; P.wear = Math.max(0, P.wear - .3); if (P.injury.weeks <= 0) { P.injury = null; notes.push(P.name + ' is healed and back in the gym.'); } return; }
+  if (P.busy > 0) { P.busy--; P.wear = Math.max(0, P.wear - .4); return; }
+  const pl = P.plan || { focus: ['technique', 'conditioning'], intensity: 'normal' }, a = P.startAge + G.week / 52;
+  const decay = (0.08 + Math.max(0, a - 29) * 0.35) / 8;
+  if (pl.rest) { STATS.forEach(k => P.stats[k] = Math.max(20, P.stats[k] - decay * 1.6 * rnd(.4, 1.4))); P.wear = Math.max(0, P.wear - .5); return; }
+  const Gl = GYMS[G.gym.level], I = INTENSITY.find(i => i.k === pl.intensity) || INTENSITY[1];
+  // kids soak it up: a teenager learns twice as fast as a man in his prime
+  const ageGain = a < 20 ? 1.7 : a < 23 ? 1.4 : a < 26 ? 1.15 : a < 30 ? 1 : a < 33 ? .75 : a < 36 ? .45 : .2, focused = new Set();
+  pl.focus.forEach(fk => {
+    const F = FOCUS[fk]; if (!F) return;
+    F.stats.forEach(k => {
+      focused.add(k);
+      const room = Math.max(0, 1 - P.stats[k] / Math.max(P.stats[k] + 1, P.pot[k]));
+      let g = .75 * Gl.mult * I.mult * ageGain * Math.pow(room, .5) * rnd(.7, 1.3) * (F.small ? .55 : 1);
+      if (k === 'chin') g *= .35;
+      P.stats[k] = Math.min(P.pot[k], P.stats[k] + g);
+    });
+  });
+  STATS.forEach(k => { if (!focused.has(k)) P.stats[k] = Math.max(20, P.stats[k] - decay * rnd(.4, 1.4)); });
+  if (R() < .03 / 8 * I.inj * (pl.focus.includes('sparring') ? 1.6 : 1)) {
+    const inj = Object.assign({}, pick(INJURIES.filter(i => i.k !== 'conc'))); inj.weeks = Math.round(inj.weeks * .7); inj.source = 'gym'; P.injury = inj;
+    notes.push(P.name + ' got hurt in the gym: ' + inj.name.toLowerCase() + ' (' + inj.weeks + ' weeks).' + (P.booked ? ' His fight is off.' : ''));
+    if (P.booked) { P.booked = null; P.fightWk = null; }
+  }
+}
+const fightsDue = G => G.fighters.filter(P => P.booked && !P.retired && P.fightWk <= G.week);
+function gymWeek(G) {
+  if (fightsDue(G).length) return null;
+  const notes = []; G.week++;
+  G.fighters.forEach(P => { if (!P.retired) trainWeek(G, P, notes); });
+  const L = GYM_LV[G.gym.level], dues = 100 + Math.round(G.gym.rep * 20);
+  G.gym.money += dues - L.upkeep;
+  if (G.week % 2 === 0) Object.values(G.worlds).forEach(W => worldSim({ world: W, week: G.week, player: { div: W.div } }, 2));
+  if (G.week % 4 === 0) { G.walkins = rollWalkins(G); notes.push('New faces at the door. Check the walk-ins.'); }
+  fightsDue(G).forEach(P => notes.push('Fight week: ' + P.name + ' vs ' + P.booked.offer.opp.name + '.'));
+  G.log = [{ wk: G.week, notes }, ...G.log].slice(0, 8);
+  return notes;
+}
+const CAMP_WEEKS = { club: 4, regional: 6, tv: 8, main: 8, title: 10 };
+function bookFight(G, P, offer) {
+  let wk = G.week + (CAMP_WEEKS[offer.tier] || 6);
+  while (G.fighters.some(m => m !== P && m.fightWk === wk)) wk++; // one fight night a week
+  P.booked = { offer, campDone: true }; P.fightWk = wk;
+}
+// after a fight: the coach takes his cut, the gym's name grows with wins
+const REP_WIN = { club: 1, regional: 2, tv: 4, main: 6, title: 12 };
+function gymAfterFight(G, P, offer, fight, out) {
+  G.gym.money -= Math.round(offer.purse * (1 - GYM_CUT)); // applyResult paid the whole purse into the gym account
+  const w = fight.result.winner === 0, l = fight.result.winner === 1, r0 = G.gym.rep;
+  if (w) G.gym.rep = Math.min(100, G.gym.rep + (REP_WIN[offer.tier] || 1) * (fight.result.decision ? 1 : 1.5) + (offer.title.length ? 6 : 0));
+  else if (l) G.gym.rep = Math.max(0, G.gym.rep - .5);
+  out.notes.push('Your cut: ' + money(Math.round(offer.purse * GYM_CUT)) + '.' + (G.gym.rep > r0 + .9 ? ' People are talking about your gym.' : ''));
+  P.fightWk = null;
+}
+function gymP4P(G) {
+  const out = [];
+  P4P_2026.forEach((S, i) => { const W = G.worlds[S.div], f = W && W.roster.find(x => x.id === 'S' + i); if (W && !f) return; const b = f ? ORGS.filter(o => W.belts[o.k] === f.id).length : 1; out.push({ name: S.name, div: DIVS[S.div].name, score: (f ? f.rating : S.rating) + b * 2.5 + ((f ? f.record.l : S.rec[1]) === 0 ? 3 : 0), belts: b }); });
+  G.fighters.filter(P => !P.retired && P.record.w >= 10).forEach(P => { const sv = fv(G, P), r = playerRank(sv); out.push({ name: P.name, div: DIVS[P.div].name, score: ovr(P.stats) + P.belts.length * 2.5 + (P.record.l === 0 ? 3 : 0) - (r > 5 ? 3 : 0), belts: P.belts.length, isPlayer: true }); });
+  return out.sort((a, b) => b.score - a.score).slice(0, 10);
+}
 
 /* ===== LAST BELL : render ===== */
 const Render = (() => {
@@ -3355,7 +3527,7 @@ function hubBody() {
     const row = (e, i) => { const b = beltsOf(save, e.id); return `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}${e.f && e.f.legend ? ' <span class="lgd" title="Legend">★</span>' : ''}${b.length ? ' ' + beltChips(b) : ''}</span><span class="rc">${rec(e.record)}</span><span class="ov">${Math.round(e.rating)}</span></div>`; };
     let rows = list.slice(0, 15).map(row).join('');
     if (pr > 15) rows += `<div class="rk gap">…</div>` + row(list[pr - 1], pr - 1);
-    const champs = ORGS.map(o => { const id = save.world.belts[o.k]; const nm = id === 'P' ? save.player.name : (findFighter(save, id) || {}).name || 'Vacant'; return `<div class="champ"><span class="belt" style="--bc:${o.c}">${o.k}</span><span>${esc(nm)}</span></div>`; }).join('');
+    const champs = ORGS.map(o => { const id = save.world.belts[o.k]; const nm = id === save.player.id ? save.player.name : save.G && save.G.fighters.find(m => m.id === id) ? save.G.fighters.find(m => m.id === id).name : (findFighter(save, id) || {}).name || 'Vacant'; return `<div class="champ"><span class="belt" style="--bc:${o.c}">${o.k}</span><span>${esc(nm)}</span></div>`; }).join('');
     const beat = save.player.beatLegends || [];
     const lg = LEGENDS.map((L, d) => `<div class="rk ${beat.includes('L' + d) ? 'me' : ''}"><span class="n">${beat.includes('L' + d) ? '✓' : '★'}</span><span class="nm">${esc(L.name)}<small class="mute" style="display:block">${esc(STYLES[L.style].label)}, "${esc(L.nick)}"</small></span><span class="rc">${esc(DIVS[d].name)}</span></div>`).join('');
     const pp = p4p(save).map((e, i) => `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}</span><span class="rc">${esc(e.div)}</span></div>`).join('');
