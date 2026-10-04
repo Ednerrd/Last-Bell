@@ -106,6 +106,12 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .hist{display:grid}.hr{display:grid;grid-template-columns:2em 1fr auto;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}
 .hr .res{font-family:var(--disp);font-size:22px}.hr.W .res{color:var(--good)}.hr.L .res{color:var(--red)}.hr.D .res{color:var(--mute)}
 .hr small{color:var(--mute)}.hp{text-align:right;font-weight:600}
+/* gym */
+.gymhead{padding:16px}.gymhead h2{font-size:30px;text-transform:uppercase}
+.gf{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;padding:10px 12px;margin:8px 0;color:inherit}
+.gfi{display:flex;flex-direction:column;gap:2px;min-width:0}.gfi b{font-family:var(--disp);font-weight:400;font-size:20px}
+.gst{font-size:15px;color:var(--accent);font-weight:600}.gst.hot{color:var(--red)}
+.wk{padding:12px 14px;margin:8px 0}.wk .gtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.wk .gtop b{font-family:var(--disp);font-weight:400;font-size:20px}.wk p{margin:4px 0}.wk .of{margin-top:6px;padding-top:8px}
 /* offers / camp */
 .offer{padding:16px;margin:12px 0}.offer.title-fight{box-shadow:0 0 0 2px var(--accent)}
 .ol{color:var(--accent);font-weight:700;margin-bottom:8px}
@@ -1946,6 +1952,11 @@ function worldFor(G, d) {
   if (!G.worlds[d]) {
     const roster = genRoster(d, true), belts = {};
     ORGS.forEach((o, i) => { belts[o.k] = roster[i < 2 ? 0 : i - 1].id; });
+    // the pound-for-pound star is the man in his division: #1 with two belts (the best one holds them all)
+    const st = roster.filter(f => f.star).sort((x, y) => y.rating - x.rating);
+    st.forEach((f, i) => { f.points = roster[0].points + 12 - i * 6; });
+    if (st.length) { ORGS.forEach((o, i) => { if (i < 2 || (st.length === 1 && st[0].rating >= 94)) belts[o.k] = st[0].id; else if (i === 2 && st[1]) belts[o.k] = st[1].id; }); }
+    roster.sort((x, y) => y.points - x.points);
     G.worlds[d] = { div: d, roster, belts, gym: true };
   }
   return G.worlds[d];
@@ -3216,7 +3227,8 @@ const Store = {
   }
 };
 let slots = Store.load(); let cur = -1; let save = null;
-function persist() { if (cur < 0 || !save) return; save.savedAt = Date.now(); slots[cur] = save; Store.push(cur); }
+function persist() { const s = gymG || save; if (cur < 0 || !s) return; s.savedAt = Date.now(); slots[cur] = s; Store.push(cur); }
+const slotName = s => s.mode === 'gym' ? s.gym.name : s.player.name;
 
 /* ---------- backup codes: a whole career as text. Copy it out, paste it back on any device ---------- */
 const toB64 = u => { let t = ''; for (let i = 0; i < u.length; i += 0x8000) t += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(t); };
@@ -3335,9 +3347,16 @@ ACT.voice = (d, b) => { Comm.setVoice(!Comm.voice); b.classList.toggle('on', Com
 
 /* ---------- title ---------- */
 function titleScreen() {
-  cur = -1; save = null;
+  cur = -1; save = null; gymG = null;
   const cards = slots.map((s, i) => {
-    if (!s) return `<button class="slot empty" data-act="newSlot" data-i="${i}"><span class="sn">Slot ${i + 1}</span><span class="st">Start a new career</span></button>`;
+    if (!s) return `<button class="slot empty" data-act="newSlot" data-i="${i}"><span class="sn">Slot ${i + 1}</span><span class="st">Open a gym</span></button>`;
+    if (s.mode === 'gym') {
+      const act = s.fighters.filter(m => !m.retired), belts = act.reduce((a, m) => a.concat(m.belts), []);
+      return `<div class="slot"><button class="slot-main" data-act="loadSlot" data-i="${i}"><span class="sn">${esc(s.gym.name)}</span>
+        <span class="st">${esc(s.gym.town)}, ${yearWk(s.week).toLowerCase()}, ${act.length} fighter${act.length === 1 ? '' : 's'}</span>${belts.length ? `<span class="chips">${beltChips(belts)}</span>` : ''}</button>
+        <button class="x" data-act="backupSlot" data-i="${i}" aria-label="Backup slot ${i + 1}">Backup</button>
+        <button class="x" data-act="delSlot" data-i="${i}" aria-label="Delete slot ${i + 1}">Delete</button></div>`;
+    }
     const P = s.player;
     const status = P.retired ? 'Retired' : P.injury ? 'Injured' : `#${playerRank(s)} ${DIVS[P.div].name}`;
     return `<div class="slot"><button class="slot-main" data-act="loadSlot" data-i="${i}">
@@ -3348,23 +3367,27 @@ function titleScreen() {
       <button class="x" data-act="delSlot" data-i="${i}" aria-label="Delete slot ${i + 1}">Delete</button></div>`;
   }).join('');
   show(`<div class="title-wrap">
-    <div class="marquee"><div class="bulb"></div><h1>Last Bell</h1><p>An auto-boxing career. You build him, train him, pick his fights. Then you watch.</p></div>
+    <div class="marquee"><div class="bulb"></div><h1>Last Bell</h1><p>You are the coach. Open a gym, find fighters, build champions. Then you work the corner.</p></div>
     <div class="slots">${cards}</div>
     <div class="row center"><button class="btn ghost sm" data-act="restore">Restore from a backup code</button></div>
     <div class="row center">${soundBtns()}</div>
   </div>`, 'title');
 }
-ACT.newSlot = d => createScreen(+d.i);
-ACT.loadSlot = d => { cur = +d.i; save = migrateSave(slots[cur]); hub(); };
+ACT.newSlot = d => show(`<div class="screen"><div class="topbar"><button class="link" data-act="toTitle">Back</button><span class="tb-title">Slot ${+d.i + 1}</span><span></span></div>
+  <button class="btn big" data-act="newGym" data-i="${d.i}">Open a gym</button><p class="mute small">You are the coach. Sign fighters, train them week by week, work their corners.</p>
+  <button class="btn ghost" data-act="newCareer" data-i="${d.i}">One fighter's career (classic)</button><p class="mute small">Build one boxer and take him all the way.</p></div>`, 'create');
+ACT.newGym = d => gymCreate(+d.i);
+ACT.newCareer = d => createScreen(+d.i);
+ACT.loadSlot = d => { cur = +d.i; const s = slots[cur]; if (s.mode === 'gym') { gymG = bindGym(s); gymHub(); } else { save = migrateSave(s); hub(); } };
 ACT.delSlot = d => {
-  const i = +d.i; const m = modal(`<h3>Delete this career?</h3><p class="mute">${esc(slots[i].player.name)} will be gone for good.</p><div class="row"><button class="btn ghost" data-close>Keep it</button><button class="btn danger" data-del>Delete</button></div>`);
+  const i = +d.i; const m = modal(`<h3>Delete this career?</h3><p class="mute">${esc(slotName(slots[i]))} will be gone for good.</p><div class="row"><button class="btn ghost" data-close>Keep it</button><button class="btn danger" data-del>Delete</button></div>`);
   m.querySelector('[data-close]').onclick = closeModal;
   m.querySelector('[data-del]').onclick = () => { slots[i] = null; Store.push(i); closeModal(); titleScreen(); };
 };
 
 ACT.backupSlot = async d => {
   const i = +d.i, s = slots[i]; if (!s) return;
-  const m = modal(`<h3>Backup code</h3><p class="mute">${esc(s.player.name)}, ${rec(s.player.record)}. Copy this and keep it somewhere safe (notes app, text it to yourself). Paste it into "Restore from a backup code" to bring him back, on this phone or any other.</p>
+  const m = modal(`<h3>Backup code</h3><p class="mute">${esc(slotName(s))}${s.mode === 'gym' ? '' : ', ' + rec(s.player.record)}. Copy this and keep it somewhere safe (notes app, text it to yourself). Paste it into "Restore from a backup code" to bring him back, on this phone or any other.</p>
     <textarea class="code" readonly aria-label="Backup code">Making the code…</textarea><p class="mute tiny" data-msg></p>
     <div class="row"><button class="btn ghost" data-close>Done</button><button class="btn" data-copy disabled>Copy code</button></div>`);
   m.querySelector('[data-close]').onclick = closeModal;
@@ -3384,7 +3407,7 @@ ACT.restore = () => {
   const draw = () => {
     seg.innerHTML = slots.map((x, i) => `<button class="${i === pickI ? 'on' : ''}" data-i="${i}">Slot ${i + 1}${x ? '' : ' (empty)'}</button>`).join('');
     seg.querySelectorAll('button').forEach(b => b.onclick = () => { pickI = +b.dataset.i; draw(); });
-    go.textContent = slots[pickI] ? `Replace ${slots[pickI].player.name}` : 'Restore';
+    go.textContent = slots[pickI] ? `Replace ${slotName(slots[pickI])}` : 'Restore';
     go.classList.toggle('danger', !!slots[pickI]);
   };
   draw(); ta.oninput = () => { err.hidden = true; };
@@ -3394,7 +3417,7 @@ ACT.restore = () => {
     try {
       const s = await Backup.decode(ta.value); s.savedAt = Date.now();
       slots[pickI] = s; Store.push(pickI); closeModal(); titleScreen();
-      const ok = modal(`<h3>He's back</h3><p class="mute">${esc(s.player.name)}, ${rec(s.player.record)}, restored to slot ${pickI + 1}.</p><button class="btn" data-ok>OK</button>`);
+      const ok = modal(`<h3>He's back</h3><p class="mute">${esc(slotName(s))}, restored to slot ${pickI + 1}.</p><button class="btn" data-ok>OK</button>`);
       ok.querySelector('[data-ok]').onclick = closeModal;
     } catch (e) { err.textContent = e.message || 'That code did not work.'; err.hidden = false; go.disabled = false; }
   };
@@ -3484,14 +3507,18 @@ function hub(tab) {
   const P = save.player; const rank = playerRank(save); const a = Math.floor(age(save));
   const pend = save.pending;
   let primary;
-  if (P.retired) primary = `<button class="btn big ghost" data-act="toTitle">Back to menu</button>`;
+  if (save.G) {
+    const G = save.G, n = P.fightWk - G.week;
+    primary = P.injury ? '' : P.booked ? (n <= 0 ? `<button class="btn big hot" data-act="gFight" data-id="${P.id}">Fight night: ${esc(P.booked.offer.opp.name)}</button>` : `<button class="btn big" data-act="gCamp">Fights ${esc(P.booked.offer.opp.name)} in ${n} week${n === 1 ? '' : 's'}</button>`)
+      : P.busy > 0 ? `<p class="alert gold">Resting after the fight: ${P.busy} more week${P.busy === 1 ? '' : 's'} before he can fight again.</p>` : `<button class="btn big" data-act="offers">Find him a fight</button>`;
+  } else if (P.retired) primary = `<button class="btn big ghost" data-act="toTitle">Back to menu</button>`;
   else if (P.injury) primary = `<button class="btn big" data-act="rest">Rest and rehab (${P.injury.weeks} weeks left)</button>`;
   else if (pend && pend.campDone) primary = `<button class="btn big hot" data-act="fightNight">Fight night: ${esc(pend.offer.opp.name)}</button>`;
   else if (pend) primary = `<button class="btn big" data-act="camp">Start camp for ${esc(pend.offer.opp.name)}</button>`;
   else primary = `<button class="btn big" data-act="offers">Find the next fight</button>`;
   const status = P.injury ? `<div class="alert">${esc(P.injury.name)}. Out ${P.injury.weeks} more weeks.</div>` : '';
   show(`<div class="screen">
-    <div class="topbar"><button class="link" data-act="quit">Save &amp; exit</button><span class="tb-title">${DIVS[P.div].name}</span><span class="cash">${money(P.money)}</span></div>
+    <div class="topbar">${save.G ? '<button class="link" data-act="gymHub">Gym</button>' : '<button class="link" data-act="quit">Save &amp; exit</button>'}<span class="tb-title">${DIVS[P.div].name}</span><span class="cash">${money(P.money)}</span></div>
     <div class="poster stitched">
       <canvas class="portrait" id="pv"></canvas>
       <div class="pinfo">
@@ -3508,7 +3535,7 @@ function hub(tab) {
     ${status}
     <div class="wear"><span>Career damage</span><span class="bar warn"><i style="width:${P.wear}%"></i></span><span class="sv">${Math.round(P.wear)}</span></div>
     ${primary}
-    ${!P.retired ? `<div class="row"><button class="btn ghost" data-act="rest" ${P.injury ? 'disabled' : ''}>Rest 6 weeks</button><button class="btn ghost" data-act="weight" ${save.pending || P.injury ? 'disabled' : ''}>Weight class</button><button class="btn ghost" data-act="retire">Retire</button></div>` : ''}
+    ${save.G ? `<div class="row"><button class="btn ghost" data-act="gPlan">Training plan</button></div><p class="mute small">${esc(fStatus(save.G, P))}.</p>` : !P.retired ? `<div class="row"><button class="btn ghost" data-act="rest" ${P.injury ? 'disabled' : ''}>Rest 6 weeks</button><button class="btn ghost" data-act="weight" ${save.pending || P.injury ? 'disabled' : ''}>Weight class</button><button class="btn ghost" data-act="retire">Retire</button></div>` : ''}
     <div class="tabs" role="tablist">${[['fighter', 'Fighter'], ['rank', 'Rankings'], ['locker', 'Locker'], ['history', 'Record']].map(([k, l]) => `<button class="${hubTab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div>
     <div class="tabbody">${hubBody()}</div>
   </div>`, 'hub');
@@ -3520,11 +3547,11 @@ function hubBody() {
   if (hubTab === 'fighter') {
     return `<div class="ovr">Overall <b>${ovr(P.stats)}</b><span class="mute"> The faint tick is his ceiling.</span></div><div class="stats">${STATS.map(k => statRow(k, P.stats[k], P.pot[k])).join('')}</div>
     ${guardCard(P.stats, P.guard, playerIQ(save), P.pot)}<p class="mute tiny">Ring IQ grows with fights and with accuracy, head movement, footwork and heart. Smarter fighters read guards, cut off the ring and slip off the ropes.</p>
-    <p class="mute small">Gym: ${GYMS[P.gym].name}. Career earnings ${money(P.earnings)}.</p>`;
+    <p class="mute small">Gym: ${save.G ? esc(save.G.gym.name) : GYMS[P.gym].name}. Career earnings ${money(P.earnings)}.</p>`;
   }
   if (hubTab === 'rank') {
     const list = rankList(save); const pr = playerRank(save);
-    const row = (e, i) => { const b = beltsOf(save, e.id); return `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}${e.f && e.f.legend ? ' <span class="lgd" title="Legend">★</span>' : ''}${b.length ? ' ' + beltChips(b) : ''}</span><span class="rc">${rec(e.record)}</span><span class="ov">${Math.round(e.rating)}</span></div>`; };
+    const row = (e, i) => { const b = beltsOf(save, e.id); return `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}${e.f && e.f.legend ? ` <span class="lgd" title="${e.f.star ? 'Pound for pound' : 'Legend'}">★</span>` : ''}${b.length ? ' ' + beltChips(b) : ''}</span><span class="rc">${rec(e.record)}</span><span class="ov">${Math.round(e.rating)}</span></div>`; };
     let rows = list.slice(0, 15).map(row).join('');
     if (pr > 15) rows += `<div class="rk gap">…</div>` + row(list[pr - 1], pr - 1);
     const champs = ORGS.map(o => { const id = save.world.belts[o.k]; const nm = id === save.player.id ? save.player.name : save.G && save.G.fighters.find(m => m.id === id) ? save.G.fighters.find(m => m.id === id).name : (findFighter(save, id) || {}).name || 'Vacant'; return `<div class="champ"><span class="belt" style="--bc:${o.c}">${o.k}</span><span>${esc(nm)}</span></div>`; }).join('');
@@ -3532,7 +3559,7 @@ function hubBody() {
     const lg = LEGENDS.map((L, d) => `<div class="rk ${beat.includes('L' + d) ? 'me' : ''}"><span class="n">${beat.includes('L' + d) ? '✓' : '★'}</span><span class="nm">${esc(L.name)}<small class="mute" style="display:block">${esc(STYLES[L.style].label)}, "${esc(L.nick)}"</small></span><span class="rc">${esc(DIVS[d].name)}</span></div>`).join('');
     const pp = p4p(save).map((e, i) => `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}</span><span class="rc">${esc(e.div)}</span></div>`).join('');
     return `<h4>World champions</h4><div class="champs">${champs}</div><h4>${DIVS[P.div].name} rankings</h4><div class="rklist"><div class="rk head"><span class="n">#</span><span class="nm">Fighter</span><span class="rc">Record</span><span class="ov">OVR</span></div>${rows}</div><h4>Pound for pound</h4><div class="rklist">${pp}</div>
-      <h4>Legends</h4><p class="mute small">One in every division, and nobody else fights like him. Beat him and you can learn his style in camp.</p><div class="rklist">${lg}</div>`;
+      ${save.G ? '' : `<h4>Legends</h4><p class="mute small">One in every division, and nobody else fights like him. Beat him and you can learn his style in camp.</p><div class="rklist">${lg}</div>`}`;
   }
   if (hubTab === 'locker') {
     const kinds = [['trunks', 'Trunks'], ['gloves', 'Gloves'], ['shoes', 'Boots']];
@@ -3611,12 +3638,12 @@ ACT.scout = d => {
   const camp = d.i === 'camp', offer = camp ? save.pending.offer : offerCache[+d.i];
   if (!scoutHim(save, offer)) return;
   persist(); const y = window.scrollY;
-  if (camp) { campOpenTape = true; campScreen(); } else renderOffers(+d.i);
+  if (camp) { campOpenTape = true; save.G ? gymCamp() : campScreen(); } else renderOffers(+d.i);
   window.scrollTo(0, y);
 };
 let campOpenTape = false;
 ACT.backHub = () => hub();
-ACT.sign = d => { campOpenTape = false; save.pending = { offer: offerCache[+d.i], campDone: false }; persist(); campScreen(); };
+ACT.sign = d => { campOpenTape = false; if (save.G) { bookFight(save.G, save.player, offerCache[+d.i]); persist(); hub(); return; } save.pending = { offer: offerCache[+d.i], campDone: false }; persist(); campScreen(); };
 
 /* ---------- camp ---------- */
 let plan = null;
@@ -3667,6 +3694,123 @@ ACT.runCamp = () => {
   m.querySelector('[data-ok]').onclick = () => { closeModal(); if (r.injury) hub(); else startFight(); };
 };
 ACT.fightNight = () => startFight();
+
+/* ===== LAST BELL : ui gym ===== */
+let gymG = null;
+const yearWk = w => `Year ${Math.floor(w / 52) + 1}, week ${w % 52 + 1}`;
+const potGrade = pot => { const a = STATS.reduce((s, k) => s + pot[k], 0) / STATS.length; return a >= 88 ? 'A' : a >= 83 ? 'B+' : a >= 78 ? 'B' : a >= 73 ? 'C+' : 'C'; };
+function fStatus(G, P) {
+  if (P.injury) return `Injured: ${P.injury.name.toLowerCase()}, ${P.injury.weeks} wk`;
+  if (P.booked) { const n = P.fightWk - G.week; return n <= 0 ? `Fight night vs ${P.booked.offer.opp.name}` : `Fights ${P.booked.offer.opp.name} in ${n} wk`; }
+  if (P.busy > 0) return `Resting after the fight, ${P.busy} wk`;
+  if (P.plan.rest) return 'Resting. No fight booked';
+  return 'Training ' + P.plan.focus.map(k => FOCUS[k].label.toLowerCase()).join(' + ') + '. No fight booked';
+}
+
+/* ---------- open a gym ---------- */
+function gymCreate(slot) {
+  show(`<div class="screen"><div class="topbar"><button class="link" data-act="toTitle">Back</button><span class="tb-title">Open a gym</span><span></span></div>
+    <p class="mute">You are a new coach. You scraped together enough to rent a garage and hang some bags. Nobody knows your name yet.</p>
+    <label>Gym name<input id="gname" maxlength="28" placeholder="Last Bell Boxing"></label>
+    <label style="margin-top:10px">Town<input id="gtown" maxlength="28" placeholder="Treasure Island, SF"></label>
+    <p class="mute small">Three kids walked in the first week. Sign one or all of them, and more will come as your name grows.</p>
+    <button class="btn big" data-act="gOpenGym" data-i="${slot}">Open the doors</button></div>`, 'create');
+}
+ACT.gOpenGym = d => {
+  const name = ($('#gname').value || '').trim() || 'Last Bell Boxing', town = ($('#gtown').value || '').trim() || 'Treasure Island, SF';
+  cur = +d.i; gymG = bindGym(newGym({ name, town })); save = null; persist(); gymHub();
+};
+
+/* ---------- the gym ---------- */
+ACT.gymHub = () => { plan = null; gymHub(); };
+function gymHub() {
+  const G = gymG; save = null; const L = GYM_LV[G.gym.level], due = fightsDue(G), act = G.fighters.filter(m => !m.retired), full = act.length >= L.cap;
+  const fcards = act.map(P => `<button class="gf stitched" data-act="gOpen" data-id="${P.id}"><canvas class="portrait sm" data-gl="${P.id}"></canvas><span class="gfi"><b>${P.nick ? `"${esc(P.nick)}" ` : ''}${esc(P.name)}</b><span class="mute">${rec(P.record)} · OVR ${ovr(P.stats)} · ${DIVS[P.div].name} #${playerRank(fv(G, P))}</span>${P.belts.length ? `<span class="chips">${beltChips(P.belts)}</span>` : ''}<span class="gst ${P.booked && P.fightWk <= G.week ? 'hot' : ''}">${esc(fStatus(G, P))}</span></span></button>`).join('');
+  const wcards = G.walkins.map((w, i) => `<div class="wk stitched"><div class="gtop"><b>${esc(w.name)}</b><span class="mute">${WALKIN[w.kind].label}</span></div>
+    <p class="small">Age ${Math.floor(w.age)}, ${DIVS[w.div].name.toLowerCase()}, ${w.kind === 'raw' ? 'never had a fight' : `${rec(w.record)}, ${STYLES[w.style].label.toLowerCase()}`}. ${w.kind === 'raw' ? 'Ceiling ' + potGrade(w.pot) : 'OVR ' + ovr(w.stats)}.</p>
+    <div class="of"><span>${w.fee ? money(w.fee) + ' to sign' : 'Free'}</span><button class="btn sm" data-act="gWalk" data-i="${i}">Talk to him</button></div></div>`).join('');
+  const next = due.length ? `<button class="btn big hot" data-act="gFight" data-id="${due[0].id}">Fight night: ${esc(due[0].name)} vs ${esc(due[0].booked.offer.opp.name)}</button>` : `<button class="btn big" data-act="gWeek">Next week</button>`;
+  const up = GYM_LV[G.gym.level + 1];
+  const log = G.log.filter(l => l.notes.length).slice(0, 4).map(l => l.notes.map(n => `<p class="small"><span class="mute">Week ${l.wk % 52 + 1}:</span> ${esc(n)}</p>`).join('')).join('');
+  show(`<div class="screen">
+    <div class="topbar"><button class="link" data-act="quit">Save &amp; exit</button><span class="tb-title">${yearWk(G.week)}</span><span class="cash">${money(G.gym.money)}</span></div>
+    <div class="gymhead stitched"><h2>${esc(G.gym.name)}</h2><div class="mute">${esc(G.gym.town)} · ${GYMS[G.gym.level].name}</div>
+      <div class="wear"><span>${esc(repLabel(G.gym.rep))}</span><span class="bar"><i style="width:${G.gym.rep}%"></i></span><span class="sv">${Math.round(G.gym.rep)}</span></div></div>
+    ${next}
+    <h4>Your fighters <span class="pts">${act.length}/${L.cap}</span></h4>${fcards || '<p class="mute">Nobody yet. Talk to the walk-ins.</p>'}
+    <h4>Walk-ins <span class="pts">${full ? 'gym is full' : 'new faces every 4 weeks'}</span></h4>${wcards || '<p class="mute">Nobody at the door right now.</p>'}
+    ${log ? `<h4>Around the gym</h4>${log}` : ''}
+    <h4>The gym</h4><p class="mute small">Members' dues bring in ${money(100 + Math.round(G.gym.rep * 20))} a week${L.upkeep ? `, rent and staff cost ${money(L.upkeep)}` : ''}. You take ${Math.round(GYM_CUT * 100)}% of every purse.</p>
+    ${up ? `<button class="btn ghost" data-act="gUp" ${G.gym.money < up.cost ? 'disabled' : ''}>Move up to a ${GYMS[G.gym.level + 1].name.toLowerCase()}: ${money(up.cost)}</button><p class="mute tiny">${GYMS[G.gym.level + 1].note} Better training, room for ${up.cap} fighters, ${money(up.upkeep)} a week to run.</p>` : ''}
+  </div>`, 'hub');
+  document.querySelectorAll('canvas[data-gl]').forEach(c => { const P = G.fighters.find(m => m.id === c.dataset.gl); Render.portrait(c, P.look, { stance: P.stance, guard: P.guard, dmg: Math.min(.5, P.wear / 200) }); });
+}
+ACT.gWeek = () => {
+  const notes = gymWeek(gymG); persist(); gymHub();
+  if (notes && notes.length) { const m = modal(`<h3>${yearWk(gymG.week)}</h3>${notes.map(n => `<p class="alert ${/Fight week/.test(n) ? 'gold' : ''}">${esc(n)}</p>`).join('')}<button class="btn" data-ok>OK</button>`); m.querySelector('[data-ok]').onclick = closeModal; }
+};
+ACT.gUp = () => { const G = gymG, up = GYM_LV[G.gym.level + 1]; if (!up || G.gym.money < up.cost) return; G.gym.money -= up.cost; G.gym.level++; bindGym(G); persist(); gymHub(); };
+ACT.gOpen = d => { save = fv(gymG, gymG.fighters.find(m => m.id === d.id)); hub('fighter'); };
+ACT.gFight = d => { const P = gymG.fighters.find(m => m.id === d.id); save = fv(gymG, P); plan = null; startFight(); };
+
+/* ---------- a walk-in: raw kids get shaped (weight, style, stance, guard), the others come as they are ---------- */
+let wSel = null;
+ACT.gWalk = d => { const w = gymG.walkins[+d.i]; wSel = { i: +d.i, div: w.div, style: w.style, stance: w.stance, guard: w.guard }; walkScreen(); };
+function walkScreen() {
+  const G = gymG, w = G.walkins[wSel.i], raw = w.kind === 'raw', full = G.fighters.filter(m => !m.retired).length >= gymCap(G);
+  const chips = (key, list, lab) => `<div class="chips wrap">${list.map(k => `<button class="chip ${String(wSel[key]) === String(k) ? 'on' : ''}" data-act="wSet" data-k="${key}" data-v="${k}">${esc(lab(k))}</button>`).join('')}</div>`;
+  const st = raw ? wSel.style : w.style;
+  show(`<div class="screen"><div class="topbar"><button class="link" data-act="gymHub">Back</button><span class="tb-title">${WALKIN[w.kind].label}</span><span class="cash">${money(G.gym.money)}</span></div>
+    <div class="poster stitched"><canvas class="portrait" id="pv"></canvas><div class="pinfo"><h2>${esc(w.name)}</h2>
+      <div class="recbig">${raw ? 'No fights' : rec(w.record) + ` <small>${w.record.ko} KO</small>`}</div>
+      <div class="mute">Age ${Math.floor(w.age)}${raw ? '' : `, ${STYLES[w.style].label.toLowerCase()}, ${w.stance}, ${gLabel(w.guard).toLowerCase()}`}</div>
+      <div class="mute">${raw ? 'Ceiling ' + potGrade(w.pot) : 'OVR ' + ovr(w.stats)}</div></div></div>
+    <p class="mute">${WALKIN[w.kind].note}</p>
+    ${raw ? `<h4>Weight class</h4>${chips('div', DIVS.map((_, i) => i), i => DIVS[i].name)}
+      <h4>Style</h4>${chips('style', BASE_STYLES, k => STYLES[k].label)}<p class="mute small">${esc(STYLES[st].desc)}</p>
+      <h4>Stance</h4>${chips('stance', ['orthodox', 'southpaw'], k => k)}
+      <h4>Guard</h4>${chips('guard', Object.keys(GUARDS), k => GUARDS[k].label)}<p class="mute small">${esc(GUARDS[wSel.guard].desc)}</p>` : ''}
+    <h4>${raw ? 'Where he starts' : 'What he brings'}</h4><div class="stats">${STATS.map(k => statRow(k, w.stats[k], raw ? w.pot[k] : 0)).join('')}</div>
+    ${raw ? '<p class="mute tiny">The faint tick is how far he can go if you build it.</p>' : ''}
+    <button class="btn big" data-act="wSign" ${full || G.gym.money < w.fee ? 'disabled' : ''}>${full ? 'Your gym is full' : w.fee ? 'Sign him for ' + money(w.fee) : 'Sign him'}</button></div>`, 'hub');
+  Render.portrait($('#pv'), w.look, { stance: raw ? wSel.stance : w.stance, guard: raw ? wSel.guard : w.guard });
+}
+ACT.wSet = d => { wSel[d.k] = d.k === 'div' ? +d.v : d.v; walkScreen(); };
+ACT.wSign = () => {
+  const G = gymG, w = G.walkins[wSel.i]; if (w.kind === 'raw') w.look.build = DIVS[wSel.div].build * rnd(.96, 1.04);
+  const P = signWalkin(G, w, wSel); if (!P) return; persist(); save = fv(G, P); hub('fighter');
+};
+
+/* ---------- weekly training plan ---------- */
+ACT.gPlan = () => planScreen();
+function planScreen() {
+  const P = save.player, pl = P.plan, G = gymG;
+  show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Training plan</span><span class="cash">${money(G.gym.money)}</span></div>
+    <p class="mute">What ${esc(P.name.split(' ')[0])} works on every week until you change it. Young fighters learn fastest. Anything he doesn't work on slowly gets rusty.</p>
+    <div class="chips"><button class="chip ${pl.rest ? 'on' : ''}" data-act="plRest">Rest weeks</button></div>
+    <h4>Focus <span class="pts">pick two</span></h4><div class="opts two">${Object.keys(FOCUS).map(k => `<button class="opt ${!pl.rest && pl.focus.includes(k) ? 'on' : ''}" data-act="plFocus" data-k="${k}" ${pl.rest ? 'disabled' : ''}><b>${FOCUS[k].label}</b><small>${FOCUS[k].stats.map(s => STAT_LABEL[s]).join(', ')}</small></button>`).join('')}</div>
+    <h4>Intensity</h4><div class="seg">${INTENSITY.map(i => `<button class="${pl.intensity === i.k ? 'on' : ''}" data-act="plInt" data-v="${i.k}">${i.label}</button>`).join('')}</div>
+    <p class="mute small">Hard weeks build more, but he can get hurt in the gym. Rest weeks heal wear and lose a little sharpness.</p>
+    <button class="btn big" data-act="backHub">Done</button></div>`, 'camp');
+}
+ACT.plRest = () => { save.player.plan.rest = !save.player.plan.rest; persist(); planScreen(); };
+ACT.plFocus = d => { const f = save.player.plan.focus, i = f.indexOf(d.k); if (i >= 0) { if (f.length > 1) f.splice(i, 1); } else { f.push(d.k); if (f.length > 2) f.shift(); } persist(); planScreen(); };
+ACT.plInt = d => { save.player.plan.intensity = d.v; persist(); planScreen(); };
+
+/* ---------- the booked fight: what we know about him ---------- */
+ACT.gCamp = () => gymCamp();
+function gymCamp() {
+  const P = save.player, o = P.booked.offer, n = P.fightWk - gymG.week;
+  show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">${n > 0 ? n + ' weeks out' : 'Fight week'}</span><span class="cash">${money(gymG.gym.money)}</span></div>
+    <p class="mute">${esc(TIERS[o.tier].label)}, ${o.rounds} rounds at ${esc(VENUE_NAMES[o.venue])}${o.title.length ? ' for ' + o.title.join(', ') : ''}. Purse ${money(o.purse)}.</p>
+    <h3>${esc(o.opp.name)}</h3><p class="mute">${STYLES[o.opp.style].label}, ${gLabel(o.opp.guard).toLowerCase()}, ${o.opp.stance}, OVR ${Math.round(o.opp.rating)}</p>
+    <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
+    <p class="read"><b>Corner:</b> ${esc(cornerRead(save, oppNow(save, o)))}</p>
+    ${tapeHtml(save, o, campOpenTape, 'camp')}
+    <p class="mute small">Until fight night he trains on his weekly plan: ${P.plan.rest ? 'resting' : P.plan.focus.map(k => FOCUS[k].label.toLowerCase()).join(' + ')}.</p>
+    <div class="row"><button class="btn ghost" data-act="gPlan">Training plan</button><button class="btn ghost" data-act="gPull">Pull out of the fight</button></div></div>`, 'camp');
+}
+ACT.gPull = () => { const P = save.player; P.booked = null; P.fightWk = null; persist(); hub(); };
 
 /* ===== LAST BELL : ui part 3 (fight) ===== */
 const CROWD_BASE = { gym: .12, hall: .35, civic: .5, coliseum: .62, vegas: .72 };
@@ -4109,7 +4253,7 @@ function resultScreen() {
   if (!F || !save.pending) return;
   Comm.stop();
   const res = F.result; const o = save.pending.offer;
-  const out = applyResult(save, o, F); persist();
+  const out = applyResult(save, o, F); if (save.G) gymAfterFight(save.G, save.player, o, F, out); persist();
   const A = F.f[0], B = F.f[1]; const win = res.winner === 0, draw = res.winner == null;
   const verdict = draw ? 'Draw' : win ? 'Win' : 'Loss';
   const mName = { UD: 'Unanimous decision', SD: 'Split decision', MD: 'Majority decision' }[res.method] || res.method;
@@ -4131,7 +4275,7 @@ function resultScreen() {
     <button class="btn big" data-act="afterFight">Continue</button></div>`, 'result');
   F = null;
 }
-ACT.afterFight = () => { plan = null; hub('fighter'); };
+ACT.afterFight = () => { plan = null; if (gymG) gymHub(); else hub('fighter'); };
 
 /* ---------- boot ---------- */
 titleScreen();
