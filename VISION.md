@@ -27,3 +27,18 @@ Create your fighter → camp (train, spar, prepare for *this* opponent) → figh
 - **Traits:** 1–2 standout traits per fighter, visible once scouted (the Thrill of the Fight lesson). Your fighter earns or loses traits from his career (a knockout loss can leave a softer chin; going 12 rounds builds "late gas").
 - **Opponent-specific camp:** spar partners who copy his style give an edge against that style. Film study reveals a habit you can call during the fight ("he drops the right after the jab").
 - **Live read:** a short line during the round when something keeps happening ("he's landing the right hand over your jab"), so the coach has something to react to.
+
+## Ed's follow-up (Oct 2026): talk to him, and the bond
+> I mean, obviously, it's fighter to code connection where, um, and it's like, it's kind of, I don't know if I'm going to do it this way, but it's just an idea where the fighter, if you don't want to work with him or he's getting like, eh, then you get to move on and create another fighter. You don't have multiple, I mean, you can have multiple fighters in your roster, but that's a kind of a bit more complex thing. But what you said before, know what's going wrong. That's, that's the only way you'll know is actually watching the, them fight together where he can be like he's landing too many jabs or or maybe you, have, you tell it through, not AI, but through a text. Be like, you're throwing, maybe that's the way to do it is telling the fighter through text or through like voice or whatever is that you're doing this wrong, this wrong, and then AI can read that and be like, hey, and adjust to what you said instead of like text lines.
+
+### How it could work (idea, not built)
+- **Talk to your fighter.** In the corner (and later during the round), the coach types or speaks in his own words. Voice works through the phone keyboard's mic button. The published page asks Claude through the artifact `sample` capability (available on Ed's account; the viewer's own usage pays; the first call asks consent; `modelTier: 'quick'`). Claude gets:
+  - the coach's words;
+  - the fight facts (round stats, what keeps happening, the cards, cuts);
+  - the fighter's personality and bond.
+
+  It returns JSON: knob changes, chosen **only from the existing vocabulary** (STRATS/SHOUTS mods, each capped), plus the fighter's reply in his own voice.
+- **Bounded on purpose.** Words can't buy power. "Just knock him out" only maps to the capped `ko`-type mods. The result is still scored by `shoutFit` against the moment: a good read helps, a bad read costs, the same as the buttons. The buttons stay as the fast option and as the fallback when `sample` is unavailable or offline (a simple keyword matcher).
+- **Corner first.** Claude's answer takes seconds, which is fine during the break. During the round it is a stretch goal.
+- **Knowing what's wrong.** The engine keeps a "pattern" log the coach can see and Claude can read: which punch keeps landing on you and off what (e.g. the right hand over your jab), time on the ropes, hands dropping when tired, who wins the exchanges. You mainly read it by watching, so the 3D must show it.
+- **The bond.** Good calls that work raise trust, so he follows you more closely and his replies get warmer. Ignored or bad calls and losses lower it. Low trust: he argues back, half-follows, and in the end can **leave you** ("I'm going with another trainer"). You can also let him go and start a new fighter. A stable of several fighters is a later, bigger idea.
