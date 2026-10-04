@@ -2,6 +2,8 @@
 
 Phone-first auto-boxing career sim. One self-contained file: `index.html` (~2,800 lines). Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1.
 
+**Vision:** read `VISION.md` first. The player is the coach. 3D plan: `proto/PLAN.md`; research on other boxing games: `proto/RESEARCH.md`.
+
 ## Publishing (important)
 The live game is a published Claude artifact: https://claude.ai/artifact/KYmQg6PQo4qE4qoyDDDt7k
 Claude Code can NOT publish there. When a version is ready, Ed uploads `index.html` in a claude.ai chat and asks to publish it to that URL (capabilities db + user carry forward; save sync uses data/users/<id>/slot0..2).
