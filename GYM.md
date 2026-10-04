@@ -25,7 +25,7 @@ On top of style + guard + stats:
 - **Person:** age (prime ~26–32; older men know more, recover less), coachability (how fast he learns, how well he hears you), ego (pros push back on changes), heart, ambition.
 
 Reference fighters (inspired-by, fictional names in game):
-- **Shakur Stevenson type:** orthodox technician, sharp disruptive jab, shoulder roll when pressured, pull counters off the ropes, distance control, low output, high IQ. Wins on the cards.
+- **Shakur Stevenson type:** southpaw technician, sharp disruptive jab, shoulder roll when pressured, pull counters off the ropes, distance control, low output, high IQ. Wins on the cards.
 - **Lomachenko type:** southpaw, footwork and angles: steps to the outside foot, jab then pivots 90° to the side and hits as you turn; feints to move; makes you shell up, then goes around the guard. Jab, low lead hook to the body, then hook or uppercut upstairs.
 - **Benavidez type:** pressure plus volume, fast hands, clusters of combos to the body and head that break you down. Flaw: flat, straight-legged feet, breaks stance walking forward, narrow and off balance.
 (Most of this maps onto existing knobs: philly guard + counter style, angle trait, volume/swarmer + combo book, plus new habits.)
@@ -52,9 +52,20 @@ Reference fighters (inspired-by, fictional names in game):
 6. **In-round micro talk** (free text during the round), locations, gym upgrades.
 Future (Ed: not now): the bond/trust system.
 
-## Open questions for Ed
-- New save type, or turn existing careers into a one-fighter gym?
-- Max fighters in the stable at once (phone screen: 3–5?).
-- Fictional inspired-by names for real-world types (like the legends), or generic?
+## Ed's calls (Oct 2026)
+- All fresh: a new save type (old careers stay as "classic").
+- Stable of 3–5 fighters (gym level sets it).
+- The current pound-for-pound top 10 are in, with slightly changed names (The Ring, June 29 2026).
+
+## Built (step 1, Oct 2026)
+- Title: an empty slot opens a gym (or a classic career). Gym save: `mode: 'gym'`, `newGym`, `G.fighters` (each one is a career player object plus `plan`, `booked`, `fightWk`, `busy`), `G.worlds` (one world per division, made when needed), `G.walkins`, `G.log`.
+- One weekly clock: `gymWeek` trains every fighter on his plan (`trainWeek`, teenagers learn fastest), heals, pays dues/upkeep, sims the divisions every 2 weeks, new walk-ins every 4 weeks. A booked fight is N camp weeks out (`CAMP_WEEKS`); the week can't move past a fight night until it's fought.
+- Walk-ins: raw (you pick weight, style, stance, guard), journeyman, veteran (rep 15+), ranked pro (rep 35+, comes off the real rankings). `signWalkin`.
+- Money: the gym account pays everything (a fighter's `money` is bound to it, not saved); the coach keeps 15% of purses (`GYM_CUT`); reputation grows with wins (`REP_WIN`). Gym levels reuse `GYMS` (training mult, cutman) with `GYM_LV` (cost, cap, upkeep).
+- The career code runs a gym fighter through `fv(G, P)` (a view with player/world/week/pending), so offers, fights, corner talk, results all work unchanged. Stablemates are ranked but never matched.
+- P4P stars: `P4P_2026`, `genStar`, `ensureStars`: #1 in their division with belts, don't fade, beating one unlocks his style.
+- Test: `node tests/gym.js 3` runs a gym for 3 years headless.
+
+Not yet: combo book / mitts, sparring, signature moves and habits, weight moves for gym fighters, releasing a fighter, retirement, multiple fights in one week.
 
 Sources (style research): ringmagazine.com (Stevenson vs Zepeda analysis), evolve-mma.com (Lomachenko breakdown), bloodyelbow.com (Benavidez vs Andrade breakdown), reviews of Fight Night Champion Legacy mode (training, fatigue).

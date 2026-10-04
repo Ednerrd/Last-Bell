@@ -19,12 +19,13 @@ Private preview for Ed (Claude Code can publish here): https://claude.ai/artifac
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Put new long-form detail in `NOTES.md`, keep this file short.
 
 ## Code map (markers `/* ===== LAST BELL : ... ===== */`)
-engine (~197) → career (~1372) → render (~1900) → audio (~2831) → commentary (`const Comm`) → ui part 1 (~2995: storage, title, create) → ui part 2 (~3308: hub, offers, camp) → ui part 3 (~3499: fight loop, corner, replay, results).
+engine (~197) → career (~1372) → render (~1900) → audio (~2831) → commentary (`const Comm`) → ui part 1 (~2995: storage, title, create) → ui part 2 (hub, offers, camp) → ui gym (gym hub, walk-ins, training plan) → ui part 3 (~3499: fight loop, corner, replay, results).
 - Ring: x ±146 (RING), z ±115 (ZR), MIN_D 30. `P3()` projection.
 - Fight loop: `footwork()` every frame, `decide()` on a timer, `react()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'.
 - Knobs: `TUNE` (combat), `DMG` (global damage), `CUT` (cuts/doctor), `GUARDS` (guard factors), `STYLES` / `STYLE_*`, `SHOUTS` / `SHOUT_EDGE`, `COMBOS` / `PNUM` / `OPEN_W`.
 - Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career. Ring IQ: `ringIQ(sheet)`.
 - Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `blendSnap`, `spreadView()`. Details in NOTES.md.
+- Gym mode (see GYM.md "Built"): logic at the end of the career section (`newGym`, `fv`, `gymWeek`, `trainWeek`, `signWalkin`, `bookFight`, `P4P_2026`), UI in `ui gym`. Globals: `gymG` (the gym save), `save` = `fv(G, P)` while a fighter is open.
 - Corner talk: `roundNotes()`, `talkPrompt`, `ACT.talk`, `talkWords()` fallback, `FX.cornerCall` fires in `updShouts`.
 
 ## Tests (`tests/`, run from repo root)
@@ -33,7 +34,8 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials, pairs to split over cores).
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
-- `node tests/same.js 200`: seeded determinism hash for recording-only engine changes.
+- `node tests/same.js 200`: seeded determinism hash for recording-only engine changes (now 28b0494a).
+- `node tests/gym.js 3`: gym mode headless for N years (signing, training, booking, fights, P4P).
 - Also: `cut.js`, `diag.js`, `probe.js`, `commtest.js`; Playwright captures `strip.py`, `shot.py`, `live.py` into `shots/` (gitignored).
 
 ## Current targets (to check after engine changes)
