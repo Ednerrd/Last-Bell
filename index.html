@@ -2923,7 +2923,8 @@ const Comm = (() => {
     wild: ['{a} winds up and hits nothing but air.', 'Wild {p} from {a}, way off the mark.', '{a} is swinging for the fences and missing.', 'Sloppy {p} from {a}, telegraphed it.']
   };
   const COLOR = ["He's gotta move his head.", "That body work is going to pay off late.", "You can hear that one in the cheap seats.", "He's fighting like his rent's due.", "The jab has been the story so far.", "His corner wants him off the ropes.", "That's a veteran move right there.", "He's breathing through his mouth now. Bad sign.", "Somebody's gonna feel this tomorrow.", "Look at the feet. Always in position.", "He's loading up on that right hand.", "This crowd is on its feet."];
-  const PN = { jab: 'jab', cross: 'right hand', hook: 'left hook', uppercut: 'uppercut', bodyJab: 'jab to the body', bodyHook: 'body hook' };
+  const PN = { jab: 'jab', cross: 'right hand', hook: 'left hook', uppercut: 'uppercut', bodyJab: 'jab to the body', bodyHook: 'body hook', rhook: 'right hook', lupper: 'left uppercut', bodyCross: 'right hand to the body' };
+  const pn = (p, F) => { const s = PN[p] || p; return F && F.stance === 'southpaw' ? s.replace(/\b(left|right)\b/, m => m === 'left' ? 'right' : 'left') : s; }; // a southpaw's power hand is the left
   const fill = (s, o) => s.replace(/\{(\w)\}/g, (m, k) => o[k] != null ? o[k] : '');
   let cd = {}, lastColor = 0, voice = true, voices = [], speaking = false;
   function reset() { cd = {}; lastColor = 0; }
@@ -2938,7 +2939,7 @@ const Comm = (() => {
       case 'roundStart': L('start', 2); break;
       case 'hit':
         if (e.blocked) break;
-        o.p = PN[e.p];
+        o.p = pn(e.p, fight.f[e.a]);
         if (e.counter && e.dmg > 2.5 && ok('counter', t, 5)) L('counter', 2);
         else if (e.zone === 'head' && e.p !== 'jab' && (e.dmg > 4.6 || e.crit) && ok('big', t, 2.4)) L('big', e.crit ? 3 : 2);
         else if (e.p === 'jab' && e.crit && ok('jab', t, 8)) { out.push({ text: o.a + ' pops him with a stiff jab.', kind: 'pbp', pri: 1 }); }
@@ -2953,14 +2954,14 @@ const Comm = (() => {
       case 'foul': if (e.ded) L('foulDed', 4); else if (ok('foul', t, 15)) L('foul', 2); break;
       case 'cut': if (e.fresh) L('cut', 3); break;
       case 'roundEnd': L('end', 2); break;
-      case 'miss': if (e.why === 'wild' && e.p !== 'jab' && e.p !== 'bodyJab' && ok('wild', t, 16)) { o.p = PN[e.p]; L('wild', 0); break; }
+      case 'miss': if (e.why === 'wild' && e.p !== 'jab' && e.p !== 'bodyJab' && ok('wild', t, 16)) { o.p = pn(e.p, fight.f[e.a]); L('wild', 0); break; }
         if (e.why === 'evade' && e.def === 'roll' && ok('roll', t, 10)) { o.d = nm(e.d); L('roll', 0); break; }
         if (e.why === 'evade' && (e.def === 'slip' || e.def === 'duck') && ok('slip', t, 9)) { o.d = nm(e.d); L('slip', 0); } break;
       case 'escape': if (ok('escape', t, 12)) L(e.how === 'spin' ? 'spin' : e.how === 'punch' ? 'punchOut' : 'pivot', e.how === 'spin' ? 1 : 0); break;
       case 'bait': if (ok('bait', t, 25)) L('bait', 1); break;
       case 'cutoff': if (ok('cutoff', t, 20)) L('cutoff', 1); break;
       case 'guardCrack': if (ok('guardCrack', t, 20)) L('guardCrack', 2); break;
-      case 'home': if (ok('home' + e.a, t, 170) && ok('homeAny', t, 60)) { o.p = PN[e.p]; L('home', 2); } break;
+      case 'home': if (ok('home' + e.a, t, 170) && ok('homeAny', t, 60)) { o.p = pn(e.p, fight.f[e.a]); L('home', 2); } break;
       case 'cutWorse': o.a = nm(1 - e.d); L('cutWorse', 3); break;
       case 'doctorLook': L('doctorLook', 3); break;
       case 'heard': if (ok('heard', t, 4)) L('heard_' + e.k, 1); break;
@@ -3776,7 +3777,7 @@ function cutmanLine() {
 }
 /* ---------- talk to your fighter (corner) ---------- */
 // the coach's notes: what kept happening last round, in plain words. The coach reads them, and so does Claude
-const PUNCH_PL = { jab: 'jabs', cross: 'right hands', hook: 'hooks', uppercut: 'uppercuts', bodyJab: 'jabs to the body', bodyHook: 'body hooks' };
+const PUNCH_PL = { jab: 'jabs', cross: 'right hands', hook: 'hooks', uppercut: 'uppercuts', bodyJab: 'jabs to the body', bodyHook: 'body hooks', rhook: 'right hooks', lupper: 'lead uppercuts', bodyCross: 'right hands to the body' };
 const pName = p => (PUNCH[p] || {}).name || p;
 function topOf(o) { let k = null, n = 0; for (const x in o || {}) if (o[x] > n) { n = o[x]; k = x; } return [k, n]; }
 function roundNotes() {

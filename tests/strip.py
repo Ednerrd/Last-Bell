@@ -5,7 +5,7 @@ rows = sys.argv[1]  # js expression: array of [label, [opts...]]
 out = sys.argv[2]
 errs=[]
 with sync_playwright() as p:
-    b=p.chromium.launch(); pg=b.new_page(viewport={'width':760,'height':400},device_scale_factor=1.5)
+    b=p.chromium.launch(**({'executable_path':'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'} if os.path.exists('/opt/pw-browsers/chromium-1194/chrome-linux/chrome') else {})); pg=b.new_page(viewport={'width':760,'height':400},device_scale_factor=1.5)
     pg.on('pageerror',lambda e: errs.append(str(e)))
     pg.goto('file://'+__import__('os').path.abspath('index.html')+''); pg.wait_for_timeout(500)
     pg.evaluate("""(rows)=>{
