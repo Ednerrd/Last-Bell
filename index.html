@@ -2979,7 +2979,7 @@ const Render = (() => {
     stepParticles(dt);
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     drawBackground(V, view.venue, view.cam, view.t, view.excite || 0);
-    const sx = shake ? rnd(-shake, shake) : 0, sy = shake ? rnd(-shake, shake) * .6 : 0;
+    const tt = view.t || 0, sx = shake ? shake * (Math.sin(tt * 53) * .6 + Math.sin(tt * 31.7 + 1.3) * .4) : 0, sy = shake ? shake * .6 * (Math.sin(tt * 47.3 + 2.1) * .6 + Math.sin(tt * 29.1) * .4) : 0; // smooth noise: same shake at any refresh rate
     const z = view.zoom || 1;
     ctx.setTransform(scale * z, 0, 0, scale * z, scale * (W / 2 - view.cam * z + sx), scale * (FY + sy + (z - 1) * 60));
     ringBack(V, view.venue);
@@ -4014,11 +4014,11 @@ function spreadView(fs, dt) {
   return [A, B];
 }
 function liveView() {
-  if (FX.mode !== 'live') FX.sPrev = FX.sCur = null;
+  if (FX.mode !== 'live' && FX.mode !== 'erupt') FX.sPrev = FX.sCur = null;
   const s = FX.sCur ? blendSnap(FX.sPrev, FX.sCur, clamp(FX.acc / DT, 0, 1)) : F.snap();
   const fs = spreadView(s.f, FX.rdt || .016), A = fs[0], B = fs[1];
-  const mid = (A.x + B.x) / 2; FX.cam += (clamp(mid, -70, 70) - FX.cam) * .08;
-  { const zt = F.phase === 'corner' || (F.phase === 'roundEnd' && F.phaseT > .8) ? 1.02 : 1.32; FX.zoom += (zt - FX.zoom) * .06; } // pull back so both corners fit between rounds
+  const mid = (A.x + B.x) / 2, rt = FX.dtR || .016; FX.cam += (clamp(mid, -70, 70) - FX.cam) * (1 - Math.exp(-rt * 5)); // per second, not per frame (120Hz phones)
+  { const zt = F.phase === 'corner' || (F.phase === 'roundEnd' && F.phaseT > .8) ? 1.02 : 1.32; FX.zoom += (zt - FX.zoom) * (1 - Math.exp(-rt * 3.7)); } // pull back so both corners fit between rounds
   const info = {};
   if (F.phase === 'kd' && F.kdState) { info.down = F.kdState.who; info.pulse = Math.min(1, F.kdState.tick / .5); }
   else if (F.phase === 'over' && F.result && !F.result.decision && F.phaseT < 3.5) info.wave = 1 - F.result.winner;
@@ -4038,7 +4038,7 @@ function updHud() {
 function loop(ts) {
   rafId = requestAnimationFrame(loop);
   if (!F || !$('#cv')) { cancelAnimationFrame(rafId); return; }
-  const rawDt = FX.last ? (ts - FX.last) / 1000 : .016; const dt = Math.min(.05, rawDt); FX.last = ts; FX.t += dt; FX.frames = (FX.frames || 0) + 1;
+  const rawDt = FX.last ? (ts - FX.last) / 1000 : .016; const dt = Math.min(.05, rawDt); FX.last = ts; FX.t += dt; FX.dtR = dt; FX.frames = (FX.frames || 0) + 1;
   FX.excite = Math.max(0, FX.excite - dt * .25); FX.flash = Math.max(0, FX.flash - dt * 2);
   Sfx.crowd(CROWD_BASE[FX.venue] + FX.excite * .35, .8);
   FX.rdt = dt * (FX.mode === 'live' ? FX.speed : FX.mode === 'replay' ? .4 : 1);
@@ -4055,14 +4055,15 @@ function loop(ts) {
     view = liveView(); updHud();
   } else if (FX.mode === 'corner') { view = liveView(); }
   else if (FX.mode === 'erupt') {
-    FX.eruptT += dt; F.step(DT); F.events = []; FX.excite = 1;
+    FX.eruptT += dt; FX.acc += dt; FX.excite = 1;
+    while (FX.acc >= DT) { FX.sPrev = FX.sCur; F.step(DT); F.events = []; FX.sCur = F.snap(); FX.acc -= DT; }
     view = liveView();
     if (FX.eruptT > 2.6) startReplay();
   } else if (FX.mode === 'replay') {
     const R_ = FX.rpData; FX.rp += Math.min(.5, rawDt) * 60 * (FX.rp < 50 ? .55 : .3); const i = Math.min(R_.length - 1, Math.floor(FX.rp));
     const ev = []; for (let k = FX.rpLast + 1; k <= i; k++) for (const e of R_[k].ev) if (e.type === 'hit') ev.push(e);
-    FX.rpLast = i; const s = { f: spreadView(R_[i].f, FX.rdt) };
-    const loser = s.f[1 - F.result.winner]; FX.zoom += (1.7 - FX.zoom) * .05; FX.cam += (clamp(loser.x, -70, 70) - FX.cam) * .06;
+    FX.rpLast = i; const s = { f: spreadView(i + 1 < R_.length ? blendSnap(R_[i], R_[i + 1], FX.rp - i).f : R_[i].f, FX.rdt) }; // slow motion blends between snapshots
+    const loser = s.f[1 - F.result.winner]; FX.zoom += (1.7 - FX.zoom) * (1 - Math.exp(-dt * 3.1)); FX.cam += (clamp(loser.x, -70, 70) - FX.cam) * (1 - Math.exp(-dt * 3.7));
     const ri_ = {}; const dn = s.f.findIndex(x => x.state === 'down'), sl = s.f.findIndex(x => x.state === 'slump');
     if (dn >= 0) { ri_.down = dn; ri_.pulse = Math.min(1, (FX.t % .95) / .5); } else if (sl >= 0) ri_.wave = sl;
     const ref = refTick(s.f, ri_, FX.rdt);
