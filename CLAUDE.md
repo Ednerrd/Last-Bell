@@ -1,122 +1,48 @@
 # Last Bell
 
-Phone-first auto-boxing career sim. One self-contained file: `index.html` (~2,800 lines). Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1.
+Phone-first auto-boxing career sim. One self-contained file: `index.html` (~4,000 lines). Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
-**Vision:** read `VISION.md` first. The player is the coach. 3D plan: `proto/PLAN.md`; research on other boxing games: `proto/RESEARCH.md`.
+**Read on demand, not up front:** `VISION.md` (vision), `NOTES.md` (system details, balance history, past measurements: grep the heading you need), `proto/PLAN.md` + `proto/RESEARCH.md` (3D).
 
 ## Publishing (important)
 The live game is a published Claude artifact: https://claude.ai/artifact/KYmQg6PQo4qE4qoyDDDt7k
 Claude Code can NOT publish there. When a version is ready, Ed uploads `index.html` in a claude.ai chat and asks to publish it to that URL (capabilities db + user carry forward; save sync uses data/users/<id>/slot0..2).
 **Talk to your fighter needs the `sample` capability:** the next live publish must declare db + user + sample (`{db:{},user:{},sample:{}}`). Without sample the corner talk still works on a simple keyword matcher.
 Published-page rules: external scripts only from cdnjs/jsdelivr/tailwind/jquery CDNs, fonts from Google Fonts, no other network calls. Keep it one file.
+Private preview for Ed (Claude Code can publish here): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo (sample + db + user).
 
 ## Working rules
 - Small, chunked edits. Commit after each working step (git is the safety net).
-- Engine changes need sims before and after. Sample sizes matter: this sim is very sensitive. 50 fights is noise (±8%). Use 300+ fights per guard for balance, 400–500 for the combat audit.
+- Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
+- Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Put new long-form detail in `NOTES.md`, keep this file short.
 
 ## Code map (markers `/* ===== LAST BELL : ... ===== */`)
-engine → career → render → audio → commentary (`const Comm`) → ui part 1 (storage, title, create) → ui part 2 (hub, offers, camp) → ui part 3 (fight loop, corner, replay, results).
+engine (~197) → career (~1372) → render (~1900) → audio (~2831) → commentary (`const Comm`) → ui part 1 (~2995: storage, title, create) → ui part 2 (~3308: hub, offers, camp) → ui part 3 (~3499: fight loop, corner, replay, results).
 - Ring: x ±146 (RING), z ±115 (ZR), MIN_D 30. `P3()` projection.
 - Fight loop: `footwork()` every frame, `decide()` on a timer, `react()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'.
-- `TUNE` object (engine top) holds the combat knobs. `DMG` is global damage. `CUT` holds cut/doctor params. `GUARDS` table holds guard factors.
-- Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career. `guardSkill()` scales perks; weaknesses always apply.
-- Ring IQ: `ringIQ(sheet)`, drives combo reading, ring cutting, escapes.
-- Render: `GUARD_POSE` table + per-guard idle/defense animation in `body()` and `arms()`. Anatomy (pass 1): `drawFighter` builds tapered, muscled limbs with `segPath` (width at each end + a bulge on each side), merges pieces with `mass()` (outline all, then fill), torso from the `TORSO` profile in its own hip→neck frame (`torsoPts`), trunks on the hips with flat hems. Girth `G = build^1.5`, so flyweights are wiry and heavyweights thick. Cost ~+1.5–2 ms/frame in headless (6.8 → ~8.5–9). Pass 2: face (eye white/pupil, brow, nostril, cheek/jaw shadow, swelling puffs out, mouth opens when gassed/hurt), `rim()` light on upward-facing edges, `crease()` muscle lines, boots rebuilt (`boot()`: foot + shaft as one shape, rotates about the toe). Animation: breathing (`J.breath`, chest + shoulders), chin tucks behind the punching shoulder, back heel turns over on rear shots (`J.heelB`), front foot pivots on hooks (`J.pivotF`), jab steps in, clean head shots knock the gloves out, body shots drop the elbows, knees buckle on big shots, hurt legs wobble. ~9.1 ms/frame headless. Gloves: padded mitt + thumb + finger fold + cuff with trim (`glove()`). Referee rebuilt on the same helpers (`drawRef`). Knockdowns are keyframed in `body()` (fall: buckle → seat → flat with the head bouncing, arms spread when out; rise: sit up → knee → stand), using the display-only snapshot flag `rise`. High guard/peekaboo/head blocks tuck the elbows (`arms()` → `elbow()`: elbow below the shoulder-glove line, upper arm foreshortened; a punching arm stretches back out). Clinch: overhook + underhook around his back, heads tucked. Impact FX: `mist` spray streaks off the head on big shots, `ripple` arcs on body shots. Corner: snapshot `sit` (display only) puts him on a stool leaning back with gloves on his knees; camera zooms out to 1.02 during the break. Pose smoothing via `v._sm` (per-fighter state in `SM`). Snapshot fields used: guard, defZ, defU, ctr, tired, gi, hitKind, hitT.
-Ported from the 3D test (all render-only, engine untouched): the fight loop keeps the last two sim snapshots and draws between them (`blendSnap`, `FX.sPrev/sCur`). `spreadView()` (ui part 3) spreads the engine's chest-to-chest distances apart along x (up to +16, none in a clinch/between rounds, only the standing man moves during a knockdown, ropes push the room onto the other man); camera, ref and replay use the spread positions. In `Render.frame`: `lunge()` steps a punch in when the arm can't reach (distance read at the start, back foot follows), `bodyPush()` keeps heads/chests from overlapping, aim locks once the other man evades (slips miss), punches stop on the face/rib surface (`tgt.hr/tw`), and `settle()` pushes gloves off the other man's head/chest/gloves after both are posed and redoes the arms (`A.redo`); a punch only stops on his gloves when he's blocking. 2x sample, 1800 frames: glove in head 617 -> 0, chest 394 -> 0, glove through glove 280 -> 9 (guard splits). Variety per punch (`J.pv`): ~30% of head crosses are overhands, hook width and uppercut depth vary. Body-shot knockdowns take a knee (`J.knee`). Ref keeps his side outside the pair (off 54) and walks around the back instead of through them.
-
-## Talk to your fighter (repo only, corner)
-Corner screen: coach's notes (`roundNotes()`, from recording-only round counters `rs.over` = what he landed while the other man was punching, `rs.ctrL` counters, `rs.made` his misses that got slipped, plus home/trap/thrown/gas/body) and a text box (phone keyboard mic = voice). No round-plan buttons (Ed: text replaces them). `ACT.talk` sends the words + fight facts to Claude (`sample.json`, quick tier, `talkPrompt`) which returns `{plan: STRATS key, call: SHOUTS key|null, reply}`; anything off-menu falls back to auto/null. The plan becomes `FX.strat`, the call fires as a normal `F.shout(0, k)` when the bell rings (`FX.cornerCall` in `updShouts`), so it is scored by `shoutFit` like a button. Offline/no consent: `talkWords()` keyword matcher. Typing holds the 10s corner timer. Next round while Claude is still thinking aborts it and uses the keyword read. `tests/same.js` = seeded determinism hash for recording-only engine changes (200 fights: 4fdc41d4).
-
-## Combinations (repo only, Ed's ask: "combinations that flow", like real pros)
-- Punches (`PUNCH`): jab, cross, hook (lead), uppercut (rear), bodyJab, bodyHook (lead), plus rhook (rear hook, 4), lupper (lead uppercut, 5), bodyCross (rear straight to the body, 2b). Trainers' numbers in `PNUM` (1..6, 1b/2b/3b).
-- `COMBOS` is written in numbers ('1-2-3-2', '1-6-3-2', '1-2b-3', '5-2', '3b-3', '3-4'...); '|' = a beat (`'1|2'` touch jab, pause, the 2). Parsed to `c.seq` (punch keys) and `c.q` (queue with '~' beats). `nextInCombo` turns '~' into `F.beatT` (.1–.22 s). Open stance (southpaw vs orthodox) leans the read via `OPEN_W` (rear straight up, jab down, lead hook up).
-- Measured (60 fights): 2-punch combos finish 83%, 3: 75%, 4: 67%; ~37% of punch runs are singles (many are counter right hands, which is real).
-- Balance (same harness, before → after): audit 55.9/16.2/28.9%/32% stops → 56.2/16.3/29%/30%; styles 48.3–53.8 → 48.2–52.4; guards @82 vs standard: high 48.8→51.4, peekaboo 52.8→52.0, philly 50→52.4, cross 52→53.8, handslow 55.9→57.9 (n1500 each; old CLAUDE numbers below were smaller samples).
-- Tried and dropped (each cost the swarmer ~2–7 pts): 2-punch counters for smart fighters, cross→bodyCross level switch, same-hand doubles waiting for a full recoil.
-- Ideas next: drill a combo in camp (he throws it more and sharper), call combos by number in the corner talk.
+- Knobs: `TUNE` (combat), `DMG` (global damage), `CUT` (cuts/doctor), `GUARDS` (guard factors), `STYLES` / `STYLE_*`, `SHOUTS` / `SHOUT_EDGE`, `COMBOS` / `PNUM` / `OPEN_W`.
+- Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career. Ring IQ: `ringIQ(sheet)`.
+- Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `blendSnap`, `spreadView()`. Details in NOTES.md.
+- Corner talk: `roundNotes()`, `talkPrompt`, `ACT.talk`, `talkWords()` fallback, `FX.cornerCall` fires in `updShouts`.
 
 ## Tests (`tests/`, run from repo root)
-Node extracts the engine+career sections and runs fights headless. `PATCH="js code"` env var injects overrides (e.g. `PATCH="Object.assign(TUNE,{vol:.36});DMG=.32"`).
-- `node tests/audit.js 500` — CompuBox-style realism audit: output, connect %, KDs, stoppage rate and timing, decision types, upset rate by OVR gap.
-- `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG` — guard win % vs standard with mirrored stats (results append to /tmp/res_TAG.txt).
-- `node tests/cut.js 500` — cut TKO %, cut frequency, doctor looks.
-- `node tests/diag.js 150 82 philly` — per-guard detail (land/block/evade %, KDs).
-- `node tests/probe.js` — knockdowns and stoppages by round.
-- `node tests/commtest.js` — runs fights through commentary, counts lines per event.
-- `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x` — style round robin: every pair of styles, identical stats + standard guard, sides swapped. Prints win % vs the field, a fingerprint per style (punches/rd, power %, landed, avg distance, gas, counters/rd, seconds on the ropes per round, stoppage wins) and the matchup grid. `BIAS=1` gives each fighter his style's stat lean, `GRD=roll` rolls his style's usual guard (BIAS=1 GRD=roll = what the AI roster looks like). Pass pairs to split runs over cores: `outboxer-counter,slugger-swarmer`.
-- `TAG=x node tests/shout.js 600 82 none,oracle,random,worst,smart,only_body` then `node tests/shout.js agg x` — coach shout policies (side 0 shouts, mirrored stats). `STY=`/`GRD=` filter matchups. Note side 0 alone wins ~48–52% with no shouts; compare against `none` from the same batch.
-- `python3 tests/strip.py "<js rows>" out.png`, `tests/shot.py`, `tests/live.py` — Playwright captures (poses, UI flow, live fight bursts) into `shots/`.
+Node extracts the engine+career sections and runs fights headless. `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
+- `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
+- `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
+- `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials, pairs to split over cores).
+- `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
+- `node tests/same.js 200`: seeded determinism hash for recording-only engine changes.
+- Also: `cut.js`, `diag.js`, `probe.js`, `commtest.js`; Playwright captures `strip.py`, `shot.py`, `live.py` into `shots/` (gitignored).
 
-## Current state
-Live build has: 6 guards, Ring IQ, combo AI, ring movement, doctor fix, guard UI, commentary, per-guard animations, all under the OLD combat tuning.
-
-Repo (not yet published) has the COMBAT REALISM PASS finished:
-```
-TUNE: vol .36, pace 1.45, jabEv .12, jabBlk 1.4, form 3.8, even .01, evenAt .25,
-      jShare .3, jNoise .9, jLean .7, flash .009, kdHurt .18, upFloor 3, wear .08,
-      kdAt 3, kdBase 2.6, kdDiv 9
-DMG .35 (was .32; raised after the style pass so stoppages stay ~30%)
-CUT fresh .004, worn .06, wearPow 1.2, onEye .65
-GUARDS: cross str 1.08 / head 1.2, peekaboo head 1 / ev .98, handslow ctr 1.3, high head 1.15 / hold 1.1
-STYLE PASS: reach .2, reachIn 14, jabCtr .5, moveEv .2, setup .3 (TUNE); STYLE_IN, STYLE_OUT, STYLE_OPEN, STYLE_RAMP, STYLE_STICK, STYLE_PLANS
-```
-Audit after the style pass (900 fights, DMG .35): 57 thrown, 16.6 landed, 29% connect, stoppages ~30%, favorites 57/78/87 at +3/+6/+10, cut TKO 1.8%, cuts in ~21% of fights.
-Audit before the style pass (2000+ fights) vs real (CompuBox ~54 thrown / ~16–17 landed / ~30% per round):
-60 thrown, 19 landed, 32% connect; jab 25%, power 33%; stoppages ~32% (timing ~20% early / 24% mid / 56% late); draws ~8% of decisions; favorites win ~60% at "+3" (really +2: the audit rounds gap/2 down on each side), ~74% at +6, ~87% at +10.
-Cuts (cut.js, 5000 fights): cuts in ~27% of fights, doctor TKO ~2.0%, doctor looks ~4%. CUT.doc alone barely moves it; onEye is the lever.
-Guard balance after the style pass (pooled 600–1100 mirrored fights each, vs standard): at 82 high ~55, peekaboo 52, philly 48.5, cross ~53, handslow ~52; at 65 all 47.6–52.3. (Before: high 54, peekaboo 52.6, philly 49, cross 49, handslow 52.)
-(Stoppage/draw/upset targets are estimates, not sourced.)
-
-Style pass knobs: reach = a power shot thrown from the edge of its range is easier to see; jabCtr = a missed jab is harder to counter than a missed hook; moveEv = a moving target is harder to hit (scaled by guard ev); setup = a power shot right behind a jab is harder to slip/block. All evasion adds are scaled by the guard's ev factor.
-
-What the knobs do: vol/pace = punch output; jabEv/jabBlk = jabs get picked off more; form = random on/off night (upsets); even/evenAt/jShare/jNoise/jLean = judging (shared view + per-judge taste); flash = clean counters can drop a fresh fighter; kdHurt/upFloor = a knockdown leaves him hurt and finishable; wear = permanent headMax damage per head shot (drives late stoppages); kdAt/kdBase/kdDiv = KD check on hurt fighters (uses shot danger `dn`, normalized to DMG).
-
-Coach shouts (repo only): during a round the player yells one of six calls (`SHOUTS`: jab, body, press, counter, move, hands). `Fight.shout(side, k)` sets `F.order` for SHOUT_LEN (14 sim-s, ~40s of fight clock). `sgOf(F)` mixes the call's mods into the STRATS lookup, scaled by `q` (how well he hears it: Ring IQ, heart, hurt, and spam makes him tune out). `shoutFit()` scores the call 0..1 against the moment (guard holes, his body/gas, who is hurt/trapped, his punch pace), worn down by `F.used` (the other corner adjusts to a call you keep using). Above `SHOUT_EDGE.bar` the call gives an edge (atkEdge/defEdge/ctrEdge in react, evade, block, counters); below it the call costs (60%). Only the player's corner shouts; the AI never does. No shouts = old behavior exactly.
-Shout results after the style pass (500 each, SHOUT_EDGE atk .6 def .5 ctr 1.1): perfect coach +10%, simple human rules +1%, random yelling −5%. (Before, at atk .4 def .35 ctr .8: +12 / +2 / −3, mashing one call −5%.)
-
-## To do
-1. Ed publishes via chat (big batch now: style pass, camp learning, special styles, weight classes, legends, visuals pass, backup codes, scouting). Tell Ed to make a backup code of his careers first.
-2. Optional: phone performance check on a real device.
-3. Ideas: the AI corner could shout too (title fights?), and a better human-ish policy in tests/shout.js to tune against.
-
-## Styles (repo only, done)
-Ed's descriptions: Counter-puncher fights slower and waits for an opening; Boxer-puncher is the balanced hybrid that throws volume when needed; Swarmer throws a lot, burns stamina, relentless; Slugger is pressure + power (fewer, heavier shots); Out-boxer fights at distance, the outside is his strong suit.
-Traits in `STYLES` (comments above the table): open, legs, stick, out, inside, hit, ramp. AI corner picks round plans per style (`STYLE_PLANS`).
-Fingerprint (identical stats, thrown/rd, avg distance, gas): counter 43 / 63 / 96%, slugger 49 / 56 / 90% (83% power), boxer-puncher 60 / 61 / 87%, out-boxer 61 / 66 / 96% (43% power), swarmer 82 / 59 / 52%.
-Balance: before, Counter-puncher won 72.5% vs the field and Out-boxer 22% (identical stats). Now 48.3–53.8 identical, 46.8–55.5 with stat leans + rolled guards. Matchups run ~38–62 (styles make fights).
-How the out-boxer got fixed (for next time): he lost on the cards, not by KO; 43% of the power shots that landed on him caught him mid-punch in the pocket. Range/legs knobs alone did nothing; what worked was moveEv + setup + jabCtr + reach + stepping out when the other man gets inside.
-Stat economy (NOT fixed, known): +8 in one stat vs identical fighter (400 fights): defense 61%, power 57, speed 57, accuracy 55.5, recovery 53, chin 52, stamina 51, body 50.5, heart 50, footwork 49. OVR weights price them almost the same, so builds that pump head movement win and chin/stamina/heart/body/footwork are near-dead points. Style stat leans were reworked to be value-neutral against this (see scratch calc in commit e014194 message). Fixing it properly = make the dead stats matter (stamina/heart in long fights, footwork in range control) or reprice OVR_W.
-
-## Legends, special styles, weight classes, camp learning (repo only, done)
-- Special styles (`special: true` in STYLES; random fighters, the create screen and the tests use `BASE_STYLES`): volume (Volume puncher), angle (Angle fighter), awkward, switch (Switch-hitter), body (Body snatcher), pboxer (Pressure boxer), spoiler (Veteran spoiler), jabgrab (Jab-and-grab), feinter (Feint master). Combo menus come from a base style via `STYLE_COMBO`. Traits: eco, angle (+ `lostT` on the other man), odd + leap, swap (stance flips mid-fight, `F.stance`, halves his read), bodyX, pjab, spoil (ties up combos, dirty shots in the clinch, warnings, point deductions via `rs.ded`), grab (+ lean), bite. Knobs: STYLE_ANGLE/ODD/SWAP/SPOIL/GRAB/BITE.
-- Balance, each special vs each base style (identical stats, 200–260/pair): 48–54%. The unlock is a sidegrade; the legend's edge is his stats. `TAG=x node tests/styles.js 200 82 vs:volume,angle` runs it.
-- Legends (`LEGENDS`, fictional, inspired-by names Ed asked for): one per division, generated into every roster by `ensureLegend` (old saves too), stays top 5, no fade/retire, may hold a belt. Wins 58–76% vs 87-rated contenders. Beat him → `P.unlocked` gets his style (camp chip), `P.beatLegends`. Rankings tab stars him and lists all nine.
-- Style is locked for the career (Ed's call): camp only offers his own base style (`P.baseStyle`) plus legend styles he has earned (`campStyles`). Stance is free: picked at creation, changeable in camp.
-- Camp learning: Style and stance row in camp, each change uses a focus slot. Fluency `styleFit`/`stanceFit` (STYLE_LEARN first .55 / camp .3 / fight .08, times gym mult and Ring IQ). While learning he fights a blend (`blendStyle`, `comboW`); a new stance is rusty (`stanceRust`).
-- Corner's call (auto) now uses `aiStrategy(0)` for the player (style-aware), instead of a neutral plan all fight.
-- Weight classes: hub "Weight class" button, one division at a time (`changeDiv`). Each division keeps its own roster/belts (`world.away`), catches up on return. Up: power −2, chin −1, speed +1; down: power +1, chin +1, stamina −3, recovery −2 (stats and ceiling). Keeps 60% of points, vacates belts. `P.titleDivs` tracks multi-division titles.
-- Not done / ideas: no art for the special styles beyond the stance flip (angle step-offs use the normal slide); foul DQ is not in (warnings + point deductions only); legends never move divisions; the other divisions don't sim while you are away except a catch-up when you return.
-
-## Saves, scouting (repo only, done)
-- Backup codes: title screen, Backup on each slot gives a text code (`Backup.encode`: gzip via CompressionStream + base64, prefix `LBz1.`; plain base64 `LB1.` fallback). "Restore from a backup code" pastes it into any slot (`Backup.decode` → `migrateSave`, then Store.push syncs it). A 12-year career is ~17k characters.
-- Offers show a corner read (`cornerRead`: OVR-gap verdict, his biggest edge, yours, his weak spot) and a collapsible tale of the tape (`tapeHtml`). Camp shows the tape too.
-- Ed's call: his stats are ?? until you scout him. The tape's public side (age, record, KO %, stance, ranking, notable wins, last fight, belts held, former champ) is always shown. "Scout him" (`scoutHim`, cost `scoutCost` = 8% of the purse, capped per tier in SCOUT_CAP) reveals his numbers for a year (`P.scout[id] = week`, SCOUT_FOR 52); club fighters get `opp.scouted`. Fought him before (history `oppId`, or name for old entries) = known. Unscouted corner read uses only public info (`publicRead`). OVR stays public.
-- Resumes: `f.wins` (last 3 notable: beat a top-10 man, a legend, took a belt, or beat you), `f.last`, `f.exBelts`, written by `noteFight` from worldSim and applyResult. Old saves/new men get a believable past from `seedResume` (lazily via `resumeOf`).
-- `liveStats(f)`: worldSim drifts roster ratings but never touched stats (gap was mean 4.3 / p90 8.7 OVR after 5 years). Fight sheets (`oppSheet`) and the tape shift every stat by rating − raw OVR, so the card OVR is the man in the ring. `oppNow(save, offer)` = the live roster fighter for an offer.
-
-## Semi-3D test (proto/, not the live game)
-`node proto/build.js` injects the engine+career sections of index.html into `proto/ring3d.src.html` → `proto/ring3d.html` (three.js 0.170 ES module from jsdelivr). Fighters: low-poly meshes, 2-bone IK (`ik()`) for arms/legs, joints computed per frame from `Fight.snap()` in `Boxer.pose()` (guard spots `GUARD3`, punch paths by PUNCH kind, defenses, hit reactions, knockdowns, clinch, walk + stool). Cameras: TV / Ringside / High / Corner + drag. Motion: renders between the last two sim ticks (`blendSnap`), planted feet that step (`this.ft`), punch load + snap curve, hit-stop on big shots (1x only). Models: one-piece lathe limbs (`limbGeo`/`placeLimb`), faces. Stances: knee bend, lean, elbows tucked, rear heel up/turned out (pivots on rear shots). Spacing: the engine's distances were tuned for the 2D side view, so the render spreads them apart (`spad`, up to +26, less on the inside, none in a clinch; only the standing man moves during a knockdown; ropes push the room onto the other man) and punches step in when the arm can't reach (`lunge` in pose, from the shoulders without the step `bSh`, up to 30/34; rear foot follows halfway). Camera frames the spread positions (`rMid`, `rSep`). Anti-clip: punch aim locks at the start (`this.aim`), gloves aim at the jaw/chin surface and are pushed out of the other man's head/torso/gloves (`this.col`), bodies nudged apart render-only (`bodyPush`), then a second pass after both men are posed (`settle()` → `arms()`) pushes the gloves off where the other man is now and redoes the arm IK (2x speed, 1056 frames: glove in head 80 → 2, glove through glove 126 → 0). Ref: `class Ref` (watch: scores 48 spots around the pair by where they land on screen (not between them or in front, away from both, inside the ropes), re-picks every .5s and only moves for a clearly better spot; break clinches, count beside the downed man's chest, wave off). Reactions: `this.react` from hit events (push dir by punch: straight back, hook sideways + head turn, uppercut chin up, body folds late). Knockdowns fall along the push (`this.kd`), body shots take a knee, rise = lie → sit → knee → stand. Variety: overhand rights (30% of head crosses), hook width / uppercut depth per punch (`this.pv`). Test tools in the scratchpad: freeze with `window.__paused = true` and set fight state by hand. Published for Ed as a private test page: https://claude.ai/artifact/D2MQxRkXSGLhmyLLa5EsmU (publish copy strips the doctype/html/head/body tags). Headless test: route three.module.min.js to a local npm copy, launch Chromium with `--use-angle=swiftshader --enable-unsafe-swiftshader`.
+## Current targets (to check after engine changes)
+Audit: ~56 thrown / ~16 landed / ~29% connect per round, stoppages ~30%. Styles 48–53% vs the field. Guards @82 vs standard within ~48–58 (handslow highest). Specials vs base styles 48–54%.
 
 ## Env notes
-- Python Playwright here may not match the preinstalled browser. If `live.py` asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` instead.
-- Even 600-fight guard runs swing ±2–4% between runs. Pool to 1500+ before trusting a 1–2% difference.
+- Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
 
-## Known notes / ideas
-- Referee lane fixed (was within a body-width of a fighter 96% of frames, now ~10%).
-- Guard card shows fit now plus a ceiling tick (new fighters start near 0% for skill guards).
-- Philly used to win ~58% at OVR 65 (low-IQ opponents don't throw the lead right). Under the new combat it's 48%, so the flavor is gone.
-- AI corner switches to 'ko' when trailing late, which causes a knockdown spike around round 8 of 10. Realistic, but watch it.
-- Phone performance with the new animations is untested on a real device.
-- Kit clash: `startFight()` swaps the opponent's trunks/gloves when `colorDist()` < `CLASH` (70, weighted RGB). The dark trunks (black/oxblood/navy/forest/royal) all clash with each other. Bug fixed: `FX.looks` used to be set before the swap, so swaps never reached the renderer.
+## To do
+1. Ed publishes via chat (big batch: style pass, camp learning, special styles, weight classes, legends, visuals, backup codes, scouting, corner talk, combos). Tell Ed to make a backup code of his careers first.
+2. Phone performance check on a real device (S25 Ultra).
+3. Ideas: drill a combo in camp, call combos by number in the corner talk, AI corner shouts. Future (not now): bond/trust system.
