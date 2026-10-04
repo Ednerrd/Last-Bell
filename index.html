@@ -2137,7 +2137,11 @@ const Render = (() => {
   }
   const L = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
   // the jab: no wind-up, snaps out by contact (60% of the punch), snaps straight back
-  const jabK = p => p < .2 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .2) / .4, 3) : p < .8 ? 1 - ease((p - .6) / .2) : 0;
+  // punches speed up into the target (fastest at contact, not easing into it like a push), carry a hair past it,
+  // then snap back and settle into the guard. Contact stays at 60% of the punch (the engine's resolve)
+  const snapIn = (u, v0) => v0 * u + (1 - v0) * u * u;
+  const snapBack = q => q < .1 ? 1 + .035 * Math.sin(q / .1 * Math.PI / 2) : 1.035 * Math.pow(1 - (q - .1) / .9, 2);
+  const jabK = p => p < .15 ? 0 : p < .6 ? snapIn((p - .15) / .45, .55) : snapBack((p - .6) / .4);
   const bez = (a, c, b, t) => ({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
   function shade(hex, f) {
     const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
@@ -2387,7 +2391,7 @@ const Render = (() => {
       if (d > reach) T = { x: sh.x + dx / d * reach, y: sh.y + dy / d * reach };
       const kOf = p => v.feint ? Math.sin(Math.min(1, p) * Math.PI) * .35
         : P.cat === 'jab' ? jabK(p)
-        : p < .35 ? -.18 * ease(p / .35) : p < .6 ? -.18 + 1.18 * (1 - Math.pow(1 - (p - .35) / .25, 3)) : 1 - ease((p - .6) / .4);
+        : p < .35 ? -.18 * ease(p / .35) : p < .6 ? -.18 + 1.18 * snapIn((p - .35) / .25, .45) : snapBack((p - .6) / .4);
       const pv = J.pv || { hw: 1, ud: 1 }, hookC = { x: G.x - 9 * pv.hw, y: (G.y + T.y) / 2 - 3 * pv.hw }, upC = { x: sh.x + 4, y: sh.y + 44 * pv.ud };
       const overC = { x: (sh.x + T.x) / 2 - 4, y: Math.min(sh.y, T.y) - 18 }; // overhand: loops up and over, comes down on him
       const flick = gd === 'handslow' && P.kind === 'straight' && G.y > sh.y + 8, flickC = { x: (G.x + T.x) / 2 + 6, y: G.y + 4 }; // whips up from the hip
