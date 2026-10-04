@@ -32,6 +32,8 @@ Ed's call (Oct 2026): **3D replaces the 2D side view as the live fight screen.**
   - A 30 fps "battery saver" option, because this is an idle sim that people leave running.
 - **Exit:** numbers in hand, and quality defaults picked.
 
+Research (FNC + Thrill of the Fight) and the items it adds to each phase: `proto/RESEARCH.md` → "What Last Bell takes from this".
+
 ## Phase 1: foundation (fix the duct tape before adding looks)
 1. **Spacing.**
    - The engine's distances were tuned for 2D, so the proto spreads them apart (`spad`, up to +26) and lunges punches in (up to 30–34).
