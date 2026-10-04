@@ -36,12 +36,13 @@ Done this session (all pushed):
 | 49cc49f | Step 3: `snapIn` / `snapBack`. Punches accelerate into contact, overshoot ~3.5%, snap back. Contact still at aP .6. |
 | 3e28239 | `research/fighters_a.md` and `research/fighters_b.md`: DNA cards for 14 real fighters (CompuBox output, jab share, body %, range, rhythm, combos, counters, flaws, if/then AI rules). |
 | 5a85264 | **Fight Lab**: `tools/lab.src.js` + `tools/lab.js` build `lab.html`. It drops straight into a fight: New fight (random), Rematch, and Pick (weight, rounds, each side as random / a P4P star / any style, guard override). |
+| adeb0e3 / ad002b3 | **Step 5: footwork acceleration.** Feet ease toward target velocity at a per-style rate (4 + 24 x ret x legs), rope-escape side locked .4 s, smoothed cut-off read, sine punch step, timed pull. Counter style counter .6 -> .68. Audit 56.3 / 15.9 / 28.2% / stops 32%; styles 48.9-51.3; guards 47.9-58.4; specials 49-55 (angle 55.2, watch). same.js hash now f00751e1. Lab republished. Details: NOTES.md "Footwork acceleration". |
 
 Ed asked for the lab: "don't show me the menus, just a boxing match I can randomize."
 
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
-- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. **Wait for his feedback, or continue with step 5 if he says go.**
+- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. **Next: step 6 (no pass-through), unless Ed's lab feedback says otherwise.**
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
