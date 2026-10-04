@@ -29,6 +29,14 @@ Ported from the 3D test (all render-only, engine untouched): the fight loop keep
 ## Talk to your fighter (repo only, corner)
 Corner screen: coach's notes (`roundNotes()`, from recording-only round counters `rs.over` = what he landed while the other man was punching, `rs.ctrL` counters, `rs.made` his misses that got slipped, plus home/trap/thrown/gas/body) and a text box (phone keyboard mic = voice). No round-plan buttons (Ed: text replaces them). `ACT.talk` sends the words + fight facts to Claude (`sample.json`, quick tier, `talkPrompt`) which returns `{plan: STRATS key, call: SHOUTS key|null, reply}`; anything off-menu falls back to auto/null. The plan becomes `FX.strat`, the call fires as a normal `F.shout(0, k)` when the bell rings (`FX.cornerCall` in `updShouts`), so it is scored by `shoutFit` like a button. Offline/no consent: `talkWords()` keyword matcher. Typing holds the 10s corner timer. Next round while Claude is still thinking aborts it and uses the keyword read. `tests/same.js` = seeded determinism hash for recording-only engine changes (200 fights: 4fdc41d4).
 
+## Combinations (repo only, Ed's ask: "combinations that flow", like real pros)
+- Punches (`PUNCH`): jab, cross, hook (lead), uppercut (rear), bodyJab, bodyHook (lead), plus rhook (rear hook, 4), lupper (lead uppercut, 5), bodyCross (rear straight to the body, 2b). Trainers' numbers in `PNUM` (1..6, 1b/2b/3b).
+- `COMBOS` is written in numbers ('1-2-3-2', '1-6-3-2', '1-2b-3', '5-2', '3b-3', '3-4'...); '|' = a beat (`'1|2'` touch jab, pause, the 2). Parsed to `c.seq` (punch keys) and `c.q` (queue with '~' beats). `nextInCombo` turns '~' into `F.beatT` (.1–.22 s). Open stance (southpaw vs orthodox) leans the read via `OPEN_W` (rear straight up, jab down, lead hook up).
+- Measured (60 fights): 2-punch combos finish 83%, 3: 75%, 4: 67%; ~37% of punch runs are singles (many are counter right hands, which is real).
+- Balance (same harness, before → after): audit 55.9/16.2/28.9%/32% stops → 56.2/16.3/29%/30%; styles 48.3–53.8 → 48.2–52.4; guards @82 vs standard: high 48.8→51.4, peekaboo 52.8→52.0, philly 50→52.4, cross 52→53.8, handslow 55.9→57.9 (n1500 each; old CLAUDE numbers below were smaller samples).
+- Tried and dropped (each cost the swarmer ~2–7 pts): 2-punch counters for smart fighters, cross→bodyCross level switch, same-hand doubles waiting for a full recoil.
+- Ideas next: drill a combo in camp (he throws it more and sharper), call combos by number in the corner talk.
+
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless. `PATCH="js code"` env var injects overrides (e.g. `PATCH="Object.assign(TUNE,{vol:.36});DMG=.32"`).
 - `node tests/audit.js 500` — CompuBox-style realism audit: output, connect %, KDs, stoppage rate and timing, decision types, upset rate by OVR gap.
