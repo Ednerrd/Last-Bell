@@ -2684,6 +2684,35 @@ const Render = (() => {
     A.redo(A);
     if (A.trail) A.trail[A.trail.length - 1] = A.trailNear ? A.gN : A.gF;
   }
+  // pose hand-offs never pop: when the action changes (the next punch of a combo takes over from one still on its way back,
+  // a punch is cut short, a block or slip starts or ends), the gap between what was drawn last frame and the new pose
+  // is carried over and fades out in a few frames, so the arm travels instead of teleporting (render only)
+  const CARRY_J = ['hip', 'neck', 'head', 'footF', 'footB'], CARRY_A = ['shN', 'shF', 'gN', 'gF'];
+  function carry(v, J, A, dt) {
+    const sm = v._sm; if (!sm) return;
+    const newShot = v.aT && (sm.cyA !== v.aT || v.aP < (sm.cyP || 0) - .05);
+    const key = (v.aT ? '' : 'n') + '|' + (v.def || '') + '|' + v.state + '|' + (J.dp > 0 ? 'd' : '');
+    if (sm.cyD !== v.dir || !sm.cyL) sm.cyO = null;                       // turned around: nothing to carry
+    else if (newShot || key !== sm.cyK) {
+      const o = {}; let big = false;
+      CARRY_J.forEach(k => { o[k] = [sm.cyL[k].x - J[k].x, sm.cyL[k].y - J[k].y]; });
+      CARRY_A.forEach(k => { o[k] = [sm.cyL[k].x - A[k].x, sm.cyL[k].y - A[k].y]; });
+      for (const k in o) if (Math.hypot(o[k][0], o[k][1]) > 70) big = true;   // a reset (new round, a knockdown) isn't a hand-off
+      sm.cyO = big ? null : o;
+    }
+    sm.cyA = v.aT; sm.cyP = v.aP || 0; sm.cyK = key; sm.cyD = v.dir;
+    const o = sm.cyO;
+    if (o) {
+      const r = Math.exp(-dt * 24); let left = 0;
+      CARRY_J.forEach(k => { J[k] = { x: J[k].x + o[k][0], y: J[k].y + o[k][1] }; });
+      CARRY_A.forEach(k => { A[k] = { x: A[k].x + o[k][0], y: A[k].y + o[k][1] }; });
+      for (const k in o) { o[k][0] *= r; o[k][1] *= r; left = Math.max(left, Math.abs(o[k][0]) + Math.abs(o[k][1])); }
+      A.redo(A);
+      if (A.trail) A.trail[A.trail.length - 1] = A.trailNear ? A.gN : A.gF;
+      if (left < .1) sm.cyO = null;
+    }
+    const L0 = {}; CARRY_J.forEach(k => { L0[k] = J[k]; }); CARRY_A.forEach(k => { L0[k] = A[k]; }); sm.cyL = L0;
+  }
   // heads and chests never overlap on screen: if leaning, ducking or stepping in puts them into each other,
   // both lean back out by half, or all on the other man while one is landing a straight (render only; not in a clinch or a knockdown)
   function bodyPush(f, J) {
@@ -2971,6 +3000,7 @@ const Render = (() => {
     });
     const AR = f.map((v, i) => { const o = 1 - i, q = P3(v.x, v.z), qo = P3(f[o].x, f[o].z); return arms(v, looks[i], J[i], { head: toLocal(v, aim[i].h), body: toLocal(v, aim[i].b), dzy: (qo.y - q.y) / q.s, hr: J[o].S.headR, tw: 10.5 * Math.pow(J[o].S.B, 1.5) }, view.t); });
     settle(f, J, AR, 0); settle(f, J, AR, 1);
+    f.forEach((v, i) => carry(v, J[i], AR[i], dt));
     if (view.ev) for (const e of view.ev) if (e.type === 'hit') spawnHit(e, f, J);
     // depth sort: far side first; a downed fighter goes under a standing one at the same depth
     const items = [0, 1].map(i => ({ z: (f[i].z || 0) - (f[i].state === 'down' ? 6 : 0), draw: () => drawFighter(f[i], looks[i], J[i], AR[i]) }));
