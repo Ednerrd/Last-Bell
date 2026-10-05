@@ -25,6 +25,8 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 ## Where we are
 Ed: "Focus on combat: the boxing AI, combinations, punching, models. Perfect the core auto-boxing mechanics. Smoothness, fluidity, pace, speed." The gym mode (GYM.md, step 1 built) is parked until combat feels right.
 
+**Ed (Oct 5): solidify the boxing first, then convert to the 3D version again** (`proto/PLAN.md`). So engine work (AI, rhythm, contact, footwork) is the priority since it carries into 3D; 2D-only render polish (step 7) is lower value.
+
 Done this session (all pushed):
 
 | Commit | What |
