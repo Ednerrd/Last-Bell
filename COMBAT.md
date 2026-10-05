@@ -26,4 +26,6 @@ Full detail: `research/combat_research.md` (Fight Night, Undisputed, Thrill of t
 10. **E: smarter AI.** Pick targets around the guard (high guard opens the body, low hands open the head), a fading memory of what hurt him, styles that differ in rhythm and range as well as numbers.
 11. **R + E: footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet (bouncy when fresh, flat when tired).
 
+Fight Night Champion / Round 3 notes and what to steal: `research/fnc.md`.
+
 Fighter DNA cards (CompuBox + breakdowns, search summaries only): `research/fighters_a.md` (Stevenson, Lomachenko, Benavidez, Inoue, Usyk), `research/fighters_b.md` (Crawford, Bivol, Canelo, Nakatani, Bam, Mayweather, Tyson, Haney, Ennis). Feeds step 10 and the gym's fighter DNA.
