@@ -1160,7 +1160,7 @@ class Fight {
     D.hitT = 1; D.hitZone = P.zone; D.hitKind = blocked ? 'block' : P.kind; D.hitPow = clamp(dmg / 7, .2, 1.3);
     { // contact quality: blocked, smothered (too close to get it off), glancing (at the end of his reach, or half caught on the roll or the pull), flush (walked into it, a counter, or a perfect one), clean
       const ln = laneOf(A, P), rear = D.stance === 'southpaw' ? 'L' : 'R';
-      const q = blocked ? 'blocked' : d < P.min ? 'smothered' : d > P.max || def === 'roll' || def === 'pull' ? 'glancing' : crit || caught || A.counterWin > 0 || mult > 1 ? 'flush' : 'clean';
+      const q = blocked ? 'blocked' : d < P.min ? 'smothered' : d > P.max || def === 'roll' || def === 'pull' ? 'glancing' : crit || ((caught || A.counterWin > 0 || mult > 1) && P.cat !== 'jab') ? 'flush' : 'clean';
       const glove = !blocked ? null : P.zone === 'body' ? 'elbow' + ln.side : P.kind === 'hook' ? ln.side : P.kind === 'upper' ? 'both' : rear; // hooks on the glove on that side, straights caught by the rear hand
       this.emit('hit', { a: A.side, d: D.side, zone: P.zone, dmg, blocked, crit, kind: P.kind, p: a.type, caught, counter: A.counterWin > 0, x: D.x, cut: D.cut, hand: ln.hand, side: ln.side, lane: ln.lane, q, glove });
     }
