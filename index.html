@@ -1031,7 +1031,7 @@ class Fight {
     F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
-    this.react(F.op, F, P);
+    { const pd = F.op.pendingDef; this.react(F.op, F, P); const nd = F.op.pendingDef; if (pre && nd && nd !== pd) nd.at = Math.max(.02, nd.at - F.act.dur * pre); } // a quicker shot is read off the same cues: his hands move as early as ever
     this.emit('throw', { a: F.side, p: type });
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
   }
