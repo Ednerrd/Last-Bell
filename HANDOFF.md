@@ -19,7 +19,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 - **Engine changes:**
   - Run sims before and after (`node tests/audit.js 500` plus style/guard checks per CLAUDE.md targets).
   - Never mix balance and visual changes in one commit.
-  - For render-only changes, `node tests/same.js 200` must stay at hash **f00751e1** (changed by step 5).
+  - For render-only changes, `node tests/same.js 200` must stay at hash **3f36123a** (changed by step 8).
 - **Don't** build the bond/trust system (future).
 
 ## Where we are
@@ -43,6 +43,7 @@ Ed asked for the lab: "don't show me the menus, just a boxing match I can random
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
 - Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. **Oct 5: step 6 dropped** (it's circling, not pass-through; only 2D shows it as a flip; see COMBAT.md). Ed is moving the fight view to 3D, so **no more 2D render polish**: skip step 7 and the render half of 11. **Next: engine steps 8 (rhythm), 9 (contact quality), 10 (smarter AI), engine half of 11**, all of which carry straight into 3D.
+- **Oct 5: step 8 rhythm v1 done** (commits 4a58bdf..now; NOTES.md "Rhythm"). Base styles, guards, audit in band; output ~52.5 (a bit quiet). Specials awkward/volume/spoiler dropped 4-10 points: tuning pass pending, **after** Ed says whether the rhythm reads in the lab. same.js hash 3f36123a. Lab republished.
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
