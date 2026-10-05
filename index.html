@@ -2188,7 +2188,11 @@ const Render = (() => {
   // then snap back and settle into the guard. Contact stays at 60% of the punch (the engine's resolve)
   const snapIn = (u, v0) => v0 * u + (1 - v0) * u * u;
   const snapBack = q => q < .1 ? 1 + .035 * Math.sin(q / .1 * Math.PI / 2) : 1.035 * Math.pow(1 - (q - .1) / .9, 2);
-  const jabK = p => p < .15 ? 0 : p < .6 ? snapIn((p - .15) / .45, .55) : snapBack((p - .6) / .4);
+  // a punch chained straight off the last one (or a counter) has its hand already loaded: short wind-up, it drives from early on.
+  // Render only: contact stays at 60% of the punch (the engine's resolve); the engine version broke the out-boxer (NOTES.md "Rhythm")
+  const windOf = v => v._sm && v._sm.chn ? .15 : .35;
+  const jabK = (p, w) => { w = w == null ? .15 : w; return p < w ? 0 : p < .6 ? snapIn((p - w) / (.6 - w), .55) : snapBack((p - .6) / .4); };
+  const extOf = (p, w) => p < w ? 0 : p < .6 ? 1 - Math.pow(1 - (p - w) / (.6 - w), 3) : Math.max(0, 1 - ease((p - .6) / .4));
   const bez = (a, c, b, t) => ({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
   function shade(hex, f) {
     const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
@@ -2251,16 +2255,17 @@ const Render = (() => {
     // every punch is a little different: about a third of the right hands to the head loop over the top,
     // hooks go wider or tighter, uppercuts dig from lower or higher (render only, rolled when the punch starts)
     let pv = { over: false, hw: 1, ud: 1 };
+    if (v._sm) { const sm = v._sm; if (v.aT && (sm.pvA !== v.aT || v.aP < (sm.pvP || 0) - .05 || !sm.pv)) sm.chn = !v.feint && (!!sm.inP || !!v.ctr); sm.inP = !!v.aT; }
     if (v.aT && v._sm) {
       const sm = v._sm, P0 = PUNCH[v.aT];
       if (sm.pvA !== v.aT || v.aP < (sm.pvP || 0) - .05 || !sm.pv) { sm.pvA = v.aT; sm.pv = { over: P0.kind === 'straight' && P0.arm === 'rear' && P0.zone === 'head' && !v.feint && Math.random() < .3, hw: .7 + Math.random() * .7, ud: .8 + Math.random() * .45 }; }
       sm.pvP = v.aP; pv = sm.pv;
     }
     if (v.aT) {
-      const P = PUNCH[v.aT], p = v.feint ? Math.min(v.aP, .35) * .8 : v.aP;
-      const ext = p < .35 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .35) / .25, 3) : Math.max(0, 1 - ease((p - .6) / .4));
+      const P = PUNCH[v.aT], p = v.feint ? Math.min(v.aP, .35) * .8 : v.aP, w = windOf(v);
+      const ext = extOf(p, w);
       const drive = P.cat === 'jab' ? .45 : 1; const rear = P.arm === 'rear';
-      load = p < .35 ? (p / .35) * drive : 0; // coil before the shot
+      load = p < w ? (p / w) * drive * (w < .35 ? .5 : 1) : 0; // coil before the shot (half a coil when the hand is already loaded)
       twist = ext * drive * (rear ? 1 : .7);
       if (P.kind === 'straight') { lean += (.12 + .12 * drive) * ext - .05 * load; hipX += (rear ? 6 : 3.5) * ext; hipY += 2 * ext * drive; if (rear) heel = ext; }
       if (pv.over) { lean += .12 * ext + .05 * load; hipY += 3 * ext; } // overhand: rolls over the top of it, dips the head under
@@ -2353,7 +2358,7 @@ const Render = (() => {
     if (v.aT && J.dp === 0 && J.twist) {
       const pl = PUNCH[v.aT].arm === 'lead'; const lsh = southpaw ? shN : shF, rsh = southpaw ? shF : shN;
       const fw = pl ? lsh : rsh, bk = pl ? rsh : lsh; fw.x += 5 * J.twist; bk.x -= 3 * J.twist; fw.y -= 1.5 * J.twist;
-      if (PUNCH[v.aT].cat === 'jab' && !v.feint) { const jk = jabK(v.aP); fw.x += 7 * jk; fw.y -= 2.2 * jk; } // lead shoulder rolls forward and up over the chin
+      if (PUNCH[v.aT].cat === 'jab' && !v.feint) { const jk = jabK(v.aP, windOf(v) < .35 ? .05 : .15); fw.x += 7 * jk; fw.y -= 2.2 * jk; } // lead shoulder rolls forward and up over the chin
     }
     let trail = null, stretch = 0, trailNear = false;
     const gd = v.guard || 'standard', N = J.neck, tir = v.tired || 0;
@@ -2436,9 +2441,10 @@ const Render = (() => {
       } else T = { x: T.x - (tgt.tw || 11) - gr * .7, y: T.y };
       const reach = S.arm * 2 * .97; let dx = T.x - sh.x, dy = T.y - sh.y, d = Math.hypot(dx, dy);
       if (d > reach) T = { x: sh.x + dx / d * reach, y: sh.y + dy / d * reach };
+      const wd = windOf(v), dip = wd < .35 ? .07 : .18;
       const kOf = p => v.feint ? Math.sin(Math.min(1, p) * Math.PI) * .35
-        : P.cat === 'jab' ? jabK(p)
-        : p < .35 ? -.18 * ease(p / .35) : p < .6 ? -.18 + 1.18 * snapIn((p - .35) / .25, .45) : snapBack((p - .6) / .4);
+        : P.cat === 'jab' ? jabK(p, wd < .35 ? .05 : .15)
+        : p < wd ? -dip * ease(p / wd) : p < .6 ? -dip + (1 + dip) * snapIn((p - wd) / (.6 - wd), .45) : snapBack((p - .6) / .4);
       const pv = J.pv || { hw: 1, ud: 1 }, hookC = { x: G.x - 9 * pv.hw, y: (G.y + T.y) / 2 - 3 * pv.hw }, upC = { x: sh.x + 4, y: sh.y + 44 * pv.ud };
       const overC = { x: (sh.x + T.x) / 2 - 4, y: Math.min(sh.y, T.y) - 18 }; // overhand: loops up and over, comes down on him
       const flick = gd === 'handslow' && P.kind === 'straight' && G.y > sh.y + 8, flickC = { x: (G.x + T.x) / 2 + 6, y: G.y + 4 }; // whips up from the hip
@@ -2796,7 +2802,7 @@ const Render = (() => {
     // Too close: he sits back a touch and the rest of the room comes from the other man rocking back off it
     if (P.kind === 'straight' && !body) {
       const rear = P.arm === 'rear', drive = P.cat === 'jab' ? .45 : 1, sp = v.stance === 'southpaw', near = rear ? !sp : sp;
-      const ext = p < .35 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .35) / .25, 3) : Math.max(0, 1 - ease((p - .6) / .4));
+      const ext = extOf(p, windOf(v));
       const tw = drive * (rear ? 1 : .7), go = (rear ? 6 : 3.5) + J.S.torso * (.12 + .12 * drive) * Math.cos(J.lean);
       const shx = J.neck.x + (near ? 2 : -3) + go * (1 - ext) + 5 * tw + (P.cat === 'jab' ? 7 : 0), shy = J.neck.y + (near ? 4 : 2) - 1.5 * tw - (P.cat === 'jab' ? 2.2 : 0);
       const gr = 7.2 * Math.sqrt(J.S.B), hr = Jo.S.headR, Tx = t.x - hr * .8 - gr * .8, Ty = t.y + hr * .5, R2 = J.S.arm * 2 * .93;
