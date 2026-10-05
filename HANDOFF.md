@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/new-session-ne6ynn`. Commit small, push after each step. No PRs unless he asks.
+- **Branch:** `claude/handoff-review-32nske` (was `claude/new-session-ne6ynn`). Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -19,11 +19,13 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 - **Engine changes:**
   - Run sims before and after (`node tests/audit.js 500` plus style/guard checks per CLAUDE.md targets).
   - Never mix balance and visual changes in one commit.
-  - For render-only changes, `node tests/same.js 200` must stay at hash **f00751e1** (changed by step 5).
+  - For render-only changes, `node tests/same.js 200` must stay at hash **ef225fb9** (changed by step 6).
 - **Don't** build the bond/trust system (future).
 
 ## Where we are
 Ed: "Focus on combat: the boxing AI, combinations, punching, models. Perfect the core auto-boxing mechanics. Smoothness, fluidity, pace, speed." The gym mode (GYM.md, step 1 built) is parked until combat feels right.
+
+**Ed (Oct 5): solidify the boxing first, then convert to the 3D version again** (`proto/PLAN.md`). So engine work (AI, rhythm, contact, footwork) is the priority since it carries into 3D; 2D-only render polish (step 7) is lower value. Why 3D: to *see* punch lanes, where a shot lands or misses and why, like Fight Night Champion. So steps 9-10 should make the engine emit that detail in its `hit`/`miss` events (hand, lane/angle, contact quality, miss type: short, slipped left/right, ducked, pulled, blocked on which glove), not just pick an outcome. The 3D render then draws what the engine decided.
 
 Done this session (all pushed):
 
@@ -36,13 +38,14 @@ Done this session (all pushed):
 | 49cc49f | Step 3: `snapIn` / `snapBack`. Punches accelerate into contact, overshoot ~3.5%, snap back. Contact still at aP .6. |
 | 3e28239 | `research/fighters_a.md` and `research/fighters_b.md`: DNA cards for 14 real fighters (CompuBox output, jab share, body %, range, rhythm, combos, counters, flaws, if/then AI rules). |
 | 5a85264 | **Fight Lab**: `tools/lab.src.js` + `tools/lab.js` build `lab.html`. It drops straight into a fight: New fight (random), Rematch, and Pick (weight, rounds, each side as random / a P4P star / any style, guard override). |
+| 5d21ada..now | **Step 6: no pass-through.** Left-right order kept; escape pivots and rope angle-offs may still switch sides (walling them off cost the out-boxer 6 points). Facing turns over .2 s in render. Swaps 1.07 -> 0.6/min. Hash ef225fb9. |
 | adeb0e3 / ad002b3 | **Step 5: footwork acceleration.** Feet ease toward target velocity at a per-style rate (4 + 24 x ret x legs), rope-escape side locked .4 s, smoothed cut-off read, sine punch step, timed pull. Counter style counter .6 -> .68. Audit 56.3 / 15.9 / 28.2% / stops 32%; styles 48.9-51.3; guards 47.9-58.4; specials 49-55 (angle 55.2, watch). same.js hash now f00751e1. Lab republished. Details: NOTES.md "Footwork acceleration". |
 
 Ed asked for the lab: "don't show me the menus, just a boxing match I can randomize."
 
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
-- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. **Next: step 6 (no pass-through), unless Ed's lab feedback says otherwise.**
+- Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. **Next: step 8 (rhythm). Skip step 7 (2D-only render polish) per Ed's 3D plan.**
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
