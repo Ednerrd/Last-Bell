@@ -455,7 +455,7 @@ function sgOf(F) {
 }
 
 // rhythm: bursts and resets instead of a metronome. After an exchange both men may reset (coolT), each round opens with a feel-out
-const RHY = { feel1: [5, 8], feelN: [1, 2.5], exEnd: .45, reset: .42, big: .2, tired: .3, cool: [1.5, 3.4], cMul: .06, cStyle: .18, hot: 1.95, hotT: [1, 2.5], hotPace: .55, base: 1.45, want: 5, feint: 1, openK: 1 };
+const RHY = { feel1: [5, 8], feelN: [1, 2.5], exEnd: .45, reset: .42, big: .2, tired: .3, cool: [1.5, 3.4], cMul: .12, cStyle: 0, hot: 1.75, hotT: [1, 2.5], hotPace: .55, base: 1.25, want: 5, feint: 1, openK: 1 };
 const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30;
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
@@ -792,7 +792,7 @@ class Fight {
     if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
     const cool = this.coolT > 0 && !hurtOp && !F.order && this.opening(F) < .9; // resetting: feints, steps, a look; the busy ones break it first
     const rk = (st.open || 0) * RHY.openK; // a counter-puncher keeps his own clock: he waits for openings, not for the tempo
-    aggr *= lerp(cool ? RHY.cMul + RHY.cStyle * clamp(st.aggr - .7, 0, 1.2) : this.hotT > 0 ? RHY.hot : RHY.base, 1, rk);
+    const rm = lerp(cool ? RHY.cMul + RHY.cStyle * clamp(st.aggr - .7, 0, 1.2) : this.hotT > 0 ? RHY.hot : RHY.base, 1, rk); // scales his rate, not his odds, so busy styles don't hit the ceiling
     // range intent
     let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0) + (cool ? RHY.want : 0);
     if (hurtOp) want -= 14;
@@ -831,7 +831,7 @@ class Fight {
       aggr *= STYLE_OUT.aggr;                       // he doesn't want to trade in there
       if (!trapped && F.slideT <= 0 && R() < st.out * STYLE_OUT.p * (.4 + .6 * k) * (.5 + F.s.footwork / 200) && this.stepOut(F, v)) return;
     }
-    if (d < 86 && R() < aggr * TUNE.vol) {
+    if (d < 86 && R() < 1 - Math.pow(1 - clamp(aggr * TUNE.vol, 0, .999), rm)) {
       const combo = this.pickCombo(F, d, sg, hurtOp);
       if (combo) { F.queue = cool && combo[0] === 'jab' ? [] : combo.slice(1); this.startPunch(F, combo[0]); F.decT = (0.15 + R() * .3) * TUNE.pace; return; } // in a reset a jab is just a touch
     }
