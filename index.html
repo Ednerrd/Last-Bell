@@ -454,7 +454,7 @@ function sgOf(F) {
   return out;
 }
 
-const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14; // XGAP: least left-right gap (A is always the left man)
+const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14, XDZ = 45; // XGAP: left-right gap kept when they are closer than XDZ in depth
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
 function dist(A, B) { return Math.hypot(B.x - A.x, B.z - A.z); }
@@ -612,7 +612,7 @@ class Fight {
     F.walkDir = walking && Math.abs(dx) > 6 ? (dx > 0 ? 1 : -1) : 0; // turns and walks where he is going; faces the ring again once he gets there
     this.face();
   }
-  face() { for (const F of this.f) { const dx = F.op.x - F.x; if (F.walkDir) F.dir = F.walkDir; else if (Math.abs(dx) > 5) F.dir = dx > 0 ? 1 : -1; } }
+  face() { const [A, B] = this.f; let lr = this.lr || 1; if ((B.x - A.x) * lr < -XGAP) this.lr = lr = -lr; this.f.forEach((F, i) => { F.dir = F.walkDir || (i ? -lr : lr); }); }
   physics() {
     const [A, B] = this.f;
     for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
@@ -622,12 +622,13 @@ class Fight {
       A.x = mx - v.ux * h; A.z = mz - v.uz * h; B.x = mx + v.ux * h; B.z = mz + v.uz * h;
       for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
     }
-    // side view: A stays on the left. They can circle deep but never cross, so nobody mirrors in one frame
-    const gap = B.x - A.x;
-    if (gap < XGAP) {
-      let a = A.x - (XGAP - gap) / 2, b = B.x + (XGAP - gap) / 2;
-      if (a < -RING) { b += -RING - a; a = -RING; } if (b > RING) { a -= b - RING; b = RING; }
-      A.x = a; B.x = b; if (A.vx > 0) A.vx = 0; if (B.vx < 0) B.vx = 0;
+    // side view: they only change sides by circling deep (one passes in front of the other). Close in depth, the left-right order holds,
+    // and facing follows the order with a margin, so nobody mirrors in one frame (the render animates the turn)
+    const lr = this.lr || 1, gap = (B.x - A.x) * lr;
+    if (gap > -XGAP && gap < XGAP && Math.abs(B.z - A.z) < XDZ) {
+      const pu = Math.min(XGAP - gap, 4) / 2 * lr; let a = A.x - pu, b = B.x + pu; // eased, never a jump
+      if (a < -RING) { b += -RING - a; a = -RING; } if (b > RING) { a -= b - RING; b = RING; } if (a > RING) { b -= a - RING; a = RING; } if (b < -RING) { a += -RING - b; b = -RING; }
+      A.x = a; B.x = b; if (A.vx * lr > 0) A.vx = 0; if (B.vx * lr < 0) B.vx = 0;
     }
     this.face();
   }
@@ -1251,7 +1252,7 @@ class Fight {
         D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
         if (K.zone === 'body') D.body = Math.max(D.body, 22);
         D.stunT = 0; D.decT = .3; A.decT = .3;
-        const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.f[0].x <= this.f[1].x ? 1 : -1;
+        const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.lr || 1;
         this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.face();
         this.phase = 'fight'; this.phaseT = 0; this.kdState = null;
         this.emit('resume');
