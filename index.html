@@ -470,7 +470,7 @@ function freeRun(x, z, dx, dz) {
   return Math.max(0, t);
 }
 let DMG = 0.35; // global tuning
-const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .5, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
+const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
 
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
 function cutChance(D, dmg, crit) {
@@ -739,6 +739,7 @@ class Fight {
     if (F.lostT > 0) F.lostT -= dt;
     if (F.pullT > 0) F.pullT -= dt;
     if (F.feelT > 0) F.feelT -= dt; if (F.beatR > 0) F.beatR -= dt; if (F.hotT > 0) F.hotT -= dt;
+    F.rq = (F.rq || 0) + ((F.beatR > 0 || F.feelT > 0 ? 1 : 0) - (F.rq || 0)) * (1 - Math.exp(-dt / 20)); // share of the last ~20 s spent resetting or feeling out
     if (F.biteT > 0) F.biteT -= dt;
     if (F.st.swap && F.state !== 'punch' && (F.swapT += dt) > STYLE_SWAP.every * rnd(.6, 1.4)) this.swapStance(F);
     if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
@@ -799,7 +800,7 @@ class Fight {
     if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
     const feel = F.feelT > 0 && !hurtOp ? clamp(F.feelT / 2, 0, 1) : 0, rst = F.beatR > 0 && !hurtOp && !oTrapped; // feeling him out, or resetting after an exchange
     if (feel) aggr *= lerp(1, TEMPO.fAggr, feel);
-    if (rst) aggr *= TEMPO.rAggr; else if (F.hotT > 0) aggr *= TEMPO.hotAggr;
+    if (rst) aggr *= TEMPO.rAggr; else { aggr /= Math.max(.55, 1 - (F.rq || 0)); if (F.hotT > 0) aggr *= TEMPO.hotAggr; } // the work he skipped in the resets comes in the bursts
     // range intent
     let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0) + TEMPO.fWant * feel + (rst ? TEMPO.rWant : 0);
     if (hurtOp) want -= 14;
