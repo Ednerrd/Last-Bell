@@ -1,10 +1,10 @@
-# Handoff (Oct 5 2026): combat polish
+# Handoff (Oct 5 2026, late): combat polish
 
 Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the ranked plan). Don't read all of `index.html`: grep, then read the section.
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/step9-contact` (was `claude/festive-thompson-e2ch70`, `ccr-9a5a152f-n8ld1d`, `claude/handoff-review-32nske`). Commit small, push after each step. No PRs unless he asks.
+- **Branch:** `claude/determined-feynman-6z4lju` is now the newest line: it merged all of `claude/step9-contact` (tree taken as-is) and added idea 1 + the KD walk fix on top. Earlier lines: `claude/step9-contact`, `claude/festive-thompson-e2ch70`, `ccr-9a5a152f-n8ld1d`, `claude/handoff-review-32nske`. **Several sessions have run in parallel off one handoff and duplicated work: run `git fetch && git branch -r` and check the newest commits before starting.** Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -19,7 +19,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 - **Engine changes:**
   - Run sims before and after (`node tests/audit.js 500` plus style/guard checks per CLAUDE.md targets).
   - Never mix balance and visual changes in one commit.
-  - For render-only changes, `node tests/same.js 200` must stay at hash **48fcf240** (changed by step 9 extension + AI).
+  - For render-only changes, `node tests/same.js 200` must stay at hash **26d689a1** (changed by the KD walk fix).
 - **Don't** build the bond/trust system (future).
 
 ## Where we are
@@ -47,10 +47,10 @@ Ed asked for the lab: "don't show me the menus, just a boxing match I can random
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
 - Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. Step 8a (rhythm: resets, feel-outs) done, see NOTES.md "Rhythm" (watch slugger 58, high guard 46, handslow 60). **Oct 5: Ed picked Lab A (this line: step 6 + `TEMPO` rhythm) over Lab B (`ccr-026fa9ad-j4d8rw`, `RHY` rhythm, no step 6): "the pace was slightly better". Lab B is dead; don't merge it.** 8b done render-only (NOTES.md "Rhythm"), lab republished. **Next: 9 (contact quality, emit lane/miss detail for 3D), then 10. Skip step 7 (2D-only render polish) per Ed's 3D plan.** **Oct 5 (claude/step9-contact): step 9 part 1 done: hit/miss events carry hand, lane, contact quality, glove, miss type (9a); damage follows arm extension at contact (Ed asked for it). same.js fa768ffe. AI now reads extension too (out-boxer 43 -> 47). Next: hit-stop + look per quality (render), then step 10, slugger first (59%, eats out-boxer and swarmer).**
 
-## Next: Ed's ideas (end of Oct 5 session), in this order
+## Next: Ed's ideas (end of Oct 5 session), in this order. **Next up: 2 (stamina, pacing, body shots)**
 Ed watched the lab and brought four things. Measured this session (scratch sims, 250–300 fights @75):
 
-1. **Punches look like pawing (render only, do first).** Frame-by-frame of a live right hand (60fps, `extOf` in render ~2227): the wind-up barely shows, the arm floats out, then **hangs out ~8 frames** after contact and drifts back; shoulder roll and hip turn are small, so it reads as reaching/touching, not hitting. Fix: visible load, snap out, very short hold, snap back as fast as it went; drive the shoulder and hips through it; some head snap on the man hit. Contact must stay at aP .6 and `same.js` at 48fcf240. Capture: lab.html + a rAF `toDataURL` loop that starts when `F.f[i].act.type==='cross'` (`tools/measure/sheet.py` does the same).
+1. ✅ **Punches look like pawing: done** (render only, contact still at .6). Visible coil (shoulder and hips pull back), accelerating drive in the last ~18% (~4 frames on a right hand), 2-frame hold, home by 86%; body on the same clock. Right hand at range: ~3 frames out, 2 at contact, ~3 back (was ~8 hanging). Not done: extra head snap on the man hit (existing hit reaction kept). Details: NOTES.md "Punches hit instead of paw". Also done: KD neutral-corner walk stays on the standing man's side (within noise in sims).
 2. **Stamina, pacing and body shots (engine, full sims; measure with `node tests/gas.js 250` and `node tests/bodykd.js 300`).**
    - Now: **output never fades** (≈54 thrown/rd in r1, ≈53 in r9). Only the swarmer ever gasses (ends rounds ~10–30% gas); counter and out-boxer end rounds at ~90%. `stamMax` only drops from body shots (98 → ~86 by r9). `stamFac` (.55–1) exists but rarely bites.
    - Want (FNC): a hard round costs `stamMax` by work rate (up to ~10%/rd if he slugs), recovery by stamina stat + training; tired = less power, slower hands, lower output, beaten to the punch. AI paces itself.
