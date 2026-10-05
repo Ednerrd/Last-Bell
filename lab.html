@@ -2575,10 +2575,17 @@ const Render = (() => {
     return pts.map(([q, o]) => ({ x: J.hip.x + ux * q + fx * o * G, y: J.hip.y + uy * q + fy * o * G }));
   }
   const TORSO = [[-.02, 9], [.22, 8.6], [.48, 9.6], [.66, 12.4], [.8, 12.2], [.93, 9.5], [1.04, 5], [1.07, -1], [1.02, -7.5], [.92, -11.5], [.72, -11.2], [.45, -9.6], [.2, -9.4], [-.02, -10]];
+  // turning around takes a beat: the body narrows to side-on and opens up the other way (no one-frame mirror)
+  function turn(v, dt) {
+    const sm = v._sm, TURN = .2;
+    if (sm.tp == null || dt > .25) sm.tp = v.dir;
+    else if (dt > 0 && sm.tp !== v.dir) sm.tp = v.dir > sm.tp ? Math.min(v.dir, sm.tp + dt * 2 / TURN) : Math.max(v.dir, sm.tp - dt * 2 / TURN);
+    if (sm.tp !== v.dir) { v.tw = .4 + .6 * Math.abs(Math.sin(sm.tp * Math.PI / 2)); if (sm.tp !== 0) v.dir = sm.tp > 0 ? 1 : -1; }
+  }
   function drawFighter(v, look, J, A) {
     const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
-    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
+    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s * (v.tw || 1), pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
@@ -3000,7 +3007,7 @@ const Render = (() => {
     lg.addColorStop(0, `rgba(${V.light},${V.la})`); lg.addColorStop(1, `rgba(${V.light},0)`);
     ctx.fillStyle = lg; ctx.fillRect(-260, -260, 520, 300);
     const f = view.f; const looks = view.looks;
-    f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt; });
+    f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt; turn(v, view.sdt == null ? dt : view.sdt); }); // the turn runs on fight time (fast-forward, slow-mo)
     const J = f.map((v, i) => body(v, looks[i], view.t));
     f.forEach((v, i) => lunge(v, J[i], f[1 - i], J[1 - i], dt));
     bodyPush(f, J);
@@ -4037,7 +4044,7 @@ function liveView() {
   else if (F.clinchT > 0) info.clinch = true;
   else if (F.phase !== 'fight') info.neutral = true;
   const ref = refTick(fs, info, FX.rdt || .016);
-  return { f: fs, looks: FX.looks, t: FX.t, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: FX.excite, ref, ev: FX.ev.splice(0), flash: FX.flash };
+  return { f: fs, looks: FX.looks, t: FX.t, sdt: FX.rdt, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: FX.excite, ref, ev: FX.ev.splice(0), flash: FX.flash };
 }
 function updHud() {
   F.f.forEach((X, i) => {
@@ -4079,7 +4086,7 @@ function loop(ts) {
     const ri_ = {}; const dn = s.f.findIndex(x => x.state === 'down'), sl = s.f.findIndex(x => x.state === 'slump');
     if (dn >= 0) { ri_.down = dn; ri_.pulse = Math.min(1, (FX.t % .95) / .5); } else if (sl >= 0) ri_.wave = sl;
     const ref = refTick(s.f, ri_, FX.rdt);
-    view = { f: s.f, looks: FX.looks, t: FX.t, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: .6, ev, replay: true, ref, flash: ev.some(e => e.dmg > 5 && !e.blocked) ? .35 : 0 };
+    view = { f: s.f, looks: FX.looks, t: FX.t, sdt: FX.rdt, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: .6, ev, replay: true, ref, flash: ev.some(e => e.dmg > 5 && !e.blocked) ? .35 : 0 };
     if (i >= R_.length - 1) { FX.mode = 'done'; clearOverlay(); setTimeout(resultScreen, 700); }
   } else { view = liveView(); }
   updShouts();

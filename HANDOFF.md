@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/new-session-ne6ynn`. Commit small, push after each step. No PRs unless he asks.
+- **Branch:** whatever the session names (this one: `ccr-9a5a152f-n8ld1d`). Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -38,11 +38,13 @@ Done this session (all pushed):
 | 5a85264 | **Fight Lab**: `tools/lab.src.js` + `tools/lab.js` build `lab.html`. It drops straight into a fight: New fight (random), Rematch, and Pick (weight, rounds, each side as random / a P4P star / any style, guard override). |
 | adeb0e3 / ad002b3 | **Step 5: footwork acceleration.** Feet ease toward target velocity at a per-style rate (4 + 24 x ret x legs), rope-escape side locked .4 s, smoothed cut-off read, sine punch step, timed pull. Counter style counter .6 -> .68. Audit 56.3 / 15.9 / 28.2% / stops 32%; styles 48.9-51.3; guards 47.9-58.4; specials 49-55 (angle 55.2, watch). same.js hash now f00751e1. Lab republished. Details: NOTES.md "Footwork acceleration". |
 
+| 2fb981e | **Step 6: animated turn** (render only). The engine x-order lock was tried and reverted (outboxer 52 -> 44%). See NOTES.md "Side swaps". Lab republished. |
+
 Ed asked for the lab: "don't show me the menus, just a boxing match I can randomize."
 
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
-- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. **Next: step 6 (no pass-through), unless Ed's lab feedback says otherwise.**
+- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. Step 6 done (animated turn). **Next: step 7 (uppercut curve, close-range spacing, render only), unless Ed's lab feedback says otherwise.**
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
@@ -52,7 +54,7 @@ Ed asked for the lab: "don't show me the menus, just a boxing match I can random
    - Make the punch step a sine shape, not a square wave (~741).
    - The `react()` pull at ~1021 gets overwritten by footwork the next tick. Give it a timer.
    - Line numbers are from before this session's edits; grep. Changes balance, so do a full sim pass.
-2. **Step 6, engine: no pass-through.** Fighters cross and `face()` mirrors both bodies in one frame (~1.7/min). Keep the left-right order in `physics()`; animate the turn in render.
+2. ✅ Step 6: animated turn (render). Don't re-try the x-order lock without an outboxer fix.
 3. **Step 7, render:** uppercut curve break at aP .4 in `body()` (switch at .35, ramp the lean); close-range spacing in `spreadView` (adds 0 below distance 32); smooth `bodyPush` / `settle` offsets.
 4. **Steps 8–11:**
    - rhythm (burst then reset, feel-out moments);
