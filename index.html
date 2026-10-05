@@ -800,7 +800,7 @@ class Fight {
     if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
     const feel = F.feelT > 0 && !hurtOp ? clamp(F.feelT / 2, 0, 1) : 0, rst = F.beatR > 0 && !hurtOp && !oTrapped; // feeling him out, or resetting after an exchange
     if (feel) aggr *= lerp(1, TEMPO.fAggr, feel);
-    if (rst) aggr *= TEMPO.rAggr; else aggr /= Math.max(.55, 1 - (F.rq || 0)); // the work he skipped in the resets comes in the bursts
+    if (rst) aggr *= TEMPO.rAggr; else aggr /= Math.max(.72, 1 - (F.rq || 0)); // the work he skipped in the resets comes in the bursts
     // range intent
     let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0) + TEMPO.fWant * feel + (rst ? TEMPO.rWant : 0);
     if (hurtOp) want -= 14;
