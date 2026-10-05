@@ -435,7 +435,7 @@ const STYLE_BITE = { t: .8, edge: 1.2 };                                     // 
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 // rhythm: bursts, then resets. After an exchange the pair may reset (back out, feint, step around). A hot streak after it cost the swarmer his gas (tried 1.15-1.35).
 // Rounds open with a feel-out (longer in the first). How often he resets and how long he feels out come from his aggression
-const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rWant: 10, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
+const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rJab: .1, rWant: 10, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
 const SHOUT_EDGE = { atk: .6, def: .5, ctr: 1.1, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
@@ -838,6 +838,10 @@ class Fight {
     if (st.out && !hurtOp && d < F.want - STYLE_OUT.gap) {
       aggr *= STYLE_OUT.aggr;                       // he doesn't want to trade in there
       if (!trapped && F.slideT <= 0 && R() < st.out * STYLE_OUT.p * (.4 + .6 * k) * (.5 + F.s.footwork / 200) && this.stepOut(F, v)) return;
+    }
+    // a reset or a feel-out is jabs and feints, not silence: the jabbers keep touching him
+    if ((rst || feel > .5) && d < PUNCH.jab.max + 6 && R() < TEMPO.rJab * (.3 + (st.stick || 0) + .5 * (st.out || 0) + .5 * (st.pjab || 0)) * (sg.jab || 1)) {
+      F.queue = R() < .3 ? ['jab'] : []; this.startPunch(F, 'jab'); F.decT = (0.2 + R() * .3) * TUNE.pace; return;
     }
     if (d < 86 && R() < aggr * TUNE.vol) {
       const combo = this.pickCombo(F, d, sg, hurtOp);
