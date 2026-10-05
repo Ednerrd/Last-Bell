@@ -435,6 +435,8 @@ const STYLE_BITE = { t: .8, edge: 1.2 };                                     // 
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 // rhythm: bursts, then resets. After an exchange the pair may reset (back out, feint, step around). A hot streak after it cost the swarmer his gas (tried 1.15-1.35).
 // Rounds open with a feel-out (longer in the first). How often he resets and how long he feels out come from his aggression
+// chained combo punches and counters skip part of the wind-up (the hand is already loaded): the punch starts this far in (contact stays at .6)
+const CHAIN = { swap: .15, same: .07, ctr: .15 };
 const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rJab: .1, rWant: 10, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
@@ -768,8 +770,8 @@ class Fight {
         const sp_ = p < 0.6 ? a.step / (a.dur * 0.6) * 1.5708 * Math.sin(Math.PI * p / .6) : -a.step * ret / (a.dur * 0.4) * 1.5708 * Math.sin(Math.PI * Math.min(1, (p - .6) / .4));
         F.vx = a.ux * sp_; F.vz = a.uz * sp_;
         if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.queue.length) this.nextInCombo(F); }
-        else if (p >= 1) { F.state = 'idle'; F.act = null; F.vx = F.vz = 0; if (F.queue.length && F.stam > 2) this.nextInCombo(F); else this.comboDone(F); }
-        else if (a.done && F.queue.length && F.stam > 2 && F.queue[0] !== '~' && p >= .82) { F.act = null; F.state = 'idle'; this.nextInCombo(F); }
+        else if (p >= 1) { F.state = 'idle'; F.act = null; F.vx = F.vz = 0; if (F.queue.length && F.stam > 2) this.nextInCombo(F, true); else this.comboDone(F); }
+        else if (a.done && F.queue.length && F.stam > 2 && F.queue[0] !== '~' && p >= .82) { F.act = null; F.state = 'idle'; this.nextInCombo(F, true); }
       }
     }
     if (F.beatT > 0 && (F.beatT -= dt) <= 0) { F.beatT = 0; if (F.state === 'idle' || F.state === 'move') { if (F.queue.length && F.stam > 2) { this.nextInCombo(F); if (F.state === 'punch') return; } else this.comboDone(F); } }
@@ -967,7 +969,7 @@ class Fight {
     F.exitAfter = false;
   }
   // next punch in the combo, adjusted to what just happened
-  nextInCombo(F) {
+  nextInCombo(F, chain) {
     const O = F.op, k = iqK(F), last = F.lastRes, d = dist(F, O);
     let nx = F.queue.shift();
     if (nx === '~') { F.beatT = .1 + R() * .12; F.decT = Math.max(F.decT, F.beatT + .3); return; } // a beat: touch, then the real one
@@ -982,7 +984,7 @@ class Fight {
     // he is hurt: keep the punches coming
     if (last === 'landed' && (O.state === 'stun' || O.head < O.headMax * .25) && F.queue.length === 0 && F.stam > 12 && R() < .35 + .45 * k)
       F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
-    this.startPunch(F, nx);
+    this.startPunch(F, nx, chain && lp ? (PUNCH[nx].arm === lp.arm ? CHAIN.same : CHAIN.swap) : 0);
   }
   pickCombo(F, d, sg, hurtOp) {
     const O = F.op, k = iqK(F), Rd = F.read;
@@ -1017,10 +1019,11 @@ class Fight {
     F.lastCombo = c.key;
     return c.q.slice();
   }
-  startPunch(F, type) {
+  startPunch(F, type, pre) {
     const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
     const v = vec(F, F.op);
     F.act = { type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
+    if (pre) F.act.t = F.act.dur * pre;
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
@@ -1188,7 +1191,7 @@ class Fight {
     // fire back out of the guard (tap-block counter)
     if (blocked && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
       const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D);
-      if (R() < p) { const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
+      if (R() < p) { const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0], CHAIN.ctr); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
     }
   }
   miss(A, D, a, why, def) {
@@ -1206,7 +1209,7 @@ class Fight {
       if (R() < Math.min(.95, ch) && D.state !== 'punch') {
         D.counterWin = .6; D.def = null; D.pendingDef = null;
         const c = this.pickCounter(D, dist(A, D), def === 'roll');
-        D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter');
+        D.queue = c.slice(1); this.startPunch(D, c[0], CHAIN.ctr); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter');
         A.lastRes = 'countered';
       }
     }
