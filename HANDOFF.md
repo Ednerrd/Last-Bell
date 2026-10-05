@@ -25,7 +25,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 ## Where we are
 Ed: "Focus on combat: the boxing AI, combinations, punching, models. Perfect the core auto-boxing mechanics. Smoothness, fluidity, pace, speed." The gym mode (GYM.md, step 1 built) is parked until combat feels right.
 
-**Ed (Oct 5): solidify the boxing first, then convert to the 3D version again** (`proto/PLAN.md`). So engine work (AI, rhythm, contact, footwork) is the priority since it carries into 3D; 2D-only render polish (step 7) is lower value.
+**Ed (Oct 5): solidify the boxing first, then convert to the 3D version again** (`proto/PLAN.md`). So engine work (AI, rhythm, contact, footwork) is the priority since it carries into 3D; 2D-only render polish (step 7) is lower value. Why 3D: to *see* punch lanes, where a shot lands or misses and why, like Fight Night Champion. So steps 9-10 should make the engine emit that detail in its `hit`/`miss` events (hand, lane/angle, contact quality, miss type: short, slipped left/right, ducked, pulled, blocked on which glove), not just pick an outcome. The 3D render then draws what the engine decided.
 
 Done this session (all pushed):
 
