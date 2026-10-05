@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/festive-thompson-e2ch70` (was `ccr-9a5a152f-n8ld1d`, `claude/handoff-review-32nske`). Commit small, push after each step. No PRs unless he asks.
+- **Branch:** `claude/step9-contact` (was `claude/festive-thompson-e2ch70`, `ccr-9a5a152f-n8ld1d`, `claude/handoff-review-32nske`). Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
