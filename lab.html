@@ -454,7 +454,7 @@ function sgOf(F) {
   return out;
 }
 
-const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30;
+const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14, XDZ = 45; // XGAP: left-right gap kept when they are closer than XDZ in depth
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
 function dist(A, B) { return Math.hypot(B.x - A.x, B.z - A.z); }
@@ -612,7 +612,7 @@ class Fight {
     F.walkDir = walking && Math.abs(dx) > 6 ? (dx > 0 ? 1 : -1) : 0; // turns and walks where he is going; faces the ring again once he gets there
     this.face();
   }
-  face() { for (const F of this.f) { const dx = F.op.x - F.x; if (F.walkDir) F.dir = F.walkDir; else if (Math.abs(dx) > 5) F.dir = dx > 0 ? 1 : -1; } }
+  face() { const [A, B] = this.f; let lr = this.lr || 1; if ((B.x - A.x) * lr < -XGAP) this.lr = lr = -lr; this.f.forEach((F, i) => { F.dir = F.walkDir || (i ? -lr : lr); }); }
   physics() {
     const [A, B] = this.f;
     for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
@@ -621,6 +621,14 @@ class Fight {
       const mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2, h = MIN_D / 2;
       A.x = mx - v.ux * h; A.z = mz - v.uz * h; B.x = mx + v.ux * h; B.z = mz + v.uz * h;
       for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
+    }
+    // side view: they only change sides by circling deep (one passes in front of the other). Close in depth, the left-right order holds,
+    // and facing follows the order with a margin, so nobody mirrors in one frame (the render animates the turn)
+    const lr = this.lr || 1, gap = (B.x - A.x) * lr;
+    if (gap > -XGAP && gap < XGAP && Math.abs(B.z - A.z) < XDZ) {
+      const pu = Math.min(XGAP - gap, 4) / 2 * lr; let a = A.x - pu, b = B.x + pu; // eased, never a jump
+      if (a < -RING) { b += -RING - a; a = -RING; } if (b > RING) { a -= b - RING; b = RING; } if (a > RING) { b -= a - RING; a = RING; } if (b < -RING) { a += -RING - b; b = -RING; }
+      A.x = a; B.x = b; if (A.vx * lr > 0) A.vx = 0; if (B.vx * lr < 0) B.vx = 0;
     }
     this.face();
   }
@@ -1229,7 +1237,7 @@ class Fight {
   updateKD(dt) {
     const K = this.kdState, D = this.f[K.who], A = D.op;
     if (!K.rising && !K.standing) D.downP = Math.min(1, D.downP + dt * 2.2);
-    { let tx = D.x + (A.x > D.x ? 1 : -1) * 120; if (Math.abs(tx) > RING - 10) tx = D.x - (A.x > D.x ? 1 : -1) * 120; tx = clamp(tx, -RING + 10, RING - 10);
+    { const sd = A.x > D.x ? 1 : -1; let tx = clamp(D.x + sd * 120, -RING + 10, RING - 10); if (sd * (tx - D.x) < XGAP) tx = clamp(D.x + sd * XGAP, -RING, RING); // neutral corner on his own side: never walks through the man on the floor
       const tz = clamp(-D.z * .5, -ZR + 10, ZR - 10), dx = tx - A.x, dz = tz - A.z, dd = Math.hypot(dx, dz);
       if (dd > 2) { const m = Math.min(dd, 70 * dt) / dd; A.x += dx * m; A.z += dz * m; } }
     A.hitT = Math.max(0, A.hitT - dt * 3); D.hitT = Math.max(0, D.hitT - dt * 3);
@@ -1244,7 +1252,7 @@ class Fight {
         D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
         if (K.zone === 'body') D.body = Math.max(D.body, 22);
         D.stunT = 0; D.decT = .3; A.decT = .3;
-        const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.f[0].x <= this.f[1].x ? 1 : -1;
+        const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.lr || 1;
         this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.face();
         this.phase = 'fight'; this.phaseT = 0; this.kdState = null;
         this.emit('resume');
@@ -2578,7 +2586,7 @@ const Render = (() => {
   function drawFighter(v, look, J, A) {
     const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
-    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
+    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale((v.tS || v.dir) * pp.s, pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
@@ -3016,6 +3024,7 @@ const Render = (() => {
     const AR = f.map((v, i) => { const o = 1 - i, q = P3(v.x, v.z), qo = P3(f[o].x, f[o].z); return arms(v, looks[i], J[i], { head: toLocal(v, aim[i].h), body: toLocal(v, aim[i].b), dzy: (qo.y - q.y) / q.s, hr: J[o].S.headR, tw: 10.5 * Math.pow(J[o].S.B, 1.5) }, view.t); });
     settle(f, J, AR, 0); settle(f, J, AR, 1);
     f.forEach((v, i) => carry(v, J[i], AR[i], dt));
+    f.forEach(v => { const sm = v._sm; if (!sm) return; if (sm.tS == null || dt <= 0) sm.tS = v.dir; else sm.tS = v.dir > sm.tS ? Math.min(v.dir, sm.tS + dt * 8) : Math.max(v.dir, sm.tS - dt * 8); v.tS = Math.sign(sm.tS || v.dir) * Math.max(.06, Math.sin(Math.abs(sm.tS) * Math.PI / 2)); }); // turning around: a quick pivot (~.25 s), not a one-frame mirror
     if (view.ev) for (const e of view.ev) if (e.type === 'hit') spawnHit(e, f, J);
     // depth sort: far side first; a downed fighter goes under a standing one at the same depth
     const items = [0, 1].map(i => ({ z: (f[i].z || 0) - (f[i].state === 'down' ? 6 : 0), draw: () => drawFighter(f[i], looks[i], J[i], AR[i]) }));

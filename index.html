@@ -2586,7 +2586,7 @@ const Render = (() => {
   function drawFighter(v, look, J, A) {
     const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
-    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
+    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale((v.tS || v.dir) * pp.s, pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
@@ -3024,6 +3024,7 @@ const Render = (() => {
     const AR = f.map((v, i) => { const o = 1 - i, q = P3(v.x, v.z), qo = P3(f[o].x, f[o].z); return arms(v, looks[i], J[i], { head: toLocal(v, aim[i].h), body: toLocal(v, aim[i].b), dzy: (qo.y - q.y) / q.s, hr: J[o].S.headR, tw: 10.5 * Math.pow(J[o].S.B, 1.5) }, view.t); });
     settle(f, J, AR, 0); settle(f, J, AR, 1);
     f.forEach((v, i) => carry(v, J[i], AR[i], dt));
+    f.forEach(v => { const sm = v._sm; if (!sm) return; if (sm.tS == null || dt <= 0) sm.tS = v.dir; else sm.tS = v.dir > sm.tS ? Math.min(v.dir, sm.tS + dt * 8) : Math.max(v.dir, sm.tS - dt * 8); v.tS = Math.sign(sm.tS || v.dir) * Math.max(.06, Math.sin(Math.abs(sm.tS) * Math.PI / 2)); }); // turning around: a quick pivot (~.25 s), not a one-frame mirror
     if (view.ev) for (const e of view.ev) if (e.type === 'hit') spawnHit(e, f, J);
     // depth sort: far side first; a downed fighter goes under a standing one at the same depth
     const items = [0, 1].map(i => ({ z: (f[i].z || 0) - (f[i].state === 'down' ? 6 : 0), draw: () => drawFighter(f[i], looks[i], J[i], AR[i]) }));
