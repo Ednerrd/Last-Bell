@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/handoff-review-32nske` (was `claude/new-session-ne6ynn`). Commit small, push after each step. No PRs unless he asks.
+- **Branch:** `claude/festive-thompson-e2ch70` (was `ccr-9a5a152f-n8ld1d`, `claude/handoff-review-32nske`). Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -45,7 +45,7 @@ Ed asked for the lab: "don't show me the menus, just a boxing match I can random
 
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
-- Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. Step 8a (rhythm: resets, feel-outs) done, see NOTES.md "Rhythm" (watch slugger 58, high guard 46, handslow 60). **Next: 8b (shorter wind-up on chained punches and counters), then 9-10. Skip step 7 (2D-only render polish) per Ed's 3D plan.**
+- Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. Step 8a (rhythm: resets, feel-outs) done, see NOTES.md "Rhythm" (watch slugger 58, high guard 46, handslow 60). **Oct 5: Ed picked Lab A (this line: step 6 + `TEMPO` rhythm) over Lab B (`ccr-026fa9ad-j4d8rw`, `RHY` rhythm, no step 6): "the pace was slightly better". Lab B is dead; don't merge it.** **Next: 8b (shorter wind-up on chained punches and counters), then 9-10. Skip step 7 (2D-only render polish) per Ed's 3D plan.**
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
