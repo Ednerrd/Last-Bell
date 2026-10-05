@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/new-session-ne6ynn`. Commit small, push after each step. No PRs unless he asks.
+- **Branch:** `claude/determined-feynman-6z4lju`. Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -19,7 +19,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 - **Engine changes:**
   - Run sims before and after (`node tests/audit.js 500` plus style/guard checks per CLAUDE.md targets).
   - Never mix balance and visual changes in one commit.
-  - For render-only changes, `node tests/same.js 200` must stay at hash **f00751e1** (changed by step 5).
+  - For render-only changes, `node tests/same.js 200` must stay at hash **ad82fcda** (changed by step 6).
 - **Don't** build the bond/trust system (future).
 
 ## Where we are
@@ -37,12 +37,13 @@ Done this session (all pushed):
 | 3e28239 | `research/fighters_a.md` and `research/fighters_b.md`: DNA cards for 14 real fighters (CompuBox output, jab share, body %, range, rhythm, combos, counters, flaws, if/then AI rules). |
 | 5a85264 | **Fight Lab**: `tools/lab.src.js` + `tools/lab.js` build `lab.html`. It drops straight into a fight: New fight (random), Rematch, and Pick (weight, rounds, each side as random / a P4P star / any style, guard override). |
 | adeb0e3 / ad002b3 | **Step 5: footwork acceleration.** Feet ease toward target velocity at a per-style rate (4 + 24 x ret x legs), rope-escape side locked .4 s, smoothed cut-off read, sine punch step, timed pull. Counter style counter .6 -> .68. Audit 56.3 / 15.9 / 28.2% / stops 32%; styles 48.9-51.3; guards 47.9-58.4; specials 49-55 (angle 55.2, watch). same.js hash now f00751e1. Lab republished. Details: NOTES.md "Footwork acceleration". |
+| (this session) | **Step 6: no pass-through.** Side order holds close in depth (XGAP 14, |dz| < 45), deep circling can still swap sides (a hard lock cost the out-boxer ~10 pts), facing has a margin, turn animated in render (`v.tS`). KD walk stays on his side. Styles 47.6-52.8, guards 49.4-55.0, specials 48.5-54.7. Hash ad82fcda. Details: NOTES.md "No pass-through". |
 
 Ed asked for the lab: "don't show me the menus, just a boxing match I can randomize."
 
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
-- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. **Next: step 6 (no pass-through), unless Ed's lab feedback says otherwise.**
+- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Steps 5 and 6 are done and the lab is republished. **Next: step 7 (render: uppercut curve, close-range spacing), unless Ed's lab feedback says otherwise.**
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
