@@ -454,7 +454,7 @@ function sgOf(F) {
   return out;
 }
 
-const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30;
+const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14; // XGAP: least left-right gap (A is always the left man)
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
 function dist(A, B) { return Math.hypot(B.x - A.x, B.z - A.z); }
@@ -621,6 +621,13 @@ class Fight {
       const mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2, h = MIN_D / 2;
       A.x = mx - v.ux * h; A.z = mz - v.uz * h; B.x = mx + v.ux * h; B.z = mz + v.uz * h;
       for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
+    }
+    // side view: A stays on the left. They can circle deep but never cross, so nobody mirrors in one frame
+    const gap = B.x - A.x;
+    if (gap < XGAP) {
+      let a = A.x - (XGAP - gap) / 2, b = B.x + (XGAP - gap) / 2;
+      if (a < -RING) { b += -RING - a; a = -RING; } if (b > RING) { a -= b - RING; b = RING; }
+      A.x = a; B.x = b; if (A.vx > 0) A.vx = 0; if (B.vx < 0) B.vx = 0;
     }
     this.face();
   }
@@ -1229,7 +1236,7 @@ class Fight {
   updateKD(dt) {
     const K = this.kdState, D = this.f[K.who], A = D.op;
     if (!K.rising && !K.standing) D.downP = Math.min(1, D.downP + dt * 2.2);
-    { let tx = D.x + (A.x > D.x ? 1 : -1) * 120; if (Math.abs(tx) > RING - 10) tx = D.x - (A.x > D.x ? 1 : -1) * 120; tx = clamp(tx, -RING + 10, RING - 10);
+    { const sd = A.x > D.x ? 1 : -1; let tx = clamp(D.x + sd * 120, -RING + 10, RING - 10); if (sd * (tx - D.x) < XGAP) tx = clamp(D.x + sd * XGAP, -RING, RING); // neutral corner on his own side: never walks through the man on the floor
       const tz = clamp(-D.z * .5, -ZR + 10, ZR - 10), dx = tx - A.x, dz = tz - A.z, dd = Math.hypot(dx, dz);
       if (dd > 2) { const m = Math.min(dd, 70 * dt) / dd; A.x += dx * m; A.z += dz * m; } }
     A.hitT = Math.max(0, A.hitT - dt * 3); D.hitT = Math.max(0, D.hitT - dt * 3);
