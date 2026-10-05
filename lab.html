@@ -547,7 +547,7 @@ class Fight {
       case 'intro2': {
         this.walkTo(A, -62, 0, dt, 70); this.walkTo(B, 62, 0, dt, 70);
         if (this.phaseT > (this.phase === 'intro' ? 2.4 : 1.2)) {
-          this.phase = 'fight'; this.phaseT = 0; this.f.forEach(F => { F.walkDir = 0; });
+          this.phase = 'fight'; this.phaseT = 0; this.xo = 0; this.f.forEach(F => { F.walkDir = 0; });
           this.emit('bell', { start: true }); this.emit('roundStart');
         }
         break;
@@ -616,6 +616,11 @@ class Fight {
   physics() {
     const [A, B] = this.f;
     for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
+    // keep the left-right order: drifting, cutting off and rope angle-offs slide past in depth instead of crossing over and mirroring.
+    // A real escape or spin-out may take him round to the other side (a pivot; the render turns him)
+    { const dx = B.x - A.x, G = 10;
+      if (A.slideT > 0 || B.slideT > 0 || !this.xo) { if (Math.abs(dx) > 1) this.xo = Math.sign(dx); }
+      else if (dx * this.xo < G) { const m = clamp((A.x + B.x) / 2, -RING + G / 2, RING - G / 2), k = .35; A.x = lerp(A.x, m - this.xo * G / 2, k); B.x = lerp(B.x, m + this.xo * G / 2, k); } }
     const v = vec(A, B);
     if (v.d < MIN_D) {
       const mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2, h = MIN_D / 2;
@@ -1246,7 +1251,7 @@ class Fight {
         D.stunT = 0; D.decT = .3; A.decT = .3;
         const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.f[0].x <= this.f[1].x ? 1 : -1;
         this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.face();
-        this.phase = 'fight'; this.phaseT = 0; this.kdState = null;
+        this.phase = 'fight'; this.phaseT = 0; this.kdState = null; this.xo = 0;
         this.emit('resume');
       }
     }
@@ -2578,7 +2583,12 @@ const Render = (() => {
   function drawFighter(v, look, J, A) {
     const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
-    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
+    // turning round (a pivot, the walk to the corner) takes ~.22 s instead of mirroring in one frame
+    let fd = v.dir;
+    if (v._sm) { const sm = v._sm, to = v.dir > 0 ? 0 : Math.PI, st = (v._dt || 1 / 60) * Math.PI / .22;
+      sm.ft = sm.ft == null ? to : sm.ft < to ? Math.min(to, sm.ft + st) : Math.max(to, sm.ft - st);
+      const c = Math.cos(sm.ft); fd = (c < 0 ? -1 : 1) * (.55 + .45 * Math.abs(c)); } // narrows a little and flips at the midpoint, never a cardboard cutout
+    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(fd * pp.s, pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
