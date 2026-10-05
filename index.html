@@ -623,10 +623,13 @@ class Fight {
       for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
     }
     // keep the left-right order: they can circle, but never walk through each other and mirror in one frame
-    const o = this.ord || (this.ord = A.x <= B.x ? 1 : -1);
-    if ((B.x - A.x) * o < XGAP) {
-      const m = (XGAP - (B.x - A.x) * o) / 2; A.x = clamp(A.x - o * m, -RING, RING); B.x = clamp(B.x + o * m, -RING, RING);
-      if ((B.x - A.x) * o < XGAP) { if (Math.abs(A.x) >= RING) B.x = A.x + o * XGAP; else A.x = B.x - o * XGAP; }
+    // (a pivot out of the ropes or a corner is the one real way to switch sides: it may cross, and the order follows him)
+    const o = this.ord || (this.ord = A.x <= B.x ? 1 : -1), piv = this.f.some(F => F.slideT > 0 && (F.esc || F.spin));
+    if (piv) { if ((B.x - A.x) * o < 0) this.ord = -o; }
+    else if ((B.x - A.x) * o < XGAP) {
+      const m = Math.min(2, (XGAP - (B.x - A.x) * o) / 2); // eases out of the gap a pivot left them in, no snap
+      const ax = A.x - o * m, bx = B.x + o * m; A.x = clamp(ax, -RING, RING); B.x = clamp(bx, -RING, RING);
+      if (A.x !== ax) B.x = clamp(B.x + o * m, -RING, RING); else if (B.x !== bx) A.x = clamp(A.x - o * m, -RING, RING); // one on the ropes: the other gives the room
       if (A.vx * o > 0) A.vx = 0; if (B.vx * o < 0) B.vx = 0;
     }
     this.face();
