@@ -483,7 +483,7 @@ function cutChance(D, dmg, crit) {
 function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1); }
 // how far out the arm is when it lands: jammed or half out has no weight behind it, the sweet spot is just short of locking out,
 // reaching at the very end of his range loses a little again. ext 0 = the punch's min range, 1 = its max. EXT.k keeps the average shot where it was
-const EXT = { on: 1, lo: .6, peak: 1.15, at: .85, end: .9, k: 1.07 };
+const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, k: 1.045 };
 function extF(P, d) {
   if (!EXT.on) return 1;
   const e = (d - P.min) / (P.max - P.min);
