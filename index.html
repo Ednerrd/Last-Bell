@@ -2583,7 +2583,12 @@ const Render = (() => {
   function drawFighter(v, look, J, A) {
     const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
-    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
+    // turning round (a pivot, the walk to the corner) takes ~.22 s instead of mirroring in one frame
+    let fd = v.dir;
+    if (v._sm) { const sm = v._sm, to = v.dir > 0 ? 0 : Math.PI, st = (v._dt || 1 / 60) * Math.PI / .22;
+      sm.ft = sm.ft == null ? to : sm.ft < to ? Math.min(to, sm.ft + st) : Math.max(to, sm.ft - st);
+      const c = Math.cos(sm.ft); fd = (c < 0 ? -1 : 1) * (.55 + .45 * Math.abs(c)); } // narrows a little and flips at the midpoint, never a cardboard cutout
+    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(fd * pp.s, pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
