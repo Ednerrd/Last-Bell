@@ -22,7 +22,7 @@ Full detail: `research/combat_research.md` (Fight Night, Undisputed, Thrill of t
 6. ✅ **E: no pass-through.** Keep the left-right order; animate the turn.
 7. **R: uppercut curve fix, close-range spacing.**
 8. **E: rhythm.** ✅ 8a: burst-and-reset pacing and feel-outs (NOTES.md "Rhythm"). ✅ 8b: shorter wind-up on chained punches and counters, render only (the engine version broke the out-boxer; NOTES.md "Rhythm").
-9. **E: contact quality.** (9a events + extension damage done, see NOTES.md "Contact quality"; next: hit-stop and looks per quality, render) Clean / glancing / smothered / blocked, each with its own look and hit-stop (2–3 frames on a jab, 4–6 on power, 8–10 on a knockdown, ~0 when blocked).
+9. **E: contact quality.** (9a events + extension damage (straights) + AI reads extension done, see NOTES.md "Contact quality"; next: hit-stop and looks per quality, render) Clean / glancing / smothered / blocked, each with its own look and hit-stop (2–3 frames on a jab, 4–6 on power, 8–10 on a knockdown, ~0 when blocked).
 10. **E: smarter AI.** Pick targets around the guard (high guard opens the body, low hands open the head), a fading memory of what hurt him, styles that differ in rhythm and range as well as numbers.
 11. **R + E: footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet (bouncy when fresh, flat when tired).
 

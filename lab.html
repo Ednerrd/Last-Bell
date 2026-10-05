@@ -481,15 +481,18 @@ function cutChance(D, dmg, crit) {
   return Math.min(.35, p);
 }
 function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1); }
-// how far out the arm is when it lands: jammed or half out has no weight behind it, the sweet spot is just short of locking out,
-// reaching at the very end of his range loses a little again. ext 0 = the punch's min range, 1 = its max. EXT.k keeps the average shot where it was
-const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, k: 1.045 };
-function extF(P, d) {
-  if (!EXT.on) return 1;
+// how far out the arm is when it lands. Straights need the arm out: jammed or half out has no weight behind it, the sweet spot is
+// just short of locking out, reaching at the very end of his range loses a little again. Hooks and uppercuts are short punches
+// (the power comes from the turn, not the reach): only fully jammed or overreaching costs them. ext 0 = the punch's min range, 1 = its max
+const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, shortLo: .85, k: 1.047, ai: 3, swap: .25 };
+function extRaw(P, d) {
   const e = (d - P.min) / (P.max - P.min);
-  const f = e <= 0 ? EXT.lo : e < EXT.at ? lerp(EXT.lo, EXT.peak, e / EXT.at) : lerp(EXT.peak, EXT.end, clamp((e - EXT.at) / (1 - EXT.at), 0, 1.4));
-  return f * EXT.k;
+  if (P.kind !== 'straight') return e <= 0 ? EXT.shortLo : e > 1 ? EXT.end : 1;
+  return e <= 0 ? EXT.lo : e < EXT.at ? lerp(EXT.lo, EXT.peak, e / EXT.at) : lerp(EXT.peak, EXT.end, clamp((e - EXT.at) / (1 - EXT.at), 0, 1.4));
 }
+// how well a punch fits the distance, against its own best (1 = sweet spot): the AI reads this before he throws
+const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
+function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
 function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
 // guard factor: bonuses only count as far as his skill supports the guard, weaknesses always count
 function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
@@ -994,6 +997,8 @@ class Fight {
     if (last === 'blocked' && lp && PUNCH[nx].zone === lp.zone && LEVEL_SWAP[nx] && R() < .6 * k) nx = LEVEL_SWAP[nx]; // he is covering that level: switch
     else if (last === 'evaded' && F.lastDef === 'slip' && d < 60 && R() < .5 * k) nx = 'hook';                 // hook where he slipped to
     else if (last === 'evaded' && F.lastDef === 'duck' && d < 54 && R() < .5 * k) nx = 'uppercut';             // he ducks, come up the middle
+    // too close to get the straight off: a smart man turns it into a hook or an uppercut
+    { const P = PUNCH[nx]; if (P.kind === 'straight' && extFit(P, d) < .8 && R() < EXT.swap * k) nx = P.zone === 'body' ? 'bodyHook' : P.arm === 'lead' ? 'hook' : d < 54 ? 'uppercut' : 'rhook'; }
     // he is hurt: keep the punches coming
     if (last === 'landed' && (O.state === 'stun' || O.head < O.headMax * .25) && F.queue.length === 0 && F.stam > 12 && R() < .35 + .45 * k)
       F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
@@ -1009,6 +1014,7 @@ class Fight {
     const c = wpick(ok, c => {
       const n = c.len; let w = comboW(F, c);
       const rc = RANGE_C[c.r]; w *= .25 + Math.exp(-Math.pow((d - rc[0]) / rc[1], 2));
+      { let q = 1; for (const p of c.seq) q *= extFit(PUNCH[p], d); w *= lerp(1, Math.pow(q, EXT.ai / n), k); } // a smart man doesn't throw a right hand from too close: he'd only get half of it
       for (const p of c.seq) { const P = PUNCH[p]; if (P.zone === 'body') w *= Math.pow(sg.body, 1 / n); if (P.cat === 'power') w *= Math.pow(sg.power * (hurtOp ? 1.8 : 1), 1 / n); if (p === 'jab') w *= Math.pow(sg.jab, 1 / n); }
       if (hurtOp && n >= 3) w *= 1.5;
       if (F.stam < 25 && n > 2) w *= .3; else if (F.stam < 40 && n > 3) w *= .5;

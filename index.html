@@ -484,7 +484,7 @@ function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1);
 // how far out the arm is when it lands. Straights need the arm out: jammed or half out has no weight behind it, the sweet spot is
 // just short of locking out, reaching at the very end of his range loses a little again. Hooks and uppercuts are short punches
 // (the power comes from the turn, not the reach): only fully jammed or overreaching costs them. ext 0 = the punch's min range, 1 = its max
-const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, shortLo: .85, k: 1.047, ai: 3, swap: .5 };
+const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, shortLo: .85, k: 1.047, ai: 3, swap: .25 };
 function extRaw(P, d) {
   const e = (d - P.min) / (P.max - P.min);
   if (P.kind !== 'straight') return e <= 0 ? EXT.shortLo : e > 1 ? EXT.end : 1;
