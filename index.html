@@ -454,7 +454,7 @@ function sgOf(F) {
   return out;
 }
 
-const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30;
+const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14, XSOFT = 46;
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
 function dist(A, B) { return Math.hypot(B.x - A.x, B.z - A.z); }
@@ -541,6 +541,7 @@ class Fight {
   step(dt) {
     dt = dt || DT;
     this.t += dt; this.phaseT += dt; this.stepEv = [];
+    if (this.phase !== 'fight') this.xo = 0; // left-right order is re-read when the fighting starts again
     const [A, B] = this.f;
     switch (this.phase) {
       case 'intro':
@@ -622,8 +623,20 @@ class Fight {
       A.x = mx - v.ux * h; A.z = mz - v.uz * h; B.x = mx + v.ux * h; B.z = mz + v.uz * h;
       for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
     }
+    // no walking through each other: the left-right order holds. Only a pivot turns him around
+    { const dx = B.x - A.x;
+      if (!this.xo) this.xo = dx < 0 ? -1 : 1;
+      else if (A.spin || B.spin) { if (dx * this.xo < -5) this.xo = -this.xo; }
+      else if (dx * this.xo < XGAP) {
+        const mx = clamp((A.x + B.x) / 2, -RING + XGAP / 2, RING - XGAP / 2);
+        A.x = mx - this.xo * XGAP / 2; B.x = mx + this.xo * XGAP / 2;
+      } }
     this.face();
   }
+  // which way the opponent is in x, by the held order (+1 right). xs(F) * vx > 0 is walking toward his side
+  // a lane that runs across his line is closed (only a pivot gets around him)
+  xPen(F, dx) { const sx = this.xs(F), t = dx * sx, gap = (F.op.x - F.x) * sx; return t > 0 ? 80 * t * clamp((XSOFT + 30 - gap) / (XSOFT + 30 - XGAP), 0, 1) : 0; }
+  xs(F) { const o = this.xo || (this.f[1].x >= this.f[0].x ? 1 : -1); return F.side ? -o : o; }
   // wall directly behind F (relative to the opponent)
   atRopes(F, m) { const v = vec(F, F.op), k = m || 16; return !inRing(F.x - v.ux * k, F.z - v.uz * k); }
   cornered(F) { return Math.abs(F.x) > RING - 26 && Math.abs(F.z) > ZR - 22; }
@@ -649,7 +662,7 @@ class Fight {
     let best = null, bs = -1e9;
     for (const s of [1, -1]) for (const a of spin ? [40, 55, 70] : [50, 65, 80, 95, 110]) {
       const r = a * Math.PI / 180, dx = v.ux * Math.cos(r) + px * s * Math.sin(r), dz = v.uz * Math.cos(r) + pz * s * Math.sin(r);
-      const sc = Math.min(150, freeRun(F.x, F.z, dx, dz)) - (O.cutting && olat * s > 4 ? 40 * k : 0) - (a < 60 ? 12 : 0) + (R() - .5) * 60 * (1 - k);
+      const sc = Math.min(150, freeRun(F.x, F.z, dx, dz)) - (O.cutting && olat * s > 4 ? 40 * k : 0) - (a < 60 ? 12 : 0) + (R() - .5) * 60 * (1 - k) - (spin ? 0 : this.xPen(F, dx));
       if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
     }
     return best;
@@ -709,6 +722,8 @@ class Fight {
     if (F.ropeT > 0) F.ropeT -= dt;
     // a pull off a punch: the feet keep going back for a beat instead of footwork taking them straight back
     if (F.pullT > 0) { vx = F.pullX * 55; vz = F.pullZ * 55; }
+    // the order holds: feet slow down before they would walk across his line (a pivot is the way around)
+    if (!F.spin) { const sx = this.xs(F), gap = (F.op.x - F.x) * sx; if (vx * sx > 0 && gap < XSOFT) vx *= clamp((gap - XGAP) / (XSOFT - XGAP), 0, 1); }
     this.feet(F, vx, vz, dt, 4 + 24 * (F.st.ret || .7) * (F.legs || 1));
     F.state = Math.hypot(vx, vz) > 3 ? 'move' : 'idle';
   }
@@ -840,7 +855,7 @@ class Fight {
     const O = F.op, v = vec(F, O), px = -v.uz, pz = v.ux; let best = null, bs = -1;
     for (const s of [1, -1]) for (const a of [75, 95]) {
       const r = a * Math.PI / 180, dx = v.ux * Math.cos(r) + px * s * Math.sin(r), dz = v.uz * Math.cos(r) + pz * s * Math.sin(r);
-      const sc = Math.min(100, freeRun(F.x, F.z, dx, dz)) + R() * 15; if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
+      const sc = Math.min(100, freeRun(F.x, F.z, dx, dz)) + R() * 15 - this.xPen(F, dx); if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
     }
     if (!best || bs < 40) return;
     F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .26 + F.s.footwork / 500; F.decT = Math.min(F.decT, .3);
@@ -852,7 +867,7 @@ class Fight {
     const px = -v.uz, pz = v.ux; let best = null, bs = -1;
     for (const s of [1, -1]) for (const a of [100, 120, 140]) {
       const r = a * Math.PI / 180, dx = v.ux * Math.cos(r) + px * s * Math.sin(r), dz = v.uz * Math.cos(r) + pz * s * Math.sin(r);
-      const sc = Math.min(120, freeRun(F.x, F.z, dx, dz)) + R() * 20;
+      const sc = Math.min(120, freeRun(F.x, F.z, dx, dz)) + R() * 20 - this.xPen(F, dx);
       if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
     }
     if (!best || bs < 60) return false;
