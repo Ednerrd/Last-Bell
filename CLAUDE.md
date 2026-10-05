@@ -38,6 +38,7 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `node tests/same.js 200`: seeded determinism hash for recording-only engine changes (now 48fcf240).
 - `node tests/swap.js 100`: side swaps per minute (left-right order flips).
 - `node tests/rhythm.js 200`: tempo (gaps between exchanges, share >3 s, longest quiet, round-1 feel-out).
+- `node tests/gas.js 250`: gas by round, style and stamina stat (tank, end-of-round gas, output). `node tests/bodykd.js 300`: knockdowns by head/body.
 - `node tests/gym.js 3`: gym mode headless for N years (signing, training, booking, fights, P4P).
 - Also: `cut.js`, `diag.js`, `probe.js`, `commtest.js`; Playwright captures `strip.py`, `shot.py`, `live.py` into `shots/` (gitignored).
 

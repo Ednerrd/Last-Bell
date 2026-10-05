@@ -1,4 +1,4 @@
-# Handoff (Oct 4 2026): combat polish
+# Handoff (Oct 5 2026): combat polish
 
 Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the ranked plan). Don't read all of `index.html`: grep, then read the section.
 
@@ -19,7 +19,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 - **Engine changes:**
   - Run sims before and after (`node tests/audit.js 500` plus style/guard checks per CLAUDE.md targets).
   - Never mix balance and visual changes in one commit.
-  - For render-only changes, `node tests/same.js 200` must stay at hash **ef225fb9** (changed by step 6).
+  - For render-only changes, `node tests/same.js 200` must stay at hash **48fcf240** (changed by step 9 extension + AI).
 - **Don't** build the bond/trust system (future).
 
 ## Where we are
@@ -47,21 +47,18 @@ Ed asked for the lab: "don't show me the menus, just a boxing match I can random
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
 - Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. Step 8a (rhythm: resets, feel-outs) done, see NOTES.md "Rhythm" (watch slugger 58, high guard 46, handslow 60). **Oct 5: Ed picked Lab A (this line: step 6 + `TEMPO` rhythm) over Lab B (`ccr-026fa9ad-j4d8rw`, `RHY` rhythm, no step 6): "the pace was slightly better". Lab B is dead; don't merge it.** 8b done render-only (NOTES.md "Rhythm"), lab republished. **Next: 9 (contact quality, emit lane/miss detail for 3D), then 10. Skip step 7 (2D-only render polish) per Ed's 3D plan.** **Oct 5 (claude/step9-contact): step 9 part 1 done: hit/miss events carry hand, lane, contact quality, glove, miss type (9a); damage follows arm extension at contact (Ed asked for it). same.js fa768ffe. AI now reads extension too (out-boxer 43 -> 47). Next: hit-stop + look per quality (render), then step 10, slugger first (59%, eats out-boxer and swarmer).**
 
-## Next (COMBAT.md steps 5–11)
-1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
-   - `footwork()` sets velocity directly (~line 707). Ease it instead: `F.vx += (vx - F.vx) * (1 - Math.exp(-dt*12))`.
-   - Lock the rope-escape side for ~.4 s (~704); it flip-flops ~180/min.
-   - Smooth the opponent velocity used for cutting off the ring (~689).
-   - Make the punch step a sine shape, not a square wave (~741).
-   - The `react()` pull at ~1021 gets overwritten by footwork the next tick. Give it a timer.
-   - Line numbers are from before this session's edits; grep. Changes balance, so do a full sim pass.
-2. **Step 6, engine: no pass-through.** Fighters cross and `face()` mirrors both bodies in one frame (~1.7/min). Keep the left-right order in `physics()`; animate the turn in render.
-3. **Step 7, render:** uppercut curve break at aP .4 in `body()` (switch at .35, ramp the lean); close-range spacing in `spreadView` (adds 0 below distance 32); smooth `bodyPush` / `settle` offsets.
-4. **Steps 8–11:**
-   - rhythm (burst then reset, feel-out moments);
-   - contact quality (clean / glancing / smothered / blocked, each with its own hit-stop);
-   - smarter AI (target around the guard, a fading memory of what hurt him, styles differ in rhythm and range; use the fighter DNA cards);
-   - feet moving during punches, flat feet when tired.
+## Next: Ed's ideas (end of Oct 5 session), in this order
+Ed watched the lab and brought four things. Measured this session (scratch sims, 250–300 fights @75):
+
+1. **Punches look like pawing (render only, do first).** Frame-by-frame of a live right hand (60fps, `extOf` in render ~2227): the wind-up barely shows, the arm floats out, then **hangs out ~8 frames** after contact and drifts back; shoulder roll and hip turn are small, so it reads as reaching/touching, not hitting. Fix: visible load, snap out, very short hold, snap back as fast as it went; drive the shoulder and hips through it; some head snap on the man hit. Contact must stay at aP .6 and `same.js` at 48fcf240. Capture: lab.html + a rAF `toDataURL` loop that starts when `F.f[i].act.type==='cross'` (`tools/measure/sheet.py` does the same).
+2. **Stamina, pacing and body shots (engine, full sims; measure with `node tests/gas.js 250` and `node tests/bodykd.js 300`).**
+   - Now: **output never fades** (≈54 thrown/rd in r1, ≈53 in r9). Only the swarmer ever gasses (ends rounds ~10–30% gas); counter and out-boxer end rounds at ~90%. `stamMax` only drops from body shots (98 → ~86 by r9). `stamFac` (.55–1) exists but rarely bites.
+   - Want (FNC): a hard round costs `stamMax` by work rate (up to ~10%/rd if he slugs), recovery by stamina stat + training; tired = less power, slower hands, lower output, beaten to the punch. AI paces itself.
+   - **Body shots:** body KDs are **6 of 351 (1.7%)**, only when `D.body` is near 0 (~1209). Add a **liver shot** (lead hook to the liver side: delayed fold, takes a knee, awake but can't beat the count), **wind knocked out** (solar plexus / straight to the gut: short freeze, hands drop, gas crash, can't punch back), body damage slows the legs and drops the elbows (opens the head: "kill the body"). Target ~5–8% of KDs from the body, mostly for men who work it.
+3. **Ring IQ when hurt or tired (step 10).** Now a hurt man clinches and moves; when the other man is hurt, `decide()` just does aggr ×1.8 (~813), no weighing. Want: hurt or gassed → disengage, jab his way back, buy time, re-engage. Smelling blood → weigh it (own gas, can the hurt man still crack, counter puncher playing possum, IQ/heart); a blitz that misses or gets blocked burns gas and leaves him open to a surprise KO.
+4. **Slugger 59%** folds into 2 and 3 (he slugs 12 rounds and never pays for it).
+
+Skip step 7 (2D-only render polish). Still to do from step 9: hit-stop + look per contact quality (render); can ride with idea 1.
 
 ## Measuring tools (`tools/measure/`)
 Python + Playwright, chromium at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Point `OUTDIR` at a scratch folder that holds the html under test.
