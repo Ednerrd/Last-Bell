@@ -2586,7 +2586,8 @@ const Render = (() => {
   function drawFighter(v, look, J, A) {
     const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
-    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(v.dir * pp.s, pp.s);
+    const pp = P3(v.x, v.z), fd = v._sm && v._sm.fd != null ? v._sm.fd : v.dir, fa = Math.abs(fd), tw = fa >= 1 ? v.dir : (fd < 0 ? -1 : fd > 0 ? 1 : v.dir) * (.3 + .7 * fa * fa * (3 - 2 * fa)); // mid-turn he narrows side-on to the camera, then opens the other way
+    ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(tw * pp.s, pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
@@ -3008,7 +3009,9 @@ const Render = (() => {
     lg.addColorStop(0, `rgba(${V.light},${V.la})`); lg.addColorStop(1, `rgba(${V.light},0)`);
     ctx.fillStyle = lg; ctx.fillRect(-260, -260, 520, 300);
     const f = view.f; const looks = view.looks;
-    f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt; });
+    f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt;
+      // facing turns over ~.2 s instead of mirroring in one frame (walking to the corner, back to the ring); a jump (new round) snaps
+      const sm = SM[i]; if (sm.fd == null || Math.abs(v.x - sm.fx) > 40) sm.fd = v.dir; else sm.fd = clamp(sm.fd + clamp(v.dir - sm.fd, -dt * 10, dt * 10), -1, 1); sm.fx = v.x; });
     const J = f.map((v, i) => body(v, looks[i], view.t));
     f.forEach((v, i) => lunge(v, J[i], f[1 - i], J[1 - i], dt));
     bodyPush(f, J);
