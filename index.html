@@ -481,6 +481,15 @@ function cutChance(D, dmg, crit) {
   return Math.min(.35, p);
 }
 function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1); }
+// how far out the arm is when it lands: jammed or half out has no weight behind it, the sweet spot is just short of locking out,
+// reaching at the very end of his range loses a little again. ext 0 = the punch's min range, 1 = its max. EXT.k keeps the average shot where it was
+const EXT = { on: 1, lo: .6, peak: 1.15, at: .85, end: .9, k: 1.07 };
+function extF(P, d) {
+  if (!EXT.on) return 1;
+  const e = (d - P.min) / (P.max - P.min);
+  const f = e <= 0 ? EXT.lo : e < EXT.at ? lerp(EXT.lo, EXT.peak, e / EXT.at) : lerp(EXT.peak, EXT.end, clamp((e - EXT.at) / (1 - EXT.at), 0, 1.4));
+  return f * EXT.k;
+}
 function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
 // guard factor: bonuses only count as far as his skill supports the guard, weaknesses always count
 function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
@@ -1140,6 +1149,7 @@ class Fight {
     let crit = false;
     if (!blocked && R() < 0.05 + A.s.accuracy / 2000) { dmg *= 1.75; crit = true; }
     dmg *= rnd(.8, 1.2) * mult;
+    dmg *= extF(P, d); // short of full extension, less on it
     // sloppy D eats them flush; wild throwers load up when they do land
     dmg *= 1 + clamp((75 - D.s.defense) / 100, 0, .4) * TUNE.flush + (a.load || 0) * TUNE.load;
     const tough = P.zone === 'head' ? (0.55 + effChin(D) / 100 * .9) : (0.55 + D.s.body / 100 * .9);
