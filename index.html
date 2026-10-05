@@ -435,7 +435,7 @@ const STYLE_BITE = { t: .8, edge: 1.2 };                                     // 
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 // rhythm: bursts, then resets. After an exchange each man may reset (back out, feint, step around) or stay hot.
 // Rounds open with a feel-out (longer in the first). How often he resets and how long he feels out come from his aggression
-const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rWant: 10, hot: .9, hotAggr: 1.35, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
+const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rWant: 10, hot: .9, hotAggr: 1.15, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
 const SHOUT_EDGE = { atk: .6, def: .5, ctr: 1.1, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
@@ -850,15 +850,15 @@ class Fight {
   }
   // round start: feel him out first (a long look in the first round, a short one after)
   tempoStart(F, first) { const r = first ? TEMPO.feel1 : TEMPO.feelN; F.feelT = rnd(r[0], r[1]) * clamp(1.4 - .5 * F.st.aggr, .4, 1.2); F.beatR = F.hotT = 0; }
-  // how much he wants a reset after an exchange: low-output, moving, careful men a lot; swarmers and a man smelling blood hardly
+  // how much he wants a reset after an exchange: low-output, moving, careful men a lot; pressure men, swarmers and a man smelling blood hardly
   rstP(F) {
     const O = F.op, pr = F.strategy === 'pressure' || F.strategy === 'ko' ? .5 : F.strategy === 'move' || F.strategy === 'counter' ? 1.3 : 1;
-    return clamp(.62 - .28 * F.st.aggr, .08, .5) * pr * (O.head < O.headMax * .3 || O.state === 'stun' ? .15 : 1) * (F.head < F.headMax * .32 ? 1.5 : 1);
+    return clamp(.7 - .25 * F.st.aggr - .25 * F.st.cutK, .05, .5) * pr * (O.head < O.headMax * .3 || O.state === 'stun' ? .15 : 1) * (F.head < F.headMax * .32 ? 1.5 : 1);
   }
-  // an exchange ended: both back off and reset (the hungrier man comes again sooner), or they stay on it
+  // an exchange ended: both back off and reset (the hungrier man decides if it happens and comes again sooner), or they stay on it
   beat() {
     const [A, B] = this.f, pA = this.rstP(A), pB = this.rstP(B), pm = Math.max(pA, pB);
-    if (R() < (pA + pB) / 2) for (const [F, p] of [[A, pA], [B, pB]]) { F.beatR = rnd(TEMPO.reset[0], TEMPO.reset[1]) * clamp(p / pm, .7, 1); F.hotT = 0; if (F.state !== 'punch') { F.queue = []; F.beatT = 0; } }
+    if (R() < Math.min(pA, pB) * 1.2) for (const [F, p] of [[A, pA], [B, pB]]) { F.beatR = rnd(TEMPO.reset[0], TEMPO.reset[1]) * clamp(p / pm, .7, 1); F.hotT = 0; if (F.state !== 'punch') { F.queue = []; F.beatT = 0; } }
     else for (const F of this.f) { F.hotT = TEMPO.hot; F.beatR = 0; }
   }
   // switch-hitter: flips stance; everything the other man had figured out is half wrong now
