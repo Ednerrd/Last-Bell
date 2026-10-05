@@ -433,6 +433,9 @@ const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2 };            // s
 const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
 const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
+// rhythm: bursts, then resets. After an exchange the pair may reset (back out, feint, step around). A hot streak after it cost the swarmer his gas (tried 1.15-1.35).
+// Rounds open with a feel-out (longer in the first). How often he resets and how long he feels out come from his aggression
+const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rJab: .1, rWant: 10, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
 const SHOUT_EDGE = { atk: .6, def: .5, ctr: 1.1, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
@@ -454,7 +457,7 @@ function sgOf(F) {
   return out;
 }
 
-const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14, XDZ = 45; // XGAP: left-right gap kept when they are closer than XDZ in depth
+const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14; // XGAP: closest they get in x, so the left-right order holds
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
 function dist(A, B) { return Math.hypot(B.x - A.x, B.z - A.z); }
@@ -478,6 +481,18 @@ function cutChance(D, dmg, crit) {
   return Math.min(.35, p);
 }
 function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1); }
+// how far out the arm is when it lands. Straights need the arm out: jammed or half out has no weight behind it, the sweet spot is
+// just short of locking out, reaching at the very end of his range loses a little again. Hooks and uppercuts are short punches
+// (the power comes from the turn, not the reach): only fully jammed or overreaching costs them. ext 0 = the punch's min range, 1 = its max
+const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, shortLo: .85, k: 1.047, ai: 3, swap: .25 };
+function extRaw(P, d) {
+  const e = (d - P.min) / (P.max - P.min);
+  if (P.kind !== 'straight') return e <= 0 ? EXT.shortLo : e > 1 ? EXT.end : 1;
+  return e <= 0 ? EXT.lo : e < EXT.at ? lerp(EXT.lo, EXT.peak, e / EXT.at) : lerp(EXT.peak, EXT.end, clamp((e - EXT.at) / (1 - EXT.at), 0, 1.4));
+}
+// how well a punch fits the distance, against its own best (1 = sweet spot): the AI reads this before he throws
+const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
+function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
 function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
 // guard factor: bonuses only count as far as his skill supports the guard, weaknesses always count
 function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
@@ -517,6 +532,12 @@ function mkF(sheet, side) {
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
+// where a punch comes from and where it arrives, for the render (3D) and the commentary. Recording only: no dice
+// hand: the attacker's L/R. side: the defender's side it arrives on. lane: center (straights), outside (hooks), under (uppercuts)
+function laneOf(A, P) {
+  const hand = (P.arm === 'lead') !== (A.stance === 'southpaw') ? 'L' : 'R';
+  return { hand, side: hand === 'L' ? 'R' : 'L', lane: P.kind === 'hook' ? 'outside' : P.kind === 'upper' ? 'under' : 'center' };
+}
 class Fight {
   constructor(A, B, opts) {
     opts = opts || {};
@@ -525,7 +546,7 @@ class Fight {
     this.f = [mkF(A, 0), mkF(B, 1)];
     this.f[0].op = this.f[1]; this.f[1].op = this.f[0];
     this.f.forEach(F => { F.gSkill = guardSkill(F.s, F.guard); });
-    this.lull = 0; this.lead = 0;
+    this.lull = 0; this.lead = 0; this.ord = 1; // left-right order, 1 = red (A) on the left; every round starts that way
     this.f.forEach(F => F.rs = newRS());
     this.round = 1; this.clock = 0; this.phase = 'intro'; this.phaseT = 0; this.t = 0;
     this.events = []; this.result = null; this.cards = [[], [], []];
@@ -534,6 +555,7 @@ class Fight {
     if (R() < 0.02) { this.judgeBias[ri(0, 2)] = (R() < .5 ? 1 : -1) * 2.6; this.robbery = true; }
     this.kdState = null; this.clinchT = 0; this.rec = []; this.replay = null; this.recAfter = 0;
     this.roundLog = []; this.stepEv = [];
+    this.exP = 0; this.f.forEach(F => this.tempoStart(F, true));
   }
   emit(type, data) { const e = Object.assign({ type, t: this.t, round: this.round, clock: this.clock }, data || {}); this.events.push(e); this.stepEv.push(e); }
   clockStr() { const s = Math.max(0, Math.floor(this.clock)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
@@ -547,7 +569,7 @@ class Fight {
       case 'intro2': {
         this.walkTo(A, -62, 0, dt, 70); this.walkTo(B, 62, 0, dt, 70);
         if (this.phaseT > (this.phase === 'intro' ? 2.4 : 1.2)) {
-          this.phase = 'fight'; this.phaseT = 0; this.f.forEach(F => { F.walkDir = 0; });
+          this.phase = 'fight'; this.phaseT = 0; this.ord = 1; this.f.forEach(F => { F.walkDir = 0; });
           this.emit('bell', { start: true }); this.emit('roundStart');
         }
         break;
@@ -559,7 +581,9 @@ class Fight {
           if ((o.t -= dt) <= 0) { if (!o.ack) this.emit('ignored', { a: F.side, k: o.k }); F.order = null; }
         }
         if (this.clinchT > 0) this.updateClinch(dt);
-        else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt); }
+        else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt);
+          const q0 = this.quiet || 0; this.quiet = this.f.some(F => F.state === 'punch' || F.queue.length) ? 0 : q0 + dt;
+          if (this.quiet >= TEMPO.at && q0 < TEMPO.at && this.exP >= 2) { this.exP = 0; this.beat(); } } // an exchange just ended (nobody punching, nothing queued)
         this.physics();
         if (this.phase === 'fight') {
           this.clock += dt * CLOCK;
@@ -612,7 +636,7 @@ class Fight {
     F.walkDir = walking && Math.abs(dx) > 6 ? (dx > 0 ? 1 : -1) : 0; // turns and walks where he is going; faces the ring again once he gets there
     this.face();
   }
-  face() { const [A, B] = this.f; let lr = this.lr || 1; if ((B.x - A.x) * lr < -XGAP) this.lr = lr = -lr; this.f.forEach((F, i) => { F.dir = F.walkDir || (i ? -lr : lr); }); }
+  face() { for (const F of this.f) { const dx = F.op.x - F.x; if (F.walkDir) F.dir = F.walkDir; else if (Math.abs(dx) > 5) F.dir = dx > 0 ? 1 : -1; } }
   physics() {
     const [A, B] = this.f;
     for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
@@ -622,13 +646,15 @@ class Fight {
       A.x = mx - v.ux * h; A.z = mz - v.uz * h; B.x = mx + v.ux * h; B.z = mz + v.uz * h;
       for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
     }
-    // side view: they only change sides by circling deep (one passes in front of the other). Close in depth, the left-right order holds,
-    // and facing follows the order with a margin, so nobody mirrors in one frame (the render animates the turn)
-    const lr = this.lr || 1, gap = (B.x - A.x) * lr;
-    if (gap > -XGAP && gap < XGAP && Math.abs(B.z - A.z) < XDZ) {
-      const pu = Math.min(XGAP - gap, 4) / 2 * lr; let a = A.x - pu, b = B.x + pu; // eased, never a jump
-      if (a < -RING) { b += -RING - a; a = -RING; } if (b > RING) { a -= b - RING; b = RING; } if (a > RING) { b -= a - RING; a = RING; } if (b < -RING) { a += -RING - b; b = -RING; }
-      A.x = a; B.x = b; if (A.vx * lr > 0) A.vx = 0; if (B.vx * lr < 0) B.vx = 0;
+    // keep the left-right order: they can circle, but never walk through each other and mirror in one frame
+    // (a pivot or angle-off out of the ropes or a corner is the one real way to switch sides: it may cross, and the order follows him)
+    const o = this.ord || (this.ord = A.x <= B.x ? 1 : -1), piv = this.f.some(F => (F.slideT > 0 && (F.esc || F.spin)) || F.ropeT > 0);
+    if (piv) { if ((B.x - A.x) * o < 0) this.ord = -o; }
+    else if ((B.x - A.x) * o < XGAP) {
+      const m = Math.min(2, (XGAP - (B.x - A.x) * o) / 2); // eases out of the gap a pivot left them in, no snap
+      const ax = A.x - o * m, bx = B.x + o * m; A.x = clamp(ax, -RING, RING); B.x = clamp(bx, -RING, RING);
+      if (A.x !== ax) B.x = clamp(B.x + o * m, -RING, RING); else if (B.x !== bx) A.x = clamp(A.x - o * m, -RING, RING); // one on the ropes: the other gives the room
+      if (A.vx * o > 0) A.vx = 0; if (B.vx * o < 0) B.vx = 0;
     }
     this.face();
   }
@@ -699,7 +725,8 @@ class Fight {
       }
     }
     // broadcast axis: the fight settles back side-on to the camera (pivots override this)
-    if (F.slideT <= 0) lat += 1.6 * F.spd * v.uz * v.ux;
+    // past ~60 degrees off the axis the pull gets stronger instead of fading, so circling turns back before they swap sides
+    if (F.slideT <= 0) { const sF = F.side ? -this.ord : this.ord, c = v.ux * sF; lat += 1.6 * F.spd * v.uz * sF * (c > .5 || F.ropeT > 0 ? c : 1 - c); }
     // drift back to center: after a break, in a lull, and always a little for ring generals
     if (F.slideT <= 0 && !F.cutting) {
       const cw = (F.resetT > 0 ? .9 : 0) + (this.lull > 1.3 ? .3 : 0) + (F.st.gen || 0) * (.4 + .6 * k);
@@ -729,6 +756,8 @@ class Fight {
     F.counterWin = Math.max(0, F.counterWin - dt);
     if (F.lostT > 0) F.lostT -= dt;
     if (F.pullT > 0) F.pullT -= dt;
+    if (F.feelT > 0) F.feelT -= dt; if (F.beatR > 0) F.beatR -= dt;
+    F.rq = (F.rq || 0) + ((F.beatR > 0 || F.feelT > 0 ? 1 : 0) - (F.rq || 0)) * (1 - Math.exp(-dt / 20)); // share of the last ~20 s spent resetting or feeling out
     if (F.biteT > 0) F.biteT -= dt;
     if (F.st.swap && F.state !== 'punch' && (F.swapT += dt) > STYLE_SWAP.every * rnd(.6, 1.4)) this.swapStance(F);
     if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
@@ -787,8 +816,11 @@ class Fight {
     if (F.lostT > 0) aggr *= .3;  // he stepped off to the side: find him first
     if (st.open) aggr *= lerp(1, STYLE_OPEN.idle + STYLE_OPEN.boost * this.opening(F), st.open);
     if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
+    const feel = F.feelT > 0 && !hurtOp ? clamp(F.feelT / 2, 0, 1) : 0, rst = F.beatR > 0 && !hurtOp && !oTrapped; // feeling him out, or resetting after an exchange
+    if (feel) aggr *= lerp(1, TEMPO.fAggr, feel);
+    if (rst) aggr *= TEMPO.rAggr; else aggr /= Math.max(.72, 1 - (F.rq || 0)); // the work he skipped in the resets comes in the bursts
     // range intent
-    let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0);
+    let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0) + TEMPO.fWant * feel + (rst ? TEMPO.rWant : 0);
     if (hurtOp) want -= 14;
     if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
     F.want = clamp(want + rnd(-4, 4), 40, 86);
@@ -825,6 +857,10 @@ class Fight {
       aggr *= STYLE_OUT.aggr;                       // he doesn't want to trade in there
       if (!trapped && F.slideT <= 0 && R() < st.out * STYLE_OUT.p * (.4 + .6 * k) * (.5 + F.s.footwork / 200) && this.stepOut(F, v)) return;
     }
+    // a reset or a feel-out is jabs and feints, not silence: the jabbers keep touching him
+    if ((rst || feel > .5) && d < PUNCH.jab.max + 6 && R() < TEMPO.rJab * (.3 + (st.stick || 0) + .5 * (st.out || 0) + .5 * (st.pjab || 0)) * (sg.jab || 1)) {
+      F.queue = R() < .3 ? ['jab'] : []; this.startPunch(F, 'jab'); F.decT = (0.2 + R() * .3) * TUNE.pace; return;
+    }
     if (d < 86 && R() < aggr * TUNE.vol) {
       const combo = this.pickCombo(F, d, sg, hurtOp);
       if (combo) { F.queue = combo.slice(1); this.startPunch(F, combo[0]); F.decT = (0.15 + R() * .3) * TUNE.pace; return; }
@@ -832,8 +868,20 @@ class Fight {
     // feints: worth more against counter-happy guards and guys who bite on everything
     const Rd = F.read, thT = Rd.th.straight + Rd.th.hook + Rd.th.upper + Rd.th.body;
     const fv = lerp(1, (GUARD_FEINT[O.guard] || 1) * (1 + clamp(Rd.reacts / Math.max(6, thT) - .35, 0, .6)), k);
-    if (d < 86 && R() < 0.07 * st.feint * fv) { this.startFeint(F); return; }
+    if (d < 86 && R() < 0.07 * st.feint * fv * (rst || feel ? TEMPO.feint : 1)) { this.startFeint(F); return; }
     if (d < 86 && R() < (F.s.defense / 100) * 0.22 * sg.def * (F.bait > 0 ? 1.6 : 1)) { F.def = 'block'; F.defZ = 'head'; F.defT = .3 + R() * .4; F.defD = F.defT; F.defP = 0; }
+  }
+  // round start: feel him out first (a long look in the first round, a short one after)
+  tempoStart(F, first) { const r = first ? TEMPO.feel1 : TEMPO.feelN; F.feelT = rnd(r[0], r[1]) * clamp(1.4 - .5 * F.st.aggr, .4, 1.2); F.beatR = 0; }
+  // how much he wants a reset after an exchange: low-output, moving, careful men a lot; pressure men, swarmers and a man smelling blood hardly
+  rstP(F) {
+    const O = F.op, pr = F.strategy === 'pressure' || F.strategy === 'ko' ? .5 : F.strategy === 'move' || F.strategy === 'counter' ? 1.3 : 1;
+    return clamp(.7 - .25 * F.st.aggr - .25 * F.st.cutK, .05, .5) * pr * (O.head < O.headMax * .3 || O.state === 'stun' ? .15 : 1) * (F.head < F.headMax * .32 ? 1.5 : 1);
+  }
+  // an exchange ended: both back off and reset (the hungrier man decides if it happens and comes again sooner)
+  beat() {
+    const [A, B] = this.f, pA = this.rstP(A), pB = this.rstP(B), pm = Math.max(pA, pB);
+    if (R() < Math.min(pA, pB) * 1.2) for (const [F, p] of [[A, pA], [B, pB]]) { F.beatR = rnd(TEMPO.reset[0], TEMPO.reset[1]) * clamp(p / pm, .7, 1); if (F.state !== 'punch') { F.queue = []; F.beatT = 0; } }
   }
   // switch-hitter: flips stance; everything the other man had figured out is half wrong now
   swapStance(F) {
@@ -949,6 +997,8 @@ class Fight {
     if (last === 'blocked' && lp && PUNCH[nx].zone === lp.zone && LEVEL_SWAP[nx] && R() < .6 * k) nx = LEVEL_SWAP[nx]; // he is covering that level: switch
     else if (last === 'evaded' && F.lastDef === 'slip' && d < 60 && R() < .5 * k) nx = 'hook';                 // hook where he slipped to
     else if (last === 'evaded' && F.lastDef === 'duck' && d < 54 && R() < .5 * k) nx = 'uppercut';             // he ducks, come up the middle
+    // too close to get the straight off: a smart man turns it into a hook or an uppercut
+    { const P = PUNCH[nx]; if (P.kind === 'straight' && extFit(P, d) < .8 && R() < EXT.swap * k) nx = P.zone === 'body' ? 'bodyHook' : P.arm === 'lead' ? 'hook' : d < 54 ? 'uppercut' : 'rhook'; }
     // he is hurt: keep the punches coming
     if (last === 'landed' && (O.state === 'stun' || O.head < O.headMax * .25) && F.queue.length === 0 && F.stam > 12 && R() < .35 + .45 * k)
       F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
@@ -964,6 +1014,7 @@ class Fight {
     const c = wpick(ok, c => {
       const n = c.len; let w = comboW(F, c);
       const rc = RANGE_C[c.r]; w *= .25 + Math.exp(-Math.pow((d - rc[0]) / rc[1], 2));
+      { let q = 1; for (const p of c.seq) q *= extFit(PUNCH[p], d); w *= lerp(1, Math.pow(q, EXT.ai / n), k); } // a smart man doesn't throw a right hand from too close: he'd only get half of it
       for (const p of c.seq) { const P = PUNCH[p]; if (P.zone === 'body') w *= Math.pow(sg.body, 1 / n); if (P.cat === 'power') w *= Math.pow(sg.power * (hurtOp ? 1.8 : 1), 1 / n); if (p === 'jab') w *= Math.pow(sg.jab, 1 / n); }
       if (hurtOp && n >= 3) w *= 1.5;
       if (F.stam < 25 && n > 2) w *= .3; else if (F.stam < 40 && n > 3) w *= .5;
@@ -994,7 +1045,7 @@ class Fight {
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
-    F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0;
+    F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0; this.exP++;
     F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
@@ -1002,12 +1053,12 @@ class Fight {
     this.emit('throw', { a: F.side, p: type });
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
   }
-  startFeint(F) {
+  startFeint(F) { // resetting, a feint is mostly just a look (no real one behind it)
     { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz }; }
     F.state = 'punch'; F.def = null;
     this.react(F.op, F, PUNCH.jab, true);
     if (F.st.bite && F.op.pendingDef) F.biteT = STYLE_BITE.t; // he bit: the real one is coming into whatever he opened
-    if (R() < .7) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
+    if (R() < (F.beatR > 0 ? .1 : .7)) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
     this.emit('feint', { a: F.side });
   }
   react(D, A, P) {
@@ -1104,6 +1155,7 @@ class Fight {
     let crit = false;
     if (!blocked && R() < 0.05 + A.s.accuracy / 2000) { dmg *= 1.75; crit = true; }
     dmg *= rnd(.8, 1.2) * mult;
+    dmg *= extF(P, d); // short of full extension, less on it
     // sloppy D eats them flush; wild throwers load up when they do land
     dmg *= 1 + clamp((75 - D.s.defense) / 100, 0, .4) * TUNE.flush + (a.load || 0) * TUNE.load;
     const tough = P.zone === 'head' ? (0.55 + effChin(D) / 100 * .9) : (0.55 + D.s.body / 100 * .9);
@@ -1122,7 +1174,12 @@ class Fight {
       if (h[a.type] === (P.cat === 'jab' ? 10 : 6) && !A.rs.homeSaid.any) { A.rs.homeSaid.any = 1; this.emit('home', { a: A.side, p: a.type }); }
     }
     D.hitT = 1; D.hitZone = P.zone; D.hitKind = blocked ? 'block' : P.kind; D.hitPow = clamp(dmg / 7, .2, 1.3);
-    this.emit('hit', { a: A.side, d: D.side, zone: P.zone, dmg, blocked, crit, kind: P.kind, p: a.type, caught, counter: A.counterWin > 0, x: D.x, cut: D.cut });
+    { // contact quality: blocked, smothered (too close to get it off), glancing (at the end of his reach, or half caught on the roll or the pull), flush (walked into it, a counter, or a perfect one), clean
+      const ln = laneOf(A, P), rear = D.stance === 'southpaw' ? 'L' : 'R';
+      const q = blocked ? 'blocked' : d < P.min ? 'smothered' : d > P.max || def === 'roll' || def === 'pull' ? 'glancing' : crit || ((caught || A.counterWin > 0 || mult > 1) && P.cat !== 'jab') ? 'flush' : 'clean';
+      const glove = !blocked ? null : P.zone === 'body' ? 'elbow' + ln.side : P.kind === 'hook' ? ln.side : P.kind === 'upper' ? 'both' : rear; // hooks on the glove on that side, straights caught by the rear hand
+      this.emit('hit', { a: A.side, d: D.side, zone: P.zone, dmg, blocked, crit, kind: P.kind, p: a.type, caught, counter: A.counterWin > 0, x: D.x, cut: D.cut, hand: ln.hand, side: ln.side, lane: ln.lane, q, glove });
+    }
     // cuts: shot size x accumulated damage. Fresh face + regular shot = very slim; beat-up face + big shot = real risk
     if (P.zone === 'head' && !blocked && dmg > 1.5 && R() < cutChance(D, dmg, crit)) {
       const was = D.cut; D.cut = Math.min(10, D.cut + 1 + R() * 2);
@@ -1164,7 +1221,12 @@ class Fight {
   miss(A, D, a, why, def) {
     const P = PUNCH[a.type];
     A.stam = Math.max(0, A.stam - P.cost * .35);
-    this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type });
+    { // how it missed: short / jammed (range), wild, or what he did with it. Straights are slipped to the side they arrive on
+      const ln = laneOf(A, P), dd = dist(A, D);
+      const mt = why === 'range' ? (dd > P.max ? 'short' : 'jammed') : why === 'wild' ? 'wild' : def === 'roll' ? 'rolled' : def === 'slip' ? 'slipped' : def === 'duck' ? 'ducked' : def === 'pull' ? 'pulled'
+        : P.zone === 'body' || P.kind === 'upper' ? 'pulled' : P.kind === 'hook' ? 'ducked' : 'slipped';
+      this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type, hand: ln.hand, side: ln.side, lane: ln.lane, mt });
+    }
     A.lastRes = 'evaded'; A.lastDef = def || null;
     if (why === 'evade') A.read.av[kindOf(a.type)]++;
     if (why === 'evade') A.rs.made[a.type] = (A.rs.made[a.type] || 0) + 1;
@@ -1237,7 +1299,7 @@ class Fight {
   updateKD(dt) {
     const K = this.kdState, D = this.f[K.who], A = D.op;
     if (!K.rising && !K.standing) D.downP = Math.min(1, D.downP + dt * 2.2);
-    { const sd = A.x > D.x ? 1 : -1; let tx = clamp(D.x + sd * 120, -RING + 10, RING - 10); if (sd * (tx - D.x) < XGAP) tx = clamp(D.x + sd * XGAP, -RING, RING); // neutral corner on his own side: never walks through the man on the floor
+    { let tx = D.x + (A.x > D.x ? 1 : -1) * 120; if (Math.abs(tx) > RING - 10) tx = D.x - (A.x > D.x ? 1 : -1) * 120; tx = clamp(tx, -RING + 10, RING - 10);
       const tz = clamp(-D.z * .5, -ZR + 10, ZR - 10), dx = tx - A.x, dz = tz - A.z, dd = Math.hypot(dx, dz);
       if (dd > 2) { const m = Math.min(dd, 70 * dt) / dd; A.x += dx * m; A.z += dz * m; } }
     A.hitT = Math.max(0, A.hitT - dt * 3); D.hitT = Math.max(0, D.hitT - dt * 3);
@@ -1252,8 +1314,8 @@ class Fight {
         D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
         if (K.zone === 'body') D.body = Math.max(D.body, 22);
         D.stunT = 0; D.decT = .3; A.decT = .3;
-        const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.lr || 1;
-        this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.face();
+        const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.f[0].x <= this.f[1].x ? 1 : -1;
+        this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.ord = sg_; this.face();
         this.phase = 'fight'; this.phaseT = 0; this.kdState = null;
         this.emit('resume');
       }
@@ -1305,6 +1367,7 @@ class Fight {
       if (F.cut < .4) F.cut = 0;
       F.kdR = 0; F.rs = newRS(); F.hitT = 0; F.state = 'idle'; F.unanswered = 0; F.downP = 0;
       F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.fakeT = 0; F.exitAfter = false; F.resetT = 0;
+      this.tempoStart(F, false); this.exP = 0;
       // memory fades a bit between rounds, the most recent round counts most
       const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6;
     }
@@ -2157,7 +2220,11 @@ const Render = (() => {
   // then snap back and settle into the guard. Contact stays at 60% of the punch (the engine's resolve)
   const snapIn = (u, v0) => v0 * u + (1 - v0) * u * u;
   const snapBack = q => q < .1 ? 1 + .035 * Math.sin(q / .1 * Math.PI / 2) : 1.035 * Math.pow(1 - (q - .1) / .9, 2);
-  const jabK = p => p < .15 ? 0 : p < .6 ? snapIn((p - .15) / .45, .55) : snapBack((p - .6) / .4);
+  // a punch chained straight off the last one (or a counter) has its hand already loaded: short wind-up, it drives from early on.
+  // Render only: contact stays at 60% of the punch (the engine's resolve); the engine version broke the out-boxer (NOTES.md "Rhythm")
+  const windOf = v => v._sm && v._sm.chn ? .15 : .35;
+  const jabK = (p, w) => { w = w == null ? .15 : w; return p < w ? 0 : p < .6 ? snapIn((p - w) / (.6 - w), .55) : snapBack((p - .6) / .4); };
+  const extOf = (p, w) => p < w ? 0 : p < .6 ? 1 - Math.pow(1 - (p - w) / (.6 - w), 3) : Math.max(0, 1 - ease((p - .6) / .4));
   const bez = (a, c, b, t) => ({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
   function shade(hex, f) {
     const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
@@ -2220,16 +2287,17 @@ const Render = (() => {
     // every punch is a little different: about a third of the right hands to the head loop over the top,
     // hooks go wider or tighter, uppercuts dig from lower or higher (render only, rolled when the punch starts)
     let pv = { over: false, hw: 1, ud: 1 };
+    if (v._sm) { const sm = v._sm; if (v.aT && (sm.pvA !== v.aT || v.aP < (sm.pvP || 0) - .05 || !sm.pv)) sm.chn = !v.feint && (!!sm.inP || !!v.ctr); sm.inP = !!v.aT; }
     if (v.aT && v._sm) {
       const sm = v._sm, P0 = PUNCH[v.aT];
       if (sm.pvA !== v.aT || v.aP < (sm.pvP || 0) - .05 || !sm.pv) { sm.pvA = v.aT; sm.pv = { over: P0.kind === 'straight' && P0.arm === 'rear' && P0.zone === 'head' && !v.feint && Math.random() < .3, hw: .7 + Math.random() * .7, ud: .8 + Math.random() * .45 }; }
       sm.pvP = v.aP; pv = sm.pv;
     }
     if (v.aT) {
-      const P = PUNCH[v.aT], p = v.feint ? Math.min(v.aP, .35) * .8 : v.aP;
-      const ext = p < .35 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .35) / .25, 3) : Math.max(0, 1 - ease((p - .6) / .4));
+      const P = PUNCH[v.aT], p = v.feint ? Math.min(v.aP, .35) * .8 : v.aP, w = windOf(v);
+      const ext = extOf(p, w);
       const drive = P.cat === 'jab' ? .45 : 1; const rear = P.arm === 'rear';
-      load = p < .35 ? (p / .35) * drive : 0; // coil before the shot
+      load = p < w ? (p / w) * drive * (w < .35 ? .5 : 1) : 0; // coil before the shot (half a coil when the hand is already loaded)
       twist = ext * drive * (rear ? 1 : .7);
       if (P.kind === 'straight') { lean += (.12 + .12 * drive) * ext - .05 * load; hipX += (rear ? 6 : 3.5) * ext; hipY += 2 * ext * drive; if (rear) heel = ext; }
       if (pv.over) { lean += .12 * ext + .05 * load; hipY += 3 * ext; } // overhand: rolls over the top of it, dips the head under
@@ -2322,7 +2390,7 @@ const Render = (() => {
     if (v.aT && J.dp === 0 && J.twist) {
       const pl = PUNCH[v.aT].arm === 'lead'; const lsh = southpaw ? shN : shF, rsh = southpaw ? shF : shN;
       const fw = pl ? lsh : rsh, bk = pl ? rsh : lsh; fw.x += 5 * J.twist; bk.x -= 3 * J.twist; fw.y -= 1.5 * J.twist;
-      if (PUNCH[v.aT].cat === 'jab' && !v.feint) { const jk = jabK(v.aP); fw.x += 7 * jk; fw.y -= 2.2 * jk; } // lead shoulder rolls forward and up over the chin
+      if (PUNCH[v.aT].cat === 'jab' && !v.feint) { const jk = jabK(v.aP, windOf(v) < .35 ? .05 : .15); fw.x += 7 * jk; fw.y -= 2.2 * jk; } // lead shoulder rolls forward and up over the chin
     }
     let trail = null, stretch = 0, trailNear = false;
     const gd = v.guard || 'standard', N = J.neck, tir = v.tired || 0;
@@ -2405,9 +2473,10 @@ const Render = (() => {
       } else T = { x: T.x - (tgt.tw || 11) - gr * .7, y: T.y };
       const reach = S.arm * 2 * .97; let dx = T.x - sh.x, dy = T.y - sh.y, d = Math.hypot(dx, dy);
       if (d > reach) T = { x: sh.x + dx / d * reach, y: sh.y + dy / d * reach };
+      const wd = windOf(v), dip = wd < .35 ? .07 : .18;
       const kOf = p => v.feint ? Math.sin(Math.min(1, p) * Math.PI) * .35
-        : P.cat === 'jab' ? jabK(p)
-        : p < .35 ? -.18 * ease(p / .35) : p < .6 ? -.18 + 1.18 * snapIn((p - .35) / .25, .45) : snapBack((p - .6) / .4);
+        : P.cat === 'jab' ? jabK(p, wd < .35 ? .05 : .15)
+        : p < wd ? -dip * ease(p / wd) : p < .6 ? -dip + (1 + dip) * snapIn((p - wd) / (.6 - wd), .45) : snapBack((p - .6) / .4);
       const pv = J.pv || { hw: 1, ud: 1 }, hookC = { x: G.x - 9 * pv.hw, y: (G.y + T.y) / 2 - 3 * pv.hw }, upC = { x: sh.x + 4, y: sh.y + 44 * pv.ud };
       const overC = { x: (sh.x + T.x) / 2 - 4, y: Math.min(sh.y, T.y) - 18 }; // overhand: loops up and over, comes down on him
       const flick = gd === 'handslow' && P.kind === 'straight' && G.y > sh.y + 8, flickC = { x: (G.x + T.x) / 2 + 6, y: G.y + 4 }; // whips up from the hip
@@ -2586,7 +2655,8 @@ const Render = (() => {
   function drawFighter(v, look, J, A) {
     const B = J.S.B, G = Math.pow(B, 1.5), skin = look.skin, skinD = shade(skin, -.28);
     const tr = gearItem('trunks', look.trunks), gl = gearItem('gloves', look.gloves), sh = gearItem('shoes', look.shoes);
-    const pp = P3(v.x, v.z); ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale((v.tS || v.dir) * pp.s, pp.s);
+    const pp = P3(v.x, v.z), fd = v._sm && v._sm.fd != null ? v._sm.fd : v.dir, fa = Math.abs(fd), tw = fa >= 1 ? v.dir : (fd < 0 ? -1 : fd > 0 ? 1 : v.dir) * (.3 + .7 * fa * fa * (3 - 2 * fa)); // mid-turn he narrows side-on to the camera, then opens the other way
+    ctx.save(); ctx.translate(pp.x, pp.y); ctx.scale(tw * pp.s, pp.s);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(J.dp > .5 && !J.knee ? -14 : 0, 2, J.dp > .5 && !J.knee ? 52 : 28 * B, 5, 0, 0, Math.PI * 2); ctx.fill();
     if (J.sit > .02) { // corner stool slides in under him
@@ -2764,7 +2834,7 @@ const Render = (() => {
     // Too close: he sits back a touch and the rest of the room comes from the other man rocking back off it
     if (P.kind === 'straight' && !body) {
       const rear = P.arm === 'rear', drive = P.cat === 'jab' ? .45 : 1, sp = v.stance === 'southpaw', near = rear ? !sp : sp;
-      const ext = p < .35 ? 0 : p < .6 ? 1 - Math.pow(1 - (p - .35) / .25, 3) : Math.max(0, 1 - ease((p - .6) / .4));
+      const ext = extOf(p, windOf(v));
       const tw = drive * (rear ? 1 : .7), go = (rear ? 6 : 3.5) + J.S.torso * (.12 + .12 * drive) * Math.cos(J.lean);
       const shx = J.neck.x + (near ? 2 : -3) + go * (1 - ext) + 5 * tw + (P.cat === 'jab' ? 7 : 0), shy = J.neck.y + (near ? 4 : 2) - 1.5 * tw - (P.cat === 'jab' ? 2.2 : 0);
       const gr = 7.2 * Math.sqrt(J.S.B), hr = Jo.S.headR, Tx = t.x - hr * .8 - gr * .8, Ty = t.y + hr * .5, R2 = J.S.arm * 2 * .93;
@@ -3008,7 +3078,9 @@ const Render = (() => {
     lg.addColorStop(0, `rgba(${V.light},${V.la})`); lg.addColorStop(1, `rgba(${V.light},0)`);
     ctx.fillStyle = lg; ctx.fillRect(-260, -260, 520, 300);
     const f = view.f; const looks = view.looks;
-    f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt; });
+    f.forEach((v, i) => { v._sm = SM[i]; v._dt = dt;
+      // facing turns over ~.2 s instead of mirroring in one frame (walking to the corner, back to the ring); a jump (new round) snaps
+      const sm = SM[i]; if (sm.fd == null || Math.abs(v.x - sm.fx) > 40) sm.fd = v.dir; else sm.fd = clamp(sm.fd + clamp(v.dir - sm.fd, -dt * 10, dt * 10), -1, 1); sm.fx = v.x; });
     const J = f.map((v, i) => body(v, looks[i], view.t));
     f.forEach((v, i) => lunge(v, J[i], f[1 - i], J[1 - i], dt));
     bodyPush(f, J);
@@ -3024,7 +3096,6 @@ const Render = (() => {
     const AR = f.map((v, i) => { const o = 1 - i, q = P3(v.x, v.z), qo = P3(f[o].x, f[o].z); return arms(v, looks[i], J[i], { head: toLocal(v, aim[i].h), body: toLocal(v, aim[i].b), dzy: (qo.y - q.y) / q.s, hr: J[o].S.headR, tw: 10.5 * Math.pow(J[o].S.B, 1.5) }, view.t); });
     settle(f, J, AR, 0); settle(f, J, AR, 1);
     f.forEach((v, i) => carry(v, J[i], AR[i], dt));
-    f.forEach(v => { const sm = v._sm; if (!sm) return; if (sm.tS == null || dt <= 0) sm.tS = v.dir; else sm.tS = v.dir > sm.tS ? Math.min(v.dir, sm.tS + dt * 8) : Math.max(v.dir, sm.tS - dt * 8); v.tS = Math.sign(sm.tS || v.dir) * Math.max(.06, Math.sin(Math.abs(sm.tS) * Math.PI / 2)); }); // turning around: a quick pivot (~.25 s), not a one-frame mirror
     if (view.ev) for (const e of view.ev) if (e.type === 'hit') spawnHit(e, f, J);
     // depth sort: far side first; a downed fighter goes under a standing one at the same depth
     const items = [0, 1].map(i => ({ z: (f[i].z || 0) - (f[i].state === 'down' ? 6 : 0), draw: () => drawFighter(f[i], looks[i], J[i], AR[i]) }));

@@ -1,18 +1,3 @@
-# READ THIS FIRST: this branch is a side branch
-
-**Work on `claude/step9-contact`, not here.** `git fetch origin claude/step9-contact && git checkout claude/step9-contact`, then follow the handoff below (copied from that branch, Oct 5). Its `same.js` hash is **48fcf240**; the live Fight Lab (https://claude.ai/artifact/QhC1gMrw1pSabzuLzMw7Ev) is built from it. Never republish the lab from this branch, it would roll back steps 8, 8b and 9.
-
-What happened here (`claude/determined-feynman-6z4lju`, Oct 5): this branch started from the stale step-5 handoff and redid **step 6 (no pass-through)**, which the main branch already has (from `claude/handoff-review-32nske`). Several sessions ran in parallel off the same handoff. Before starting, check `git branch -r` and the newest handoff.
-
-Worth carrying over to the main branch (not done yet, needs sims since it touches balance):
-- **KD neutral-corner walk goes through the downed man.** In `updateKD()` (main branch ~line 1302) the standing man's target flips to `D.x - 120` when near the ropes, so he walks across the man on the floor. Fix used here: `const sd = A.x > D.x ? 1 : -1; let tx = clamp(D.x + sd * 120, -RING + 10, RING - 10); if (sd * (tx - D.x) < XGAP) tx = clamp(D.x + sd * XGAP, -RING, RING);` (commit c2038fc). Run audit + styles before and after.
-- **Confirmed dead end:** hard-locking the left-right order (no side swaps at all) costs the out-boxer 6-10 points (43%, 38.9% once escape lanes knew the wall). Escapes go past the other man. Details in this branch's NOTES.md "No pass-through".
-- Measuring script for side swaps / facing flips: the per-frame probe idea (count sign flips of `B.x - A.x` in phase 'fight', and `F.f[0].dir` flips per minute) is quick to rewrite in ~15 lines on top of `tests/sim.js`.
-
-Ed's call on what's next (end of the Oct 5 handoff below): 1) punches look like pawing (render), 2) stamina / gassing / body shots, 3) Ring IQ when hurt or tired. Skip step 7.
-
----
-
 # Handoff (Oct 5 2026): combat polish
 
 Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the ranked plan). Don't read all of `index.html`: grep, then read the section.
