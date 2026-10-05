@@ -45,7 +45,7 @@ Ed asked for the lab: "don't show me the menus, just a boxing match I can random
 
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
-- Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. **Next: step 8 (rhythm). Skip step 7 (2D-only render polish) per Ed's 3D plan.**
+- Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. Step 8a (rhythm: resets, feel-outs) done, see NOTES.md "Rhythm" (watch slugger 58, high guard 46, handslow 60). **Next: 8b (shorter wind-up on chained punches and counters), then 9-10. Skip step 7 (2D-only render polish) per Ed's 3D plan.**
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).

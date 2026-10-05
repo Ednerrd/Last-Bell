@@ -21,7 +21,7 @@ Full detail: `research/combat_research.md` (Fight Night, Undisputed, Thrill of t
 5. ✅ **E: footwork acceleration.** Ease velocity toward its target, lock the rope-escape side for ~.4 s, smooth the cut-off tracking, sine-shaped punch step, a pull that really moves.
 6. ✅ **E: no pass-through.** Keep the left-right order; animate the turn.
 7. **R: uppercut curve fix, close-range spacing.**
-8. **E: rhythm.** Burst-and-reset pacing (real activity ratios), feel-out moments, shorter wind-up on chained punches and counters.
+8. **E: rhythm.** ✅ 8a: burst-and-reset pacing and feel-outs (NOTES.md "Rhythm"). Still to do, 8b: shorter wind-up on chained punches and counters.
 9. **E: contact quality.** Clean / glancing / smothered / blocked, each with its own look and hit-stop (2–3 frames on a jab, 4–6 on power, 8–10 on a knockdown, ~0 when blocked).
 10. **E: smarter AI.** Pick targets around the guard (high guard opens the body, low hands open the head), a fading memory of what hurt him, styles that differ in rhythm and range as well as numbers.
 11. **R + E: footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet (bouncy when fresh, flat when tired).

@@ -433,6 +433,9 @@ const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2 };            // s
 const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
 const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
+// rhythm: bursts, then resets. After an exchange the pair may reset (back out, feint, step around). A hot streak after it cost the swarmer his gas (tried 1.15-1.35).
+// Rounds open with a feel-out (longer in the first). How often he resets and how long he feels out come from his aggression
+const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rJab: .1, rWant: 10, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
 const SHOUT_EDGE = { atk: .6, def: .5, ctr: 1.1, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
@@ -534,6 +537,7 @@ class Fight {
     if (R() < 0.02) { this.judgeBias[ri(0, 2)] = (R() < .5 ? 1 : -1) * 2.6; this.robbery = true; }
     this.kdState = null; this.clinchT = 0; this.rec = []; this.replay = null; this.recAfter = 0;
     this.roundLog = []; this.stepEv = [];
+    this.exP = 0; this.f.forEach(F => this.tempoStart(F, true));
   }
   emit(type, data) { const e = Object.assign({ type, t: this.t, round: this.round, clock: this.clock }, data || {}); this.events.push(e); this.stepEv.push(e); }
   clockStr() { const s = Math.max(0, Math.floor(this.clock)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
@@ -559,7 +563,9 @@ class Fight {
           if ((o.t -= dt) <= 0) { if (!o.ack) this.emit('ignored', { a: F.side, k: o.k }); F.order = null; }
         }
         if (this.clinchT > 0) this.updateClinch(dt);
-        else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt); }
+        else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt);
+          const q0 = this.quiet || 0; this.quiet = this.f.some(F => F.state === 'punch' || F.queue.length) ? 0 : q0 + dt;
+          if (this.quiet >= TEMPO.at && q0 < TEMPO.at && this.exP >= 2) { this.exP = 0; this.beat(); } } // an exchange just ended (nobody punching, nothing queued)
         this.physics();
         if (this.phase === 'fight') {
           this.clock += dt * CLOCK;
@@ -732,6 +738,8 @@ class Fight {
     F.counterWin = Math.max(0, F.counterWin - dt);
     if (F.lostT > 0) F.lostT -= dt;
     if (F.pullT > 0) F.pullT -= dt;
+    if (F.feelT > 0) F.feelT -= dt; if (F.beatR > 0) F.beatR -= dt;
+    F.rq = (F.rq || 0) + ((F.beatR > 0 || F.feelT > 0 ? 1 : 0) - (F.rq || 0)) * (1 - Math.exp(-dt / 20)); // share of the last ~20 s spent resetting or feeling out
     if (F.biteT > 0) F.biteT -= dt;
     if (F.st.swap && F.state !== 'punch' && (F.swapT += dt) > STYLE_SWAP.every * rnd(.6, 1.4)) this.swapStance(F);
     if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
@@ -790,8 +798,11 @@ class Fight {
     if (F.lostT > 0) aggr *= .3;  // he stepped off to the side: find him first
     if (st.open) aggr *= lerp(1, STYLE_OPEN.idle + STYLE_OPEN.boost * this.opening(F), st.open);
     if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
+    const feel = F.feelT > 0 && !hurtOp ? clamp(F.feelT / 2, 0, 1) : 0, rst = F.beatR > 0 && !hurtOp && !oTrapped; // feeling him out, or resetting after an exchange
+    if (feel) aggr *= lerp(1, TEMPO.fAggr, feel);
+    if (rst) aggr *= TEMPO.rAggr; else aggr /= Math.max(.72, 1 - (F.rq || 0)); // the work he skipped in the resets comes in the bursts
     // range intent
-    let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0);
+    let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0) + TEMPO.fWant * feel + (rst ? TEMPO.rWant : 0);
     if (hurtOp) want -= 14;
     if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
     F.want = clamp(want + rnd(-4, 4), 40, 86);
@@ -828,6 +839,10 @@ class Fight {
       aggr *= STYLE_OUT.aggr;                       // he doesn't want to trade in there
       if (!trapped && F.slideT <= 0 && R() < st.out * STYLE_OUT.p * (.4 + .6 * k) * (.5 + F.s.footwork / 200) && this.stepOut(F, v)) return;
     }
+    // a reset or a feel-out is jabs and feints, not silence: the jabbers keep touching him
+    if ((rst || feel > .5) && d < PUNCH.jab.max + 6 && R() < TEMPO.rJab * (.3 + (st.stick || 0) + .5 * (st.out || 0) + .5 * (st.pjab || 0)) * (sg.jab || 1)) {
+      F.queue = R() < .3 ? ['jab'] : []; this.startPunch(F, 'jab'); F.decT = (0.2 + R() * .3) * TUNE.pace; return;
+    }
     if (d < 86 && R() < aggr * TUNE.vol) {
       const combo = this.pickCombo(F, d, sg, hurtOp);
       if (combo) { F.queue = combo.slice(1); this.startPunch(F, combo[0]); F.decT = (0.15 + R() * .3) * TUNE.pace; return; }
@@ -835,8 +850,20 @@ class Fight {
     // feints: worth more against counter-happy guards and guys who bite on everything
     const Rd = F.read, thT = Rd.th.straight + Rd.th.hook + Rd.th.upper + Rd.th.body;
     const fv = lerp(1, (GUARD_FEINT[O.guard] || 1) * (1 + clamp(Rd.reacts / Math.max(6, thT) - .35, 0, .6)), k);
-    if (d < 86 && R() < 0.07 * st.feint * fv) { this.startFeint(F); return; }
+    if (d < 86 && R() < 0.07 * st.feint * fv * (rst || feel ? TEMPO.feint : 1)) { this.startFeint(F); return; }
     if (d < 86 && R() < (F.s.defense / 100) * 0.22 * sg.def * (F.bait > 0 ? 1.6 : 1)) { F.def = 'block'; F.defZ = 'head'; F.defT = .3 + R() * .4; F.defD = F.defT; F.defP = 0; }
+  }
+  // round start: feel him out first (a long look in the first round, a short one after)
+  tempoStart(F, first) { const r = first ? TEMPO.feel1 : TEMPO.feelN; F.feelT = rnd(r[0], r[1]) * clamp(1.4 - .5 * F.st.aggr, .4, 1.2); F.beatR = 0; }
+  // how much he wants a reset after an exchange: low-output, moving, careful men a lot; pressure men, swarmers and a man smelling blood hardly
+  rstP(F) {
+    const O = F.op, pr = F.strategy === 'pressure' || F.strategy === 'ko' ? .5 : F.strategy === 'move' || F.strategy === 'counter' ? 1.3 : 1;
+    return clamp(.7 - .25 * F.st.aggr - .25 * F.st.cutK, .05, .5) * pr * (O.head < O.headMax * .3 || O.state === 'stun' ? .15 : 1) * (F.head < F.headMax * .32 ? 1.5 : 1);
+  }
+  // an exchange ended: both back off and reset (the hungrier man decides if it happens and comes again sooner)
+  beat() {
+    const [A, B] = this.f, pA = this.rstP(A), pB = this.rstP(B), pm = Math.max(pA, pB);
+    if (R() < Math.min(pA, pB) * 1.2) for (const [F, p] of [[A, pA], [B, pB]]) { F.beatR = rnd(TEMPO.reset[0], TEMPO.reset[1]) * clamp(p / pm, .7, 1); if (F.state !== 'punch') { F.queue = []; F.beatT = 0; } }
   }
   // switch-hitter: flips stance; everything the other man had figured out is half wrong now
   swapStance(F) {
@@ -997,7 +1024,7 @@ class Fight {
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
-    F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0;
+    F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0; this.exP++;
     F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
@@ -1005,12 +1032,12 @@ class Fight {
     this.emit('throw', { a: F.side, p: type });
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
   }
-  startFeint(F) {
+  startFeint(F) { // resetting, a feint is mostly just a look (no real one behind it)
     { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz }; }
     F.state = 'punch'; F.def = null;
     this.react(F.op, F, PUNCH.jab, true);
     if (F.st.bite && F.op.pendingDef) F.biteT = STYLE_BITE.t; // he bit: the real one is coming into whatever he opened
-    if (R() < .7) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
+    if (R() < (F.beatR > 0 ? .1 : .7)) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
     this.emit('feint', { a: F.side });
   }
   react(D, A, P) {
@@ -1308,6 +1335,7 @@ class Fight {
       if (F.cut < .4) F.cut = 0;
       F.kdR = 0; F.rs = newRS(); F.hitT = 0; F.state = 'idle'; F.unanswered = 0; F.downP = 0;
       F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.fakeT = 0; F.exitAfter = false; F.resetT = 0;
+      this.tempoStart(F, false); this.exP = 0;
       // memory fades a bit between rounds, the most recent round counts most
       const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6;
     }
