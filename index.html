@@ -547,7 +547,7 @@ class Fight {
       case 'intro2': {
         this.walkTo(A, -62, 0, dt, 70); this.walkTo(B, 62, 0, dt, 70);
         if (this.phaseT > (this.phase === 'intro' ? 2.4 : 1.2)) {
-          this.phase = 'fight'; this.phaseT = 0; this.f.forEach(F => { F.walkDir = 0; });
+          this.phase = 'fight'; this.phaseT = 0; this.xo = 0; this.f.forEach(F => { F.walkDir = 0; });
           this.emit('bell', { start: true }); this.emit('roundStart');
         }
         break;
@@ -616,11 +616,11 @@ class Fight {
   physics() {
     const [A, B] = this.f;
     for (const F of this.f) { F.x = clamp(F.x, -RING, RING); F.z = clamp(F.z, -ZR, ZR); }
-    // keep the left-right order: circling, pivots and escapes slide past in depth instead of crossing over and mirroring
-    { const s = A.dir, G = 10; B.dir = -s;
-      if ((B.x - A.x) * s < G) {
-        const m = clamp((A.x + B.x) / 2, -RING + G / 2, RING - G / 2); A.x = m - s * G / 2; B.x = m + s * G / 2;
-      } }
+    // keep the left-right order: drifting, cutting off and rope angle-offs slide past in depth instead of crossing over and mirroring.
+    // A real escape or spin-out may take him round to the other side (a pivot; the render turns him)
+    { const dx = B.x - A.x, G = 10;
+      if (A.slideT > 0 || B.slideT > 0 || !this.xo) { if (Math.abs(dx) > 1) this.xo = Math.sign(dx); }
+      else if (dx * this.xo < G) { const m = clamp((A.x + B.x) / 2, -RING + G / 2, RING - G / 2), k = .35; A.x = lerp(A.x, m - this.xo * G / 2, k); B.x = lerp(B.x, m + this.xo * G / 2, k); } }
     const v = vec(A, B);
     if (v.d < MIN_D) {
       const mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2, h = MIN_D / 2;
@@ -696,7 +696,7 @@ class Fight {
       }
     }
     // broadcast axis: the fight settles back side-on to the camera (pivots override this)
-    if (F.slideT <= 0) lat += 1.6 * F.spd * v.uz * F.dir * Math.max(Math.abs(v.ux), .6); // floor: the pull used to fade to nothing right where they stack up deep
+    if (F.slideT <= 0) lat += 1.6 * F.spd * v.uz * v.ux;
     // drift back to center: after a break, in a lull, and always a little for ring generals
     if (F.slideT <= 0 && !F.cutting) {
       const cw = (F.resetT > 0 ? .9 : 0) + (this.lull > 1.3 ? .3 : 0) + (F.st.gen || 0) * (.4 + .6 * k);
@@ -1251,7 +1251,7 @@ class Fight {
         D.stunT = 0; D.decT = .3; A.decT = .3;
         const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.f[0].x <= this.f[1].x ? 1 : -1;
         this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.face();
-        this.phase = 'fight'; this.phaseT = 0; this.kdState = null;
+        this.phase = 'fight'; this.phaseT = 0; this.kdState = null; this.xo = 0;
         this.emit('resume');
       }
     }
