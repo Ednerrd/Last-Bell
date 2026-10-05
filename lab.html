@@ -481,6 +481,15 @@ function cutChance(D, dmg, crit) {
   return Math.min(.35, p);
 }
 function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1); }
+// how far out the arm is when it lands: jammed or half out has no weight behind it, the sweet spot is just short of locking out,
+// reaching at the very end of his range loses a little again. ext 0 = the punch's min range, 1 = its max. EXT.k keeps the average shot where it was
+const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, k: 1.045 };
+function extF(P, d) {
+  if (!EXT.on) return 1;
+  const e = (d - P.min) / (P.max - P.min);
+  const f = e <= 0 ? EXT.lo : e < EXT.at ? lerp(EXT.lo, EXT.peak, e / EXT.at) : lerp(EXT.peak, EXT.end, clamp((e - EXT.at) / (1 - EXT.at), 0, 1.4));
+  return f * EXT.k;
+}
 function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
 // guard factor: bonuses only count as far as his skill supports the guard, weaknesses always count
 function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
@@ -520,6 +529,12 @@ function mkF(sheet, side) {
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
+// where a punch comes from and where it arrives, for the render (3D) and the commentary. Recording only: no dice
+// hand: the attacker's L/R. side: the defender's side it arrives on. lane: center (straights), outside (hooks), under (uppercuts)
+function laneOf(A, P) {
+  const hand = (P.arm === 'lead') !== (A.stance === 'southpaw') ? 'L' : 'R';
+  return { hand, side: hand === 'L' ? 'R' : 'L', lane: P.kind === 'hook' ? 'outside' : P.kind === 'upper' ? 'under' : 'center' };
+}
 class Fight {
   constructor(A, B, opts) {
     opts = opts || {};
@@ -1134,6 +1149,7 @@ class Fight {
     let crit = false;
     if (!blocked && R() < 0.05 + A.s.accuracy / 2000) { dmg *= 1.75; crit = true; }
     dmg *= rnd(.8, 1.2) * mult;
+    dmg *= extF(P, d); // short of full extension, less on it
     // sloppy D eats them flush; wild throwers load up when they do land
     dmg *= 1 + clamp((75 - D.s.defense) / 100, 0, .4) * TUNE.flush + (a.load || 0) * TUNE.load;
     const tough = P.zone === 'head' ? (0.55 + effChin(D) / 100 * .9) : (0.55 + D.s.body / 100 * .9);
@@ -1152,7 +1168,12 @@ class Fight {
       if (h[a.type] === (P.cat === 'jab' ? 10 : 6) && !A.rs.homeSaid.any) { A.rs.homeSaid.any = 1; this.emit('home', { a: A.side, p: a.type }); }
     }
     D.hitT = 1; D.hitZone = P.zone; D.hitKind = blocked ? 'block' : P.kind; D.hitPow = clamp(dmg / 7, .2, 1.3);
-    this.emit('hit', { a: A.side, d: D.side, zone: P.zone, dmg, blocked, crit, kind: P.kind, p: a.type, caught, counter: A.counterWin > 0, x: D.x, cut: D.cut });
+    { // contact quality: blocked, smothered (too close to get it off), glancing (at the end of his reach, or half caught on the roll or the pull), flush (walked into it, a counter, or a perfect one), clean
+      const ln = laneOf(A, P), rear = D.stance === 'southpaw' ? 'L' : 'R';
+      const q = blocked ? 'blocked' : d < P.min ? 'smothered' : d > P.max || def === 'roll' || def === 'pull' ? 'glancing' : crit || ((caught || A.counterWin > 0 || mult > 1) && P.cat !== 'jab') ? 'flush' : 'clean';
+      const glove = !blocked ? null : P.zone === 'body' ? 'elbow' + ln.side : P.kind === 'hook' ? ln.side : P.kind === 'upper' ? 'both' : rear; // hooks on the glove on that side, straights caught by the rear hand
+      this.emit('hit', { a: A.side, d: D.side, zone: P.zone, dmg, blocked, crit, kind: P.kind, p: a.type, caught, counter: A.counterWin > 0, x: D.x, cut: D.cut, hand: ln.hand, side: ln.side, lane: ln.lane, q, glove });
+    }
     // cuts: shot size x accumulated damage. Fresh face + regular shot = very slim; beat-up face + big shot = real risk
     if (P.zone === 'head' && !blocked && dmg > 1.5 && R() < cutChance(D, dmg, crit)) {
       const was = D.cut; D.cut = Math.min(10, D.cut + 1 + R() * 2);
@@ -1194,7 +1215,12 @@ class Fight {
   miss(A, D, a, why, def) {
     const P = PUNCH[a.type];
     A.stam = Math.max(0, A.stam - P.cost * .35);
-    this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type });
+    { // how it missed: short / jammed (range), wild, or what he did with it. Straights are slipped to the side they arrive on
+      const ln = laneOf(A, P), dd = dist(A, D);
+      const mt = why === 'range' ? (dd > P.max ? 'short' : 'jammed') : why === 'wild' ? 'wild' : def === 'roll' ? 'rolled' : def === 'slip' ? 'slipped' : def === 'duck' ? 'ducked' : def === 'pull' ? 'pulled'
+        : P.zone === 'body' || P.kind === 'upper' ? 'pulled' : P.kind === 'hook' ? 'ducked' : 'slipped';
+      this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type, hand: ln.hand, side: ln.side, lane: ln.lane, mt });
+    }
     A.lastRes = 'evaded'; A.lastDef = def || null;
     if (why === 'evade') A.read.av[kindOf(a.type)]++;
     if (why === 'evade') A.rs.made[a.type] = (A.rs.made[a.type] || 0) + 1;
