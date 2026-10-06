@@ -264,7 +264,7 @@ const STYLES = {
     bias: { accuracy: 5, defense: 4, speed: 3, power: 1, stamina: -2 } },
   body: { label: 'Body snatcher', special: true, desc: 'Breaks you down downstairs, one rib at a time. The head comes later.', range: 56, ret: .55, circ: .35, cutK: .95, aggr: 1.2, counter: .3, feint: .7, clinch: 1, gen: 0, inside: .6, bodyX: 1,
     bias: { body: 5, power: 5, stamina: 5, heart: 4, speed: -3, footwork: -3 } },
-  pboxer: { label: 'Pressure boxer', special: true, desc: 'Walks you down behind a stiff jab and cuts the ring off. No wasted punches.', range: 60, ret: .65, circ: .3, cutK: 1.25, aggr: 1.05, counter: .35, feint: .8, clinch: .9, gen: .2, pjab: 1, hit: 1.18,
+  pboxer: { label: 'Pressure boxer', special: true, desc: 'Walks you down behind a stiff jab and cuts the ring off. No wasted punches.', range: 60, ret: .65, circ: .3, cutK: 1.25, aggr: 1.05, counter: .35, feint: .8, clinch: .9, gen: .2, pjab: 1, hit: 1.25,
     bias: { power: 6, chin: 5, stamina: 4, footwork: 2, speed: -3, defense: -3 } },
   spoiler: { label: 'Veteran spoiler', special: true, desc: 'Old tricks. Ties you up, leans on you, sneaks shots in the clutches. Ugly and smart.', range: 64, ret: .85, circ: .45, cutK: .5, aggr: .7, counter: .5, feint: 1.2, clinch: 1.6, gen: .3, open: .5, spoil: 1,
     bias: { defense: 6, accuracy: 5, recovery: 4, heart: 2, speed: -4, stamina: -2 } },
@@ -868,7 +868,7 @@ class Fight {
     if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
     // what's working decides where he wants to be: hooks landing, get inside; straights landing, stay long
     { const pv = F.pv = this.punchVal(F); F.pvT = this.t; const avg = ks => ks.reduce((s, p) => s + pv[p], 0) / ks.length;
-      const sh = clamp(avg(MEM_IN) - avg(MEM_OUT), -1, 1); want -= MEMV.range * k * sh * (sh > 0 && st.out ? .3 : 1); } // an out-boxer adjusts inside his range, he doesn't turn brawler
+      const sh = clamp(avg(MEM_IN) - avg(MEM_OUT), -1, 1); want -= MEMV.range * k * sh * (sh > 0 ? (st.out ? .3 : 1) : (st.cutK > .9 ? .3 : 1)); } // adjust inside his style: an out-boxer doesn't turn brawler, a pressure man doesn't start running
     F.want = clamp(want + rnd(-4, 4), 40, 86);
     F.spd = (34 + F.s.footwork * 0.6) * (0.7 + 0.3 * sf) * (hurtMe ? .85 : 1) * (1 - BODY.legs * (1 - clamp(F.body, 0, 100) / 100));
     F.legs = st.legs || 1;
