@@ -101,6 +101,24 @@ Built first on the old step-5 engine, then re-applied on this branch's tip (`563
 **Ed's call (Oct 6): medium.** `TEACH` step .12 → .18, max .4 → .7, keep .6 → .7. Same QUIET=3 body test, body share with the corner quiet (control 20.9 / 21.3 / 20.3 in rounds 4 / 6 / 7): old 21.4 / 21.4 / 20.8, max .7 + step .18 alone 22.7 / 21.8 / 21.2, **with keep .7 23.2 / 22.3 / 21.3** (lesson at the bell .45 in round 4, .15 by round 7).
 Win rates, smart corner vs a quiet one (shout.js, rating 82): old 51.8 (600; 51.9 pooled over 1800 with the milder variants: max .7 keep .6 51.4, max .55 keep .7 52.6). **New 55.8 ±1.1 over 2400** (runs of 600 went 61.4, 52.1, then 54.8 over 1200: pool before trusting one run). Oracle 60.7 (600, was 58.7). Hash holds at 84ba46a3 (no shouts in same.js).
 
+## Round awareness / pacing (Oct 6, Gap E/F)
+`need(F)` (engine, next to `tempoStart`): > 0 he needs something, < 0 he can protect what he has. Cards: `-lead / roundsLeft * .6`. Clock: in the last `NEED.stealT` (30) s of a round he reads the round with `rdScore` (the judges' formula, pulled out of `scoreRound`) and turns it up if it's close or slightly gone. Times `lerp(.35, 1, iqK)`: a dumb man barely reads the cards. Hurt, he never goes looking for it. Cached as `F.need` in `decide`.
+- Uses: aggression (`NEED.aggr` .3 / `coast` .2), resets (`rstP` x (1 - .5 n) when he needs it, more when ahead), combo picks (power when he needs it; jabs and short work when protecting, replaces the old `late && lead` lines in `pickCombo`).
+- `NEED.want` (range shift) is 0: at 6 it jammed the slugger in close (50.3 -> 46.8 vs the field); with range off he's back to 49.5.
+- Not built: gassers saving it for later (stamina pacing). The corner's between-round plan (`aiStrategy` ko/move) already existed and stays.
+
+`node tests/brain.js pace N` (new). Before -> after (800 / 800 fights, rating 80):
+| Measure | Before | After |
+|---|---|---|
+| Rds 8-10 thrown/rd: ahead / close / behind on the cards | 55.7 / 51.7 / 57.5 | 52.8 / 50.2 / 62.8 |
+| Power % when ahead / behind | 60.8 / 67.2 | 61.3 / 67.5 |
+| Last 30 s vs the rest of the round, close round | 0.97 | 1.04 |
+| Down 3+ after 7: comebacks | 2.2% | ~2% (no change: a man down 3 late at even stats rarely gets it back) |
+| Audit thrown / landed / connect, stops (500) | 53.2 / 15.2 / 28.6%, 29.8% | 53.5 / 15.3 / 28.7%, 31.0% |
+| IQ 90 vs 40 / 80 vs 60 (300) | 58.3 / 49.3 | 63.0 / 49.3 |
+| Base styles round robin (300/pair) | bp 51.2, ctr 50.3, slug 50.3, swarm 49.2, out 49.0 | out 52.5, bp 52.4, slug 49.5, ctr 48.4, swarm 47.4 |
+Hash 84ba46a3 -> **9fe862cf**. For B6: swarmer 47.4 sits just under the 48 floor.
+
 ## Steps (each a commit, sims before and after, never balance + visuals together)
 - ✅ **B0:** `tests/brain.js` and a baseline report. No engine change.
 - ✅ **B1:** Opponent memory with fading (`F.mem`, `memAdd`/`memPeek`, `punchVal`). Results, Oct 6:
