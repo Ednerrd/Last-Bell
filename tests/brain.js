@@ -1,5 +1,5 @@
 // Brain report: how the AI boxer decides, how his rhythm moves, whether ring IQ wins fights, whether he learns.
-// node tests/brain.js [mode] [N]   modes: tempo | iq | adapt | styles | all (default all, N per mode)
+// node tests/brain.js [mode] [N]   modes: tempo | iq | adapt | pace | styles | all (default all, N per mode)
 // Recording only: wraps Fight methods from the outside, never changes a fight.
 const S = require('./sim.js');
 const P = S.Fight.prototype;
@@ -157,9 +157,46 @@ function styles(n) {
   }
 }
 
+// ---- pace: does he fight the scorecards and the clock? ----
+// Late rounds (8-10) by where he stands on the cards going in; the last 30 s of a round vs the rest by where the round stands; comebacks.
+function pace(n) {
+  const rounds = 10, LATE = 8, CUT_T = 150;
+  const out = { ahead: [0, 0, 0], close: [0, 0, 0], behind: [0, 0, 0] }; // thrown, power thrown, rounds
+  const fin = { ahead: [0, 0, 0], close: [0, 0, 0], behind: [0, 0, 0] }; // thrown before 2:30, thrown after, rounds
+  let trail = 0, trailW = 0, trailKO = 0, leadKO = 0, stops = 0, lateStops = 0;
+  for (let i = 0; i < n; i++) {
+    const a = pickS(), b = pickS();
+    const f = fight(S.sheet(80, a, S.rollGuard(a)), S.sheet(80, b, S.rollGuard(b)), { rounds });
+    const R_ = f.cards[0].length, cum = [0];
+    for (let r = 0; r < R_; r++) { let s = 0; for (const c of f.cards) s += c[r][0] - c[r][1]; cum.push(cum[r] + s / 3); }
+    const th = {}, sc = {};
+    for (const e of f.events) {
+      if (e.type === 'throw') { const k = e.round + ':' + e.a; const t = th[k] || (th[k] = [0, 0, 0]); if (e.clock < CUT_T) t[0]++; else t[1]++; if (!/jab/i.test(e.p)) t[2]++; }
+      if (e.type === 'hit' && !e.blocked && e.clock < CUT_T) { const k = e.round + ':' + e.a; sc[k] = (sc[k] || 0) + (/jab/i.test(e.p) ? .45 : 1); }
+    }
+    const lastR = f.result.decision ? rounds : f.result.round;
+    for (let r = 1; r <= lastR; r++) for (const side of [0, 1]) {
+      const t = th[r + ':' + side]; if (!t) continue;
+      const full = r < lastR || f.result.decision;
+      if (r >= LATE && full) { const L = (side ? -1 : 1) * cum[r - 1], g = L >= 2 ? 'ahead' : L <= -2 ? 'behind' : 'close'; out[g][0] += t[0] + t[1]; out[g][1] += t[2]; out[g][2]++; }
+      if (full) { const m = (sc[r + ':' + side] || 0) - (sc[r + ':' + (1 - side)] || 0), g = m >= 3 ? 'ahead' : m <= -3 ? 'behind' : 'close'; fin[g][0] += t[0]; fin[g][1] += t[1]; fin[g][2]++; }
+    }
+    if (!f.result.decision) { stops++; if (f.result.round >= LATE) lateStops++; }
+    if (R_ >= 7) { const L = cum[7]; if (Math.abs(L) >= 3) { trail++; const ts = L > 0 ? 1 : 0; if (f.result.winner === ts) { trailW++; if (!f.result.decision) trailKO++; } else if (!f.result.decision && f.result.winner === 1 - ts && f.result.round > 7) leadKO++; } }
+  }
+  console.log(`\n== PACE (${n} fights, random base styles, rating 80, ${rounds} rds) ==`);
+  console.log('Rounds 8-10, by the cards going in:   thrown/rd  power%   (n)');
+  for (const g of ['ahead', 'close', 'behind']) { const o = out[g]; console.log(`  ${g.padEnd(8)}${f1(o[0] / o[2]).padStart(24)}  ${pct(o[1], o[0]).padStart(7)}  (${o[2]})`); }
+  console.log('Last 30 s vs the rest (per 10 s), by the round at 2:30:  rest   last 30   ratio  (n)');
+  for (const g of ['ahead', 'close', 'behind']) { const o = fin[g], a_ = o[0] / o[2] / 15, b_ = o[1] / o[2] / 3; console.log(`  ${g.padEnd(8)}${f2(a_).padStart(44)}  ${f2(b_).padStart(7)}  ${f2(b_ / a_).padStart(6)}  (${o[2]})`); }
+  console.log(`Down 3+ after 7: ${trail} fights, comeback ${pct(trailW, trail)} (by stoppage ${pct(trailKO, trail)}); leader stops him late ${pct(leadKO, trail)}`);
+  console.log(`Stoppages ${pct(stops, n)}, rounds 8+ ${pct(lateStops, n)}`);
+}
+
 const t0 = Date.now();
 if (mode === 'tempo' || mode === 'all') tempo(N);
 if (mode === 'iq' || mode === 'all') iq(N);
 if (mode === 'adapt' || mode === 'all') adapt(N);
+if (mode === 'pace' || mode === 'all') pace(N);
 if (mode === 'styles' || mode === 'all') styles(Math.max(40, N / 4 | 0));
 console.log(`\n(${((Date.now() - t0) / 1000).toFixed(0)} s)`);
