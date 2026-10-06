@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e7dfd0" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#15110e" media="(prefers-color-scheme: dark)">
-<title>Last Bell Brain Lab</title>
+<title>Last Bell Fight Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -437,6 +437,9 @@ const FEINT_READ = { per: 10, max: .45 };                                    // 
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 // rhythm: bursts, then resets. After an exchange the pair may reset (back out, feint, step around). A hot streak after it cost the swarmer his gas (tried 1.15-1.35).
 // Rounds open with a feel-out (longer in the first). How often he resets and how long he feels out come from his aggression
+// round awareness: aggr/coast scale aggression, want: range shift (0: he presses at his own range; 6 jammed the slugger, 50 -> 47), rst cuts resets when he needs something, pow: power combos when he does, safe: short ones when he's protecting a lead
+// steal: last stealT seconds of a close round he turns it up. All of it times lerp(iqLo, 1, iqK): a dumb man barely reads the cards
+const NEED = { aggr: .3, coast: .2, rst: .5, want: 0, pow: .35, safe: .4, steal: .7, stealT: 30, iqLo: .35 };
 const TEMPO = { at: .3, reset: [1.5, 4], rAggr: .03, rJab: .1, rWant: 10, feel1: [7, 12], feelN: [2, 5], fAggr: .25, fWant: 6, feint: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
@@ -449,7 +452,7 @@ function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 
 function ctrEdge(D) { const o = D.order; return o && o.k === 'counter' ? Math.max(.2, 1 + orderPow(D) * SHOUT_EDGE.ctr) : 1; }
 // the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
 // step: how much one payoff teaches (times how well he took the call and teachK), max: a full lesson is worth this much of the shout, keep: what survives the break
-const TEACH = { step: .12, max: .4, keep: .6 };
+const TEACH = { step: .18, max: .7, keep: .7 };
 // who learns from the corner: ring IQ, and above all experience (a kid in his 3rd fight vs a man in his 25th)
 function teachK(F) { return clamp(.15 + .45 * iqK(F) + .4 * Math.min(1, Math.sqrt(F.sheet.exp || 0) / 5), 0, 1); }
 function mixMods(out, m, q) { for (const k in m) out[k] = SHOUT_ADD[k] ? (out[k] || 0) + m[k] * q : (out[k] == null ? 1 : out[k]) * (1 + (m[k] - 1) * q); return out; }
@@ -469,6 +472,7 @@ function sgOf(F) {
   return mixMods(Object.assign({}, base), SHOUTS[o.k].mods, o.q * Math.min(1, o.t / (SHOUT_LEN * .3)));
 }
 
+const rdScore = F => F.rs.landedPow * 1.0 + F.rs.landedJab * .45 + F.rs.landedBody * .75 + F.rs.dmg * .07 + F.rs.thrown * .025 + F.rs.ctrl * .015; // what the judges see in a round
 const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14; // XGAP: closest they get in x, so the left-right order holds
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
@@ -870,12 +874,15 @@ class Fight {
     if (F.lostT > 0) aggr *= .3;  // he stepped off to the side: find him first
     if (st.open) aggr *= lerp(1, STYLE_OPEN.idle + STYLE_OPEN.boost * this.opening(F), st.open);
     if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
+    const nd = F.need = hurtMe ? Math.min(0, this.need(F)) : this.need(F); // hurt, he doesn't go looking for it
+    aggr *= nd > 0 ? 1 + NEED.aggr * nd : 1 + NEED.coast * nd;
     const feel = F.feelT > 0 && !hurtOp ? clamp(F.feelT / 2, 0, 1) : 0, rst = F.beatR > 0 && !hurtOp && !oTrapped; // feeling him out, or resetting after an exchange
     if (feel) aggr *= lerp(1, TEMPO.fAggr, feel);
     if (rst) aggr *= TEMPO.rAggr; else aggr /= Math.max(.72, 1 - (F.rq || 0)); // the work he skipped in the resets comes in the bursts
     // range intent
     let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0) + TEMPO.fWant * feel + (rst ? TEMPO.rWant : 0);
     if (hurtOp) want -= 14;
+    want -= NEED.want * nd;
     if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
     // what's working decides where he wants to be: hooks landing, get inside; straights landing, stay long
     { const pv = F.pv = this.punchVal(F); F.pvT = this.t; const avg = ks => ks.reduce((s, p) => s + pv[p], 0) / ks.length;
@@ -928,12 +935,21 @@ class Fight {
     if (d < 86 && R() < 0.07 * st.feint * fv * (rst || feel ? TEMPO.feint : 1)) { this.startFeint(F); return; }
     if (d < 86 && R() < (F.s.defense / 100) * 0.22 * sg.def * (F.bait > 0 ? 1.6 : 1)) { F.def = 'block'; F.defZ = 'head'; F.defT = .3 + R() * .4; F.defD = F.defT; F.defP = 0; }
   }
+  // round awareness: > 0 he needs something (behind on the cards with the rounds running out, a close round about to go), < 0 he can protect what he has
+  need(F) {
+    const lead = F.side === 0 ? this.lead : -this.lead, left = this.rounds - this.round + 1;
+    let n = clamp(-lead / left * .6, -1, 1);                  // points per round he has to make up (or can give away)
+    const tl = this.clock - (ROUND_LEN - NEED.stealT);
+    if (tl > 0) { const m = rdScore(F) - rdScore(F.op); if (m < 2 && m > -6) n += NEED.steal * tl / NEED.stealT * (m > -3 ? 1 : .5); } // steal the round late
+    return clamp(n, -1, 1) * lerp(NEED.iqLo, 1, iqK(F));
+  }
   // round start: feel him out first (a long look in the first round, a short one after)
   tempoStart(F, first) { const r = first ? TEMPO.feel1 : TEMPO.feelN; F.feelT = rnd(r[0], r[1]) * clamp(1.4 - .5 * F.st.aggr, .4, 1.2); F.beatR = 0; }
   // how much he wants a reset after an exchange: low-output, moving, careful men a lot; pressure men, swarmers and a man smelling blood hardly
   rstP(F) {
     const O = F.op, pr = F.strategy === 'pressure' || F.strategy === 'ko' ? .5 : F.strategy === 'move' || F.strategy === 'counter' ? 1.3 : 1;
-    return clamp(.7 - .25 * F.st.aggr - .25 * F.st.cutK, .05, .5) * pr * (O.head < O.headMax * .3 || O.state === 'stun' ? .15 : 1) * (F.head < F.headMax * .32 ? 1.5 : 1);
+    const nd = F.need || 0;
+    return clamp(.7 - .25 * F.st.aggr - .25 * F.st.cutK, .05, .5) * pr * (nd > 0 ? 1 - NEED.rst * nd : 1 - .4 * nd) * (O.head < O.headMax * .3 || O.state === 'stun' ? .15 : 1) * (F.head < F.headMax * .32 ? 1.5 : 1);
   }
   // an exchange ended: both back off and reset (the hungrier man decides if it happens and comes again sooner)
   beat() {
@@ -1086,7 +1102,7 @@ class Fight {
     const ok = COMBOS.filter(c => { if (!comboW(F, c)) return false; const P = PUNCH[c.seq[0]]; const step = (P.kind === 'straight' ? 10 : 6) + (P.cat !== 'jab' ? F.st.leap || 0 : 0); return d <= P.max + step && d >= P.min - 6; });
     if (!ok.length) return null;
     const holes = GUARD_HOLES[O.guard] || {};
-    const lead = F.side === 0 ? this.lead : -this.lead, late = this.round > this.rounds - 3;
+    const nd = F.need || 0;
     const softBody = O.stam < O.stamMax * .45 || O.body < 55, pv = F.pvT === this.t ? F.pv : this.punchVal(F), hf = {};
     for (const p in PUNCH) { const e = memPeek(F, F.mem.def, defKind(PUNCH[p]), this.t), n = e ? e.n : 0; hf[p] = 1 - n / (n + MEMV.seen); }
     const c = wpick(ok, c => {
@@ -1104,8 +1120,8 @@ class Fight {
         read *= Math.pow(f, 1 / n);
       }
       if (softBody) read *= 1 + c.body * .25;
-      if (late && lead > 2.5) read *= n <= 2 ? 1.25 : .7;   // up on the cards: stay smart
-      if (late && lead < -2.5) read *= 1 + c.pow * .2;       // down: needs something big
+      if (nd < 0) read *= 1 - nd * NEED.safe * (!c.pow ? 1 : n <= 2 ? .3 : -1); // protecting a lead: jabs and short, safe work
+      if (nd > 0) read *= 1 + c.pow * NEED.pow * nd;          // needs something big
       if (c.key === F.lastCombo) read *= .65;               // don't show him the same look twice
       w *= lerp(1, read, k * (1 - STYLE_ODD.read * (O.st.odd || 0))); // an awkward man is hard to read
       w *= 1 + (R() - .5) * (1 - k) * .8;                   // low IQ: noisy choices
@@ -1438,8 +1454,7 @@ class Fight {
   scoreRound() {
     const [A, B] = this.f;
     // ring generalship (controlling where the fight happens) is a small nod, not a round-winner on its own
-    const sc = F => F.rs.landedPow * 1.0 + F.rs.landedJab * .45 + F.rs.landedBody * .75 + F.rs.dmg * .07 + F.rs.thrown * .025 + F.rs.ctrl * .015;
-    const sa = sc(A), sb = sc(B);
+    const sa = rdScore(A), sb = rdScore(B);
     const log = { r: this.round, a: Object.assign({}, A.rs), b: Object.assign({}, B.rs), cards: [] };
     const shared = gauss() * TUNE.jNoise * TUNE.jShare;
     for (let j = 0; j < 3; j++) {

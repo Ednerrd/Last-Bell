@@ -20,8 +20,8 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `BRAIN.md` (the b
 - **The teacher's measured effect is small.** About +1 point of body share after the corner goes quiet, gone by round 6–7, and no change in who wins. Exempting lessons from the between-round decay keeps them all fight but doesn't make them bigger. The dials are `TEACH.max` / `step`. **Waiting on Ed:** how much should a lesson be worth?
 
 ## Open, in order (Ed's order from the review chat)
-1. **Ed's call on lesson size**, then retune `TEACH` and re-run `tests/teach.js` + `tests/shout.js` (smart / oracle, with and without `PATCH="TEACH.max=0"`).
-2. **Round awareness / pacing** (Gap E/F): a `need()` signal (protect the lead vs need the KO) into aggression, power picks and resets. It may fold into B2 intent modes, so read BRAIN.md B2 first.
+1. ✅ **Lesson size: medium** (Ed, Oct 6). `TEACH` .18 / .7 / .7; smart corner 51.9 → 55.8% (BRAIN.md).
+2. ✅ **Round awareness / pacing:** `need()` built (BRAIN.md "Round awareness"). Not built: gassers saving it for later.
 3. **B6 balance:** guards spread (high ~35–40, cross ~40, handslow/philly 55–60 vs standard), feinter ~44 (the feint read cost it ~1.5), pboxer and jabgrab low.
 4. **Later (after the gym):** Gap C, defensive read inside `react()`. Ed's constraint: it re-weights within the guard's own defenses, capped around ±25%, so a peekaboo fighter stays a peekaboo fighter, with a commentary hook so it shows. B3 anticipation already covers part of it, so check before building.
 5. Within-round read decay (~0.98 per exchange) was agreed in the review but not built. B1 memory already fades, so check whether it's still needed.
