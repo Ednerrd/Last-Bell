@@ -290,7 +290,7 @@ const GUARDS = {
   cross: { label: 'Cross-arm', desc: 'Forearms locked across the face. Built for head shots and uppercuts. The ribs and liver hang out.',
     head: 1.2, body: .66, str: 1.08, hook: 1.05, up: 1.45, ev: .8, ctr: .9, hold: 1.35, def: { block: 2.2, slip: .5, duck: .6, pull: .6 } },
   handslow: { label: 'Hands low', desc: 'Gloves at the waist, eyes wide open. Sees everything and fires back, but pays for it when the legs go.',
-    head: .75, body: .9, str: .9, hook: .85, up: 1, ev: 1.3, ctr: 1.3, hold: .7, skill: ['defense', 'footwork', 'speed'], def: { block: .4, slip: 1.3, duck: .9, pull: 2 } }
+    head: .75, body: .9, str: .9, hook: .85, up: 1, ev: 1.3, ctr: 1.2, hold: .7, skill: ['defense', 'footwork', 'speed'], def: { block: .4, slip: 1.3, duck: .9, pull: 2 } }
 };
 // what a smart opponent throws into each guard
 const GUARD_HOLES = {
@@ -534,8 +534,9 @@ const DEF_CLEAN = { none: () => 1, stun: () => 1.4, block: (P, O) => blockLeak(O
 const MEMV = { prior: 4, inf: .6, emp: .7, ctr: 1.5, lo: .55, hi: 1.8, range: 10, seen: 20 }; // seen: how much evidence until his own eyes replace the scouting report on guard holes // range: how far he shifts his distance toward where his working punches are
 const MEM_IN = ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook'], MEM_OUT = ['jab', 'cross', 'bodyJab', 'bodyCross'];
 // anticipation: a punch he saw coming. react: more likely to defend it. pick: reaches for the right defense. ctr: counters it harder. prior: evidence before a read means anything
-const ANT = { react: .35, pick: 2, ctr: .3, prior: 3, jab: .5 }; // jab: the jab is too quick to time even when he knows it's coming
+const ANT = { react: .35, pick: 2, ctr: .3, prior: 3, jab: .5, catch: .4 }; // catch: a read punch caught on the gloves leaks less // jab: the jab is too quick to time even when he knows it's coming
 const ANT_BEST = { straight: 'slip', hook: 'duck', upper: 'pull', body: 'block' };
+const antOn = (D, type, now) => D.antic && D.antic.p === type && now - D.antic.t < 1 ? D.antic.rd : 0;
 // how sure he is this punch was coming (0 = no idea, 1 = called it): what the man leads with, or what he throws after the last one
 function antRead(D, A, type, now) {
   const M = D.mem, pre = A.prevP; let tot = 0, hit = 0;
@@ -1071,7 +1072,7 @@ class Fight {
     const rd = antRead(D, A, A.act ? A.act.type : 'jab', this.t); D.antic = rd > 0 ? { p: A.act ? A.act.type : 'jab', rd, t: this.t } : null;
     ch *= 1 + ANT.react * rd;
     if (R() > ch) return;
-    const best = ANT_BEST[defKind(P)], bw = x => x === best ? 1 + ANT.pick * rd : 1;
+    const best = gdw(D, 'block') > 1.5 ? 'block' : ANT_BEST[defKind(P)], bw = x => x === best ? 1 + ANT.pick * rd : 1; // a shell guy who reads it gets the gloves there
     A.read.reacts++;
     // which defense he reaches for depends on his guard
     let kind;
@@ -1111,7 +1112,7 @@ class Fight {
     const def = D.def;
     memAdd(A, A.mem.def, defKind(P), this.t, { n: 1, [D.state === 'stun' ? 'stun' : def || 'none']: 1 });
     if (def && D.state !== 'stun') {
-      if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25); blocked = true; }
+      if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25) * (1 - ANT.catch * antOn(D, a.type, this.t)); blocked = true; } // saw it coming: caught it clean
       else if (def === 'roll') { // shoulder roll: straights glance off, hooks get half caught, uppercuts split it
         if (P.zone === 'body') { mult = blockLeak(D, P, .5); blocked = true; }
         else if (P.kind === 'straight') { const lead = a.type === 'cross' && A.prevP !== 'jab'; if (R() < .38 + .22 * D.gSkill - (lead ? .22 : 0)) { evaded = true; rolled = true; } else { mult = blockLeak(D, P, .35); blocked = true; } }
@@ -1213,7 +1214,7 @@ class Fight {
     }
     // fire back out of the guard (tap-block counter)
     if (blocked && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
-      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D);
+      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D) * (1 + ANT.ctr * antOn(D, a.type, this.t));
       if (R() < p) { memAdd(A, A.mem.mine, a.type, this.t, { c: 1 }); const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
     }
   }
@@ -1229,7 +1230,7 @@ class Fight {
       const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1) * ctrEdge(D)
         * (P.cat === 'jab' ? TUNE.jabCtr : 1) // a jab snaps back: much harder to counter than a missed hook
         * (A.st.inside && dist(A, D) < STYLE_IN.at ? 1 - STYLE_IN.ctr * A.st.inside : 1); // no room to counter a man on your chest
-      const an = D.antic && D.antic.p === a.type && this.t - D.antic.t < 1 ? D.antic.rd : 0; // he saw this one coming
+      const an = antOn(D, a.type, this.t); // he saw this one coming
       if (R() < Math.min(.95, ch * (1 + ANT.ctr * an)) && D.state !== 'punch') {
         D.counterWin = .6; D.def = null; D.pendingDef = null; memAdd(A, A.mem.mine, a.type, this.t, { c: 1 });
         const c = this.pickCounter(D, dist(A, D), def === 'roll', def);
