@@ -429,9 +429,10 @@ const STYLE_IN = { at: 54, ev: .4, ctr: .5 };
 const STYLE_ANGLE = { p: .17, lost: .32, react: .6, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
 const STYLE_ODD = { react: .08, read: .25 };                                 // awkward: less time to react, his read is half as useful
 const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
-const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2 };            // spoiler: tie up a combo coming, dirty shots/s in the clinch, foul chance per dirty shot, stamina drain/s
+const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2, cool: 1.5 };  // spoiler: tie up a combo coming, dirty shots/s in the clinch, foul chance per dirty shot, stamina drain/s, how much a warning cools a smart one off
 const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
 const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
+const FEINT_READ = { per: 10, max: .45 };                                    // every feint he bit on makes a smart man warier of the next one (count for full effect, cap)
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
@@ -997,12 +998,14 @@ class Fight {
   startFeint(F) {
     { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz }; }
     F.state = 'punch'; F.def = null;
-    this.react(F.op, F, PUNCH.jab, true);
-    if (F.st.bite && F.op.pendingDef) F.biteT = STYLE_BITE.t; // he bit: the real one is coming into whatever he opened
+    const was = F.op.pendingDef; this.react(F.op, F, PUNCH.jab, true);
+    const bit = F.op.pendingDef && F.op.pendingDef !== was;
+    if (bit) F.op.read.feints++;
+    if (F.st.bite && bit) F.biteT = STYLE_BITE.t; // he bit: the real one is coming into whatever he opened
     if (R() < .7) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
     this.emit('feint', { a: F.side });
   }
-  react(D, A, P) {
+  react(D, A, P, feint) {
     if (D.state === 'stun' || D.state === 'down' || D.state === 'clinch') return;
     if (D.state === 'punch' && D.act && D.act.t / D.act.dur > 0.25) return;
     const sgD = sgOf(D);
@@ -1011,6 +1014,7 @@ class Fight {
     if (D.head < D.headMax * .3) ch *= .75;
     ch *= (1.15 - A.s.accuracy / 100 * .35);
     ch *= .92 + .16 * iqK(D);
+    if (feint) ch *= 1 - Math.min(FEINT_READ.max, D.read.feints / FEINT_READ.per) * iqK(D); // he has bitten on enough of those
     ch *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
     if (D.lostT > 0) ch *= STYLE_ANGLE.react;
     if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
@@ -1191,7 +1195,7 @@ class Fight {
       const O = F.op;
       const lean = (F.st.grab && this.clinchBy === F.side ? STYLE_GRAB.lean * F.st.grab : 0) + (F.st.spoil ? STYLE_SPOIL.lean * F.st.spoil : 0);
       if (lean) O.stam = Math.max(0, O.stam - lean * dt);                                   // leaning his weight on him
-      if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt) this.dirtyShot(F, O);   // holding and hitting
+      if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt / (1 + F.warn * STYLE_SPOIL.cool * iqK(F))) this.dirtyShot(F, O);   // holding and hitting; a smart one eases off once the ref has warned him
     }
     if (this.clinchT <= 0) {
       for (const F of this.f) { F.state = 'idle'; F.decT = .3 + R() * .3; F.resetT = 1.2; F.trapT *= .3; F.bait = 0; }
@@ -1298,7 +1302,7 @@ class Fight {
       F.kdR = 0; F.rs = newRS(); F.hitT = 0; F.state = 'idle'; F.unanswered = 0; F.downP = 0;
       F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.fakeT = 0; F.exitAfter = false; F.resetT = 0;
       // memory fades a bit between rounds, the most recent round counts most
-      const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6;
+      const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6; Rd.feints *= .6;
     }
     // doctor / corner stoppages
     const tot = this.cardTotals(); const lead0 = tot.reduce((s, t) => s + (t[0] - t[1]), 0) / 3;
