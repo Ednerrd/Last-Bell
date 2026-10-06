@@ -246,9 +246,9 @@ const STYLES = {
     bias: { speed: 2, footwork: 3, defense: 1, accuracy: 3, heart: 3, power: -3, chin: -1 } },
   slugger: { label: 'Slugger', desc: 'Walks you down and sits on every shot. Fewer punches, all of them heavy.', range: 58, ret: .6, circ: .2, cutK: .85, aggr: .68, counter: .2, feint: .5, clinch: 1, gen: 0, legs: .92, hit: 1.3, inside: .7,
     bias: { power: 10, chin: 7, heart: 2, speed: -2, footwork: -4, defense: -1 } },
-  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.15,
+  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.3,
     bias: { stamina: 7, heart: 4, body: 4, speed: 3, power: 4, defense: 2, footwork: -1 } },
-  counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .68, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
+  counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .62, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
     bias: { defense: 4, accuracy: 6, recovery: 2, heart: 3, chin: 2, stamina: -2, power: -5 } },
   boxerpuncher: { label: 'Boxer-puncher', desc: 'A bit of everything. Boxes, then turns it up when the fight calls for it.', range: 66, ret: .8, circ: .5, cutK: .6, aggr: .8, counter: .45, feint: 1, clinch: .9, gen: .12, open: .3, ramp: .8,
     bias: { power: 3, accuracy: 3, speed: 2, footwork: 3, heart: 2 } },
@@ -425,7 +425,7 @@ const STYLE_PLANS = {
   switch: { auto: 6, counter: 1, move: 1 }, body: { auto: 6, body: 3, pressure: 1 }, pboxer: { auto: 6, pressure: 3 },
   spoiler: { auto: 6, counter: 2, move: 1 }, jabgrab: { auto: 6, move: 2 }, feinter: { auto: 6, counter: 1, move: 1 }
 };
-const STYLE_IN = { at: 54, ev: .4, ctr: .5 };
+const STYLE_IN = { at: 54, ev: .4, ctr: .65 };
 const STYLE_ANGLE = { p: .17, lost: .32, react: .6, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
 const STYLE_ODD = { react: .08, read: .25 };                                 // awkward: less time to react, his read is half as useful
 const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
@@ -467,7 +467,7 @@ function freeRun(x, z, dx, dz) {
   return Math.max(0, t);
 }
 let DMG = 0.35; // global tuning
-const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
+const TUNE = { ev: .3, guard: .34, react: .75, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
 
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
 function cutChance(D, dmg, crit) {
@@ -534,7 +534,7 @@ const DEF_CLEAN = { none: () => 1, stun: () => 1.4, block: (P, O) => blockLeak(O
 const MEMV = { prior: 4, inf: .6, emp: .7, ctr: 1.5, lo: .55, hi: 1.8, range: 10, seen: 20 }; // seen: how much evidence until his own eyes replace the scouting report on guard holes // range: how far he shifts his distance toward where his working punches are
 const MEM_IN = ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook'], MEM_OUT = ['jab', 'cross', 'bodyJab', 'bodyCross'];
 // anticipation: a punch he saw coming. react: more likely to defend it. pick: reaches for the right defense. ctr: counters it harder. prior: evidence before a read means anything
-const ANT = { react: .6, pick: 2, ctr: .6, prior: 3 };
+const ANT = { react: .35, pick: 2, ctr: .3, prior: 3, jab: .5 }; // jab: the jab is too quick to time even when he knows it's coming
 const ANT_BEST = { straight: 'slip', hook: 'duck', upper: 'pull', body: 'block' };
 // how sure he is this punch was coming (0 = no idea, 1 = called it): what the man leads with, or what he throws after the last one
 function antRead(D, A, type, now) {
@@ -542,7 +542,7 @@ function antRead(D, A, type, now) {
   if (pre) { for (const key in M.after) if (key.startsWith(pre + '>')) { const e = memPeek(D, M.after, key, now); tot += e.n; if (key === pre + '>' + type) hit = e.n; } }
   else for (const p in M.lead) { const e = memPeek(D, M.lead, p, now); tot += e.n; if (p === type) hit = e.n; }
   const base = 1 / Object.keys(PUNCH).length, q = (hit + ANT.prior * base) / (tot + ANT.prior);
-  return clamp((q - base) / .5, 0, 1) * iqK(D);
+  return clamp((q - base) / .5, 0, 1) * iqK(D) * (PUNCH[type].cat === 'jab' || type === 'bodyJab' ? ANT.jab : 1);
 }
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
