@@ -289,7 +289,7 @@ const GUARDS = {
   philly: { label: 'Philly shell', desc: 'Lead arm across the belly, chin behind the shoulder. Rolls straights off the shoulder and fires back. Takes real reflexes and ring smarts.',
     head: 1, body: 1.05, str: 1.12, hook: .8, up: .85, ev: 1, ctr: 1.05, hold: .85, skill: ['defense', 'speed', 'accuracy'], def: { block: .5, slip: 1, duck: .7, pull: 1.1, roll: 1.25 } },
   cross: { label: 'Cross-arm', desc: 'Forearms locked across the face. Built for head shots and uppercuts. The ribs and liver hang out.',
-    head: 1.2, body: .66, str: 1.08, hook: 1.05, up: 1.45, ev: .8, ctr: .9, hold: 1.35, def: { block: 2.2, slip: .5, duck: .6, pull: .6 } },
+    head: 1.2, body: .74, str: 1.08, hook: 1.05, up: 1.45, ev: .8, ctr: .9, hold: 1.35, def: { block: 2.2, slip: .5, duck: .6, pull: .6 } },
   handslow: { label: 'Hands low', desc: 'Gloves at the waist, eyes wide open. Sees everything and fires back, but pays for it when the legs go.',
     head: .75, body: .9, str: .9, hook: .85, up: 1, ev: 1.3, ctr: 1.3, hold: .7, skill: ['defense', 'footwork', 'speed'], def: { block: .4, slip: 1.3, duck: .9, pull: 2 } }
 };
@@ -1132,7 +1132,7 @@ class Fight {
       else if (def === 'pull') { if (R() < (P.zone === 'head' ? .8 : .5)) evaded = true; }
     } else if (D.state !== 'stun' && D.state !== 'clinch') {
       let ev = TUNE.ev + (P.cat === 'jab' ? TUNE.jabEv : 0) + (D.s.defense * .5 + D.s.footwork * .3 - A.s.accuracy * .5 - A.s.speed * .3) / TUNE.evDiv;
-      ev = clamp(ev, .06, .5) * stamFac(D) * (this.atRopes(D) ? .75 : 1) * gf(D, 'ev') * (D.guard === 'handslow' ? stamFac(D) : 1);
+      ev = clamp(ev, .06, .5) * stamFac(D) * (this.atRopes(D) ? .75 : 1) * gf(D, 'ev') * (D.guard === 'handslow' ? stamFac(D) * tankF(D) : 1);
       if (D.state === 'punch') ev *= .45;
       if (a.stick) ev *= STYLE_STICK_EV;
       ev += TUNE.moveEv * clamp((D.mv - 30) / 50, 0, 1) * gf(D, 'ev'); // a moving target is harder to find (his intended speed: the feet ease, the intent doesn't)
