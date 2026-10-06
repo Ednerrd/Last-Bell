@@ -430,7 +430,7 @@ const STYLE_IN = { at: 54, ev: .4, ctr: .5 };
 const STYLE_ANGLE = { p: .17, lost: .32, react: .6, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
 const STYLE_ODD = { react: .08, read: .25 };                                 // awkward: less time to react, his read is half as useful
 const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
-const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2 };            // spoiler: tie up a combo coming, dirty shots/s in the clinch, foul chance per dirty shot, stamina drain/s
+const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2, wear: 6 };   // spoiler: tie up a combo coming, dirty shots/s in the clinch, foul chance per dirty shot, stamina drain/s, wear: x lean as tank work
 const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
 const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
@@ -1283,6 +1283,7 @@ class Fight {
       const O = F.op;
       const lean = (F.st.grab && this.clinchBy === F.side ? STYLE_GRAB.lean * F.st.grab : 0) + (F.st.spoil ? STYLE_SPOIL.lean * F.st.spoil : 0);
       if (lean) O.stam = Math.max(0, O.stam - lean * dt);                                   // leaning his weight on him
+      if (F.st.spoil) O.work = (O.work || 0) + STYLE_SPOIL.lean * STYLE_SPOIL.wear * F.st.spoil * dt; // carrying a veteran's weight wears the tank
       if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt) this.dirtyShot(F, O);   // holding and hitting
     }
     if (this.clinchT <= 0) {
