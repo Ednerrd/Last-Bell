@@ -3168,6 +3168,12 @@ const Comm = (() => {
     heard_counter: ['{a} sits back and makes him pay.', 'There it is. {a} is countering now.', '{a} lets him come and fires back.'],
     heard_move: ['{a} is using the ring now.', '{a} gets on his bike.', '{a} moves his feet, like the corner asked.'],
     heard_hands: ['{a} tightens up the guard.', 'Hands up now for {a}.', '{a} shells up and takes it on the gloves.'],
+    learned_jab: ['{a} has bought into that jab. He will keep it now.', 'The corner told him jab, and the jab is working. {a} will remember that.'],
+    learned_body: ['{a} has found something downstairs. He will go back there.', 'The body work is paying off, and {a} knows it.'],
+    learned_press: ['{a} likes what happens when he walks him down.', 'Every time {a} steps in, it works. He is learning this fight.'],
+    learned_counter: ['{a} has it figured out. Let him lead, then make him pay.', 'That counter is working, and {a} is taking it to heart.'],
+    learned_move: ['{a} has learned he does not have to stand there. He is boxing smart now.', 'Those feet are keeping {a} out of trouble. He will keep using them.'],
+    learned_hands: ['{a} has learned to keep the hands up in there.', 'Tighter defense from {a}. The corner got through to him.'],
     ignored: ["{a} is not hearing his corner.", "The corner is yelling, but {a} is doing his own thing.", "{a} tunes out the corner."],
     angle: ['{a} steps off to the side and {d} is punching air.', 'Beautiful angle by {a}. {d} has to turn to find him.', '{a} hits and pivots out. He is gone.', '{a} lands and steps around him. {d} is looking at nothing.'],
     swap: ['{a} switches to {s}.', '{a} changes stances again. Now he is {s}.', 'There is the switch. {a} goes {s}.', '{a} flips to {s}. Back to the drawing board for {d}.'],
@@ -3220,6 +3226,7 @@ const Comm = (() => {
       case 'doctorLook': L('doctorLook', 3); break;
       case 'heard': if (ok('heard', t, 4)) L('heard_' + e.k, 1); break;
       case 'ignored': if (ok('ignored', t, 20)) L('ignored', 1); break;
+      case 'learned': if (ok('learned', t, 30)) L('learned_' + e.k, 2); break;
       case 'stoppage': L(e.why === 'three' ? 'three' : 'tko', 5); break;
       case 'doctor': L('doctor', 5); break;
       case 'rtd': o.a = nm(1 - e.d); L('rtd', 5); break;
