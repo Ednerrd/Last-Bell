@@ -433,7 +433,7 @@ const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2, cool: 1.5 };  // 
 const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
 const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
 const CTR_IN = [['hook'], ['uppercut'], ['cross'], ['hook', 'cross'], ['uppercut', 'hook'], ['cross', 'hook']];
-const CTR_FIT = { duck: { uppercut: 2, hook: 1.2, cross: .5 }, slip: { hook: 1.8, cross: 1.1, uppercut: .6 }, block: { hook: 1.5, uppercut: 1.1, cross: .7 }, pull: { cross: 2, hook: .6, uppercut: .4 } }; // what each defense sets up inside
+const CTR_FIT = { duck: { uppercut: 2, hook: 1.2, cross: .5 }, slip: { hook: 1.8, cross: 1.1, uppercut: .6 }, block: {}, pull: { cross: 2, hook: .6, uppercut: .4 } }; // what each defense sets up inside
 const FEINT_READ = { per: 10, max: .45 };                                    // every feint he bit on makes a smart man warier of the next one (count for full effect, cap)
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 const STYLE_OPEN = { idle: .55, boost: 1.6, edge: .45 }, STYLE_RAMP = .6, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
