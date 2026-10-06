@@ -2535,11 +2535,17 @@ const Render = (() => {
     const gN = southpaw ? leadG : rearG, gF = southpaw ? rearG : leadG;
     const bN = southpaw ? leadBend : rearBend, bF = southpaw ? rearBend : leadBend;
     // tucked guards (and covering up): elbows hang down in front of the ribs, forearms stand up. Hooks keep the elbow up
-    const tuck = gd === 'high' || gd === 'peekaboo' || (v.def === 'block' && v.defZ !== 'body' && gd !== 'cross');
+    const tuck = gd === 'high' || gd === 'peekaboo' || gd === 'cross' || gd === 'philly' || (v.def === 'block' && v.defZ !== 'body');
     // the elbow comes forward across the body toward us, so from the side the upper arm looks short; a punch stretches it back out
     const elbow = (sh, g, b, lead) => {
       const f = !tuck || b === 1 || J.dp > 0 ? 0 : punchLead === lead ? 1 - clamp(punchK * 1.6, 0, 1) : 1;
       if (v.walk && !(J.sit > .05)) { const e1 = ik(sh, g, S.arm, S.arm, 1), e2 = ik(sh, g, S.arm, S.arm, -1); return e1.x < e2.x ? e1 : e2; } // hanging arm: a soft bend, elbow back, hand in front
+      // a straight drives through flat: up close the elbow comes in line (out toward us), so the forearm points at him instead of standing up like a hammer
+      const P = v.aT && !v.feint && PUNCH[v.aT];
+      if (P && P.kind === 'straight' && punchLead === lead && J.dp === 0) {
+        const d = Math.hypot(g.x - sh.x, g.y - sh.y), u = clamp(punchK * 1.5, 0, 1), l1 = lerp(S.arm, clamp(d - S.arm * .96, S.arm * .45, S.arm), u);
+        if (l1 < S.arm - .05) { const e1 = ik(sh, g, l1, S.arm, 1), e2 = ik(sh, g, l1, S.arm, -1); return e1.y > e2.y ? e1 : e2; }
+      }
       if (f <= 0) return ik(sh, g, S.arm, S.arm, b);
       const l1 = S.arm * (1 - .4 * f), e1 = ik(sh, g, l1, S.arm, 1), e2 = ik(sh, g, l1, S.arm, -1); return e1.y > e2.y ? e1 : e2;
     };
