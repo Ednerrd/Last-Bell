@@ -511,9 +511,18 @@ function mkF(sheet, side) {
     guard: GUARDS[sheet.guard] ? sheet.guard : 'standard', gSkill: 1, iq: ringIQ(sheet), gi: 1, giWarn: 0, defZ: 'head',
     trapT: 0, bait: 0, fakeT: 0, spin: false, esc: null, exitAfter: false, resetT: 0, lastRes: null, lastCombo: null,
     // what he has learned about the other guy this fight: per punch kind thrown / avoided, per punch type thrown / landed
-    read: newRead()
+    read: newRead(), mem: newMem()
   };
 }
+/* ---------- memory: what he has learned about the other man this fight. Everything fades; ring IQ sets how much he notices and how long it sticks ----------
+   mine[p]: my punch p vs him (n thrown, l clean, b blocked, e evaded, c countered). his[p] / lead[p] / after['q>p']: what he throws, what he opens with, what follows what.
+   def[kind]: what he was doing when my punch of that kind (straight/hook/upper/body) arrived (n, none, block, slip, duck, pull, roll, stun). hurt[p]: damage his punch p did to me. */
+const MEM = { notice: [.3, 1], tau: [30, 110] }; // evidence per thing seen (low IQ .. high IQ), memory time constant in sim s (a round is 60)
+function newMem() { return { mine: {}, his: {}, lead: {}, after: {}, def: {}, hurt: {} }; }
+const memTau = F => lerp(MEM.tau[0], MEM.tau[1], iqK(F));
+function memGet(F, tbl, key, now) { const e = tbl[key] || (tbl[key] = { t: now }); const f = Math.exp(-(now - e.t) / memTau(F)); if (f < 1) for (const k in e) if (k !== 't') e[k] *= f; e.t = now; return e; }
+function memAdd(F, tbl, key, now, fields) { const e = memGet(F, tbl, key, now), w = lerp(MEM.notice[0], MEM.notice[1], iqK(F)); for (const k in fields) e[k] = (e[k] || 0) + fields[k] * w; return e; }
+const defKind = P => P.zone === 'body' ? 'body' : P.kind;
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
@@ -990,6 +999,7 @@ class Fight {
     F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
+    { const O = F.op, now = this.t; memAdd(F, F.mem.mine, type, now, { n: 1 }); memAdd(O, O.mem.his, type, now, { n: 1 }); if (F.prevP) memAdd(O, O.mem.after, F.prevP + '>' + type, now, { n: 1 }); else memAdd(O, O.mem.lead, type, now, { n: 1 }); }
     this.react(F.op, F, P);
     this.emit('throw', { a: F.side, p: type });
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
@@ -1048,6 +1058,7 @@ class Fight {
     }
     let mult = 1, evaded = false, blocked = false, rolled = false;
     const def = D.def;
+    memAdd(A, A.mem.def, defKind(P), this.t, { n: 1, [D.state === 'stun' ? 'stun' : def || 'none']: 1 });
     if (def && D.state !== 'stun') {
       if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25); blocked = true; }
       else if (def === 'roll') { // shoulder roll: straights glance off, hooks get half caught, uppercuts split it
@@ -1079,6 +1090,7 @@ class Fight {
     }
     if (evaded) { this.miss(A, D, a, 'evade', rolled ? 'roll' : def); return; }
     A.lastRes = blocked ? 'blocked' : 'landed';
+    memAdd(A, A.mem.mine, a.type, this.t, blocked ? { b: 1 } : { l: 1 });
     if (blocked) {
       A.read.av[kindOf(a.type)]++;
       // every blocked shot wears the guard down; a heavy hand breaks it faster
@@ -1103,6 +1115,7 @@ class Fight {
     if (P.zone === 'head') { D.head -= dmg; D.headMax = Math.max(10, D.headMax - dmg * TUNE.wear); }
     else { D.body -= dmg * 1.1; D.stamMax = Math.max(30, D.stamMax - dmg * .25); D.stam = Math.max(0, D.stam - dmg * .9); D.head -= dmg * .15; }
     A.tot.dmg += dmg; D.tot.taken += dmg; A.rs.dmg += dmg;
+    if (!blocked) memAdd(D, D.mem.hurt, a.type, this.t, { d: dmg });
     if (!blocked) {
       A.tot.landed[P.cat]++;
       if (P.cat === 'jab') A.rs.landedJab++; else if (P.cat === 'power') A.rs.landedPow++; else A.rs.landedBody++;
@@ -1150,7 +1163,7 @@ class Fight {
     // fire back out of the guard (tap-block counter)
     if (blocked && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
       const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D);
-      if (R() < p) { const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
+      if (R() < p) { memAdd(A, A.mem.mine, a.type, this.t, { c: 1 }); const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
     }
   }
   miss(A, D, a, why, def) {
@@ -1158,7 +1171,7 @@ class Fight {
     A.stam = Math.max(0, A.stam - P.cost * .35);
     this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type });
     A.lastRes = 'evaded'; A.lastDef = def || null;
-    if (why === 'evade') A.read.av[kindOf(a.type)]++;
+    if (why === 'evade') { A.read.av[kindOf(a.type)]++; memAdd(A, A.mem.mine, a.type, this.t, { e: 1 }); }
     if (why === 'evade') A.rs.made[a.type] = (A.rs.made[a.type] || 0) + 1;
     if (why === 'evade' && D.state !== 'stun' && D.state !== 'down') {
       const st = D.st, sg = sgOf(D);
@@ -1166,7 +1179,7 @@ class Fight {
         * (P.cat === 'jab' ? TUNE.jabCtr : 1) // a jab snaps back: much harder to counter than a missed hook
         * (A.st.inside && dist(A, D) < STYLE_IN.at ? 1 - STYLE_IN.ctr * A.st.inside : 1); // no room to counter a man on your chest
       if (R() < Math.min(.95, ch) && D.state !== 'punch') {
-        D.counterWin = .6; D.def = null; D.pendingDef = null;
+        D.counterWin = .6; D.def = null; D.pendingDef = null; memAdd(A, A.mem.mine, a.type, this.t, { c: 1 });
         const c = this.pickCounter(D, dist(A, D), def === 'roll');
         D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter');
         A.lastRes = 'countered';
