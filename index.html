@@ -258,17 +258,17 @@ const STYLES = {
     bias: { stamina: 8, speed: 5, recovery: 4, power: -6, chin: -2 } },
   angle: { label: 'Angle fighter', special: true, desc: 'Hits you, then he is gone. Steps off to the side and makes you turn to find him.', range: 64, ret: .85, circ: .9, cutK: .5, aggr: .82, counter: .42, feint: 1.3, clinch: .7, gen: .25, legs: 1.1, angle: 1,
     bias: { footwork: 8, speed: 5, accuracy: 3, power: -4, chin: -3 } },
-  awkward: { label: 'Awkward', special: true, desc: 'Weird rhythm, hands low, punches from places you do not see coming. Hard to figure out.', range: 66, ret: .8, circ: .7, cutK: .4, aggr: .85, counter: .4, feint: 1.6, clinch: .8, gen: .1, odd: .8, leap: 4,
+  awkward: { label: 'Awkward', special: true, desc: 'Weird rhythm, hands low, punches from places you do not see coming. Hard to figure out.', range: 66, ret: .8, circ: .7, cutK: .4, aggr: .85, counter: .4, feint: 1.6, clinch: .8, gen: .1, odd: .6, leap: 4,
     bias: { speed: 4, power: 4, defense: 3, accuracy: -4, stamina: -3 } },
   switch: { label: 'Switch-hitter', special: true, desc: 'Orthodox, southpaw, orthodox again. Every time you figure him out, he changes.', range: 64, ret: .8, circ: .55, cutK: .6, aggr: .85, counter: .45, feint: 1, clinch: .85, gen: .15, swap: 1,
     bias: { accuracy: 5, defense: 4, speed: 3, power: 1, stamina: -2 } },
   body: { label: 'Body snatcher', special: true, desc: 'Breaks you down downstairs, one rib at a time. The head comes later.', range: 56, ret: .55, circ: .35, cutK: .95, aggr: 1.2, counter: .3, feint: .7, clinch: 1, gen: 0, inside: .6, bodyX: 1,
     bias: { body: 5, power: 5, stamina: 5, heart: 4, speed: -3, footwork: -3 } },
-  pboxer: { label: 'Pressure boxer', special: true, desc: 'Walks you down behind a stiff jab and cuts the ring off. No wasted punches.', range: 60, ret: .65, circ: .3, cutK: 1.25, aggr: 1.05, counter: .35, feint: .8, clinch: .9, gen: .2, pjab: 1, hit: 1.25,
+  pboxer: { label: 'Pressure boxer', special: true, desc: 'Walks you down behind a stiff jab and cuts the ring off. No wasted punches.', range: 60, ret: .65, circ: .3, cutK: 1.25, aggr: 1.05, counter: .35, feint: .8, clinch: .9, gen: .2, pjab: 1, hit: 1.25, inside: .4,
     bias: { power: 6, chin: 5, stamina: 4, footwork: 2, speed: -3, defense: -3 } },
   spoiler: { label: 'Veteran spoiler', special: true, desc: 'Old tricks. Ties you up, leans on you, sneaks shots in the clutches. Ugly and smart.', range: 64, ret: .85, circ: .45, cutK: .5, aggr: .7, counter: .5, feint: 1.2, clinch: 1.6, gen: .3, open: .5, spoil: 1,
     bias: { defense: 6, accuracy: 5, recovery: 4, heart: 2, speed: -4, stamina: -2 } },
-  jabgrab: { label: 'Jab-and-grab', special: true, desc: 'Long jab, and the second you get close he grabs you and leans his weight on you.', range: 74, ret: .95, circ: .6, cutK: .35, aggr: .9, counter: .3, feint: .8, clinch: 1.4, gen: .35, legs: 1.1, stick: 1, grab: 1, hit: 1.15,
+  jabgrab: { label: 'Jab-and-grab', special: true, desc: 'Long jab, and the second you get close he grabs you and leans his weight on you.', range: 74, ret: .95, circ: .6, cutK: .35, aggr: 1, counter: .3, feint: .8, clinch: 1.4, gen: .35, legs: 1.1, stick: 1, grab: 1, hit: 1.15,
     bias: { power: 6, accuracy: 4, footwork: 2, chin: -2, speed: -2, heart: -2 } },
   feinter: { label: 'Feint master', special: true, desc: 'Feints you into knots, then hits whatever you leave open.', range: 64, ret: .85, circ: .7, cutK: .6, aggr: .92, counter: .45, feint: 2.6, clinch: .8, gen: .4, legs: 1.1, bite: 1,
     bias: { speed: 4, accuracy: 4, footwork: 4, defense: 2, power: -3 } }
@@ -431,9 +431,9 @@ const STYLE_ANGLE = { p: .17, lost: .32, react: .6, ev: .8, blk: .85 };   // ang
 const STYLE_ODD = { react: .08, read: .25 };                                 // awkward: less time to react, his read is half as useful
 const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
 const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2, wear: 6, cool: 1.5 }; // spoiler: tie up a combo coming, dirty shots/s in the clinch, foul chance per dirty shot, stamina drain/s, wear: x lean as tank work, cool: how much a warning cools a smart one off
-const STYLE_GRAB = { p: .25, at: 50, lean: 4 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
-const STYLE_BITE = { t: .8, edge: 1.2 };                                     // feint master: he bit, the next real shot finds him committed
-const FEINT_READ = { per: 10, max: .45 };                                    // every feint he bit on makes a smart man warier of the next one (count for full effect, cap)
+const STYLE_GRAB = { p: .25, at: 50, lean: 5.5 };                             // jab-and-grab: grab chance per decision inside 50, stamina drain/s on the man held
+const STYLE_BITE = { t: 1.2, edge: 1.5 };                                     // feint master: he bit, the next real shot finds him committed
+const FEINT_READ = { per: 10, max: .45, master: .7 };                                    // every feint he bit on makes a smart man warier of the next one (count for full effect, cap)
 const STYLE_OUT = { gap: 10, aggr: .45, p: 1.6 };
 // rhythm: bursts, then resets. After an exchange the pair may reset (back out, feint, step around). A hot streak after it cost the swarmer his gas (tried 1.15-1.35).
 // Rounds open with a feel-out (longer in the first). How often he resets and how long he feels out come from his aggression
@@ -1165,7 +1165,7 @@ class Fight {
     if (D.head < D.headMax * .3) ch *= .75;
     ch *= (1.15 - A.s.accuracy / 100 * .35);
     ch *= .92 + .16 * iqK(D);
-    if (feint) ch *= 1 - Math.min(FEINT_READ.max, D.read.feints / FEINT_READ.per) * iqK(D); // he has bitten on enough of those
+    if (feint) ch *= 1 - Math.min(FEINT_READ.max, D.read.feints / FEINT_READ.per) * iqK(D) * (1 - FEINT_READ.master * (A.st.bite || 0)); // he has bitten on enough of those (a feint master's still look real)
     ch *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
     if (D.lostT > 0) ch *= STYLE_ANGLE.react;
     if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
