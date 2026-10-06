@@ -12,6 +12,7 @@ Published-page rules: external scripts only from cdnjs/jsdelivr/tailwind/jquery 
 Private preview for Ed (Claude Code can publish here): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo (sample + db + user).
 3D phone test for Ed (proto + perf panel, 3D plan phase 0): https://claude.ai/artifact/5kVb4PyywgDcPBHSVSc3cu. Build `node proto/build.js`, publish a copy of `proto/ring3d.html` with the doctype/html/head/body tags stripped.
 Fight lab for Ed (straight into a fight, no menus): https://claude.ai/artifact/QhC1gMrw1pSabzuLzMw7Ev. Rebuild with `node tools/lab.js`, publish `lab.html` (no capabilities needed). Republish after every combat change.
+Brain lab (the fight lab built from this branch, with the boxer brain): https://claude.ai/artifact/N5pj7BCRDSNuJngq7tkMAk. Rebuild with `node tools/lab.js`, retitle to "Last Bell Brain Lab", publish from the same scratch path or pass the URL. Compare it with the plain lab.
 
 ## Working rules
 - Small, chunked edits. Commit after each working step (git is the safety net).
