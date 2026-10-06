@@ -126,7 +126,7 @@ function adaptOne(n, habit, oppIQ) {
       if ((e.type === 'hit' || e.type === 'miss') && e.a === 1) { av[b][1]++; if (e.type === 'miss' || e.blocked) av[b][0]++; }
     }
   }
-  const hook = b => { const k = kinds[b], t = Object.values(k).reduce((s, x) => s + x, 0); return pct((k.hook || 0) + (k.bodyHook || 0) + (k.uppercut || 0), t); };
+  const hook = b => { const k = kinds[b], t = Object.values(k).reduce((s, x) => s + x, 0); return pct((k.hook || 0) + (k.rhook || 0) + (k.bodyHook || 0) + (k.uppercut || 0) + (k.lupper || 0), t); };
   console.log(`  opp IQ ${oppIQ}: wins ${pct(w, n)} | his connect ${BK.map((k, b) => pct(land[b][0], land[b][1])).join(' → ')} | stops habit's shots ${BK.map((k, b) => pct(av[b][0], av[b][1])).join(' → ')} | counters landed/rd ${BK.map((k, b) => f2(ctr[b] / Math.max(1, rn[b]))).join(' → ')} | hooks+ups share ${BK.map((k, b) => hook(b)).join(' → ')}`);
 }
 function adapt(n) {

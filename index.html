@@ -523,6 +523,16 @@ const memTau = F => lerp(MEM.tau[0], MEM.tau[1], iqK(F));
 function memGet(F, tbl, key, now) { const e = tbl[key] || (tbl[key] = { t: now }); const f = Math.exp(-(now - e.t) / memTau(F)); if (f < 1) for (const k in e) if (k !== 't') e[k] *= f; e.t = now; return e; }
 function memAdd(F, tbl, key, now, fields) { const e = memGet(F, tbl, key, now), w = lerp(MEM.notice[0], MEM.notice[1], iqK(F)); for (const k in fields) e[k] = (e[k] || 0) + fields[k] * w; return e; }
 const defKind = P => P.zone === 'body' ? 'body' : P.kind;
+function memPeek(F, tbl, key, now) { const e = tbl[key]; if (!e) return null; const f = Math.exp(-(now - e.t) / memTau(F)), o = {}; for (const k in e) if (k !== 't') o[k] = e[k] * f; return o; }
+// how much of a punch gets through each defense (mirrors resolve): a man who slips everything is open for hooks, a ducker eats uppercuts
+const DEF_CLEAN = { none: () => 1, stun: () => 1.4, block: () => .35,
+  slip: P => P.zone === 'head' && P.kind === 'straight' ? 0 : P.kind === 'hook' ? 1.15 : 1,
+  duck: P => P.zone === 'head' ? (P.kind === 'upper' ? 1.4 : 0) : 1,
+  pull: P => P.zone === 'head' ? .2 : .5,
+  roll: P => P.zone === 'body' ? .5 : P.kind === 'straight' ? .55 : P.kind === 'hook' ? .65 : 1.1 };
+// prior: evidence a memory needs before it beats the average. inf/emp: weight of what his defense habits say vs what has actually landed. ctr: how much getting countered puts him off a punch
+const MEMV = { prior: 4, inf: .8, emp: .7, ctr: 1.5, lo: .55, hi: 1.8, range: 14 }; // range: how far he shifts his distance toward where his working punches are
+const MEM_IN = ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook'], MEM_OUT = ['jab', 'cross', 'bodyJab', 'bodyCross'];
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
@@ -792,6 +802,9 @@ class Fight {
     let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0);
     if (hurtOp) want -= 14;
     if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
+    // what's working decides where he wants to be: hooks landing, get inside; straights landing, stay long
+    { const pv = F.pv = this.punchVal(F); F.pvT = this.t; const avg = ks => ks.reduce((s, p) => s + pv[p], 0) / ks.length;
+      want -= MEMV.range * k * clamp(avg(MEM_IN) - avg(MEM_OUT), -1, 1); }
     F.want = clamp(want + rnd(-4, 4), 40, 86);
     F.spd = (34 + F.s.footwork * 0.6) * (0.7 + 0.3 * sf) * (hurtMe ? .85 : 1);
     F.legs = st.legs || 1;
@@ -955,13 +968,33 @@ class Fight {
       F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
     this.startPunch(F, nx);
   }
+  // what each punch is worth against this man right now, from memory (1 = his average punch)
+  punchVal(F) {
+    const M = F.mem, now = this.t, pool = {}, out = {}, inf = {};
+    let pn = 0; for (const K in M.def) { const e = memPeek(F, M.def, K, now); for (const d in e) if (d !== 'n') pool[d] = (pool[d] || 0) + e[d]; pn += e.n; }
+    let tn = 0, tl = 0, tc = 0; for (const p in M.mine) { const e = memPeek(F, M.mine, p, now); tn += e.n; tl += e.l || 0; tc += e.c || 0; }
+    const Lp = (tl + MEMV.prior * .3) / (tn + MEMV.prior), Cp = (tc + MEMV.prior * .05) / (tn + MEMV.prior);
+    let vbar = 0;
+    for (const p in PUNCH) {
+      const P = PUNCH[p], e = memPeek(F, M.def, defKind(P), now), en = e ? e.n : 0; let v = 0;
+      for (const dk in DEF_CLEAN) { const ps = ((pool[dk] || 0) + (dk === 'none' ? MEMV.prior : 0)) / (pn + MEMV.prior); v += ((e && e[dk] || 0) + MEMV.prior * ps) / (en + MEMV.prior) * DEF_CLEAN[dk](P); }
+      inf[p] = v; vbar += v;
+    }
+    vbar /= Object.keys(PUNCH).length;
+    for (const p in PUNCH) {
+      const e = memPeek(F, M.mine, p, now), n = e ? e.n : 0;
+      const l = ((e && e.l || 0) + MEMV.prior * Lp) / (n + MEMV.prior), c = ((e && e.c || 0) + MEMV.prior * Cp) / (n + MEMV.prior);
+      out[p] = clamp(Math.pow(inf[p] / Math.max(.05, vbar), MEMV.inf) * Math.pow(l / Lp, MEMV.emp) * (1 - MEMV.ctr * (c - Cp)), MEMV.lo, MEMV.hi);
+    }
+    return out;
+  }
   pickCombo(F, d, sg, hurtOp) {
     const O = F.op, k = iqK(F), Rd = F.read;
     const ok = COMBOS.filter(c => { if (!comboW(F, c)) return false; const P = PUNCH[c.seq[0]]; const step = (P.kind === 'straight' ? 10 : 6) + (P.cat !== 'jab' ? F.st.leap || 0 : 0); return d <= P.max + step && d >= P.min - 6; });
     if (!ok.length) return null;
     const holes = GUARD_HOLES[O.guard] || {};
     const lead = F.side === 0 ? this.lead : -this.lead, late = this.round > this.rounds - 3;
-    const softBody = O.stam < O.stamMax * .45 || O.body < 55;
+    const softBody = O.stam < O.stamMax * .45 || O.body < 55, pv = F.pvT === this.t ? F.pv : this.punchVal(F);
     const c = wpick(ok, c => {
       const n = c.len; let w = comboW(F, c);
       const rc = RANGE_C[c.r]; w *= .25 + Math.exp(-Math.pow((d - rc[0]) / rc[1], 2));
@@ -972,9 +1005,7 @@ class Fight {
       let read = 1;
       for (const p of c.seq) {
         let f = (holes[p] || 1) * (F.stance !== O.stance ? OPEN_W[p] || 1 : 1);
-        const kd = kindOf(p), th = Rd.th[kd];
-        if (th >= 3) f *= clamp(1 + (.45 - Rd.av[kd] / th) * 1.2, .6, 1.4);
-        const tp = Rd.thr[p] || 0; if (tp >= 4) f *= clamp(.8 + (Rd.land[p] || 0) / tp * 1.1, .8, 1.5);
+        f *= pv[p] || 1;
         read *= Math.pow(f, 1 / n);
       }
       if (softBody) read *= 1 + c.body * .25;
