@@ -2,7 +2,7 @@
 
 Phone-first auto-boxing career sim. One self-contained file: `index.html` (~4,000 lines). Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
-**New direction:** `GYM.md` (gym + stable, Oct 2026). **Current focus:** `COMBAT.md` (smoothness/pace plan, ranked). **Read on demand, not up front:** `VISION.md` (old vision), `NOTES.md` (system details, balance history, past measurements: grep the heading you need), `proto/PLAN.md` + `proto/RESEARCH.md` (3D).
+**New direction:** `GYM.md` (gym + stable, Oct 2026). **Current focus:** `BRAIN.md` (the AI boxer's fight IQ and decisions, steps B0–B6), then `COMBAT.md` (smoothness/pace plan; BRAIN replaces its steps 8 and 10). **Read on demand, not up front:** `VISION.md` (old vision), `NOTES.md` (system details, balance history, past measurements: grep the heading you need), `proto/PLAN.md` + `proto/RESEARCH.md` (3D).
 
 ## Publishing (important)
 The live game is a published Claude artifact: https://claude.ai/artifact/KYmQg6PQo4qE4qoyDDDt7k
