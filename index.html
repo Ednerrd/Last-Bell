@@ -496,7 +496,7 @@ const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
 // A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
-const STAM = { free: 45, wear: .05, regen: .5, tank: .45 };
+const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg: .5, tankOut: .5 }; // bodyHit: tank lost per point of body damage
 // body shots that end things. Liver: a shot to his right side (orthodox lead hook, southpaw straight left) folds him a beat later,
 // awake but he can't beat the count. Wind: a straight in the gut freezes him, hands down, the gas goes. Both need a real shot (danger
 // over a floor) and grow as the body wears and with a weak body stat; a counter or a man walking in doubles it.
@@ -821,7 +821,7 @@ class Fight {
     const hurtMe = F.head < F.headMax * 0.32;
     const hurtOp = O.state === 'stun' || O.head < O.headMax * 0.3;
     const trapped = this.trapped(F), oTrapped = this.trapped(O);
-    let aggr = st.aggr * sg.aggr * (0.5 + 0.5 * sf) * tankF(F);
+    let aggr = st.aggr * sg.aggr * (0.5 + 0.5 * sf) * lerp(1, tankF(F), STAM.tankOut);
     if (hurtOp) aggr *= (F.strategy === 'survive' ? 1.2 : 1.8);
     if (hurtMe) aggr *= 0.55;
     if (F.bait > 0) aggr *= .5; // lying on the ropes, waiting to counter
@@ -1157,7 +1157,7 @@ class Fight {
       D.gi = Math.max(0, D.gi - shot * .04 / GUARDS[D.guard].hold);
       if (was >= .35 && D.gi < .35 && this.t - D.giWarn > 8) { D.giWarn = this.t; this.emit('guardCrack', { a: A.side, d: D.side }); }
     } else A.read.land[a.type] = (A.read.land[a.type] || 0) + 1;
-    let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A)) * tankF(A);
+    let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A)) * lerp(1, tankF(A), STAM.tankDmg);
     if (P.cat !== 'jab') dmg *= A.st.hit || 1;
     if (P.zone === 'body' && A.st.bodyX) dmg *= 1 + .25 * A.st.bodyX;
     if (a.stick && !blocked && D.state !== 'stun') { D.stopT = .45; D.decT = Math.max(D.decT, .2); }
@@ -1173,7 +1173,7 @@ class Fight {
     const tough = P.zone === 'head' ? (0.55 + effChin(D) / 100 * .9) : (0.55 + D.s.body / 100 * .9);
     dmg /= tough;
     if (P.zone === 'head') { D.head -= dmg; D.headMax = Math.max(10, D.headMax - dmg * TUNE.wear); }
-    else { D.body -= dmg * 1.1; D.stamMax = Math.max(30, D.stamMax - dmg * .25); D.stam = Math.max(0, D.stam - dmg * .9); D.head -= dmg * .15; }
+    else { D.body -= dmg * 1.1; D.stamMax = Math.max(30, D.stamMax - dmg * STAM.bodyHit); D.stam = Math.max(0, D.stam - dmg * .9); D.head -= dmg * .15; }
     A.tot.dmg += dmg; D.tot.taken += dmg; A.rs.dmg += dmg;
     if (!blocked) {
       A.tot.landed[P.cat]++;
