@@ -247,7 +247,7 @@ const STYLES = {
     bias: { speed: 2, footwork: 3, defense: 1, accuracy: 3, heart: 3, power: -3, chin: -1 } },
   slugger: { label: 'Slugger', desc: 'Walks you down and sits on every shot. Fewer punches, all of them heavy.', range: 58, ret: .6, circ: .2, cutK: .85, aggr: .68, counter: .2, feint: .5, clinch: 1, gen: 0, legs: .92, hit: 1.3, inside: .7,
     bias: { power: 10, chin: 7, heart: 2, speed: -2, footwork: -4, defense: -1 } },
-  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.15, cond: .55,
+  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.15, cond: .7,
     bias: { stamina: 7, heart: 4, body: 4, speed: 3, power: 4, defense: 2, footwork: -1 } },
   counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .68, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
     bias: { defense: 4, accuracy: 6, recovery: 2, heart: 3, chin: 2, stamina: -2, power: -5 } },
@@ -495,14 +495,16 @@ function extRaw(P, d) {
 const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
-// A smaller tank refills slower (regen) and a worn man is slower and weaker even fresh off the stool (tank)
+// A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
 const STAM = { free: 45, wear: .05, regen: .5, tank: .45 };
 // body shots that end things. Liver: a shot to his right side (orthodox lead hook, southpaw straight left) folds him a beat later,
 // awake but he can't beat the count. Wind: a straight in the gut freezes him, hands down, the gas goes. Both need a real shot (danger
 // over a floor) and grow as the body wears and with a weak body stat; a counter or a man walking in doubles it.
 // Kill the body: a worn body slows his feet (legs) and drops his elbows, so head shots get through his guard more (elbows)
-const BODY = { legs: .2, elbows: .25, liver: .003, lAt: 1.2, delay: .35, up: .35, wind: .035, wAt: .8, windT: .9, gasHit: 25 };
-function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return (0.55 + 0.45 * Math.min(1, f * 1.4)) * (1 - STAM.tank * (1 - F.stamMax / 100)); }
+const BODY = { legs: .2, elbows: .15, liver: .003, lAt: 1.2, delay: .35, up: .35, wind: .035, wAt: .8, windT: .9, gasHit: 25 };
+function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
+// a worn tank: less on his punches, slower hands, less output (his defense rides the gas he has right now, stamFac)
+function tankF(F) { return 1 - STAM.tank * (1 - F.stamMax / 100); }
 // guard factor: bonuses only count as far as his skill supports the guard, weaknesses always count
 function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
 function gdw(F, kind) { const f = GUARDS[F.guard].def[kind]; if (f == null) return kind === 'roll' ? 0 : 1; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
@@ -819,7 +821,7 @@ class Fight {
     const hurtMe = F.head < F.headMax * 0.32;
     const hurtOp = O.state === 'stun' || O.head < O.headMax * 0.3;
     const trapped = this.trapped(F), oTrapped = this.trapped(O);
-    let aggr = st.aggr * sg.aggr * (0.5 + 0.5 * sf);
+    let aggr = st.aggr * sg.aggr * (0.5 + 0.5 * sf) * tankF(F);
     if (hurtOp) aggr *= (F.strategy === 'survive' ? 1.2 : 1.8);
     if (hurtMe) aggr *= 0.55;
     if (F.bait > 0) aggr *= .5; // lying on the ropes, waiting to counter
@@ -1051,7 +1053,7 @@ class Fight {
   startPunch(F, type) {
     const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
     const v = vec(F, F.op);
-    F.act = { type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
+    F.act = { type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf) * (1.5 - .5 * tankF(F)), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
@@ -1155,7 +1157,7 @@ class Fight {
       D.gi = Math.max(0, D.gi - shot * .04 / GUARDS[D.guard].hold);
       if (was >= .35 && D.gi < .35 && this.t - D.giWarn > 8) { D.giWarn = this.t; this.emit('guardCrack', { a: A.side, d: D.side }); }
     } else A.read.land[a.type] = (A.read.land[a.type] || 0) + 1;
-    let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A));
+    let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A)) * tankF(A);
     if (P.cat !== 'jab') dmg *= A.st.hit || 1;
     if (P.zone === 'body' && A.st.bodyX) dmg *= 1 + .25 * A.st.bodyX;
     if (a.stick && !blocked && D.state !== 'stun') { D.stopT = .45; D.decT = Math.max(D.decT, .2); }
