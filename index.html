@@ -493,7 +493,10 @@ function extRaw(P, d) {
 // how well a punch fits the distance, against its own best (1 = sweet spot): the AI reads this before he throws
 const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
-function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
+// gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
+// A smaller tank refills slower (regen) and a worn man is slower and weaker even fresh off the stool (tank)
+const STAM = { free: 45, wear: .05, regen: .6, tank: .5 };
+function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return (0.55 + 0.45 * Math.min(1, f * 1.4)) * (1 - STAM.tank * (1 - F.stamMax / 100)); }
 // guard factor: bonuses only count as far as his skill supports the guard, weaknesses always count
 function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
 function gdw(F, kind) { const f = GUARDS[F.guard].def[kind]; if (f == null) return kind === 'roll' ? 0 : 1; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
@@ -761,7 +764,7 @@ class Fight {
     if (F.biteT > 0) F.biteT -= dt;
     if (F.st.swap && F.state !== 'punch' && (F.swapT += dt) > STYLE_SWAP.every * rnd(.6, 1.4)) this.swapStance(F);
     if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
-    const regen = (1.3 + F.s.stamina / 100 * 2.9) * (0.45 + 0.55 * Math.max(0, F.body) / 100);
+    const regen = (1.3 + F.s.stamina / 100 * 2.9) * (0.45 + 0.55 * Math.max(0, F.body) / 100) * (1 - STAM.regen * (1 - F.stamMax / 100));
     if (F.state !== 'punch') F.stam = Math.min(F.stamMax, F.stam + regen * dt);
     if (F.state !== 'stun' && F.head > 0) F.head = Math.min(F.headMax, F.head + (0.25 + F.s.recovery / 100 * 0.5) * TUNE.regen * dt * (F.hitT > 0 ? 0 : 1));
     // guard integrity comes back once the pressure stops; a tired fighter can't get his hands all the way back up
@@ -1046,7 +1049,7 @@ class Fight {
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
     F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0; this.exP++;
-    F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
+    { const c = P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1); F.stam = Math.max(0, F.stam - c); F.work = (F.work || 0) + c; }
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
     this.react(F.op, F, P);
@@ -1220,7 +1223,7 @@ class Fight {
   }
   miss(A, D, a, why, def) {
     const P = PUNCH[a.type];
-    A.stam = Math.max(0, A.stam - P.cost * .35);
+    A.stam = Math.max(0, A.stam - P.cost * .35); A.work = (A.work || 0) + P.cost * .35;
     { // how it missed: short / jammed (range), wild, or what he did with it. Straights are slipped to the side they arrive on
       const ln = laneOf(A, P), dd = dist(A, D);
       const mt = why === 'range' ? (dd > P.max ? 'short' : 'jammed') : why === 'wild' ? 'wild' : def === 'roll' ? 'rolled' : def === 'slip' ? 'slipped' : def === 'duck' ? 'ducked' : def === 'pull' ? 'pulled'
@@ -1361,6 +1364,7 @@ class Fight {
       F.head = Math.min(F.headMax, F.head + (F.headMax - F.head) * (.25 + rec * .35) + 3);
       F.head = Math.max(F.head, 8);
       F.body = Math.min(100, F.body + (100 - F.body) * (.15 + rec * .2));
+      F.stamMax = Math.max(30, F.stamMax - Math.max(0, (F.work || 0) - STAM.free) * STAM.wear * (1.3 - F.s.stamina / 100 * .6)); F.work = 0; // a hard round costs the tank
       F.stam = Math.min(F.stamMax, F.stam + (F.stamMax - F.stam) * (.5 + rec * .4));
       // the cutman slows the bleeding and closes it a little; he can't make a bad cut go away
       F.cut = Math.max(0, F.cut - this.cutman[F.side] * CUT.cutman * rnd(.7, 1.2));
