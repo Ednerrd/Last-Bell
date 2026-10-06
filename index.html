@@ -441,20 +441,30 @@ const SHOUT_LEN = 14, SHOUT_ADD = { range: 1, cut: 1 };
 const SHOUT_EDGE = { atk: .6, def: .5, ctr: 1.1, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit / he counters more. Below bar the call hurts
 // a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
 function orderPow(F) { const o = F.order; if (!o) return 0; const f = o.fit - SHOUT_EDGE.bar; return o.q * (f < 0 ? f * SHOUT_EDGE.bad : f) * Math.min(1, o.t / (SHOUT_LEN * .3)); }
-function atkEdge(A, P) {
-  const o = A.order; if (!o) return 0;
-  const on = o.k === 'jab' ? P.cat === 'jab' : o.k === 'body' ? P.zone === 'body' : o.k === 'press' ? P.cat === 'power' : o.k === 'counter' ? A.counterWin > 0 : false;
-  return on ? orderPow(A) * SHOUT_EDGE.atk : 0;
-}
+function orderOn(A, P) { const k = A.order.k; return k === 'jab' ? P.cat === 'jab' : k === 'body' ? P.zone === 'body' : k === 'press' ? P.cat === 'power' : k === 'counter' ? A.counterWin > 0 : false; }
+function atkEdge(A, P) { return A.order && orderOn(A, P) ? orderPow(A) * SHOUT_EDGE.atk : 0; }
 function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 'hands') ? orderPow(D) * SHOUT_EDGE.def : 0; }
 function ctrEdge(D) { const o = D.order; return o && o.k === 'counter' ? Math.max(.2, 1 + orderPow(D) * SHOUT_EDGE.ctr) : 1; }
+// the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
+// step: how much one payoff teaches (times how well he took the call and teachK), max: a full lesson is worth this much of the shout, keep: what survives the break
+const TEACH = { step: .12, max: .4, keep: .6 };
+// who learns from the corner: ring IQ, and above all experience (a kid in his 3rd fight vs a man in his 25th)
+function teachK(F) { return clamp(.15 + .45 * iqK(F) + .4 * Math.min(1, Math.sqrt(F.sheet.exp || 0) / 5), 0, 1); }
+function mixMods(out, m, q) { for (const k in m) out[k] = SHOUT_ADD[k] ? (out[k] || 0) + m[k] * q : (out[k] == null ? 1 : out[k]) * (1 + (m[k] - 1) * q); return out; }
+// round plan + what the corner has taught him this fight (cached until either changes)
+function planOf(F) {
+  const base = STRATS[F.strategy] || STRATS.auto, Rd = F.read;
+  if (!Rd.lv) return base;
+  if (F.planC && F.planC.v === Rd.lv && F.planC.s === F.strategy) return F.planC.out;
+  const out = Object.assign({}, base);
+  for (const k in Rd.les) if (Rd.les[k] > .005) mixMods(out, SHOUTS[k].mods, Rd.les[k] * TEACH.max);
+  F.planC = { v: Rd.lv, s: F.strategy, out }; return out;
+}
 // round plan with the current shout mixed in, scaled by how well he took it and fading near the end
 function sgOf(F) {
-  const base = STRATS[F.strategy] || STRATS.auto, o = F.order;
+  const base = planOf(F), o = F.order;
   if (!o) return base;
-  const q = o.q * Math.min(1, o.t / (SHOUT_LEN * .3)), m = SHOUTS[o.k].mods, out = Object.assign({}, base);
-  for (const k in m) out[k] = SHOUT_ADD[k] ? (out[k] || 0) + m[k] * q : (out[k] == null ? 1 : out[k]) * (1 + (m[k] - 1) * q);
-  return out;
+  return mixMods(Object.assign({}, base), SHOUTS[o.k].mods, o.q * Math.min(1, o.t / (SHOUT_LEN * .3)));
 }
 
 const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30;
@@ -517,7 +527,7 @@ function mkF(sheet, side) {
     read: newRead()
   };
 }
-function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
+function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0, les: {}, lv: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
 class Fight {
@@ -1093,7 +1103,8 @@ class Fight {
       const shot = P.dmg * (0.5 + A.s.power / 100), was = D.gi;
       D.gi = Math.max(0, D.gi - shot * .04 / GUARDS[D.guard].hold);
       if (was >= .35 && D.gi < .35 && this.t - D.giWarn > 8) { D.giWarn = this.t; this.emit('guardCrack', { a: A.side, d: D.side }); }
-    } else A.read.land[a.type] = (A.read.land[a.type] || 0) + 1;
+      if (D.order && D.order.k === 'hands') this.teach(D);
+    } else { A.read.land[a.type] = (A.read.land[a.type] || 0) + 1; if (A.order && orderOn(A, P)) this.teach(A); }
     let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A));
     if (P.cat !== 'jab') dmg *= A.st.hit || 1;
     if (P.zone === 'body' && A.st.bodyX) dmg *= 1 + .25 * A.st.bodyX;
@@ -1166,7 +1177,7 @@ class Fight {
     A.stam = Math.max(0, A.stam - P.cost * .35);
     this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type });
     A.lastRes = 'evaded'; A.lastDef = def || null;
-    if (why === 'evade') A.read.av[kindOf(a.type)]++;
+    if (why === 'evade') { A.read.av[kindOf(a.type)]++; if (D.order && D.order.k === 'move') this.teach(D); }
     if (why === 'evade') A.rs.made[a.type] = (A.rs.made[a.type] || 0) + 1;
     if (why === 'evade' && D.state !== 'stun' && D.state !== 'down') {
       const st = D.st, sg = sgOf(D);
@@ -1307,6 +1318,7 @@ class Fight {
       F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.fakeT = 0; F.exitAfter = false; F.resetT = 0;
       // memory fades a bit between rounds, the most recent round counts most
       const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6; Rd.feints *= .6;
+      for (const k in Rd.les) Rd.les[k] *= TEACH.keep; Rd.lv++;
     }
     // doctor / corner stoppages
     const tot = this.cardTotals(); const lead0 = tot.reduce((s, t) => s + (t[0] - t[1]), 0) / 3;
@@ -1370,6 +1382,12 @@ class Fight {
       case 'hands': return clamp(Math.max(hurt(F) ? 1 : 0, O.rs.landedPow / Math.max(30, this.clock) * ROUND_LEN > 12 ? .7 : 0, F.gi < .4 ? .4 : 0), 0, 1);
     }
     return 0;
+  }
+  // the call is paying off: some of it sticks
+  teach(F) {
+    const o = F.order, Rd = F.read, v = Rd.les[o.k] || 0, g = TEACH.step * o.q * teachK(F) * (1 - v);
+    Rd.les[o.k] = v + g; Rd.lv++;
+    if (v < .3 && v + g >= .3) this.emit('learned', { a: F.side, k: o.k });
   }
   // he does what the corner said (once per shout, for the commentary)
   ack(F, k) { const o = F.order; if (o && !o.ack && o.k === k && R() < o.q) { o.ack = true; this.emit('heard', { a: F.side, k }); } }
