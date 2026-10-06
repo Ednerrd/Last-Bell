@@ -66,9 +66,15 @@ Styles already differ in mix (out-boxer 54% jab, slugger 66% power, body snatche
 
 ## Steps (each a commit, sims before and after, never balance + visuals together)
 - ✅ **B0:** `tests/brain.js` and a baseline report. No engine change.
-- **B1:** Opponent memory with fading. Recording only first (same.js hash holds), then wired into combo picks.
+- ✅ **B1:** Opponent memory with fading (`F.mem`, `memAdd`/`memPeek`, `punchVal`). Results, Oct 6:
+  - Memory feeds combo picks and wanted range. The scouting report (`GUARD_HOLES`) fades out as his own memory builds (`MEMV.seen`).
+  - A first cut (stronger inference, flat block value) took IQ 90 vs 40 to 61–63%, but broke balance: cross 43%, slugger 55%, spoiler 45%. Blocking guards got read twice (scouting + memory), and the out-boxer got dragged inside.
+  - Final: block value uses the real `blockLeak` per guard and punch, inference .6, range shift 10 (out-boxers at .3 toward inside).
+  - Balance: audit 56.4 / 16.2 / 28.7%, stoppages 33%. Base styles 47.8–52.2 (pairs). Guards 47–59 over two runs (±3). Specials 47.4–54.4.
+  - IQ 90 vs 40 pooled over 800 fights: ~56%, about where it started; rounds won early → late 55 → 60%. **Memory alone doesn't make IQ win fights.** The lever is B3, where a low-IQ man can't use what he's seen.
+- **B1 (original line):** Opponent memory with fading. Recording only first (same.js hash holds), then wired into combo picks.
 - **B2:** Intent modes and rhythm, from style DNA.
-- **B3:** Anticipation plus the defense-keyed counter table.
+- **B3 (next, moved ahead of B2):** Anticipation plus the defense-keyed counter table.
 - **B4:** Setups, feint traps, "show it twice, change it".
 - **B5:** In-round and between-round adjustments, plus "what hurt me".
 - **B6:** DNA numbers for every style from the research cards, then a full balance pass.
