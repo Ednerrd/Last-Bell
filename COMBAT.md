@@ -25,8 +25,8 @@ Full detail: `research/combat_research.md` (Fight Night, Undisputed, Thrill of t
 9. **E: contact quality.** (9a events + extension damage (straights) + AI reads extension done, see NOTES.md "Contact quality"; next: hit-stop and looks per quality, render) Clean / glancing / smothered / blocked, each with its own look and hit-stop (2–3 frames on a jab, 4–6 on power, 8–10 on a knockdown, ~0 when blocked).
 10. **E: smarter AI.** Pick targets around the guard (high guard opens the body, low hands open the head), a fading memory of what hurt him, styles that differ in rhythm and range as well as numbers.
 11. **R + E: footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet (bouncy when fresh, flat when tired).
-12. **R: punches that hit, not paw** (Ed, Oct 5). Visible load, snap out, short hold, snap back; shoulder and hips through it. Details in HANDOFF.md "Next".
-13. **E: stamina, pacing, body shots** (Ed, Oct 5). Work rate drains `stamMax`, fatigue cuts power/speed/output, liver shot, wind knocked out, body work slows legs and drops elbows. Order: 12, then 13, then 10 (hurt/tired thinking needs 13).
+12. ✅ **R: punches that hit, not paw** (Ed, Oct 5). Visible load, snap out, short hold, snap back; shoulder and hips through it. Details in HANDOFF.md "Next".
+13. ✅ **E: stamina, pacing, body shots** (pacing AI not done) (Ed, Oct 5). Work rate drains `stamMax`, fatigue cuts power/speed/output, liver shot, wind knocked out, body work slows legs and drops elbows. Order: 12, then 13, then 10 (hurt/tired thinking needs 13).
 
 Fight Night Champion / Round 3 notes and what to steal: `research/fnc.md`.
 
