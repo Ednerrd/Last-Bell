@@ -8,7 +8,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `BRAIN.md` (the b
 - **Before you start, `git fetch` and check the other branches.** Ed runs parallel sessions. This session lost a pass by building on a two-day-old base while another session was rebuilding the same brain on the main line. If a newer branch touches the same code, ask Ed before working on it.
 - **Commit trailer:** `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <your session link>`. No model IDs anywhere else.
 - **Never publish to the live game** without Ed's explicit OK. Free to republish: the brain lab, the fight lab, the private preview (links in CLAUDE.md). The plain fight lab still shows the main line without the brain. Don't overwrite it with an older build (check what's live first, `Artifact read`).
-- **Engine changes:** sims before and after, never balance + visuals in one commit. same.js hash is **9fe862cf**.
+- **Engine changes:** sims before and after, never balance + visuals in one commit. same.js hash is **8a08e67b**.
 
 ## Where we are
 - **The brain (BRAIN.md):** B0 report, B1 opponent memory with fading, B3 anticipation + counters keyed to the defense used. On the main line: IQ 90 beats IQ 40 63%, IQ 80 beats 60 58%, a habit fighter gets figured out (smart man's counters climb 2.0 → 2.6/rd).

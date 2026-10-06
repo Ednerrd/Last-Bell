@@ -140,4 +140,6 @@ Hash 84ba46a3 -> **9fe862cf**. For B6: swarmer 47.4 sits just under the 48 floor
 - **B4:** Setups, feint traps, "show it twice, change it".
 - **B5:** In-round and between-round adjustments, plus "what hurt me". Started: corner as teacher (section above). Next: decide how big a lesson should be (`TEACH.max`), and let the fighter's own read carry between rounds the same way.
 - **B6:** DNA numbers for every style from the research cards, then a full balance pass.
+  - **Guards (Oct 6), after round awareness.** Before (300 each @82 vs standard): high 40.4, cross 42.7, peekaboo 57.1, philly 52.6, handslow 59.3 (900). The body holes weren't the lever (halving `GUARD_HOLES` body values for high/cross: 43.5 / 41.3); head movement was. `GUARDS.high.ev` .82 → .92, `cross.ev` .8 → .92 + `cross.body` .8 → .9, `handslow.ev` 1.3 → 1.27 (1.25 gave 55.1, under peekaboo).
+  - After: high 48.5 (600), cross 51.3 (600), peekaboo 48.6, philly 55.3, handslow 57.4. Audit 53.5 / 15.1 / 28.2%, stops 25.2%. One run of 300 swung 52.2 → 43.2 on the same patch: pool 600+ per guard. Hash 8a08e67b.
 - Lab republished after each engine step so Ed can watch the brain work.
