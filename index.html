@@ -533,6 +533,17 @@ const DEF_CLEAN = { none: () => 1, stun: () => 1.4, block: (P, O) => blockLeak(O
 // prior: evidence a memory needs before it beats the average. inf/emp: weight of what his defense habits say vs what has actually landed. ctr: how much getting countered puts him off a punch
 const MEMV = { prior: 4, inf: .6, emp: .7, ctr: 1.5, lo: .55, hi: 1.8, range: 10, seen: 20 }; // seen: how much evidence until his own eyes replace the scouting report on guard holes // range: how far he shifts his distance toward where his working punches are
 const MEM_IN = ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook'], MEM_OUT = ['jab', 'cross', 'bodyJab', 'bodyCross'];
+// anticipation: a punch he saw coming. react: more likely to defend it. pick: reaches for the right defense. ctr: counters it harder. prior: evidence before a read means anything
+const ANT = { react: .6, pick: 2, ctr: .6, prior: 3 };
+const ANT_BEST = { straight: 'slip', hook: 'duck', upper: 'pull', body: 'block' };
+// how sure he is this punch was coming (0 = no idea, 1 = called it): what the man leads with, or what he throws after the last one
+function antRead(D, A, type, now) {
+  const M = D.mem, pre = A.prevP; let tot = 0, hit = 0;
+  if (pre) { for (const key in M.after) if (key.startsWith(pre + '>')) { const e = memPeek(D, M.after, key, now); tot += e.n; if (key === pre + '>' + type) hit = e.n; } }
+  else for (const p in M.lead) { const e = memPeek(D, M.lead, p, now); tot += e.n; if (p === type) hit = e.n; }
+  const base = 1 / Object.keys(PUNCH).length, q = (hit + ANT.prior * base) / (tot + ANT.prior);
+  return clamp((q - base) / .5, 0, 1) * iqK(D);
+}
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
@@ -1057,23 +1068,31 @@ class Fight {
     if (D.lostT > 0) ch *= STYLE_ANGLE.react;
     if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
     if (D.st.spoil && A.queue.length && D.state !== 'punch' && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) { this.startClinch(D); return; } // sees the combo coming, ties him up
+    const rd = antRead(D, A, A.act ? A.act.type : 'jab', this.t); D.antic = rd > 0 ? { p: A.act ? A.act.type : 'jab', rd, t: this.t } : null;
+    ch *= 1 + ANT.react * rd;
     if (R() > ch) return;
+    const best = ANT_BEST[defKind(P)], bw = x => x === best ? 1 + ANT.pick * rd : 1;
     A.read.reacts++;
     // which defense he reaches for depends on his guard
     let kind;
-    if (P.zone === 'body') kind = wpick(['block', 'pull'], k => ({ block: 65 * gdw(D, 'block') * Math.min(1.2, gf(D, 'body')), pull: 35 * gdw(D, 'pull') })[k]);
-    else if (P.kind === 'straight') kind = wpick(['slip', 'block', 'pull', 'duck', 'roll'], k => ({ slip: D.s.defense * gdw(D, 'slip'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), duck: D.s.defense * .4 * gdw(D, 'duck'), roll: 55 * gdw(D, 'roll') })[k]);
-    else if (P.kind === 'hook') kind = wpick(['duck', 'block', 'pull', 'roll'], k => ({ duck: D.s.defense * gdw(D, 'duck'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), roll: 22 * gdw(D, 'roll') })[k]);
-    else kind = wpick(['block', 'pull'], k => ({ block: 60 * gdw(D, 'block'), pull: D.s.footwork * gdw(D, 'pull') })[k]);
+    if (P.zone === 'body') kind = wpick(['block', 'pull'], k => ({ block: 65 * gdw(D, 'block') * Math.min(1.2, gf(D, 'body')), pull: 35 * gdw(D, 'pull') })[k] * bw(k));
+    else if (P.kind === 'straight') kind = wpick(['slip', 'block', 'pull', 'duck', 'roll'], k => ({ slip: D.s.defense * gdw(D, 'slip'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), duck: D.s.defense * .4 * gdw(D, 'duck'), roll: 55 * gdw(D, 'roll') })[k] * bw(k));
+    else if (P.kind === 'hook') kind = wpick(['duck', 'block', 'pull', 'roll'], k => ({ duck: D.s.defense * gdw(D, 'duck'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), roll: 22 * gdw(D, 'roll') })[k] * bw(k));
+    else kind = wpick(['block', 'pull'], k => ({ block: 60 * gdw(D, 'block'), pull: D.s.footwork * gdw(D, 'pull') })[k] * bw(k));
     if (D.state === 'punch') { D.act = null; D.queue = []; D.state = 'idle'; }
     D.pendingDef = { kind, at: 0.05 + (1 - D.s.speed / 100) * 0.13, dur: .34 }; D.defZ = P.zone;
     if (D.order) this.ack(D, kind === 'block' || kind === 'roll' ? 'hands' : kind === 'pull' ? 'move' : '');
     if (kind === 'pull') { const v = vec(D, A); D.vx = -v.ux * 55; D.vz = -v.uz * 55; D.pullX = -v.ux; D.pullZ = -v.uz; D.pullT = .22; }
   }
   // counter shot(s) fired off a miss or out of the guard
-  pickCounter(D, d, roll) {
+  pickCounter(D, d, roll, def) {
     const k = iqK(D);
     if (roll) return d < 60 && R() < .35 ? ['cross', 'hook'] : ['cross'];
+    // the counter that fits the defense: slip the straight, right hand over it; duck the hook, come back up with one; pull back, step in behind a straight
+    if (def && R() < .35 + .5 * k) {
+      const c = def === 'slip' ? (d < 56 ? ['hook', 'cross'] : ['cross', 'hook']) : def === 'duck' ? (d < 50 ? ['uppercut', 'hook'] : ['hook', 'cross']) : def === 'pull' ? ['cross', 'hook'] : null;
+      if (c) return R() < .3 + .5 * k ? c : c.slice(0, 1);
+    }
     if (d < 54) { const c = pick([['hook'], ['uppercut'], ['cross'], ['hook', 'cross'], ['uppercut', 'hook'], ['cross', 'hook']]); return R() < .4 + .4 * k ? c : c.slice(0, 1); }
     return R() < .3 * k ? ['cross', 'hook'] : ['cross']; // slip, 2-3: the smart ones follow the counter up
   }
@@ -1210,9 +1229,10 @@ class Fight {
       const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1) * ctrEdge(D)
         * (P.cat === 'jab' ? TUNE.jabCtr : 1) // a jab snaps back: much harder to counter than a missed hook
         * (A.st.inside && dist(A, D) < STYLE_IN.at ? 1 - STYLE_IN.ctr * A.st.inside : 1); // no room to counter a man on your chest
-      if (R() < Math.min(.95, ch) && D.state !== 'punch') {
+      const an = D.antic && D.antic.p === a.type && this.t - D.antic.t < 1 ? D.antic.rd : 0; // he saw this one coming
+      if (R() < Math.min(.95, ch * (1 + ANT.ctr * an)) && D.state !== 'punch') {
         D.counterWin = .6; D.def = null; D.pendingDef = null; memAdd(A, A.mem.mine, a.type, this.t, { c: 1 });
-        const c = this.pickCounter(D, dist(A, D), def === 'roll');
+        const c = this.pickCounter(D, dist(A, D), def === 'roll', def);
         D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter');
         A.lastRes = 'countered';
       }
