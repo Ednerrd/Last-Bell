@@ -449,7 +449,7 @@ function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 
 function ctrEdge(D) { const o = D.order; return o && o.k === 'counter' ? Math.max(.2, 1 + orderPow(D) * SHOUT_EDGE.ctr) : 1; }
 // the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
 // step: how much one payoff teaches (times how well he took the call and teachK), max: a full lesson is worth this much of the shout, keep: what survives the break
-const TEACH = { step: .12, max: .4, keep: .6 };
+const TEACH = { step: .18, max: .7, keep: .7 };
 // who learns from the corner: ring IQ, and above all experience (a kid in his 3rd fight vs a man in his 25th)
 function teachK(F) { return clamp(.15 + .45 * iqK(F) + .4 * Math.min(1, Math.sqrt(F.sheet.exp || 0) / 5), 0, 1); }
 function mixMods(out, m, q) { for (const k in m) out[k] = SHOUT_ADD[k] ? (out[k] || 0) + m[k] * q : (out[k] == null ? 1 : out[k]) * (1 + (m[k] - 1) * q); return out; }

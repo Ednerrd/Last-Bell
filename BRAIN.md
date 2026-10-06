@@ -98,6 +98,9 @@ Built first on the old step-5 engine, then re-applied on this branch's tip (`563
 
 **What survives the break** (`QUIET=3 node tests/teach.js 300 82 body 20`; the corner only calls "Body!" in rounds 1–3, control `PATCH="TEACH.max=0"`): lesson at the bell .34 / .43 / .47 in rounds 1–3, then .28 / .17 / .10 / .06 in rounds 4–7 once the corner is quiet. Body share in round 4: 22.0% vs 21.7% control (old engine: 22.9 vs 21.6). A live body call moves it about 4.5 points. With `TEACH.keep=1` (old engine) the lesson holds at ~.69 all fight but is still worth only ~1 point. **The break is not what washes it out, the size is:** a full lesson is at most 40% of a call, and a call itself is small. The dials are `TEACH.max` / `step` (and the `SHOUTS` mods), not `keep`. Ed's call.
 
+**Ed's call (Oct 6): medium.** `TEACH` step .12 → .18, max .4 → .7, keep .6 → .7. Same QUIET=3 body test, body share with the corner quiet (control 20.9 / 21.3 / 20.3 in rounds 4 / 6 / 7): old 21.4 / 21.4 / 20.8, max .7 + step .18 alone 22.7 / 21.8 / 21.2, **with keep .7 23.2 / 22.3 / 21.3** (lesson at the bell .45 in round 4, .15 by round 7).
+Win rates, smart corner vs a quiet one (shout.js, rating 82): old 51.8 (600; 51.9 pooled over 1800 with the milder variants: max .7 keep .6 51.4, max .55 keep .7 52.6). **New 55.8 ±1.1 over 2400** (runs of 600 went 61.4, 52.1, then 54.8 over 1200: pool before trusting one run). Oracle 60.7 (600, was 58.7). Hash holds at 84ba46a3 (no shouts in same.js).
+
 ## Steps (each a commit, sims before and after, never balance + visuals together)
 - ✅ **B0:** `tests/brain.js` and a baseline report. No engine change.
 - ✅ **B1:** Opponent memory with fading (`F.mem`, `memAdd`/`memPeek`, `punchVal`). Results, Oct 6:
