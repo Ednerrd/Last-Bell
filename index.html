@@ -238,6 +238,7 @@ const PNUM = { 1: 'jab', 2: 'cross', 3: 'hook', 4: 'rhook', 5: 'lupper', 6: 'upp
 // legs: footwork going back and sideways. stick: jabs the man walking in and stops his feet
 // hit: weight behind the power shots. ramp: turns the volume up when the fight calls for it
 // out: slides out on an angle when the other guy gets inside. inside: smothers you in close (no room to slip or counter)
+// cond: conditioning, how much his work wears the tank (1 = normal; swarmers are built for the pace)
 // special-style traits: eco (cheaper punches), angle (steps off after combos, he loses you), odd (hard to read, weird timing),
 // leap (lunges in from further out), swap (switches stance, resets your read), bodyX (body shots hurt more), pjab (jab on the way in),
 // spoil (ties up combos, dirty work in the clutches), grab (grabs when you get close, leans), bite (feints that make you commit)
@@ -246,7 +247,7 @@ const STYLES = {
     bias: { speed: 2, footwork: 3, defense: 1, accuracy: 3, heart: 3, power: -3, chin: -1 } },
   slugger: { label: 'Slugger', desc: 'Walks you down and sits on every shot. Fewer punches, all of them heavy.', range: 58, ret: .6, circ: .2, cutK: .85, aggr: .68, counter: .2, feint: .5, clinch: 1, gen: 0, legs: .92, hit: 1.3, inside: .7,
     bias: { power: 10, chin: 7, heart: 2, speed: -2, footwork: -4, defense: -1 } },
-  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.15,
+  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.15, cond: .55,
     bias: { stamina: 7, heart: 4, body: 4, speed: 3, power: 4, defense: 2, footwork: -1 } },
   counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .68, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
     bias: { defense: 4, accuracy: 6, recovery: 2, heart: 3, chin: 2, stamina: -2, power: -5 } },
@@ -310,7 +311,7 @@ const STYLE_GUARDS = {
   boxerpuncher: { standard: 3, high: 1.4, philly: 1, peekaboo: .6, handslow: .4 }
 };
 // a fighter still learning a style fights as a blend of the old one and the new one
-const STYLE_DEF = { legs: 1, hit: 1, ret: .7 };
+const STYLE_DEF = { legs: 1, hit: 1, ret: .7, cond: 1 };
 function blendStyle(sh) {
   const to = STYLES[sh.style] || STYLES.boxerpuncher, from = sh.styleFrom && STYLES[sh.styleFrom], f = sh.styleFit == null ? 1 : clamp(sh.styleFit, 0, 1);
   if (!from || f >= 1) return to;
@@ -495,7 +496,7 @@ const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
 // A smaller tank refills slower (regen) and a worn man is slower and weaker even fresh off the stool (tank)
-const STAM = { free: 45, wear: .05, regen: .4, tank: .3 };
+const STAM = { free: 45, wear: .05, regen: .5, tank: .45 };
 // body shots that end things. Liver: a shot to his right side (orthodox lead hook, southpaw straight left) folds him a beat later,
 // awake but he can't beat the count. Wind: a straight in the gut freezes him, hands down, the gas goes. Both need a real shot (danger
 // over a floor) and grow as the body wears and with a weak body stat; a counter or a man walking in doubles it.
@@ -1379,7 +1380,7 @@ class Fight {
       F.head = Math.min(F.headMax, F.head + (F.headMax - F.head) * (.25 + rec * .35) + 3);
       F.head = Math.max(F.head, 8);
       F.body = Math.min(100, F.body + (100 - F.body) * (.15 + rec * .2));
-      F.stamMax = Math.max(30, F.stamMax - Math.max(0, (F.work || 0) - STAM.free) * STAM.wear * (1.3 - F.s.stamina / 100 * .6)); F.work = 0; // a hard round costs the tank
+      F.stamMax = Math.max(30, F.stamMax - Math.max(0, (F.work || 0) - STAM.free) * STAM.wear * (1.3 - F.s.stamina / 100 * .6) * (F.st.cond || 1)); F.work = 0; // a hard round costs the tank
       F.stam = Math.min(F.stamMax, F.stam + (F.stamMax - F.stam) * (.5 + rec * .4));
       // the cutman slows the bleeding and closes it a little; he can't make a bad cut go away
       F.cut = Math.max(0, F.cut - this.cutman[F.side] * CUT.cutman * rnd(.7, 1.2));
