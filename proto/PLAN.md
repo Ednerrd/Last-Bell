@@ -75,3 +75,7 @@ Research (FNC + Thrill of the Fight) and the items it adds to each phase: `proto
 - **Heat and battery** in long idle sessions. That's why Phase 0 comes first and the 30 fps option exists.
 - **File size and complexity.** index.html grows to about 5,000 lines. The render3d section must stay self-contained.
 - **Two renderers to maintain.** 2D gets frozen and becomes fallback only. No new 2D features after the merge.
+
+## Guard reference for the 3D models (Ed, Oct 6 2026)
+- **Cross-arm (Ken Norton, Ed's photos):** both forearms horizontal, stacked across the body. Rear forearm on top, across the chest just under the chin, rear glove resting on the lead shoulder. Lead forearm below, across the belly, lead glove out at the rear side. Chin tucked down behind the top arm and the lead shoulder, elbows tight to the ribs. The 2D render can only fake this (forearms point at the camera); the 3D model should show the stack. Right hand comes straight off the chin, no hammer.
+- **Philly / cross-arm blocks:** elbows stay down by the ribs, never winged out (Ed: "elbows out, not natural").
