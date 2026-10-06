@@ -45,8 +45,27 @@ This replaces COMBAT.md steps 8 (rhythm) and 10 (smarter AI) and feeds step 9. S
 - **Style identity:** output, jab share, body % and range per style, compared with the DNA cards.
 - **Plus the usual targets:** audit (~56/16/29%, stops ~30%), styles 48–53, guards, specials, shouts.
 
+## B0 baseline (Oct 6, `node tests/brain.js`, rating 80, 10 rds)
+Run: `node tests/brain.js tempo 400`, `iq 400`, `adapt 300`, `styles 640` (one process each, ~5 min in parallel).
+
+| Measure | Now | Target |
+|---|---|---|
+| decide() doing nothing | 52% | n/a (modes replace the roll) |
+| Quiet gaps over 4 s | 1.8% (p90 2.3 s) | ~8–12% (feel-outs, resets) |
+| Burstiness (CV of punches per 30 s) | 0.30 | ~0.5 |
+| Output by round (per man) | 60 → 57 → 59, flat | round 1 ~15% under mid-fight, late rounds up (real cards: slow start, late surge) |
+| IQ 90 vs 40, identical stats | wins 56% (loses 33%) | ~70%+ |
+| IQ 90 vs 40, rounds won early → late | 57 → 60% | edge grows: ~55 → 70% |
+| IQ 80 vs 60 | wins 46% vs 42%, a coin flip | ~58% |
+| Slip habit: smart man's hook/upper share early → late | 32 → 29%, goes the WRONG way | climbs (he hooks the slipper) |
+| 1-2 habit: smart man stops it early → late | 66 → 66%, flat | climbs 10+ points; IQ 40 stays flat |
+
+Why the slip test goes backwards: `read.av` counts avoided shots per punch kind, and a man who slips everything avoids straights and hooks alike, so the read learns nothing. The 1-2 test is flat because `react()` has no memory at all.
+
+Styles already differ in mix (out-boxer 54% jab, slugger 66% power, body snatcher 32% body, counter-puncher 4.2 counters landed/rd vs ~1.1 for the slugger). They don't differ in rhythm.
+
 ## Steps (each a commit, sims before and after, never balance + visuals together)
-- **B0:** `tests/brain.js` and a baseline report. No engine change.
+- ✅ **B0:** `tests/brain.js` and a baseline report. No engine change.
 - **B1:** Opponent memory with fading. Recording only first (same.js hash holds), then wired into combo picks.
 - **B2:** Intent modes and rhythm, from style DNA.
 - **B3:** Anticipation plus the defense-keyed counter table.

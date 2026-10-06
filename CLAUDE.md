@@ -36,6 +36,7 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials, pairs to split over cores).
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
 - `node tests/same.js 200`: seeded determinism hash for recording-only engine changes (now f00751e1).
+- `node tests/brain.js [tempo|iq|adapt|styles] N`: the brain report (decision mix, rhythm, IQ ladder, habit exploitation, style identity). Baseline + targets in BRAIN.md.
 - `node tests/gym.js 3`: gym mode headless for N years (signing, training, booking, fights, P4P).
 - Also: `cut.js`, `diag.js`, `probe.js`, `commtest.js`; Playwright captures `strip.py`, `shot.py`, `live.py` into `shots/` (gitignored).
 
