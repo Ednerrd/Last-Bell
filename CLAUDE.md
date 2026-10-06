@@ -35,7 +35,8 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials, pairs to split over cores).
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
-- `node tests/same.js 200`: seeded determinism hash for recording-only engine changes (now f00751e1).
+- `node tests/same.js 200`: seeded determinism hash for recording-only engine changes (now 6e268e4f).
+- `node tests/teach.js 300 82 body 20` (`QUIET=3`, control `PATCH="TEACH.max=0"`): corner-as-teacher dev log, lesson strength per round and what survives the break.
 - `node tests/gym.js 3`: gym mode headless for N years (signing, training, booking, fights, P4P).
 - Also: `cut.js`, `diag.js`, `probe.js`, `commtest.js`; Playwright captures `strip.py`, `shot.py`, `live.py` into `shots/` (gitignored).
 
