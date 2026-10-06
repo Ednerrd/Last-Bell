@@ -75,6 +75,14 @@ What the knobs do: vol/pace = punch output; jabEv/jabBlk = jabs get picked off m
 - After (gas.js / bodykd.js / audit 500 / styles 300 per pair / guards 300 / specials 200): output 54 -> 50 by r9 (swarmer 82 -> 71, tank 71 by r9; slugger tank 66). Audit 52.7 thrown / 15.2 landed / 28.9%, KDs 1.0, stops 25%. Styles 47.7-51.1 (slugger 50.3). Guards 45.0-57.1 (high 45-46, was 46.1 before; handslow 54-57, was 61). Specials 45.9-53.5 (spoiler low). Body KDs 5.9% (liver ~5%), wind ~.2/fight. DMG .35 -> .38. same.js hash d48949f6.
 - Not done: AI pacing (a gasser saving it for later), smell-blood weighing (idea 3).
 
+## Spoiler fix and high guard check (Oct 2026, pre-3D)
+- High guard @82 vs standard: 47.1% ±1.9 (n800). Inside noise of the 48 floor, left alone.
+- Spoiler was 45.7% ±1.2 vs the base styles (n1772; out-boxer 40, counter 43, slugger 46, boxer-puncher 48, swarmer 51). Why: his lean in the clinch drained only in-round stamina, and the clinch refills both men faster (2.5 + stamina/40 per s) than the lean drains (2/s), so it did nothing since the gas work. He also clinches little (0.1-1.7 s per round; only when hurt, gassed, trapped, or a combo is coming up close).
+- Fix: carrying a veteran's weight counts as work for the man held (`STYLE_SPOIL.wear` x lean per s goes into `O.work`, so it wears his tank at the bell). Spoiler only; the jab-and-grab's lean is unchanged.
+- Measured (vs:spoiler, 200 per pair x 2 runs each): wear 3 -> 47.5, wear 3 + also tie up single close power shots -> 47.8 (dropped, no gain), wear 3 + no stamina bias -> 48.9, **wear 6 -> 48.9 (kept)**: out-boxer 43, counter 46, slugger 49, boxer-puncher 48, swarmer 58. same.js unchanged (d48949f6): base-style fights never touch it.
+- Still open: the out-boxer is his worst matchup (he never gets close enough to grab).
+
+
 ## Rhythm (Oct 2026, COMBAT step 8a)
 - `TEMPO` + `beat()` / `rstP()` / `tempoStart()`. An exchange ends when nobody is punching or has a combo queued for .3 s (`this.quiet`). Then the pair may reset for 1.5-4 s (chance = 1.2 x the *less* patient man's `rstP`, so a swarmer rarely lets you reset; each man resets >= 70% as long). Reset: aggr x .03, want +10, feints x1.6 that are mostly just a look (10% follow-up), queued combos dropped, jabbers keep touching (`rJab` x jabbiness: stick/out/pjab). Rounds open with a feel-out (7-12 s first round, 2-5 s after, x clamp(1.4 - .5 aggr)): aggr x .25 fading, want +6.
 - `rstP` = clamp(.7 - .25 aggr - .25 cutK) x strategy (pressure/ko .5, move/counter 1.3), tiny vs a hurt man. Output kept by `F.rq` (share of the last 20 s resetting/feeling out): aggr / max(.72, 1 - rq) outside resets. TUNE.vol stays .36.
