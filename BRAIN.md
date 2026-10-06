@@ -73,8 +73,15 @@ Styles already differ in mix (out-boxer 54% jab, slugger 66% power, body snatche
   - Balance: audit 56.4 / 16.2 / 28.7%, stoppages 33%. Base styles 47.8–52.2 (pairs). Guards 47–59 over two runs (±3). Specials 47.4–54.4.
   - IQ 90 vs 40 pooled over 800 fights: ~56%, about where it started; rounds won early → late 55 → 60%. **Memory alone doesn't make IQ win fights.** The lever is B3, where a low-IQ man can't use what he's seen.
 - **B1 (original line):** Opponent memory with fading. Recording only first (same.js hash holds), then wired into combo picks.
-- **B2:** Intent modes and rhythm, from style DNA.
-- **B3 (next, moved ahead of B2):** Anticipation plus the defense-keyed counter table.
+- **B2 (next):** Intent modes and rhythm, from style DNA.
+- ✅ **B3 (done before B2):** Anticipation plus the defense-keyed counter table (`antRead`, `antOn`, `ANT`, `ANT_BEST`, `pickCounter(…, def)`).
+  - A read punch is defended more often (`ANT.react` .35) with the right defense: slip the straight, duck the hook, a block-leaning guard gets the gloves there. It's countered harder (`ANT.ctr` .3), and caught cleaner on the gloves (`ANT.catch` .4). Jab reads count half.
+  - The first cut (react .6, ctr .6) took IQ 90 vs 40 to 67%, but put the counter-puncher at 66% and connect at 25.9%. Tuning: counter style .68 → .62, `STYLE_IN.ctr` .5 → .65, swarmer inside 1.15 → 1.3, `TUNE.react` .8 → .75, hands-low ctr 1.3 → 1.2.
+  - Final: audit 57.2 / 16.1 / 28.1%, stoppages 31%. Base styles 48.7–51.4.
+  - IQ 90 vs 40 ~66% pooled (62–71 across runs); IQ 80 vs 60 ~55%. The 1-2 habit man loses 64% to IQ 90 and only 36% to IQ 40; the smart man's counters climb 2.3 → 3.0/rd.
+  - **For B6:**
+    - Guards spread wider: high 41, cross 45, peekaboo 47, philly 58, hands-low 60. Smart opponents work the open body of high and cross; body cover +.08 made no difference.
+    - Specials: feint master 42.8, jab-and-grab 46.
 - **B4:** Setups, feint traps, "show it twice, change it".
 - **B5:** In-round and between-round adjustments, plus "what hurt me".
 - **B6:** DNA numbers for every style from the research cards, then a full balance pass.

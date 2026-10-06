@@ -246,9 +246,9 @@ const STYLES = {
     bias: { speed: 2, footwork: 3, defense: 1, accuracy: 3, heart: 3, power: -3, chin: -1 } },
   slugger: { label: 'Slugger', desc: 'Walks you down and sits on every shot. Fewer punches, all of them heavy.', range: 58, ret: .6, circ: .2, cutK: .85, aggr: .68, counter: .2, feint: .5, clinch: 1, gen: 0, legs: .92, hit: 1.3, inside: .7,
     bias: { power: 10, chin: 7, heart: 2, speed: -2, footwork: -4, defense: -1 } },
-  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.15,
+  swarmer: { label: 'Swarmer', desc: 'Relentless. Throws all night and makes every round a war. Burns gas.', range: 54, ret: .45, circ: .3, cutK: 1.05, aggr: 1.85, counter: .25, feint: .6, clinch: 1.1, gen: 0, inside: 1.3,
     bias: { stamina: 7, heart: 4, body: 4, speed: 3, power: 4, defense: 2, footwork: -1 } },
-  counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .68, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
+  counter: { label: 'Counter-puncher', desc: 'Patient. Waits for you to throw, then makes you pay for it.', range: 68, ret: .9, circ: .6, cutK: .4, aggr: .48, counter: .62, feint: 1.4, clinch: .8, gen: .22, open: 1, legs: 1.08,
     bias: { defense: 4, accuracy: 6, recovery: 2, heart: 3, chin: 2, stamina: -2, power: -5 } },
   boxerpuncher: { label: 'Boxer-puncher', desc: 'A bit of everything. Boxes, then turns it up when the fight calls for it.', range: 66, ret: .8, circ: .5, cutK: .6, aggr: .8, counter: .45, feint: 1, clinch: .9, gen: .12, open: .3, ramp: .8,
     bias: { power: 3, accuracy: 3, speed: 2, footwork: 3, heart: 2 } },
@@ -290,7 +290,7 @@ const GUARDS = {
   cross: { label: 'Cross-arm', desc: 'Forearms locked across the face. Built for head shots and uppercuts. The ribs and liver hang out.',
     head: 1.2, body: .66, str: 1.08, hook: 1.05, up: 1.45, ev: .8, ctr: .9, hold: 1.35, def: { block: 2.2, slip: .5, duck: .6, pull: .6 } },
   handslow: { label: 'Hands low', desc: 'Gloves at the waist, eyes wide open. Sees everything and fires back, but pays for it when the legs go.',
-    head: .75, body: .9, str: .9, hook: .85, up: 1, ev: 1.3, ctr: 1.3, hold: .7, skill: ['defense', 'footwork', 'speed'], def: { block: .4, slip: 1.3, duck: .9, pull: 2 } }
+    head: .75, body: .9, str: .9, hook: .85, up: 1, ev: 1.3, ctr: 1.2, hold: .7, skill: ['defense', 'footwork', 'speed'], def: { block: .4, slip: 1.3, duck: .9, pull: 2 } }
 };
 // what a smart opponent throws into each guard
 const GUARD_HOLES = {
@@ -425,7 +425,7 @@ const STYLE_PLANS = {
   switch: { auto: 6, counter: 1, move: 1 }, body: { auto: 6, body: 3, pressure: 1 }, pboxer: { auto: 6, pressure: 3 },
   spoiler: { auto: 6, counter: 2, move: 1 }, jabgrab: { auto: 6, move: 2 }, feinter: { auto: 6, counter: 1, move: 1 }
 };
-const STYLE_IN = { at: 54, ev: .4, ctr: .5 };
+const STYLE_IN = { at: 54, ev: .4, ctr: .65 };
 const STYLE_ANGLE = { p: .17, lost: .32, react: .6, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
 const STYLE_ODD = { react: .08, read: .25 };                                 // awkward: less time to react, his read is half as useful
 const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
@@ -467,7 +467,7 @@ function freeRun(x, z, dx, dz) {
   return Math.max(0, t);
 }
 let DMG = 0.35; // global tuning
-const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
+const TUNE = { ev: .3, guard: .34, react: .75, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
 
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
 function cutChance(D, dmg, crit) {
@@ -511,8 +511,39 @@ function mkF(sheet, side) {
     guard: GUARDS[sheet.guard] ? sheet.guard : 'standard', gSkill: 1, iq: ringIQ(sheet), gi: 1, giWarn: 0, defZ: 'head',
     trapT: 0, bait: 0, fakeT: 0, spin: false, esc: null, exitAfter: false, resetT: 0, lastRes: null, lastCombo: null,
     // what he has learned about the other guy this fight: per punch kind thrown / avoided, per punch type thrown / landed
-    read: newRead()
+    read: newRead(), mem: newMem()
   };
+}
+/* ---------- memory: what he has learned about the other man this fight. Everything fades; ring IQ sets how much he notices and how long it sticks ----------
+   mine[p]: my punch p vs him (n thrown, l clean, b blocked, e evaded, c countered). his[p] / lead[p] / after['q>p']: what he throws, what he opens with, what follows what.
+   def[kind]: what he was doing when my punch of that kind (straight/hook/upper/body) arrived (n, none, block, slip, duck, pull, roll, stun). hurt[p]: damage his punch p did to me. */
+const MEM = { notice: [.3, 1], tau: [30, 110] }; // evidence per thing seen (low IQ .. high IQ), memory time constant in sim s (a round is 60)
+function newMem() { return { mine: {}, his: {}, lead: {}, after: {}, def: {}, hurt: {} }; }
+const memTau = F => lerp(MEM.tau[0], MEM.tau[1], iqK(F));
+function memGet(F, tbl, key, now) { const e = tbl[key] || (tbl[key] = { t: now }); const f = Math.exp(-(now - e.t) / memTau(F)); if (f < 1) for (const k in e) if (k !== 't') e[k] *= f; e.t = now; return e; }
+function memAdd(F, tbl, key, now, fields) { const e = memGet(F, tbl, key, now), w = lerp(MEM.notice[0], MEM.notice[1], iqK(F)); for (const k in fields) e[k] = (e[k] || 0) + fields[k] * w; return e; }
+const defKind = P => P.zone === 'body' ? 'body' : P.kind;
+function memPeek(F, tbl, key, now) { const e = tbl[key]; if (!e) return null; const f = Math.exp(-(now - e.t) / memTau(F)), o = {}; for (const k in e) if (k !== 't') o[k] = e[k] * f; return o; }
+// how much of a punch gets through each defense (mirrors resolve): a man who slips everything is open for hooks, a ducker eats uppercuts
+const DEF_CLEAN = { none: () => 1, stun: () => 1.4, block: (P, O) => blockLeak(O, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25),
+  slip: P => P.zone === 'head' && P.kind === 'straight' ? 0 : P.kind === 'hook' ? 1.15 : 1,
+  duck: P => P.zone === 'head' ? (P.kind === 'upper' ? 1.4 : 0) : 1,
+  pull: P => P.zone === 'head' ? .2 : .5,
+  roll: P => P.zone === 'body' ? .5 : P.kind === 'straight' ? .55 : P.kind === 'hook' ? .65 : 1.1 };
+// prior: evidence a memory needs before it beats the average. inf/emp: weight of what his defense habits say vs what has actually landed. ctr: how much getting countered puts him off a punch
+const MEMV = { prior: 4, inf: .6, emp: .7, ctr: 1.5, lo: .55, hi: 1.8, range: 10, seen: 20 }; // seen: how much evidence until his own eyes replace the scouting report on guard holes // range: how far he shifts his distance toward where his working punches are
+const MEM_IN = ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook'], MEM_OUT = ['jab', 'cross', 'bodyJab', 'bodyCross'];
+// anticipation: a punch he saw coming. react: more likely to defend it. pick: reaches for the right defense. ctr: counters it harder. prior: evidence before a read means anything
+const ANT = { react: .35, pick: 2, ctr: .3, prior: 3, jab: .5, catch: .4 }; // catch: a read punch caught on the gloves leaks less // jab: the jab is too quick to time even when he knows it's coming
+const ANT_BEST = { straight: 'slip', hook: 'duck', upper: 'pull', body: 'block' };
+const antOn = (D, type, now) => D.antic && D.antic.p === type && now - D.antic.t < 1 ? D.antic.rd : 0;
+// how sure he is this punch was coming (0 = no idea, 1 = called it): what the man leads with, or what he throws after the last one
+function antRead(D, A, type, now) {
+  const M = D.mem, pre = A.prevP; let tot = 0, hit = 0;
+  if (pre) { for (const key in M.after) if (key.startsWith(pre + '>')) { const e = memPeek(D, M.after, key, now); tot += e.n; if (key === pre + '>' + type) hit = e.n; } }
+  else for (const p in M.lead) { const e = memPeek(D, M.lead, p, now); tot += e.n; if (p === type) hit = e.n; }
+  const base = 1 / Object.keys(PUNCH).length, q = (hit + ANT.prior * base) / (tot + ANT.prior);
+  return clamp((q - base) / .5, 0, 1) * iqK(D) * (PUNCH[type].cat === 'jab' || type === 'bodyJab' ? ANT.jab : 1);
 }
 function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
@@ -783,6 +814,9 @@ class Fight {
     let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0);
     if (hurtOp) want -= 14;
     if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
+    // what's working decides where he wants to be: hooks landing, get inside; straights landing, stay long
+    { const pv = F.pv = this.punchVal(F); F.pvT = this.t; const avg = ks => ks.reduce((s, p) => s + pv[p], 0) / ks.length;
+      const sh = clamp(avg(MEM_IN) - avg(MEM_OUT), -1, 1); want -= MEMV.range * k * sh * (sh > 0 && st.out ? .3 : 1); } // an out-boxer adjusts inside his range, he doesn't turn brawler
     F.want = clamp(want + rnd(-4, 4), 40, 86);
     F.spd = (34 + F.s.footwork * 0.6) * (0.7 + 0.3 * sf) * (hurtMe ? .85 : 1);
     F.legs = st.legs || 1;
@@ -946,13 +980,34 @@ class Fight {
       F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
     this.startPunch(F, nx);
   }
+  // what each punch is worth against this man right now, from memory (1 = his average punch)
+  punchVal(F) {
+    const M = F.mem, now = this.t, pool = {}, out = {}, inf = {};
+    let pn = 0; for (const K in M.def) { const e = memPeek(F, M.def, K, now); for (const d in e) if (d !== 'n') pool[d] = (pool[d] || 0) + e[d]; pn += e.n; }
+    let tn = 0, tl = 0, tc = 0; for (const p in M.mine) { const e = memPeek(F, M.mine, p, now); tn += e.n; tl += e.l || 0; tc += e.c || 0; }
+    const Lp = (tl + MEMV.prior * .3) / (tn + MEMV.prior), Cp = (tc + MEMV.prior * .05) / (tn + MEMV.prior);
+    let vbar = 0;
+    for (const p in PUNCH) {
+      const P = PUNCH[p], e = memPeek(F, M.def, defKind(P), now), en = e ? e.n : 0; let v = 0;
+      for (const dk in DEF_CLEAN) { const ps = ((pool[dk] || 0) + (dk === 'none' ? MEMV.prior : 0)) / (pn + MEMV.prior); v += ((e && e[dk] || 0) + MEMV.prior * ps) / (en + MEMV.prior) * DEF_CLEAN[dk](P, F.op); }
+      inf[p] = v; vbar += v;
+    }
+    vbar /= Object.keys(PUNCH).length;
+    for (const p in PUNCH) {
+      const e = memPeek(F, M.mine, p, now), n = e ? e.n : 0;
+      const l = ((e && e.l || 0) + MEMV.prior * Lp) / (n + MEMV.prior), c = ((e && e.c || 0) + MEMV.prior * Cp) / (n + MEMV.prior);
+      out[p] = clamp(Math.pow(inf[p] / Math.max(.05, vbar), MEMV.inf) * Math.pow(l / Lp, MEMV.emp) * (1 - MEMV.ctr * (c - Cp)), MEMV.lo, MEMV.hi);
+    }
+    return out;
+  }
   pickCombo(F, d, sg, hurtOp) {
     const O = F.op, k = iqK(F), Rd = F.read;
     const ok = COMBOS.filter(c => { if (!comboW(F, c)) return false; const P = PUNCH[c.seq[0]]; const step = (P.kind === 'straight' ? 10 : 6) + (P.cat !== 'jab' ? F.st.leap || 0 : 0); return d <= P.max + step && d >= P.min - 6; });
     if (!ok.length) return null;
     const holes = GUARD_HOLES[O.guard] || {};
     const lead = F.side === 0 ? this.lead : -this.lead, late = this.round > this.rounds - 3;
-    const softBody = O.stam < O.stamMax * .45 || O.body < 55;
+    const softBody = O.stam < O.stamMax * .45 || O.body < 55, pv = F.pvT === this.t ? F.pv : this.punchVal(F), hf = {};
+    for (const p in PUNCH) { const e = memPeek(F, F.mem.def, defKind(PUNCH[p]), this.t), n = e ? e.n : 0; hf[p] = 1 - n / (n + MEMV.seen); }
     const c = wpick(ok, c => {
       const n = c.len; let w = comboW(F, c);
       const rc = RANGE_C[c.r]; w *= .25 + Math.exp(-Math.pow((d - rc[0]) / rc[1], 2));
@@ -962,10 +1017,8 @@ class Fight {
       // the read: guard holes, what he keeps avoiding, what keeps landing, the scorecards
       let read = 1;
       for (const p of c.seq) {
-        let f = (holes[p] || 1) * (F.stance !== O.stance ? OPEN_W[p] || 1 : 1);
-        const kd = kindOf(p), th = Rd.th[kd];
-        if (th >= 3) f *= clamp(1 + (.45 - Rd.av[kd] / th) * 1.2, .6, 1.4);
-        const tp = Rd.thr[p] || 0; if (tp >= 4) f *= clamp(.8 + (Rd.land[p] || 0) / tp * 1.1, .8, 1.5);
+        let f = Math.pow(holes[p] || 1, hf[p] == null ? 1 : hf[p]) * (F.stance !== O.stance ? OPEN_W[p] || 1 : 1); // the scouting report counts until he has seen it for himself
+        f *= pv[p] || 1;
         read *= Math.pow(f, 1 / n);
       }
       if (softBody) read *= 1 + c.body * .25;
@@ -990,6 +1043,7 @@ class Fight {
     F.stam = Math.max(0, F.stam - P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1));
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
+    { const O = F.op, now = this.t; memAdd(F, F.mem.mine, type, now, { n: 1 }); memAdd(O, O.mem.his, type, now, { n: 1 }); if (F.prevP) memAdd(O, O.mem.after, F.prevP + '>' + type, now, { n: 1 }); else memAdd(O, O.mem.lead, type, now, { n: 1 }); }
     this.react(F.op, F, P);
     this.emit('throw', { a: F.side, p: type });
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
@@ -1015,23 +1069,31 @@ class Fight {
     if (D.lostT > 0) ch *= STYLE_ANGLE.react;
     if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
     if (D.st.spoil && A.queue.length && D.state !== 'punch' && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) { this.startClinch(D); return; } // sees the combo coming, ties him up
+    const rd = antRead(D, A, A.act ? A.act.type : 'jab', this.t); D.antic = rd > 0 ? { p: A.act ? A.act.type : 'jab', rd, t: this.t } : null;
+    ch *= 1 + ANT.react * rd;
     if (R() > ch) return;
+    const best = gdw(D, 'block') > 1.5 ? 'block' : ANT_BEST[defKind(P)], bw = x => x === best ? 1 + ANT.pick * rd : 1; // a shell guy who reads it gets the gloves there
     A.read.reacts++;
     // which defense he reaches for depends on his guard
     let kind;
-    if (P.zone === 'body') kind = wpick(['block', 'pull'], k => ({ block: 65 * gdw(D, 'block') * Math.min(1.2, gf(D, 'body')), pull: 35 * gdw(D, 'pull') })[k]);
-    else if (P.kind === 'straight') kind = wpick(['slip', 'block', 'pull', 'duck', 'roll'], k => ({ slip: D.s.defense * gdw(D, 'slip'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), duck: D.s.defense * .4 * gdw(D, 'duck'), roll: 55 * gdw(D, 'roll') })[k]);
-    else if (P.kind === 'hook') kind = wpick(['duck', 'block', 'pull', 'roll'], k => ({ duck: D.s.defense * gdw(D, 'duck'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), roll: 22 * gdw(D, 'roll') })[k]);
-    else kind = wpick(['block', 'pull'], k => ({ block: 60 * gdw(D, 'block'), pull: D.s.footwork * gdw(D, 'pull') })[k]);
+    if (P.zone === 'body') kind = wpick(['block', 'pull'], k => ({ block: 65 * gdw(D, 'block') * Math.min(1.2, gf(D, 'body')), pull: 35 * gdw(D, 'pull') })[k] * bw(k));
+    else if (P.kind === 'straight') kind = wpick(['slip', 'block', 'pull', 'duck', 'roll'], k => ({ slip: D.s.defense * gdw(D, 'slip'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), duck: D.s.defense * .4 * gdw(D, 'duck'), roll: 55 * gdw(D, 'roll') })[k] * bw(k));
+    else if (P.kind === 'hook') kind = wpick(['duck', 'block', 'pull', 'roll'], k => ({ duck: D.s.defense * gdw(D, 'duck'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), roll: 22 * gdw(D, 'roll') })[k] * bw(k));
+    else kind = wpick(['block', 'pull'], k => ({ block: 60 * gdw(D, 'block'), pull: D.s.footwork * gdw(D, 'pull') })[k] * bw(k));
     if (D.state === 'punch') { D.act = null; D.queue = []; D.state = 'idle'; }
     D.pendingDef = { kind, at: 0.05 + (1 - D.s.speed / 100) * 0.13, dur: .34 }; D.defZ = P.zone;
     if (D.order) this.ack(D, kind === 'block' || kind === 'roll' ? 'hands' : kind === 'pull' ? 'move' : '');
     if (kind === 'pull') { const v = vec(D, A); D.vx = -v.ux * 55; D.vz = -v.uz * 55; D.pullX = -v.ux; D.pullZ = -v.uz; D.pullT = .22; }
   }
   // counter shot(s) fired off a miss or out of the guard
-  pickCounter(D, d, roll) {
+  pickCounter(D, d, roll, def) {
     const k = iqK(D);
     if (roll) return d < 60 && R() < .35 ? ['cross', 'hook'] : ['cross'];
+    // the counter that fits the defense: slip the straight, right hand over it; duck the hook, come back up with one; pull back, step in behind a straight
+    if (def && R() < .35 + .5 * k) {
+      const c = def === 'slip' ? (d < 56 ? ['hook', 'cross'] : ['cross', 'hook']) : def === 'duck' ? (d < 50 ? ['uppercut', 'hook'] : ['hook', 'cross']) : def === 'pull' ? ['cross', 'hook'] : null;
+      if (c) return R() < .3 + .5 * k ? c : c.slice(0, 1);
+    }
     if (d < 54) { const c = pick([['hook'], ['uppercut'], ['cross'], ['hook', 'cross'], ['uppercut', 'hook'], ['cross', 'hook']]); return R() < .4 + .4 * k ? c : c.slice(0, 1); }
     return R() < .3 * k ? ['cross', 'hook'] : ['cross']; // slip, 2-3: the smart ones follow the counter up
   }
@@ -1048,8 +1110,9 @@ class Fight {
     }
     let mult = 1, evaded = false, blocked = false, rolled = false;
     const def = D.def;
+    memAdd(A, A.mem.def, defKind(P), this.t, { n: 1, [D.state === 'stun' ? 'stun' : def || 'none']: 1 });
     if (def && D.state !== 'stun') {
-      if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25); blocked = true; }
+      if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25) * (1 - ANT.catch * antOn(D, a.type, this.t)); blocked = true; } // saw it coming: caught it clean
       else if (def === 'roll') { // shoulder roll: straights glance off, hooks get half caught, uppercuts split it
         if (P.zone === 'body') { mult = blockLeak(D, P, .5); blocked = true; }
         else if (P.kind === 'straight') { const lead = a.type === 'cross' && A.prevP !== 'jab'; if (R() < .38 + .22 * D.gSkill - (lead ? .22 : 0)) { evaded = true; rolled = true; } else { mult = blockLeak(D, P, .35); blocked = true; } }
@@ -1079,6 +1142,7 @@ class Fight {
     }
     if (evaded) { this.miss(A, D, a, 'evade', rolled ? 'roll' : def); return; }
     A.lastRes = blocked ? 'blocked' : 'landed';
+    memAdd(A, A.mem.mine, a.type, this.t, blocked ? { b: 1 } : { l: 1 });
     if (blocked) {
       A.read.av[kindOf(a.type)]++;
       // every blocked shot wears the guard down; a heavy hand breaks it faster
@@ -1103,6 +1167,7 @@ class Fight {
     if (P.zone === 'head') { D.head -= dmg; D.headMax = Math.max(10, D.headMax - dmg * TUNE.wear); }
     else { D.body -= dmg * 1.1; D.stamMax = Math.max(30, D.stamMax - dmg * .25); D.stam = Math.max(0, D.stam - dmg * .9); D.head -= dmg * .15; }
     A.tot.dmg += dmg; D.tot.taken += dmg; A.rs.dmg += dmg;
+    if (!blocked) memAdd(D, D.mem.hurt, a.type, this.t, { d: dmg });
     if (!blocked) {
       A.tot.landed[P.cat]++;
       if (P.cat === 'jab') A.rs.landedJab++; else if (P.cat === 'power') A.rs.landedPow++; else A.rs.landedBody++;
@@ -1149,8 +1214,8 @@ class Fight {
     }
     // fire back out of the guard (tap-block counter)
     if (blocked && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
-      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D);
-      if (R() < p) { const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
+      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D) * (1 + ANT.ctr * antOn(D, a.type, this.t));
+      if (R() < p) { memAdd(A, A.mem.mine, a.type, this.t, { c: 1 }); const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
     }
   }
   miss(A, D, a, why, def) {
@@ -1158,16 +1223,17 @@ class Fight {
     A.stam = Math.max(0, A.stam - P.cost * .35);
     this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type });
     A.lastRes = 'evaded'; A.lastDef = def || null;
-    if (why === 'evade') A.read.av[kindOf(a.type)]++;
+    if (why === 'evade') { A.read.av[kindOf(a.type)]++; memAdd(A, A.mem.mine, a.type, this.t, { e: 1 }); }
     if (why === 'evade') A.rs.made[a.type] = (A.rs.made[a.type] || 0) + 1;
     if (why === 'evade' && D.state !== 'stun' && D.state !== 'down') {
       const st = D.st, sg = sgOf(D);
       const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1) * ctrEdge(D)
         * (P.cat === 'jab' ? TUNE.jabCtr : 1) // a jab snaps back: much harder to counter than a missed hook
         * (A.st.inside && dist(A, D) < STYLE_IN.at ? 1 - STYLE_IN.ctr * A.st.inside : 1); // no room to counter a man on your chest
-      if (R() < Math.min(.95, ch) && D.state !== 'punch') {
-        D.counterWin = .6; D.def = null; D.pendingDef = null;
-        const c = this.pickCounter(D, dist(A, D), def === 'roll');
+      const an = antOn(D, a.type, this.t); // he saw this one coming
+      if (R() < Math.min(.95, ch * (1 + ANT.ctr * an)) && D.state !== 'punch') {
+        D.counterWin = .6; D.def = null; D.pendingDef = null; memAdd(A, A.mem.mine, a.type, this.t, { c: 1 });
+        const c = this.pickCounter(D, dist(A, D), def === 'roll', def);
         D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter');
         A.lastRes = 'countered';
       }
@@ -3295,7 +3361,7 @@ const Backup = {
       try { bytes = await pipeBytes(bytes, new DecompressionStream('gzip')); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
     }
     let s; try { s = JSON.parse(new TextDecoder().decode(bytes)); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
-    if (!s || !s.player || !s.player.stats || !s.world || !Array.isArray(s.world.roster)) throw new Error('That code is missing pieces of the career.');
+    if (!s || (s.mode === 'gym' ? !s.gym || !Array.isArray(s.fighters) : !s.player || !s.player.stats || !s.world || !Array.isArray(s.world.roster))) throw new Error('That code is missing pieces of the career.');
     return migrateSave(s);
   }
 };
