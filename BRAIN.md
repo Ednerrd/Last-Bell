@@ -81,6 +81,23 @@ B1/B3 were built on the old step-5 engine, then moved onto the main line (rhythm
 - Ablation on pboxer and feinter (200/pairing): switching off anticipation or memory values moves each by ≤3 points, all within noise. No single brain part is the cause.
 - **B6 list:** the guard spread (high/cross low, handslow/philly high, partly there before the brain), and the pboxer / feinter / jabgrab specials.
 
+## Corner as teacher, feint read, warned spoiler (Oct 6, merged from `claude/admiring-archimedes-bczsms`)
+Built first on the old step-5 engine, then re-applied on this branch's tip (`56354b5`). That branch's own `pickCounter` change was dropped: B3's `pickCounter(…, def)` already does it.
+- **Corner as teacher** (`TEACH` step .12 / max .4 / keep .6, `teachK`, `planOf`, `Fight.teach`): a live call that pays off (its shot lands, a block on 'hands', an evasion on 'move') grows `read.les[call]`; `planOf` mixes `les * TEACH.max` of that call's mods into the round plan after the shout ends. `teachK = .15 + .45*iqK + .4*min(1, sqrt(exp)/5)`, so career experience finally matters. Emits `learned` at .3 (commentary `learned_*`). Only the player's corner shouts, so it only helps the player. This is B5's "between rounds: the corner" piece, started.
+- **Feint read** (`FEINT_READ` per 10 / max .45): `read.feints` was never written. Now a fresh bite counts, and a smart defender bites less (`react(D, A, P, feint)`). Decays x.6 between rounds.
+- **Warned spoiler** (`STYLE_SPOIL.cool` 1.5): dirty-shot rate / (1 + warn * cool * iqK).
+- Hashes: brain tip `ddf15bfa`; with the feint read and spoiler patched off it still matches (the teacher only acts when the corner shouts); everything on: `84ba46a3`.
+
+| Measure (n) | Brain tip | + these three |
+|---|---|---|
+| Audit thrown / landed / connect, stops (500) | 53.2 / 15.1 / 28.3%, 25.0% | 53.3 / 15.0 / 28.1%, 27.6% |
+| Shouts none / smart / oracle (600, ±2.1) | n/a | 48.0 / 51.8 / 58.7; teacher off: smart 51.8, oracle 56.5 |
+| Feinter vs base styles avg (300/pair) | 45.4 | 43.9 (smart men bite less; already a B6 item) |
+| Spoiler vs base styles avg (300/pair) | 52.1 | 51.4 |
+| Guards vs standard (300) | high 34.7, peek 52.0, philly 58.1, cross 39.3, handslow 59.9 | high 39.6, peek 50.4, philly 53.5, cross 40.4, handslow 55.5 |
+
+**What survives the break** (`QUIET=3 node tests/teach.js 300 82 body 20`; the corner only calls "Body!" in rounds 1–3, control `PATCH="TEACH.max=0"`): lesson at the bell .34 / .43 / .47 in rounds 1–3, then .28 / .17 / .10 / .06 in rounds 4–7 once the corner is quiet. Body share in round 4: 22.0% vs 21.7% control (old engine: 22.9 vs 21.6). A live body call moves it about 4.5 points. With `TEACH.keep=1` (old engine) the lesson holds at ~.69 all fight but is still worth only ~1 point. **The break is not what washes it out, the size is:** a full lesson is at most 40% of a call, and a call itself is small. The dials are `TEACH.max` / `step` (and the `SHOUTS` mods), not `keep`. Ed's call.
+
 ## Steps (each a commit, sims before and after, never balance + visuals together)
 - ✅ **B0:** `tests/brain.js` and a baseline report. No engine change.
 - ✅ **B1:** Opponent memory with fading (`F.mem`, `memAdd`/`memPeek`, `punchVal`). Results, Oct 6:
@@ -100,6 +117,6 @@ B1/B3 were built on the old step-5 engine, then moved onto the main line (rhythm
     - Guards spread wider: high 41, cross 45, peekaboo 47, philly 58, hands-low 60. Smart opponents work the open body of high and cross; body cover +.08 made no difference.
     - Specials: feint master 42.8, jab-and-grab 46.
 - **B4:** Setups, feint traps, "show it twice, change it".
-- **B5:** In-round and between-round adjustments, plus "what hurt me".
+- **B5:** In-round and between-round adjustments, plus "what hurt me". Started: corner as teacher (section above). Next: decide how big a lesson should be (`TEACH.max`), and let the fighter's own read carry between rounds the same way.
 - **B6:** DNA numbers for every style from the research cards, then a full balance pass.
 - Lab republished after each engine step so Ed can watch the brain work.

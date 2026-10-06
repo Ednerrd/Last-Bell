@@ -1,4 +1,32 @@
-# Handoff (Oct 6 2026): next is the 3D conversation, on Ed's order
+# Handoff (Oct 6 2026, evening): the brain, merged
+
+Read this first, then `CLAUDE.md` (rules, code map, tests) and `BRAIN.md` (the brain plan, every measurement). Don't read all of `index.html`: grep, then read the section.
+
+## Who and how
+- **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
+- **Branch:** `claude/admiring-archimedes-bczsms` is the newest line. It is the brain branch (`claude/laughing-pascal-31dfag`, which already had the main line `ccr-ce0946a0-yr9gyi` merged in) plus the corner-as-teacher work. Start new work from here.
+- **Before you start, `git fetch` and check the other branches.** Ed runs parallel sessions. This session lost a pass by building on a two-day-old base while another session was rebuilding the same brain on the main line. If a newer branch touches the same code, ask Ed before working on it.
+- **Commit trailer:** `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <your session link>`. No model IDs anywhere else.
+- **Never publish to the live game** without Ed's explicit OK. Free to republish: the brain lab, the fight lab, the private preview (links in CLAUDE.md). The plain fight lab still shows the main line without the brain. Don't overwrite it with an older build (check what's live first, `Artifact read`).
+- **Engine changes:** sims before and after, never balance + visuals in one commit. same.js hash is **84ba46a3**.
+
+## Where we are
+- **The brain (BRAIN.md):** B0 report, B1 opponent memory with fading, B3 anticipation + counters keyed to the defense used. On the main line: IQ 90 beats IQ 40 63%, IQ 80 beats 60 58%, a habit fighter gets figured out (smart man's counters climb 2.0 → 2.6/rd).
+- **New this session (BRAIN.md "Corner as teacher"):**
+  - Corner as teacher: a call that works leaves a lesson that outlasts the shout. Learning speed = IQ + career experience. Commentary says when it sticks.
+  - Feint read: smart men stop biting on feints.
+  - Warned spoiler: a smart spoiler eases off after a warning.
+  - Dev log: `tests/teach.js`.
+- **The teacher's measured effect is small.** About +1 point of body share after the corner goes quiet, gone by round 6–7, and no change in who wins. Exempting lessons from the between-round decay keeps them all fight but doesn't make them bigger. The dials are `TEACH.max` / `step`. **Waiting on Ed:** how much should a lesson be worth?
+
+## Open, in order (Ed's order from the review chat)
+1. **Ed's call on lesson size**, then retune `TEACH` and re-run `tests/teach.js` + `tests/shout.js` (smart / oracle, with and without `PATCH="TEACH.max=0"`).
+2. **Round awareness / pacing** (Gap E/F): a `need()` signal (protect the lead vs need the KO) into aggression, power picks and resets. It may fold into B2 intent modes, so read BRAIN.md B2 first.
+3. **B6 balance:** guards spread (high ~35–40, cross ~40, handslow/philly 55–60 vs standard), feinter ~44 (the feint read cost it ~1.5), pboxer and jabgrab low.
+4. **Later (after the gym):** Gap C, defensive read inside `react()`. Ed's constraint: it re-weights within the guard's own defenses, capped around ±25%, so a peekaboo fighter stays a peekaboo fighter, with a commentary hook so it shows. B3 anticipation already covers part of it, so check before building.
+5. Within-round read decay (~0.98 per exchange) was agreed in the review but not built. B1 memory already fades, so check whether it's still needed.
+
+# Previous handoff (Oct 6 2026): next is the 3D conversation, on Ed's order
 
 Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the ranked plan). Don't read all of `index.html`: grep, then read the section.
 
