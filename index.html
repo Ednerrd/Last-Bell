@@ -3295,7 +3295,7 @@ const Backup = {
       try { bytes = await pipeBytes(bytes, new DecompressionStream('gzip')); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
     }
     let s; try { s = JSON.parse(new TextDecoder().decode(bytes)); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
-    if (!s || !s.player || !s.player.stats || !s.world || !Array.isArray(s.world.roster)) throw new Error('That code is missing pieces of the career.');
+    if (!s || (s.mode === 'gym' ? !s.gym || !Array.isArray(s.fighters) : !s.player || !s.player.stats || !s.world || !Array.isArray(s.world.roster))) throw new Error('That code is missing pieces of the career.');
     return migrateSave(s);
   }
 };
