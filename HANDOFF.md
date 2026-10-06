@@ -4,7 +4,7 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/new-session-ne6ynn`. Commit small, push after each step. No PRs unless he asks.
+- **Branch:** `claude/laughing-pascal-31dfag` (Oct 6; earlier work was on `claude/new-session-ne6ynn`). Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -43,6 +43,16 @@ Ed asked for the lab: "don't show me the menus, just a boxing match I can random
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
 - Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. **Next: step 6 (no pass-through), unless Ed's lab feedback says otherwise.**
+
+## Oct 6 session (backup + live prep, then paused for a side project)
+- **2D build to ship: commit `56bd4d4`.** Ed has it as a file. He publishes it live via a claude.ai chat with `{db:{},user:{},sample:{}}`. Claude Code's publish to the live URL was blocked by the session's permission check. If Ed later says "publish live", publish `git show 56bd4d4:index.html`, not HEAD (HEAD will have engine work by then). Live was `ec41eaa` (verified byte-for-byte), so nothing is lost by publishing over it.
+- **Saves:** live cloud slots are empty (deleted Oct 3). Ed's gym "Last Bell Boxing" (Y1 W1) lives in the preview's cloud save. He got a backup code. Live careers, if any, are only in his phone's localStorage: he should hit Backup on each slot before the live publish. Never commit save data (the repo is public).
+- **Fixed:** `Backup.decode` rejected gym backup codes (checked `s.player`). Now accepts `mode:'gym'` with `gym` + `fighters[]`. Tested restore in Playwright, same.js still f00751e1.
+- **Step 6 design notes (not started, no code changed):**
+  - Spin escapes are meant to swap sides. `escape()` with `how === 'spin'` sets `F.spin`, and the commentary says "spins him into the ropes".
+  - So in `physics()`, keep the left-right order (a min x gap, push both apart, shift back inside the ropes) **except while either fighter has `F.spin`**. Store the order on the fight and update it when a spin finishes.
+  - Render (separate commit, same.js hash must hold): ease a smoothed dir (-1..1 over ~150 ms) into `ctx.scale(v.dir * pp.s, …)` at ~2581, so a real turn reads as a turn. Check `carry()` (`sm.cyD`, ~2710) when switching to the smoothed dir.
+  - Walk phases use `walkDir` and should be left alone. Run sims before and after (audit 500 + styles + guards).
 
 ## Next (COMBAT.md steps 5–11)
 1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
