@@ -64,6 +64,23 @@ Why the slip test goes backwards: `read.av` counts avoided shots per punch kind,
 
 Styles already differ in mix (out-boxer 54% jab, slugger 66% power, body snatcher 32% body, counter-puncher 4.2 counters landed/rd vs ~1.1 for the slugger). They don't differ in rhythm.
 
+## On the main-line engine (Oct 6, after merging `ccr-ce0946a0-yr9gyi`)
+B1/B3 were built on the old step-5 engine, then moved onto the main line (rhythm, contact quality, gas, no pass-through). The main line's balance numbers were taken, then retuned.
+
+| Measure | Main line, no brain | Main line + brain (final) |
+|---|---|---|
+| Audit thrown / landed / connect, stops | 51.7 / 15.2 / 29.5%, 29.5% | 52.4 / 14.6 / 27.8%, 28% |
+| IQ 90 vs 40 | 58.7% | 63% (300-run: 64%) |
+| IQ 80 vs 60 | 52.3% | 58% |
+| 1-2 habit man vs IQ 90 (smart man's win %) | 53.5% | 69.5%; counters climb 2.0 → 2.6/rd |
+| Base styles | (not rerun) | 47.9–53.2 |
+| Specials | 46.4–53.7 | 44.0–54.6: pboxer 44, feinter 44.9, jabgrab 46.3 |
+| Guards vs standard | high 45, cross 45, peek 52, philly 52, handslow 56 | high 39, cross 43, peek 47.5, philly 58, handslow 63 |
+
+- Tuning on top of the main line: counter style .68 → .63, `STYLE_IN.ctr` .5 → .65, swarmer inside 1.15 → 1.3, pressure boxer hit 1.18 → 1.25. The range shift is style-aware: out-boxers barely shift inside, and pressure men (cutK > .9) barely shift out.
+- Ablation on pboxer and feinter (200/pairing): switching off anticipation or memory values moves each by ≤3 points, all within noise. No single brain part is the cause.
+- **B6 list:** the guard spread (high/cross low, handslow/philly high, partly there before the brain), and the pboxer / feinter / jabgrab specials.
+
 ## Steps (each a commit, sims before and after, never balance + visuals together)
 - ✅ **B0:** `tests/brain.js` and a baseline report. No engine change.
 - ✅ **B1:** Opponent memory with fading (`F.mem`, `memAdd`/`memPeek`, `punchVal`). Results, Oct 6:
