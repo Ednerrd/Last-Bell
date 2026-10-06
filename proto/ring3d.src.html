@@ -24,6 +24,13 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui
 .big.on{opacity:1}
 .hint{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 66px);text-align:center;font-size:14px;color:var(--mute);pointer-events:none;transition:opacity .6s}
 .err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:18px}
+.perf{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 66px);display:none;font:500 14px/1.35 var(--ui);background:rgba(12,9,7,.82);border:1px solid rgba(240,184,90,.35);border-radius:8px;padding:8px 10px;max-width:440px;margin:0 auto}
+.perf.on{display:block}.perf b{font-family:var(--disp);font-weight:400;font-size:22px;color:var(--accent);letter-spacing:.02em}
+.perf .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.perf button{font:700 14px var(--ui);color:var(--ink);background:rgba(20,15,11,.9);border:1px solid rgba(240,184,90,.45);border-radius:5px;padding:7px 9px;min-height:36px}
+.perf button:active{background:rgba(240,184,90,.25)}.perf .m{color:var(--mute)}
+.perf table{width:100%;border-collapse:collapse;margin-top:6px;font-variant-numeric:tabular-nums}.perf td,.perf th{padding:2px 4px;text-align:right;white-space:nowrap}.perf td:first-child,.perf th:first-child{text-align:left}.perf th{color:var(--mute);font-weight:500}
+.perf .ok{color:#8fcf7a}.perf .bad{color:#e07a5f}
 </style></head><body>
 <canvas id="c" aria-label="3D boxing ring with two fighters"></canvas>
 <div class="hud">
@@ -33,7 +40,8 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui
 </div>
 <div class="big" id="big"></div>
 <div class="hint" id="hint">Drag to move the camera</div>
-<div class="ctl"><button id="bCam">Cam: TV</button><button id="bSpd">Speed 1x</button><button id="bNew">New fight</button></div>
+<div class="ctl"><button id="bCam">Cam: TV</button><button id="bSpd">Speed 1x</button><button id="bNew">New fight</button><button id="bPerf">Phone test</button></div>
+<div class="perf" id="perf" aria-live="polite"></div>
 <div class="err" id="err">This test needs WebGL. Try another browser.</div>
 <script>
 /*@ENGINE@*/
@@ -757,6 +765,130 @@ $('bSpd').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $('bS
 $('bNew').onclick = () => { newFight(); sPrev = sCur = null; };
 setTimeout(() => { $('hint').style.opacity = 0; }, 5000);
 
+/* ================= phone test (3D plan, phase 0) ================= */
+// Frame rate, frame time and draw calls, with switches for resolution, shadows and an fps cap,
+// plus a one-tap run through five settings. The fight keeps going the whole time.
+const PF = {
+  pr: Math.min(2, devicePixelRatio || 1), sh: 2048, cap: 0, // cap 0 = whatever the screen runs at
+  lastDraw: 0, win: [], cpu: [], winT: 0, fps: 0, ms: 0, calls: 0, tris: 0,
+  t0: performance.now(), n: 0, slow: 0, sum: 0, mins: [], minN: 0, minT: 0,
+  bat0: null, bat: null, test: null, results: null, open: false
+};
+const PR_OPTS = [1, 1.5, 2, 'native'], SH_OPTS = [0, 1024, 2048], CAP_OPTS = [0, 60, 30];
+const prVal = v => v === 'native' ? (devicePixelRatio || 1) : Math.min(v, devicePixelRatio || 1);
+const prLbl = v => v === 'native' ? 'Native ' + (+(devicePixelRatio || 1).toFixed(2)) + 'x' : v + 'x';
+const shLbl = v => v ? 'Shadows ' + v : 'No shadows', capLbl = v => v ? 'Cap ' + v : 'No cap';
+function applyPF() {
+  renderer.setPixelRatio(prVal(PF.pr)); resize();
+  const on = PF.sh > 0;
+  if (renderer.shadowMap.enabled !== on) { renderer.shadowMap.enabled = on; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); }); }
+  if (on && key.shadow.mapSize.x !== PF.sh) { key.shadow.mapSize.set(PF.sh, PF.sh); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; } }
+  resetSession();
+}
+function resetSession() { PF.t0 = performance.now(); PF.n = PF.slow = PF.sum = 0; PF.mins = []; PF.minN = PF.minT = 0; PF.bat0 = PF.bat; }
+if (navigator.getBattery) navigator.getBattery().then(b => { const up = () => { PF.bat = { lvl: b.level, chg: b.charging }; if (!PF.bat0) PF.bat0 = PF.bat; }; up(); b.addEventListener('levelchange', up); b.addEventListener('chargingchange', up); }).catch(() => {});
+// 30 fps cap: skip screen refreshes (dt keeps counting, so the fight runs at the same speed)
+function pfSkip(now) { return PF.cap && PF.lastDraw && now - PF.lastDraw < 1000 / PF.cap - 2.5; }
+function pfAfter(now, cpuMs) {
+  const iv = PF.lastDraw ? now - PF.lastDraw : 16.7; PF.lastDraw = now;
+  const info = renderer.info.render; PF.calls = info.calls; PF.tris = info.triangles;
+  PF.win.push(iv); PF.cpu.push(cpuMs); PF.winT += iv;
+  if (document.visibilityState === 'visible' && iv < 500) {
+    PF.n++; PF.sum += iv; if (iv > (PF.cap === 30 ? 45 : 25)) PF.slow++;
+    PF.minN++; PF.minT += iv; if (PF.minT >= 60000) { PF.mins.push(PF.minN / PF.minT * 1000); PF.minN = PF.minT = 0; }
+    if (PF.test && PF.test.rec) { PF.test.iv.push(iv); PF.test.cpu.push(cpuMs); }
+  }
+  if (PF.winT >= 1000) {
+    PF.fps = PF.win.length / PF.winT * 1000; PF.ms = PF.cpu.reduce((a, b) => a + b, 0) / PF.cpu.length;
+    PF.win = []; PF.cpu = []; PF.winT = 0; if (PF.open) drawPF();
+  }
+  if (PF.test) testStep(now);
+}
+// the run: five settings, 4 s to settle then 30 s measured each, no fps cap so we see the headroom
+const PRESETS = [
+  { n: 'Max', pr: 'native', sh: 2048 }, { n: 'Proto now', pr: 2, sh: 2048 }, { n: 'Plan budget', pr: 2, sh: 1024 },
+  { n: 'Lighter', pr: 1.5, sh: 1024 }, { n: 'Lightest', pr: 1.5, sh: 0 }
+];
+const SETTLE = 4000, MEASURE = 30000;
+function startTest() {
+  PF.test = { i: -1, keep: { pr: PF.pr, sh: PF.sh, cap: PF.cap }, rows: [] }; PF.results = null; $('pfRes').innerHTML = '';
+  speed = 1; $('bSpd').textContent = 'Speed 1x'; nextPreset();
+}
+function nextPreset() {
+  const T = PF.test; T.i++;
+  if (T.i >= PRESETS.length) { PF.results = T.rows; Object.assign(PF, T.keep); PF.test = null; applyPF(); drawPF(); return; }
+  const P = PRESETS[T.i]; PF.pr = P.pr; PF.sh = P.sh; PF.cap = 0; applyPF();
+  T.start = performance.now(); T.rec = false; T.iv = []; T.cpu = []; drawPF();
+}
+function testStep(now) {
+  const T = PF.test, el = now - T.start;
+  if (!T.rec && el >= SETTLE) { T.rec = true; T.recAt = now; }
+  if (T.rec && now - T.recAt >= MEASURE) {
+    const iv = T.iv.slice().sort((a, b) => a - b), tot = iv.reduce((a, b) => a + b, 0);
+    const p99 = iv[Math.min(iv.length - 1, Math.floor(iv.length * .99))] || 0;
+    T.rows.push({ n: PRESETS[T.i].n, set: prLbl(PRESETS[T.i].pr) + ', ' + (PRESETS[T.i].sh ? 'sh ' + PRESETS[T.i].sh : 'no sh'),
+      fps: iv.length / tot * 1000, low: p99 ? 1000 / p99 : 0, cpu: T.cpu.reduce((a, b) => a + b, 0) / T.cpu.length, calls: PF.calls,
+      px: renderer.domElement.width + '×' + renderer.domElement.height });
+    nextPreset();
+  }
+}
+const mmss = ms => Math.floor(ms / 60000) + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0');
+function resultText() {
+  const r = PF.results || [];
+  return 'Last Bell 3D phone test\n' + navigator.userAgent.replace(/^.*?\(([^)]*)\).*$/, '$1') + ', screen ' + screen.width + '×' + screen.height + ' @' + (+(devicePixelRatio || 1).toFixed(2)) + 'x\n' +
+    r.map(x => `${x.n} (${x.set}, ${x.px}): ${x.fps.toFixed(0)} fps, 1% low ${x.low.toFixed(0)}, ${x.cpu.toFixed(1)} ms js, ${x.calls} calls`).join('\n') + '\n' + sessionText();
+}
+function sessionText() {
+  const el = performance.now() - PF.t0, avg = PF.n ? PF.n / PF.sum * 1000 : 0;
+  let b = '';
+  if (PF.bat && PF.bat0) b = ', battery ' + Math.round(PF.bat0.lvl * 100) + '% → ' + Math.round(PF.bat.lvl * 100) + '%' + (PF.bat.chg ? ' (charging)' : '');
+  return `Session ${mmss(el)} on ${prLbl(PF.pr)}, ${shLbl(PF.sh).toLowerCase()}, ${capLbl(PF.cap).toLowerCase()}: avg ${avg.toFixed(0)} fps, slow frames ${(PF.n ? PF.slow / PF.n * 100 : 0).toFixed(1)}%${b}` +
+    (PF.mins.length ? '\nfps by minute: ' + PF.mins.map(x => x.toFixed(0)).join(' ') : '');
+}
+// built once; the buttons stay put (a redraw under a finger would eat the tap), only the text changes
+$('perf').innerHTML = '<div id="pfTop"></div><div class="m" id="pfPx"></div><div id="pfTest" style="margin-top:6px"></div>' +
+  '<div id="pfCtl"><div class="row"><button data-k="pr"></button><button data-k="sh"></button><button data-k="cap"></button></div>' +
+  '<div class="row"><button data-k="run">Run test (3 min)</button><button data-k="copy">Copy results</button><button data-k="hide">Hide</button></div>' +
+  '<div class="m" id="pfSess" style="margin-top:6px"></div></div><div id="pfRes"></div>';
+const pfBtn = k => $('perf').querySelector(`button[data-k="${k}"]`);
+function drawPF() {
+  const el = $('perf'); if (!PF.open) { el.classList.remove('on'); return; } el.classList.add('on');
+  const T = PF.test, cls = PF.fps >= (PF.cap || 58) * .95 - 1 ? 'ok' : PF.fps < 45 ? 'bad' : '';
+  $('pfTop').innerHTML = `<b class="${cls}">${PF.fps.toFixed(0)} fps</b> · ${PF.ms.toFixed(1)} ms js · ${PF.calls} draw calls · ${(PF.tris / 1000).toFixed(0)}k tris`;
+  $('pfPx').textContent = renderer.domElement.width + '×' + renderer.domElement.height + ' px';
+  $('pfCtl').style.display = T ? 'none' : '';
+  if (T) {
+    const P = PRESETS[T.i], left = Math.max(0, (SETTLE + MEASURE - (performance.now() - T.start)) / 1000);
+    $('pfTest').innerHTML = `Testing ${T.i + 1} of ${PRESETS.length}: <b style="font-size:16px">${P.n}</b> (${prLbl(P.pr)}, ${shLbl(P.sh).toLowerCase()}), ${left.toFixed(0)} s left. Leave it be.`;
+  } else {
+    $('pfTest').textContent = '';
+    pfBtn('pr').textContent = prLbl(PF.pr); pfBtn('sh').textContent = shLbl(PF.sh); pfBtn('cap').textContent = capLbl(PF.cap);
+    $('pfSess').innerHTML = sessionText().replace(/\n/g, '<br>');
+  }
+  if (PF.results && !$('pfRes').firstChild) {
+    const best = Math.max(...PF.results.map(r => r.fps));
+    $('pfRes').innerHTML = '<table><tr><th>Setting</th><th>fps</th><th>1% low</th><th>ms js</th><th>calls</th></tr>' +
+      PF.results.map(r => `<tr><td>${r.n}<br><span class="m">${r.set}</span></td><td class="${r.fps >= best * .97 ? 'ok' : r.fps < 45 ? 'bad' : ''}">${r.fps.toFixed(0)}</td><td>${r.low.toFixed(0)}</td><td>${r.cpu.toFixed(1)}</td><td>${r.calls}</td></tr>`).join('') + '</table>';
+  }
+}
+$('perf').addEventListener('click', e => {
+  const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+  const nx = (opts, v) => opts[(opts.indexOf(v) + 1) % opts.length];
+  if (k === 'pr') { PF.pr = nx(PR_OPTS, PF.pr); applyPF(); }
+  else if (k === 'sh') { PF.sh = nx(SH_OPTS, PF.sh); applyPF(); }
+  else if (k === 'cap') { PF.cap = nx(CAP_OPTS, PF.cap); resetSession(); }
+  else if (k === 'run') startTest();
+  else if (k === 'hide') PF.open = false;
+  else if (k === 'copy') {
+    const t = resultText(), b = e.target;
+    const done = ok => { b.textContent = ok ? 'Copied' : 'Copy failed, screenshot it'; setTimeout(() => { b.textContent = 'Copy results'; }, 1800); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => done(true), () => done(false)); else done(false);
+    return;
+  }
+  drawPF();
+});
+$('bPerf').onclick = () => { PF.open = !PF.open; drawPF(); };
+
 /* ================= loop ================= */
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -782,6 +914,8 @@ function blendSnap(a, b, t) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
+  if (pfSkip(now)) return;
+  const cpu0 = performance.now();
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (!sCur) sCur = sPrev = fight.snap();
   if (window.__paused) { sPrev = sCur = fight.snap(); acc = 0; }
@@ -839,6 +973,7 @@ function frame(now) {
   const left = Math.max(0, ROUND_LEN - fight.clock); $('ck').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
   $('rd').textContent = fight.phase === 'corner' ? 'Between rounds' : 'Round ' + fight.round + ' of ' + fight.rounds;
   renderer.render(scene, camera);
+  pfAfter(now, performance.now() - cpu0);
   fpsN++; fpsT += dt; if (fpsT > 1) { window.__fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
 }
 requestAnimationFrame(frame);

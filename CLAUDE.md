@@ -2,7 +2,7 @@
 
 Phone-first auto-boxing career sim. One self-contained file: `index.html` (~4,000 lines). Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
-**New direction:** `GYM.md` (gym + stable, Oct 2026). **Current focus:** `COMBAT.md` (smoothness/pace plan, ranked). **Read on demand, not up front:** `VISION.md` (old vision), `NOTES.md` (system details, balance history, past measurements: grep the heading you need), `proto/PLAN.md` + `proto/RESEARCH.md` (3D).
+**New direction:** `GYM.md` (gym + stable, Oct 2026). **Current focus:** `BRAIN.md` (the AI boxer's fight IQ and decisions, steps B0–B6), then `COMBAT.md` (smoothness/pace plan; BRAIN replaces its steps 8 and 10). **Read on demand, not up front:** `VISION.md` (old vision), `NOTES.md` (system details, balance history, past measurements: grep the heading you need), `proto/PLAN.md` + `proto/RESEARCH.md` (3D).
 
 ## Publishing (important)
 The live game is a published Claude artifact: https://claude.ai/artifact/KYmQg6PQo4qE4qoyDDDt7k
@@ -10,7 +10,9 @@ Claude Code can NOT publish there. When a version is ready, Ed uploads `index.ht
 **Talk to your fighter needs the `sample` capability:** the next live publish must declare db + user + sample (`{db:{},user:{},sample:{}}`). Without sample the corner talk still works on a simple keyword matcher.
 Published-page rules: external scripts only from cdnjs/jsdelivr/tailwind/jquery CDNs, fonts from Google Fonts, no other network calls. Keep it one file.
 Private preview for Ed (Claude Code can publish here): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo (sample + db + user).
+3D phone test for Ed (proto + perf panel, 3D plan phase 0): https://claude.ai/artifact/5kVb4PyywgDcPBHSVSc3cu. Build `node proto/build.js`, publish a copy of `proto/ring3d.html` with the doctype/html/head/body tags stripped.
 Fight lab for Ed (straight into a fight, no menus): https://claude.ai/artifact/QhC1gMrw1pSabzuLzMw7Ev. Rebuild with `node tools/lab.js`, publish `lab.html` (no capabilities needed). Republish after every combat change.
+Brain lab (the fight lab built from this branch, with the boxer brain): https://claude.ai/artifact/N5pj7BCRDSNuJngq7tkMAk. Rebuild with `node tools/lab.js`, retitle to "Last Bell Brain Lab", publish from the same scratch path or pass the URL. Compare it with the plain lab.
 
 ## Working rules
 - Small, chunked edits. Commit after each working step (git is the safety net).
@@ -35,13 +37,16 @@ Node extracts the engine+career sections and runs fights headless. `PATCH="js co
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials, pairs to split over cores).
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
-- `node tests/same.js 200`: seeded determinism hash for recording-only engine changes (now 6e268e4f).
-- `node tests/teach.js 300 82 body 20` (`QUIET=3`, control `PATCH="TEACH.max=0"`): corner-as-teacher dev log, lesson strength per round and what survives the break.
+- `node tests/same.js 200`: seeded determinism hash for recording-only engine changes (now d48949f6).
+- `node tests/swap.js 100`: side swaps per minute (left-right order flips).
+- `node tests/rhythm.js 200`: tempo (gaps between exchanges, share >3 s, longest quiet, round-1 feel-out).
+- `node tests/gas.js 250`: gas by round, style and stamina stat (tank, end-of-round gas, output). `node tests/bodykd.js 300`: knockdowns by head/body.
+- `node tests/brain.js [tempo|iq|adapt|styles] N`: the brain report (decision mix, rhythm, IQ ladder, habit exploitation, style identity). Baseline + targets in BRAIN.md.
 - `node tests/gym.js 3`: gym mode headless for N years (signing, training, booking, fights, P4P).
 - Also: `cut.js`, `diag.js`, `probe.js`, `commtest.js`; Playwright captures `strip.py`, `shot.py`, `live.py` into `shots/` (gitignored).
 
 ## Current targets (to check after engine changes)
-Audit: ~56 thrown / ~16 landed / ~29% connect per round, stoppages ~30%. Styles 48–53% vs the field. Guards @82 vs standard within ~48–58 (handslow highest). Specials vs base styles 48–54%.
+Audit: ~53 thrown / ~15 landed / ~29% connect per round (output fades late now), stoppages ~25–30%, body KDs 5–8% (`bodykd.js`). Styles 48–53% vs the field. Guards @82 vs standard within ~48–58 (handslow highest). Specials vs base styles 48–54%.
 
 ## Env notes
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.

@@ -1,10 +1,10 @@
-# Handoff (Oct 4 2026): combat polish
+# Handoff (Oct 6 2026): next is the 3D conversation, on Ed's order
 
 Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the ranked plan). Don't read all of `index.html`: grep, then read the section.
 
 ## Who and how
 - **Owner:** Ed. Talk to him like a homie: light, real, roasts welcome. He reads on his phone.
-- **Branch:** `claude/new-session-ne6ynn`. Commit small, push after each step. No PRs unless he asks.
+- **Branch:** `ccr-ce0946a0-yr9gyi` (Oct 6) is the newest line: `claude/determined-feynman-6z4lju` fast-forwarded, plus the phone test page and the spoiler fix. Before that, `claude/determined-feynman-6z4lju` was the main line: it merged all of `claude/step9-contact` (tree taken as-is) and added Ed's ideas 1, 2, 4 and the KD walk fix on top. Earlier lines: `claude/step9-contact`, `claude/festive-thompson-e2ch70`, `ccr-9a5a152f-n8ld1d`, `claude/handoff-review-32nske`. **Several sessions have run in parallel off one handoff and duplicated work: run `git fetch && git branch -r` and check the newest commits before starting.** Commit small, push after each step. No PRs unless he asks.
 - **Commit trailer:**
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -19,11 +19,13 @@ Read this first, then `CLAUDE.md` (rules, code map, tests) and `COMBAT.md` (the 
 - **Engine changes:**
   - Run sims before and after (`node tests/audit.js 500` plus style/guard checks per CLAUDE.md targets).
   - Never mix balance and visual changes in one commit.
-  - For render-only changes, `node tests/same.js 200` must stay at hash **6e268e4f** (changed by the brain pass, Oct 6; see NOTES.md "Brain").
+  - For render-only changes, `node tests/same.js 200` must stay at hash **d48949f6** (changed by idea 2, gas + body shots).
 - **Don't** build the bond/trust system (future).
 
 ## Where we are
 Ed: "Focus on combat: the boxing AI, combinations, punching, models. Perfect the core auto-boxing mechanics. Smoothness, fluidity, pace, speed." The gym mode (GYM.md, step 1 built) is parked until combat feels right.
+
+**Ed (Oct 5): solidify the boxing first, then convert to the 3D version again** (`proto/PLAN.md`). So engine work (AI, rhythm, contact, footwork) is the priority since it carries into 3D; 2D-only render polish (step 7) is lower value. Why 3D: to *see* punch lanes, where a shot lands or misses and why, like Fight Night Champion. So steps 9-10 should make the engine emit that detail in its `hit`/`miss` events (hand, lane/angle, contact quality, miss type: short, slipped left/right, ducked, pulled, blocked on which glove), not just pick an outcome. The 3D render then draws what the engine decided.
 
 Done this session (all pushed):
 
@@ -36,29 +38,60 @@ Done this session (all pushed):
 | 49cc49f | Step 3: `snapIn` / `snapBack`. Punches accelerate into contact, overshoot ~3.5%, snap back. Contact still at aP .6. |
 | 3e28239 | `research/fighters_a.md` and `research/fighters_b.md`: DNA cards for 14 real fighters (CompuBox output, jab share, body %, range, rhythm, combos, counters, flaws, if/then AI rules). |
 | 5a85264 | **Fight Lab**: `tools/lab.src.js` + `tools/lab.js` build `lab.html`. It drops straight into a fight: New fight (random), Rematch, and Pick (weight, rounds, each side as random / a P4P star / any style, guard override). |
+| 5d21ada..now | **Step 6: no pass-through.** Left-right order kept; escape pivots and rope angle-offs may still switch sides (walling them off cost the out-boxer 6 points). Facing turns over .2 s in render. Swaps 1.07 -> 0.6/min. Hash ef225fb9. |
 | adeb0e3 / ad002b3 | **Step 5: footwork acceleration.** Feet ease toward target velocity at a per-style rate (4 + 24 x ret x legs), rope-escape side locked .4 s, smoothed cut-off read, sine punch step, timed pull. Counter style counter .6 -> .68. Audit 56.3 / 15.9 / 28.2% / stops 32%; styles 48.9-51.3; guards 47.9-58.4; specials 49-55 (angle 55.2, watch). same.js hash now f00751e1. Lab republished. Details: NOTES.md "Footwork acceleration". |
 
 Ed asked for the lab: "don't show me the menus, just a boxing match I can randomize."
 
 - **Rebuild:** `node tools/lab.js`.
 - **Publish:** the `lab.html` file path, with no capabilities. Ignore the db/sample warnings: the lab doesn't save, and corner talk falls back to keywords.
-- Last message to Ed: the lab is live; next is step 5; he should roll fights and say what looks off. Step 5 is done and the lab is republished. **Next: step 6 (no pass-through), unless Ed's lab feedback says otherwise.**
+- Step 6 is done (no pass-through, see NOTES.md "No pass-through"), lab republished. Step 8a (rhythm: resets, feel-outs) done, see NOTES.md "Rhythm" (watch slugger 58, high guard 46, handslow 60). **Oct 5: Ed picked Lab A (this line: step 6 + `TEMPO` rhythm) over Lab B (`ccr-026fa9ad-j4d8rw`, `RHY` rhythm, no step 6): "the pace was slightly better". Lab B is dead; don't merge it.** 8b done render-only (NOTES.md "Rhythm"), lab republished. **Next: 9 (contact quality, emit lane/miss detail for 3D), then 10. Skip step 7 (2D-only render polish) per Ed's 3D plan.** **Oct 5 (claude/step9-contact): step 9 part 1 done: hit/miss events carry hand, lane, contact quality, glove, miss type (9a); damage follows arm extension at contact (Ed asked for it). same.js fa768ffe. AI now reads extension too (out-boxer 43 -> 47). Next: hit-stop + look per quality (render), then step 10, slugger first (59%, eats out-boxer and swarmer).**
 
-## Next (COMBAT.md steps 5–11)
-1. **Step 5, engine: footwork acceleration** (the biggest jerkiness left; the audit measured ~400 velocity snaps/min per fighter).
-   - `footwork()` sets velocity directly (~line 707). Ease it instead: `F.vx += (vx - F.vx) * (1 - Math.exp(-dt*12))`.
-   - Lock the rope-escape side for ~.4 s (~704); it flip-flops ~180/min.
-   - Smooth the opponent velocity used for cutting off the ring (~689).
-   - Make the punch step a sine shape, not a square wave (~741).
-   - The `react()` pull at ~1021 gets overwritten by footwork the next tick. Give it a timer.
-   - Line numbers are from before this session's edits; grep. Changes balance, so do a full sim pass.
-2. **Step 6, engine: no pass-through.** Fighters cross and `face()` mirrors both bodies in one frame (~1.7/min). Keep the left-right order in `physics()`; animate the turn in render.
-3. **Step 7, render:** uppercut curve break at aP .4 in `body()` (switch at .35, ramp the lean); close-range spacing in `spreadView` (adds 0 below distance 32); smooth `bodyPush` / `settle` offsets.
-4. **Steps 8–11:**
-   - rhythm (burst then reset, feel-out moments);
-   - contact quality (clean / glancing / smothered / blocked, each with its own hit-stop);
-   - smarter AI (target around the guard, a fading memory of what hurt him, styles differ in rhythm and range; use the fighter DNA cards);
-   - feet moving during punches, flat feet when tired.
+## LATEST (Oct 6, `claude/laughing-pascal-31dfag`): Ed switched to the brain project
+- Ed: skip the 3D review for now; "the fight iq, fight engine, the boxers iq, the decisions they make... the ai boxer is the brain." Plan, baseline and results: **`BRAIN.md`**. Test: `node tests/brain.js`.
+- This branch = main line `ccr-ce0946a0-yr9gyi` (merged in) + the brain work (B0 test, B1 fading memory, B3 anticipation and defense-keyed counters) + the gym-backup restore fix.
+- B1/B3 were first built and tuned on the old step-5 engine. After the merge, the main line's balance numbers were taken and the brain was re-measured on the real engine (see BRAIN.md).
+- **2D build for the live publish = main-line tip `4e62be9` + the restore fix, with no brain** (the brain still needs balance work). The `56bd4d4` file from earlier today was stale: it came from the old step-5 line. Don't ship it.
+- Live game cloud saves are empty. Ed's gym save is in the preview's cloud. Never commit save data (the repo is public).
+
+## NEXT SESSION: review the 3D model with Ed (Oct 6)
+Ed: "handoff with 3D model and let's review in the next session." This is a **review**, not a build. Look at the 3D proto with him, write down what he likes and hates, then agree on where Phase 1 starts. Don't change code until he says go.
+
+**What to look at.** The current 3D model is the phone test page: https://claude.ai/artifact/5kVb4PyywgDcPBHSVSc3cu (proto `proto/ring3d.html` + the perf panel; current engine as of `3ba1739`). The older 3D test link (https://claude.ai/artifact/D2MQxRkXSGLhmyLLa5EsmU) is a stale build; ignore it.
+- Source: `proto/ring3d.src.html` (~950 lines). Build: `node proto/build.js`. What's in it: NOTES.md "Semi-3D test". Plan: `proto/PLAN.md` (phases 0-4). Research: `proto/RESEARCH.md` (FNC, Thrill of the Fight, Round 4, Undisputed).
+- Look at it yourself first (headless, no GPU here): `npm i three@0.170.0` in the scratchpad, `pip install playwright` if missing, then `python3 tools/measure/shot3d.py proto/ring3d.html <scratch>/node_modules/three/build/three.module.min.js out.png` and Read the png. `tools/measure/perf3d.py` checks the phone-test panel end to end.
+
+**Review agenda (walk Ed through it, collect notes per item):**
+1. **Phone numbers first** (phase 0). Did he run "Run test (3 min)" and 10 min on one setting on the S25 Ultra? Get fps per setting, warmth, battery drop. Headless draw calls were 124-150, right at the 150 budget: if it stutters, merging meshes is the first fix. These numbers set the quality defaults.
+2. **Spacing and reach.** The engine's 2D distances are spread apart in 3D (`spad` up to +26) and punches lunge in (up to 30-34). Does the distance look like real boxing? Phase 1 item 1 replaces this with one clean mapping.
+3. **Punches.** Do straights land nearly locked out, hooks wide, uppercuts under? Is there snap (the 2D got coil + accelerating drive + hold + 1.5x return; the 3D has its own older load+snap curve)? Does he see the punch lanes and why a shot misses? That was the whole point of 3D (FNC style). The engine already emits hand/lane/contact quality/miss type in `hit`/`miss` events; the 3D only partly uses them.
+4. **Guards.** **Cross-arm in 3D is still the old pose** (`GUARD3.cross`, forearms high), not Ed's Ken Norton stack (rear forearm across the chest under the chin, lead across the belly; PLAN.md "Guard reference"). Philly elbows must stay down. Check all 6 guards (Pick isn't in the proto: hit New fight until each shows up, or add a guard picker if he wants one).
+5. **Footwork.** Planted feet that step vs sliding; pivots on hooks; back foot following a lunge.
+6. **Hits and knockdowns.** Head snap by punch type, body shots folding late, knockdowns falling along the punch, taking a knee on body shots, getting up.
+7. **Models and look.** Faces, builds by weight class, gloves, trunks. Phase 2 stuff, but note what bugs him.
+8. **Ref and camera.** Ref placement, the 4 cameras + drag.
+
+**Then decide with Ed** where Phase 1 starts. Options pitched before: (a) engine drives the 3D, drawing punch lanes and why a shot lands or misses (recommended, it's why we're going 3D); (b) fighter models and animation system first; (c) feet during punches first. Write his notes and the decision into this file and `proto/PLAN.md`.
+
+## Next (Ed, Oct 6): small step first, then 3D
+**Ed's call:** do the small step before the big one. #3 (Ring IQ when hurt or tired) is **parked**, Ed said "naw not #3". Skip 2D-only render polish (step 7, and the animation half of step 11): 3D redoes the animation.
+
+1. ✅ **DONE (NOTES.md "Hit-stop and look per contact quality"), lab republished.** Was: hit-stop + look per contact quality (render only, finishes step 9).** The engine already tags every `hit` event with `q`: `clean` / `flush` / `glancing` / `smothered` / `blocked` (plus `hand`, `side`, `lane`, `glove`; misses carry the miss type). Today every landed shot looks the same and hit-stop is generic (grep `hitStop`: `FX.hitStop` is set on knockdowns ~.14 s and on some big hits). Target (research/combat_research.md, "Hit-stop"): freeze both men ~2-3 frames on a clean jab, 4-6 on flush/clean power, 8-10 on a knockdown punch, ~0-1 on blocked/glancing/smothered; optional ±1-2 px head shake during the freeze. Different look per quality: glancing slides off (glove skids past, small head turn), smothered is a shove with no snap, blocked thuds on the named glove/elbow, flush gets the big head snap + flash. Keep `same.js` at **d48949f6** (render only). Check it frame by frame with a contact sheet (`tools/measure/sheet.py`, or the cross-trigger capture idea in NOTES "Punches hit instead of paw") and at 60 and 120 Hz (`tools/measure/hz.py`): hit-stop must run on real time, not frames. Republish the lab after.
+2. ✅ **Ed's pre-3D moves: done.** Cross-arm and Philly elbows tucked, straights drive through flat (no hammer right hand), cross-arm guard rebuilt on Ed's Ken Norton photos (rear forearm across the chest under the chin, lead across the belly, chin tucked). NOTES "Cross-arm and Philly elbows"; 3D guard reference in `proto/PLAN.md`. Lab republished (v14).
+3. **Pre-3D checks (Oct 6), done:** 3D proto rebuilt on the current engine, runs clean headless. High guard 47.1% ±1.9 (n800): left alone. Spoiler 45.7 -> 48.9 (lean wears the tank, NOTES "Spoiler fix"). Lab republished (v15).
+   **3D phase 0 (phone test), built, waiting on Ed:** `proto/ring3d.src.html` has a "Phone test" panel (fps, frame ms, draw calls; resolution / shadows / fps cap switches; "Run test" tries 5 settings for ~3 min and shows a table; session avg, fps by minute, battery). Published for Ed: https://claude.ai/artifact/5kVb4PyywgDcPBHSVSc3cu (publish copy strips the doctype/html/head/body tags). Ed runs it on the S25 Ultra: the 3-minute test, then 10 minutes on one setting for heat and battery. His numbers pick the quality defaults (PLAN.md phase 0 budget: 60 fps, ratio <= 2, one 1024 shadow, < 150 draw calls; headless showed 124-150 calls, right at the edge).
+4. **The 3D conversation: see "NEXT SESSION" above.** Don't start anything until Ed says go. Then talk it through with him before building: how to start (options pitched: engine drives `proto/ring3d` drawing punch lanes and why a shot lands or misses, recommended; or fighter models first; or feet moving during punches first), phone performance on the S25 Ultra. Read `proto/PLAN.md`, `proto/RESEARCH.md`, NOTES "Semi-3D test" first. `node proto/build.js` injects the engine into `proto/ring3d.src.html`.
+5. **Anytime (Ed's 5 minutes, not yours):** remind Ed the live game is far behind (style pass, legends, corner talk, combos, all of the combat work). He uploads `index.html` in a claude.ai chat, capabilities db + user + sample, after making a backup code of his careers.
+
+Parked / open: #3 Ring IQ when hurt or tired + AI pacing (gassers don't save it for later); step 10 smarter AI; spoiler vs out-boxer ~43% (he never gets close enough to grab).
+
+### Done on Ed's Oct 5 list
+1. ✅ **Punches look like pawing: done** (render only, contact still at .6). Visible coil (shoulder and hips pull back), accelerating drive in the last ~18% (~4 frames on a right hand), 2-frame hold, home by 86%; body on the same clock. Right hand at range: ~3 frames out, 2 at contact, ~3 back (was ~8 hanging). Not done: extra head snap on the man hit (existing hit reaction kept). Details: NOTES.md "Punches hit instead of paw". Also done: KD neutral-corner walk stays on the standing man's side (within noise in sims).
+2. ✅ **Stamina, gas and body shots: done** (NOTES.md "Gas and body shots"). Work wears the tank, a worn tank hits softer/slower/less, heavy power shots cost more, swarmer conditioning trait; liver shot (delayed fold), wind knocked out, worn body slows the legs; commentary lines. Output 54 -> 50 by r9, slugger 59 -> 50%, styles 47.7-51.1, body KDs 5.9%. Open: AI pacing (gassers don't save it), spoiler special ~46%, high guard ~45-46 (was already 46).
+3. (parked) **Ring IQ when hurt or tired (step 10).** Now a hurt man clinches and moves; when the other man is hurt, `decide()` just does aggr ×1.8 (~813), no weighing. Want: hurt or gassed → disengage, jab his way back, buy time, re-engage. Smelling blood → weigh it (own gas, can the hurt man still crack, counter puncher playing possum, IQ/heart); a blitz that misses or gets blocked burns gas and leaves him open to a surprise KO.
+4. ✅ **Slugger 59%**: fixed by 2 (50%). Was: folds into 2 and 3 (he slugs 12 rounds and never pays for it).
+
+Skip step 7 (2D-only render polish). Still to do from step 9: hit-stop + look per contact quality (render); can ride with idea 1.
 
 ## Measuring tools (`tools/measure/`)
 Python + Playwright, chromium at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Point `OUTDIR` at a scratch folder that holds the html under test.
