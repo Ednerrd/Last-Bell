@@ -496,7 +496,7 @@ const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
 // A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
-const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg: .5, tankOut: .5 }; // bodyHit: tank lost per point of body damage
+const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg: .5, tankOut: .5, heavy: 1.5 }; // bodyHit: tank lost per point of body damage. heavy: power shots with weight behind them (hit) cost more
 // body shots that end things. Liver: a shot to his right side (orthodox lead hook, southpaw straight left) folds him a beat later,
 // awake but he can't beat the count. Wind: a straight in the gut freezes him, hands down, the gas goes. Both need a real shot (danger
 // over a floor) and grow as the body wears and with a weak body stat; a counter or a man walking in doubles it.
@@ -1058,7 +1058,7 @@ class Fight {
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
     F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0; this.exP++;
-    { const c = P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1); F.stam = Math.max(0, F.stam - c); F.work = (F.work || 0) + c; }
+    { const c = P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1) * (P.cat === 'jab' ? 1 : 1 + STAM.heavy * ((F.st.hit || 1) - 1)); F.stam = Math.max(0, F.stam - c); F.work = (F.work || 0) + c; }
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
     this.react(F.op, F, P);
