@@ -98,6 +98,12 @@ What the knobs do: vol/pace = punch output; jabEv/jabBlk = jabs get picked off m
 - Worth keeping for B4: the attacker side (`READ.vary`: change up a combo the other man is reading). Measured on the old engine: styles 47.6-52.4, vet margin +6.7 -> +10.6 (noise ~3).
 - Its research (research/mind_*.md, research/MIND.md) is merged.
 
+## Rope lock timer (Oct 7 2026, bug fix)
+- `ropeT` (the rope angle-off side lock) only counted down inside `footwork()`, so it froze through punches, stuns, defense and escape runs. `physics()` lets the pair cross while `ropeT > 0`, so a stale lock let fighters pass through each other after a combo. Now it counts down every tick in `updateF` (next to `pullT`).
+- swap.js 200: swaps 0.56 -> 0.45/min, flips 1.12 -> 0.89/min; footwork-caused swaps 273 -> 145, cut-off 54 -> 21 (escape and spin swaps unchanged).
+- Audit 500: 53.0/14.8/27.9%/stops 27.0% -> 52.7/14.6/27.8%/25.8% (noise).
+- Styles @82, 600/pair pooled, before -> after: counter 52.5 -> 54.8, out-boxer 50.8 -> 49.8, slugger 51.3 -> 49.0, boxer-puncher 48.0 -> 49.0, swarmer 47.5 -> 47.5. Counter now just over the 53 ceiling: B6 item. same.js hash 8a08e67b -> 7f58e976.
+
 ## Coach shouts (repo only)
 during a round the player yells one of six calls (`SHOUTS`: jab, body, press, counter, move, hands). `Fight.shout(side, k)` sets `F.order` for SHOUT_LEN (14 sim-s, ~40s of fight clock). `sgOf(F)` mixes the call's mods into the STRATS lookup, scaled by `q` (how well he hears it: Ring IQ, heart, hurt, and spam makes him tune out). `shoutFit()` scores the call 0..1 against the moment (guard holes, his body/gas, who is hurt/trapped, his punch pace), worn down by `F.used` (the other corner adjusts to a call you keep using). Above `SHOUT_EDGE.bar` the call gives an edge (atkEdge/defEdge/ctrEdge in react, evade, block, counters); below it the call costs (60%). Only the player's corner shouts; the AI never does. No shouts = old behavior exactly.
 Shout results after the style pass (500 each, SHOUT_EDGE atk .6 def .5 ctr 1.1): perfect coach +10%, simple human rules +1%, random yelling −5%. (Before, at atk .4 def .35 ctr .8: +12 / +2 / −3, mashing one call −5%.)

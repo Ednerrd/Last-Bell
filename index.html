@@ -798,7 +798,6 @@ class Fight {
       const sgn = F.ropeSg;
       vx = px * sgn * F.spd * .9 + v.ux * radial * .2; vz = pz * sgn * F.spd * .9 + v.uz * radial * .2;
     }
-    if (F.ropeT > 0) F.ropeT -= dt;
     // a pull off a punch: the feet keep going back for a beat instead of footwork taking them straight back
     if (F.pullT > 0) { vx = F.pullX * 55; vz = F.pullZ * 55; }
     this.feet(F, vx, vz, dt, 4 + 24 * (F.st.ret || .7) * (F.legs || 1));
@@ -813,6 +812,7 @@ class Fight {
     F.counterWin = Math.max(0, F.counterWin - dt);
     if (F.lostT > 0) F.lostT -= dt;
     if (F.pullT > 0) F.pullT -= dt;
+    if (F.ropeT > 0) F.ropeT -= dt; // the rope side lock runs on the clock, not only while footwork runs (it also lets the pair cross in physics)
     if (F.feelT > 0) F.feelT -= dt; if (F.beatR > 0) F.beatR -= dt;
     F.rq = (F.rq || 0) + ((F.beatR > 0 || F.feelT > 0 ? 1 : 0) - (F.rq || 0)) * (1 - Math.exp(-dt / 20)); // share of the last ~20 s spent resetting or feeling out
     if (F.biteT > 0) F.biteT -= dt;
