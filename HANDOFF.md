@@ -1,4 +1,15 @@
-# Handoff (Oct 6 2026, evening): the brain, merged
+# Handoff (Oct 7 2026): everything merged onto one line
+
+- **Branch:** `ccr-3026595d-4l5s24` is now the one main line. It is `claude/admiring-archimedes-bczsms` (which already held every other branch) plus the Mind of a Boxer research from `claude/practical-cerf-qzf1ew`. **Start new work from here**, and still `git fetch` first: Ed runs parallel sessions.
+- **Left out on purpose:**
+  - practical-cerf's defensive-read engine code, a duplicate of BRAIN B1 + B3 (NOTES.md "Defensive read"). Its attacker "change it up" idea is parked for B4.
+  - `ccr-026fa9ad-j4d8rw`, the rhythm v1 Lab B experiment, which COMBAT 8a/8b replaced.
+- **Fixes this pass:**
+  - Render: feet keep stepping while he slows to a stop.
+  - Engine: the rope side lock (`ropeT`) now counts down every tick in `updateF`. Before, it only counted while footwork ran, so it went stale through punches and escape runs, and in `physics()` that stale lock let the pair cross. Numbers are in NOTES.md "Rope lock timer".
+- `research/MIND.md` maps its build order onto BRAIN steps.
+
+# Previous handoff (Oct 6 2026, evening): the brain, merged
 
 Read this first, then `CLAUDE.md` (rules, code map, tests) and `BRAIN.md` (the brain plan, every measurement). Don't read all of `index.html`: grep, then read the section.
 
