@@ -679,7 +679,7 @@ class Fight {
     }
   }
   snap() {
-    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, hitQ: F.hitQ, hitGlove: F.hitGlove, aQ: F.act && F.act.q || null, downP: F.downP, rise: !!(this.kdState && this.kdState.who === F.side && (this.kdState.rising || this.kdState.standing)), walk: this.phase === 'roundEnd' || this.phase === 'corner', sit: this.phase === 'corner' || (this.phase === 'roundEnd' && F.arrived && (this.cornerT || 0) > .25) ? 1 : 0, cut: F.cut, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
+    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' || F.state === 'idle' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, hitQ: F.hitQ, hitGlove: F.hitGlove, aQ: F.act && F.act.q || null, downP: F.downP, rise: !!(this.kdState && this.kdState.who === F.side && (this.kdState.rising || this.kdState.standing)), walk: this.phase === 'roundEnd' || this.phase === 'corner', sit: this.phase === 'corner' || (this.phase === 'roundEnd' && F.arrived && (this.cornerT || 0) > .25) ? 1 : 0, cut: F.cut, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
   }
   walkTo(F, x, z, dt, sp) {
     const dx = x - F.x, dz = z - F.z, d = Math.hypot(dx, dz); F.vx = F.vz = 0;
@@ -798,7 +798,6 @@ class Fight {
       const sgn = F.ropeSg;
       vx = px * sgn * F.spd * .9 + v.ux * radial * .2; vz = pz * sgn * F.spd * .9 + v.uz * radial * .2;
     }
-    if (F.ropeT > 0) F.ropeT -= dt;
     // a pull off a punch: the feet keep going back for a beat instead of footwork taking them straight back
     if (F.pullT > 0) { vx = F.pullX * 55; vz = F.pullZ * 55; }
     this.feet(F, vx, vz, dt, 4 + 24 * (F.st.ret || .7) * (F.legs || 1));
@@ -813,6 +812,7 @@ class Fight {
     F.counterWin = Math.max(0, F.counterWin - dt);
     if (F.lostT > 0) F.lostT -= dt;
     if (F.pullT > 0) F.pullT -= dt;
+    if (F.ropeT > 0) F.ropeT -= dt; // the rope side lock runs on the clock, not only while footwork runs (it also lets the pair cross in physics)
     if (F.feelT > 0) F.feelT -= dt; if (F.beatR > 0) F.beatR -= dt;
     F.rq = (F.rq || 0) + ((F.beatR > 0 || F.feelT > 0 ? 1 : 0) - (F.rq || 0)) * (1 - Math.exp(-dt / 20)); // share of the last ~20 s spent resetting or feeling out
     if (F.biteT > 0) F.biteT -= dt;
@@ -857,7 +857,7 @@ class Fight {
       if (F.decT <= 0) this.decide(F);
     }
     F.x += F.vx * dt; F.z += F.vz * dt;
-    F.mv = Math.hypot(F.vx, F.vz); if (F.state === 'move') F.gait = (F.gait || 0) + F.mv * dt;
+    F.mv = Math.hypot(F.vx, F.vz); if (F.state === 'move' || F.state === 'idle') F.gait = (F.gait || 0) + F.mv * dt; // idle too: the feet keep stepping while he slows to a stop
   }
 
   decide(F) {
@@ -1228,7 +1228,7 @@ class Fight {
       ev = clamp(ev, .06, .5) * stamFac(D) * (this.atRopes(D) ? .75 : 1) * gf(D, 'ev') * (D.guard === 'handslow' ? stamFac(D) * tankF(D) : 1);
       if (D.state === 'punch') ev *= .45;
       if (a.stick) ev *= STYLE_STICK_EV;
-      ev += TUNE.moveEv * clamp((D.mv - 30) / 50, 0, 1) * gf(D, 'ev'); // a moving target is harder to find (his intended speed: the feet ease, the intent doesn't)
+      ev += TUNE.moveEv * clamp((D.mv - 30) / 50, 0, 1) * gf(D, 'ev'); // a moving target is harder to find (his real speed: the feet ease in and out)
       { const ins = A.st.inside; if (ins && d < STYLE_IN.at) ev *= 1 - STYLE_IN.ev * ins; } // smothered: no room to slip in there
       const setup = (A.prevP === 'jab' && P.cat !== 'jab' ? 1 - TUNE.setup : 1) * (1 - STYLE_OPEN.edge * (a.open || 0)); // the jab hides the right hand behind it; a shot into an opening finds him recovering
       ev *= setup;
