@@ -4,6 +4,36 @@ Ed: "the fight iq, fight engine, the boxers iq, the decisions they make, play a 
 
 This replaces COMBAT.md steps 8 (rhythm) and 10 (smarter AI) and feeds step 9. Steps 6, 7 and 11 stay as they are.
 
+## Skill levels: the brain's backbone (Ed, Oct 7, planned, not built)
+
+Ed: step back to the beginning. A beginner doesn't do the champ's things worse, he does different things. Decided in a 12-question review (Oct 7):
+
+- **Levels:** Novice, Intermediate, Pro/Elite, Worldclass. The overall level is built from per-skill mastery (both: a Pro jab can sit next to a Novice body attack).
+- **Skills (all four groups):**
+  - Offense: jab, power shots, combos, body work, feints and setups.
+  - Defense: blocking, slipping and rolling, footwork out, clinching.
+  - Ring craft: cutting off the ring, rope escape, range control, angles.
+  - Fight IQ: countering, reading habits, pacing, adjusting between rounds, taking corner advice.
+- **Scalable, earned:** mastery grows from real fights and training (and what he learns from both). No sparring for now (Ed: skip it).
+- **Training teaches knowledge:** how to deal with each style and stance, plus his own skills. He carries a familiarity rating per opponent style and per stance. A man who's never seen a southpaw is lost early; camp can drill the next opponent's style.
+- **A skill he doesn't own still gets tried, badly:** telegraphed (read and countered harder), off balance after a miss, arm-punch damage, and the commentary calls it ("he's trying to feint, nobody's buying it"). Funny and real.
+- **Upsets:** a fighter one level down wins ~15–20%, more with the right plan, high IQ, or a great combination landing.
+- **Start levels (no preference from Ed, default):** raw beginner = Novice; journeyman = Intermediate with a few Pro skills; veteran = Pro with fading legs; ranked pro = Pro/Worldclass with set habits. Generated opponents get mastery from record and rank.
+- **Shown as:** a skill sheet (a mastery bar per skill) and level-up moments ("he's finally sitting down on that right hand"). No level badge.
+
+How the built brain maps on: B1 memory → reading habits; B3 anticipation/counters → countering; feint read and FEINT_READ → feints; `need()` → pacing; corner as teacher (`TEACH`, `teachK`) → taking corner advice; B4 setups → feints and setups; B2 rhythm → pacing at the top levels. Today these all scale off `ringIQ()` (stats + `exp`); the skill sheet replaces that one dial.
+
+**Open before building:** the overlap between the 10 `STATS` and the skills (accuracy, defense, footwork). Proposal: stats stay the body and tools (power, speed, chin, stamina, ...), skills are what he knows how to do with them.
+
+### Build order (each a commit, sims before and after, never balance + visuals together)
+- **L0:** `tests/levels.js`: win % by level gap, skill use and success by level, bad-technique counts. Baseline first.
+- **L1:** data only. `sheet.sk` (mastery per skill), `sheet.know` (per style + stance), the level derived from them, defaults per walk-in type and opponent record. Recording only: same.js hash holds.
+- **L2:** the engine reads mastery: how often a skill is tried, how well, and the bad-technique outcomes (telegraph read, off-balance beat, damage cut, commentary hook).
+- **L3:** style and stance familiarity in the fight (slow reads early against the unfamiliar, caught more).
+- **L4:** learning: fights and training raise mastery and knowledge; camp drills the next opponent's style.
+- **L5:** UI: skill sheet and level-up moments (visual commit, separate).
+- **L6:** balance: upsets one level down 15–20%, then the CLAUDE.md targets (styles, guards, audit). The old B6 list folds in here.
+
 ## How the brain works now (engine, `decide` ~768, `pickCombo` ~949, `react` ~1005, `pickCounter` ~1032)
 - **A dice stack on a timer.** Every .2–.6 s `decide()` re-rolls everything: clinch → grab → escape → step out → combo → feint → block. 53% of rolls do nothing but nudge footwork. He has no intent that lasts longer than one roll.
 - **No rhythm.** An exchange every ~2.5 s, all fight. No feel-out, no burst-then-reset, no "take a breather", no "steal the round late".
