@@ -4,6 +4,9 @@
 - **Left out on purpose:**
   - practical-cerf's defensive-read engine code, a duplicate of BRAIN B1 + B3 (NOTES.md "Defensive read"). Its attacker "change it up" idea is parked for B4.
   - `ccr-026fa9ad-j4d8rw`, the rhythm v1 Lab B experiment, which COMBAT 8a/8b replaced.
+  - `ccr-b57f3498-nk3hk1`, a parallel step 6 (hash 21280dfb). The main line has the other session's step 6 (`claude/handoff-review-32nske`) and a newer `research/fnc.md`.
+  - Every other remote branch is fully inside this one; they can be deleted.
+- **Labs not republished this pass.** The fight lab (QhC1…) still shows the Oct 6 build (3ba1739), without the brain. The publish tool wants the whole live page read first (~200k tokens), so do it in a fresh session: `node tools/lab.js`, then publish `lab.html` to the fight lab URL. The brain lab (N5pj…) is now the same thing as the fight lab; keep one.
 - **Fixes this pass:**
   - Render: feet keep stepping while he slows to a stop.
   - Engine: the rope side lock (`ropeT`) now counts down every tick in `updateF`. Before, it only counted while footwork ran, so it went stale through punches and escape runs, and in `physics()` that stale lock let the pair cross. Numbers are in NOTES.md "Rope lock timer".
