@@ -483,6 +483,9 @@ function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0
 function gf(F, key) { const f = GUARDS[F.guard][key]; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
 function gdw(F, kind) { const f = GUARDS[F.guard].def[kind]; if (f == null) return kind === 'roll' ? 0 : 1; return f > 1 ? 1 + (f - 1) * F.gSkill : f; }
 const iqK = F => clamp((F.iq - 35) / 55, 0, 1);
+// the defensive read: he learns what the other man throws after what. edge: more avoids vs a habit he has seen,
+// early: his defense starts sooner (anticipation), vary: the attacker steers off combos he is being read on, keep: kept between rounds
+const READ = { edge: .35, early: .4, vary: .4, keep: .8 };
 // how well his guard covers this punch (≈ .5 weak .. 1.6 strong)
 function coverF(D, P) { return P.zone === 'body' ? gf(D, 'body') : gf(D, 'head') * gf(D, P.kind === 'straight' ? 'str' : P.kind === 'hook' ? 'hook' : 'up'); }
 // blocked shot: a strong guard absorbs more, a cracked guard lets more leak through
@@ -514,7 +517,17 @@ function mkF(sheet, side) {
     read: newRead()
   };
 }
-function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0 }; }
+function newRead() { return { th: { straight: 0, hook: 0, upper: 0, body: 0 }, av: { straight: 0, hook: 0, upper: 0, body: 0 }, thr: {}, land: {}, reacts: 0, feints: 0, seen: {} }; }
+// seen[prev][type]: what the other man threw after prev ('' = his opener). Smart fighters notice more of it
+function readSee(D, A, type) {
+  const w = .5 + .5 * iqK(D), key = A.prevP || '', row = D.read.seen[key] || (D.read.seen[key] = { n: 0 });
+  row.n += w; row[type] = (row[type] || 0) + w;
+}
+// how well D can call this punch: 0 = no idea, 1 = he knows it is coming (a 60% habit seen 12+ times)
+function guess(D, prev, type) {
+  const row = D.read.seen[prev || '']; if (!row || row.n < 3) return 0;
+  return clamp(((row[type] || 0) / row.n - .25) * 1.6, 0, 1) * Math.min(1, row.n / 12);
+}
 function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
 class Fight {
@@ -832,6 +845,7 @@ class Fight {
     F.swapT = 0; F.stance = F.stance === 'southpaw' ? 'orthodox' : 'southpaw';
     const Rd = F.op.read; for (const g of ['th', 'av']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
     for (const g of ['thr', 'land']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
+    for (const r of Object.values(F.op.read.seen)) for (const k in r) r[k] /= 2;
     F.op.lostT = Math.max(F.op.lostT, STYLE_SWAP.lost * F.st.swap);
     this.emit('switch', { a: F.side, st: F.stance });
   }
@@ -972,6 +986,7 @@ class Fight {
       if (late && lead > 2.5) read *= n <= 2 ? 1.25 : .7;   // up on the cards: stay smart
       if (late && lead < -2.5) read *= 1 + c.pow * .2;       // down: needs something big
       if (c.key === F.lastCombo) read *= .65;               // don't show him the same look twice
+      { let pv = this.t - (F.lastPT || -9) < .8 ? F.lastP : '', gm = 0; for (const p of c.seq) { gm = Math.max(gm, guess(O, pv, p)); pv = p; } read *= 1 - READ.vary * gm; } // he is reading that one: change it up
       w *= lerp(1, read, k * (1 - STYLE_ODD.read * (O.st.odd || 0))); // an awkward man is hard to read
       w *= 1 + (R() - .5) * (1 - k) * .8;                   // low IQ: noisy choices
       return w;
@@ -991,6 +1006,7 @@ class Fight {
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
     this.react(F.op, F, P);
+    if (F.op.state !== 'stun' && F.op.state !== 'down') readSee(F.op, F, type);
     this.emit('throw', { a: F.side, p: type });
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
   }
@@ -1014,6 +1030,8 @@ class Fight {
     ch *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
     if (D.lostT > 0) ch *= STYLE_ANGLE.react;
     if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
+    const g = A.act && !A.act.feint ? guess(D, A.prevP, A.act.type) * (1 - STYLE_ODD.read * (A.st.odd || 0)) : 0; // he has seen this one before
+    ch *= 1 + READ.edge * g;
     if (D.st.spoil && A.queue.length && D.state !== 'punch' && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) { this.startClinch(D); return; } // sees the combo coming, ties him up
     if (R() > ch) return;
     A.read.reacts++;
@@ -1024,7 +1042,7 @@ class Fight {
     else if (P.kind === 'hook') kind = wpick(['duck', 'block', 'pull', 'roll'], k => ({ duck: D.s.defense * gdw(D, 'duck'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), roll: 22 * gdw(D, 'roll') })[k]);
     else kind = wpick(['block', 'pull'], k => ({ block: 60 * gdw(D, 'block'), pull: D.s.footwork * gdw(D, 'pull') })[k]);
     if (D.state === 'punch') { D.act = null; D.queue = []; D.state = 'idle'; }
-    D.pendingDef = { kind, at: 0.05 + (1 - D.s.speed / 100) * 0.13, dur: .34 }; D.defZ = P.zone;
+    D.pendingDef = { kind, at: (0.05 + (1 - D.s.speed / 100) * 0.13) * (1 - READ.early * g), dur: .34 }; D.defZ = P.zone;
     if (D.order) this.ack(D, kind === 'block' || kind === 'roll' ? 'hands' : kind === 'pull' ? 'move' : '');
     if (kind === 'pull') { const v = vec(D, A); D.vx = -v.ux * 55; D.vz = -v.uz * 55; D.pullX = -v.ux; D.pullZ = -v.uz; D.pullT = .22; }
   }
@@ -1299,6 +1317,7 @@ class Fight {
       F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.fakeT = 0; F.exitAfter = false; F.resetT = 0;
       // memory fades a bit between rounds, the most recent round counts most
       const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6;
+      for (const r of Object.values(Rd.seen)) for (const k in r) r[k] *= READ.keep; // what he figured out about the other man mostly stays
     }
     // doctor / corner stoppages
     const tot = this.cardTotals(); const lead0 = tot.reduce((s, t) => s + (t[0] - t[1]), 0) / 3;
