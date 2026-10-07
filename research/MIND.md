@@ -31,7 +31,9 @@ The league already sits on the real welterweight line (~57 to 63 thrown, ~19 lan
 
 ## Build order (each step: own commit, `same.js` + audit + styles before/after)
 
-1. **Defensive read: "I know what he throws next."** Per-opponent punch transition counts (`seen['jab>cross']`), noticed at a rate set by Ring IQ. `guess()` in `react()` raises avoid chance (`READ.edge` ~.35) and starts the defense earlier vs habits. Attacker's picker avoids combos the defender reads well (free variety). Spec: `mind_vision.md` 8a. Watch: late-round connect % per round.
+**Status:** step 1 built and validated. Paused here by Ed; next up is step 2 (clarity + trust). Lab artifact not republished since step 1.
+
+1. **[BUILT Oct 2026, see NOTES.md "Defensive read"] Defensive read: "I know what he throws next."** Per-opponent punch transition counts (`seen['jab>cross']`), noticed at a rate set by Ring IQ. `guess()` in `react()` raises avoid chance (`READ.edge` ~.35) and starts the defense earlier vs habits. Attacker's picker avoids combos the defender reads well (free variety). Spec: `mind_vision.md` 8a. Watch: late-round connect % per round.
 2. **Clarity + trust.** Fatigue and damage blur the read, a knockdown wipes part of it, feints wear down trust (and a strong read bites harder on feints of that punch: the feint master's job). `mind_vision.md` 8b/8c.
 3. **Context counters.** Replace the generic `pickCounter` menu with a table keyed on how he avoided it and what was thrown (pull counter, catch and shoot, slip-cross, uppercut vs a duck, straight inside a wide hook, counter jab, check hook). `mind_combos.md` section 6. Watch counter style stays under ~54%.
 4. **Pace controller.** `paceMult` on top of `decide()`: round 1 feel-out by `startSpeed`, late-fight `tank`, first-20 s feel-out, last-30 s steal by `stealer`, "you're blowing it" urgency from `F.lead` late, protect a lead. Targets: R1 ~85 to 90%, last 30 s ~22 to 25% of a round's punches. `mind_pace.md` section 8.
