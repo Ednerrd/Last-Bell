@@ -6,7 +6,7 @@ Phone-first auto-boxing career sim. One self-contained file: `index.html` (~4,60
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
-- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `ccr-3026595d-4l5s24`.
+- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch).
 - Never publish to the live game without Ed's explicit OK.
 
 ## Links
