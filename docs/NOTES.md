@@ -1,5 +1,7 @@
 # Last Bell: notes and history
 
+"COMBAT step N" refers to the old combat polish plan (`COMBAT.md`, removed Oct 8 2026; steps 1-6, 8, 9, 12, 13 done; see git history).
+
 Reference for `CLAUDE.md`. Not loaded every session: open the section you need (grep the heading). Numbers here are past measurements; re-run the sims before trusting them for new work.
 
 ## Render details (2D)

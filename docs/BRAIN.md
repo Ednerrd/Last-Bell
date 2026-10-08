@@ -2,7 +2,7 @@
 
 Ed: "the fight iq, fight engine, the boxers iq, the decisions they make, play a huge part into how the game runs because the ai boxer is the brain."
 
-This replaces COMBAT.md steps 8 (rhythm) and 10 (smarter AI) and feeds step 9. Steps 6, 7 and 11 stay as they are.
+Design + measurements for the AI. What to build next is in `ROADMAP.md`.
 
 ## Skill levels: the brain's backbone (Ed, Oct 7, planned, not built)
 
@@ -157,7 +157,6 @@ Hash 84ba46a3 -> **9fe862cf**. For B6: swarmer 47.4 sits just under the 48 floor
   - Final: block value uses the real `blockLeak` per guard and punch, inference .6, range shift 10 (out-boxers at .3 toward inside).
   - Balance: audit 56.4 / 16.2 / 28.7%, stoppages 33%. Base styles 47.8–52.2 (pairs). Guards 47–59 over two runs (±3). Specials 47.4–54.4.
   - IQ 90 vs 40 pooled over 800 fights: ~56%, about where it started; rounds won early → late 55 → 60%. **Memory alone doesn't make IQ win fights.** The lever is B3, where a low-IQ man can't use what he's seen.
-- **B1 (original line):** Opponent memory with fading. Recording only first (same.js hash holds), then wired into combo picks.
 - **B2 (next):** Intent modes and rhythm, from style DNA.
 - ✅ **B3 (done before B2):** Anticipation plus the defense-keyed counter table (`antRead`, `antOn`, `ANT`, `ANT_BEST`, `pickCounter(…, def)`).
   - A read punch is defended more often (`ANT.react` .35) with the right defense: slip the straight, duck the hook, a block-leaning guard gets the gloves there. It's countered harder (`ANT.ctr` .3), and caught cleaner on the gloves (`ANT.catch` .4). Jab reads count half.

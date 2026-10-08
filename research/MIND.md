@@ -30,20 +30,9 @@ The league already sits on the real welterweight line (~57 to 63 thrown, ~19 lan
 - `st.ramp` + `rampSig()` (~781): volume up when the fight calls for it. `F.lead`: the fighter's own scorecard guess.
 - `iqK()` in `react()`: Ring IQ as a flat factor. Last-combo repeat penalty.
 
-## Build order (each step: own commit, `same.js` + audit + styles before/after)
+## Specs for the open brain work
 
-**Status (Oct 7 merge):** step 1 was first built on an old branch; the main line already had it as BRAIN B1 + B3, so that engine code was left out (NOTES.md "Defensive read"). How the steps line up with BRAIN.md:
-
-| MIND step | Main line |
-|---|---|
-| 1 Defensive read | Done: B1 memory + B3 anticipation. Attacker "change it up" (`READ.vary`) not built: B4 |
-| 2 Clarity + trust | Trust partly done (`FEINT_READ`). Clarity (fatigue/damage/KD blur the read) open |
-| 3 Context counters | Done: B3 `pickCounter(..., def)` |
-| 4 Pace controller | Partly: rhythm (COMBAT 8a). Round shape / last 30 s steal open: B2 |
-| 5 Hurt brain | Open |
-| 6 Between-round adjustment | Started: B5 corner as teacher |
-| 7 Combos + setup memory | Open: B4 |
-| 8 Mind knobs for named fighters | Open: B6 DNA |
+The order lives in `ROADMAP.md`. Steps 1 and 3 are built (BRAIN B1 + B3); step 6 is started (corner as teacher); step 4 is partly built (rhythm `TEMPO`, round awareness `NEED`).
 
 1. **[Done on the main line as BRAIN B1 + B3] Defensive read: "I know what he throws next."** Per-opponent punch transition counts (`seen['jab>cross']`), noticed at a rate set by Ring IQ. `guess()` in `react()` raises avoid chance (`READ.edge` ~.35) and starts the defense earlier vs habits. Attacker's picker avoids combos the defender reads well (free variety). Spec: `mind_vision.md` 8a. Watch: late-round connect % per round.
 2. **Clarity + trust.** Fatigue and damage blur the read, a knockdown wipes part of it, feints wear down trust (and a strong read bites harder on feints of that punch: the feint master's job). `mind_vision.md` 8b/8c.

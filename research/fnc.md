@@ -30,7 +30,7 @@ Ed asked for "FNC 3, just for any info". Covers Fight Night Champion (FNC) and F
 - Flash knockdowns off clean counters (`TUNE.flash`, ~1169).
 - Counter window (`counterWin`), `TUNE` = our tuner set, cuts and doctor (`CUT`), camp training.
 
-## Worth stealing (mapped to COMBAT.md)
+## Worth stealing (step numbers are the old combat plan, now in git history)
 1. **Contact quality from angle and flushness (step 9).** Emit it in the `hit`/`miss` events (hand, lane, quality, miss type) so the 3D render can draw it, like FNC shows where a shot lands. This is FNC's whole damage model. Score each landed punch clean / glancing / smothered / blocked from distance, angle and the defender's guard and slip. Give each its own damage, look and hit-stop.
 2. **Arm fatigue (step 10/11).** A per-arm pool next to `stam`: a jab-heavy round tires the lead arm, the jab gets slower and the hand drops. Good for the AI ("his left is tired, he stopped jabbing") and for corner talk.
 3. **Block wear plus timed blocks (step 9).** Reflexes and block strength already sort of wear via `gi`. Add a timed-block roll: a block that fires early (`react()` reading the shot) holds much better than a guard that was just sitting there, so high-guard turtling bleeds.
