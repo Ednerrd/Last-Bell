@@ -44,6 +44,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials).
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
 - `node tests/brain.js [tempo|iq|adapt|pace|styles] N`: brain report. Baselines in `docs/BRAIN.md`.
+- `node tests/levels.js 300`: skill levels report (win % by level gap, skill use, bad technique). L0 baseline in `docs/BRAIN.md`.
 - `QUIET=3 node tests/teach.js 300 82 body 20`: corner-as-teacher log (control `PATCH="TEACH.max=0"`).
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body, `gym.js 3` gym mode for N years.
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).

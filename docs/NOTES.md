@@ -128,6 +128,10 @@ Stat economy (NOT fixed, known): +8 in one stat vs identical fighter (400 fights
 - Weight classes: hub "Weight class" button, one division at a time (`changeDiv`). Each division keeps its own roster/belts (`world.away`), catches up on return. Up: power −2, chin −1, speed +1; down: power +1, chin +1, stamina −3, recovery −2 (stats and ceiling). Keeps 60% of points, vacates belts. `P.titleDivs` tracks multi-division titles.
 - Not done / ideas: no art for the special styles beyond the stance flip (angle step-offs use the normal slide); foul DQ is not in (warnings + point deductions only); legends never move divisions; the other divisions don't sim while you are away except a catch-up when you return.
 
+## Fight lab republish + skill levels L0 (Oct 8)
+- Fight lab republished from `node tools/lab.js` with the brain (artifact version 16). One lab only; the brain lab is retired.
+- `tests/levels.js` built (recording only, wraps `pickCombo`/`startPunch`/`react`). L0 baseline in `docs/BRAIN.md`: one level down wins 4.4% (target 15–20), combo length flat at 2.03 at every level, jammed misses never fire.
+
 ## Saves, scouting (repo only, done)
 - Backup codes: title screen, Backup on each slot gives a text code (`Backup.encode`: gzip via CompressionStream + base64, prefix `LBz1.`; plain base64 `LB1.` fallback). "Restore from a backup code" pastes it into any slot (`Backup.decode` → `migrateSave`, then Store.push syncs it). A 12-year career is ~17k characters.
 - Offers show a corner read (`cornerRead`: OVR-gap verdict, his biggest edge, yours, his weak spot) and a collapsible tale of the tape (`tapeHtml`). Camp shows the tape too.

@@ -8,19 +8,18 @@ The only to-do list. When something is done, delete its line here and put the nu
 3. **Answer:** how do skills overlap with the 10 `STATS`? Proposal: stats are the body (power, speed, chin, stamina), skills are what he knows how to do with them.
 
 ## Claude, in this order
-1. **Republish the fight lab** (`node tools/lab.js`, publish `lab.html` to the fight lab URL). It still shows the Oct 6 build without the brain. The brain lab is retired; one lab only.
-2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Needs Ed's answer to item 3 above before L1.
-3. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):
+1. **Skill levels L1–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. L0 baseline is in (`tests/levels.js`, numbers in `docs/BRAIN.md`). Next is L1, blocked on Ed's answer to item 3 above.
+2. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):
    - Setups and traps: jab-jab-right, body then head, feint to draw the slip, "show it twice, change it" (`research/mind_combos.md`).
    - Hurt brain: shell / run / fire back / clinch / freeze by composure; finisher weighs the risk (`research/mind_vision.md` 8d).
    - AI between-round adjustment: change one thing when losing exchanges; low adjusters wait too long.
    - Clarity: fatigue, damage and knockdowns blur the read.
    - Gassers save it for later (stamina pacing).
    - Check first, maybe not needed: within-round read decay (B1 already fades), defensive read inside `react()` capped ±25% per guard (B3 covers part).
-4. **Balance pass** (L6). Upsets one level down 15–20%, then the CLAUDE.md targets. Known weak: feinter ~46–47, swarmer ~47.4, high/cross guards swing between runs (pool 600+ per guard).
-5. **Gym mode steps 3–6** (`docs/GYM.md`): mitts + combo book, training sessions, sparring, signature moves and habits, in-round talk.
-6. **3D phase 1** once Ed's phone numbers are in (`proto/PLAN.md`). Recommended start: the engine drives the 3D and draws punch lanes, why a shot lands or misses.
-7. **Footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet. Do it in 3D, not 2D.
+3. **Balance pass** (L6). Upsets one level down 15–20%, then the CLAUDE.md targets. Known weak: feinter ~46–47, swarmer ~47.4, high/cross guards swing between runs (pool 600+ per guard).
+4. **Gym mode steps 3–6** (`docs/GYM.md`): mitts + combo book, training sessions, sparring, signature moves and habits, in-round talk.
+5. **3D phase 1** once Ed's phone numbers are in (`proto/PLAN.md`). Recommended start: the engine drives the 3D and draws punch lanes, why a shot lands or misses.
+6. **Footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet. Do it in 3D, not 2D.
 
 ## Decided (don't reopen)
 - No 2D-only render polish (uppercut curve, close-range spacing): 3D redoes the animation.

@@ -26,13 +26,24 @@ How the built brain maps on: B1 memory → reading habits; B3 anticipation/count
 **Open before building:** the overlap between the 10 `STATS` and the skills (accuracy, defense, footwork). Proposal: stats stay the body and tools (power, speed, chin, stamina, ...), skills are what he knows how to do with them.
 
 ### Build order (each a commit, sims before and after, never balance + visuals together)
-- **L0:** `tests/levels.js`: win % by level gap, skill use and success by level, bad-technique counts. Baseline first.
+- **L0 (done Oct 8):** `tests/levels.js`: win % by level gap, skill use and success by level, bad-technique counts. Baseline below.
 - **L1:** data only. `sheet.sk` (mastery per skill), `sheet.know` (per style + stance), the level derived from them, defaults per walk-in type and opponent record. Recording only: same.js hash holds.
 - **L2:** the engine reads mastery: how often a skill is tried, how well, and the bad-technique outcomes (telegraph read, off-balance beat, damage cut, commentary hook).
 - **L3:** style and stance familiarity in the fight (slow reads early against the unfamiliar, caught more).
 - **L4:** learning: fights and training raise mastery and knowledge; camp drills the next opponent's style.
 - **L5:** UI: skill sheet and level-up moments (visual commit, separate).
 - **L6:** balance: upsets one level down 15–20%, then the CLAUDE.md targets (styles, guards, audit). The old B6 list folds in here.
+
+### L0 baseline (Oct 8, `node tests/levels.js 300`, 3,000 fights, 10 rds, random base styles + guards)
+No levels exist yet, so each level is a proxy from what drives skill today (rating ±3 + exp → `ringIQ`): Novice r42 exp0 (IQ 36), Inter r59 exp12 (IQ 64), Pro r75 exp30 (IQ 85), World r90 exp45 (IQ 98).
+- **Upsets way too rare.** Lower level wins: 1 down 4.4% (target 15–20), 2 down 0.3%, 3 down 0.3%. Novice vs Inter 3.7, Inter vs Pro 2.3, Pro vs World 4.7. Same level 49.5. Stops: Novice vs World 97%, World vs World 15%. Today rating is the whole fight; L2 has to make the gap skill, not just stats.
+- Offense N/I/P/W: thrown 40.7/47.4/53.5/58.3, landed 8.6/11.8/15.5/18.1, connect 21.2/24.8/28.9/31.1. Jab share drops 40→32%, body share rises 14→19%. Feints 4.9→7.1/rd.
+- **Combo length flat:** 2.03 at every level, 3+ combos ~23%. Skill doesn't touch combo choice yet. Power behind the jab falls with level (30→20%): the good ones throw fewer jab setups, backwards.
+- Defense: evaded 18.7→34.6%, blocked 18.9→23.0%, slips 16→30%. Clinches 0.41→0.11/rd.
+- Ring craft: on the ropes 11.1→7.9 s/rd, escapes 1.2→1.8/rd, cutoffs flat at ~0.11/rd.
+- Fight IQ: counters tried 1.3→6.3/rd, landed 0.31→2.82/rd. Read the shot 0.01→0.31 avg, read >.3: 0/10/46/48%. Pace late/early flat (~1.0).
+- Bad technique: wild misses 12.7/7.9/2.3/0.03 per rd (the one real bad-technique signal today). Short misses rise with level (3.7→5.3, more volume). **Jammed misses never fire (0 at every level).** Smothered ~2.5%, glancing 6–8% of landed.
+- Not measured (no system yet): adjusting between rounds, corner advice, style/stance familiarity.
 
 ## How the brain works now (engine, `decide` ~768, `pickCombo` ~949, `react` ~1005, `pickCounter` ~1032)
 - **A dice stack on a timer.** Every .2–.6 s `decide()` re-rolls everything: clinch → grab → escape → step out → combo → feint → block. 53% of rolls do nothing but nudge footwork. He has no intent that lasts longer than one roll.
