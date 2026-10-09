@@ -10,7 +10,7 @@ Start here.
 
 ## Where things stand
 - **v1** (`index.html` at the root) is frozen. It's the reference and the fallback. No new v1 work, unless it's Ed's items in `ROADMAP.md` (publishing live, the phone test).
-- **v2** has docs only, no code yet. The next step is **M0**.
+- **v2**: M0 (skeleton) done Oct 9, preview link in `v2/CLAUDE.md`. Next is **M1**.
 
 ## M0 spec (skeleton)
 - Create the folder layout from FOUNDATION section 8: `v2/src/{core,engine,brain,fighter,career,render3d,ui}`, `v2/tests`, `v2/build.js`, `v2/CLAUDE.md` (short v2 working rules).

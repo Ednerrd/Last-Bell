@@ -3,7 +3,7 @@
 3D phone-first auto-boxing coach sim, rebuilt from zero. Source of truth: `VISION.md` → `GAME.md` → `FOUNDATION.md` (build order in section 9). `HANDOFF.md` says where things stand.
 
 ## Links
-- **v2 preview** (private, Claude Code publishes it): _pending_
+- **v2 preview** (private, Claude Code publishes it): https://claude.ai/artifact/JSRSAaWGMNSdb8eTvMiSRm. Publish with `node v2/build.js --publish <scratchpad>/lastbell-v2.html`, then publish that file to this URL. No capabilities yet.
 - v1's live game is off limits. v2 only ever goes to its own preview until Ed says it replaces v1.
 
 ## Build and test

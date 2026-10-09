@@ -1,4 +1,5 @@
 // Bundles v2/src into ONE file: v2/index.html (the thing Ed uploads). node v2/build.js
+// node v2/build.js --publish <file> also writes the artifact copy (see bottom).
 // A small module bundler for our own code, so there's no npm dependency.
 // Supported: import { a, b as c } from './x.js' | import * as X from './x.js'
 //            export function|async function|const|let|class name  |  export { a, b as c }
@@ -58,4 +59,13 @@ for (const url of html.match(/https?:\/\/[^\s'"`)]+/g) || []) {
     throw new Error('disallowed URL in build: ' + url);
 }
 writeFileSync(join(here, 'index.html'), html);
+
+// --publish <file>: the same page without doctype/html/head/body, since the artifact host adds its own skeleton.
+const pi = process.argv.indexOf('--publish');
+if (pi > 0) {
+  const page = html.replace(/<!doctype html>\s*/i, '').replace(/<\/?(html|head|body)[^>]*>\s*/gi, '')
+    .replace(/<meta (charset|name="viewport")[^>]*>\s*/gi, '');
+  writeFileSync(resolve(process.argv[pi + 1]), page);
+  console.log('wrote publish copy ' + process.argv[pi + 1]);
+}
 console.log(`wrote v2/index.html  ${order.length} modules  ${(html.length / 1024).toFixed(1)}KB`);
