@@ -145,7 +145,7 @@ async function start() {
     if (frames % 6 === 0) hud.fight({ ...fight, rest: rest > 0 });
   }
   requestAnimationFrame(frame);
-  window.__lb = { renderer, scene, THREE, get fight() { return fight; } }; // for headless checks
+  window.__lb = { renderer, scene, THREE, men: drawMen, get fight() { return fight; } }; // for headless checks
 }
 
 start();

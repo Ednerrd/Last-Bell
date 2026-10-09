@@ -1,8 +1,11 @@
-// Placeholder men: simple shapes, drawn exactly where the engine says they are.
-// M2 keyed poses, plus life between steps (bounce, weave, step dip): punches (straight / hook / upper paths to the live target), defense moves
-// (block, slip, roll, pull), hit snaps, torso turn, two-bone arms. Render only: reads the state
-// it's handed and the bus, never changes a result.
+// Placeholder men: simple shapes, drawn where the engine says they are. Render only: reads the
+// state it's handed and the bus, never changes a result.
+// Movement pass (research/move_plan.md): feet plant and step (lift, swing, land, pivot on the ball),
+// the hips ride between them with the weight shifting foot to foot, the torso turns into punches
+// (hips lead, shoulders follow, a little follow-through), hits land as impulses (chest first, the
+// head whips after), and every man has his own way of moving (moves.js).
 // Local frame: [forward, up, right] for a man 1.78 m tall, mirrored for southpaws (lead = -right).
+import { moveDNA, noise } from './moves.js';
 
 // Glove spots in guard: [x forward, y up, z right]. Lead = left = -z.
 const GUARD = {
@@ -17,12 +20,15 @@ const SHOULDER = { lead: [0.06, 1.42, -0.17], rear: [-0.04, 1.42, 0.17] };
 const HEAD = [0.02, 1.64, 0];
 const BLOCK = { lead: [0.2, 1.6, -0.075], rear: [0.19, 1.61, 0.075] };
 const HIT_AMP = { glancing: 0.035, solid: 0.075, flush: 0.13 };
-// Life between the steps, so he's never frozen: bounce (Hz, amplitude) and a weave side to side, by style.
-const LIFE = {
-  outboxer: { hz: 2.3, bob: 0.016, weave: 0.012 },
-  boxer:    { hz: 1.8, bob: 0.011, weave: 0.016 },
-  pressure: { hz: 1.4, bob: 0.008, weave: 0.035 },
-};
+// Stance (local, before his own width/length): the engine plants the same shape.
+const FOOT = { lead: [0.22, -0.1], rear: [-0.2, 0.12] };
+const TOE = { lead: 0.3, rear: 0.9 };      // toes turned out from his facing (rad)
+const BALL = 0.07;                         // foot center to the ball of the foot
+// Torso turn behind each punch (rad, + turns the rear shoulder through). Elite trunk turn is
+// ~43 deg on the jab and ~73 on the rear straight (move_fundamentals.md); these are the visible peaks.
+const TURN = { jab: 0.35, bjab: 0.3, cross: 0.87, bcross: 0.8, lhook: -0.7, bhook: -0.6, rhook: 0.8, brhook: 0.75, lupper: -0.3, rupper: 0.55 };
+// Weight: 0 all on the rear foot .. 1 all on the lead.
+const WEIGHT = { jab: 0.55, bjab: 0.6, cross: 0.68, bcross: 0.7, lhook: 0.38, bhook: 0.4, rhook: 0.66, brhook: 0.66, lupper: 0.45, rupper: 0.6 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const smooth = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
@@ -32,13 +38,33 @@ const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const len = (a) => Math.hypot(a[0], a[1], a[2]);
 const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 const rotY = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[2] * s, p[1], p[0] * s + p[2] * c]; };
+const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-// Punch progress 0 (guard) .. 1 (contact), with a small load back. Same curve the engine times.
-function extOf(p) {
+// Springs (render seconds, substepped so a long frame can't blow up). w: stiffness, z: damping
+// (1 = no overshoot, < 1 wobbles back). Scalars live in { p, v }, vectors in { p: [], v: [] }.
+function spring(s, goal, w, z, dt) {
+  const n = Math.max(1, Math.ceil(dt * 120)), h = dt / n;
+  for (let i = 0; i < n; i++) { s.v += (w * w * (goal - s.p) - 2 * z * w * s.v) * h; s.p += s.v * h; }
+  return s.p;
+}
+function spring3(s, goal, w, z, dt) {
+  const n = Math.max(1, Math.ceil(dt * 120)), h = dt / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < 3; j++) { s.v[j] += (w * w * (goal[j] - s.p[j]) - 2 * z * w * s.v[j]) * h; s.p[j] += s.v[j] * h; }
+  return s.p;
+}
+const S1 = (p = 0) => ({ p, v: 0 });
+const S3 = () => ({ p: [0, 0, 0], v: [0, 0, 0] });
+
+// Punch progress 0 (guard) .. 1 (contact), with a small load back. The fist is still moving when it
+// arrives (it drives through, it doesn't die on the target). After contact it depends what happened:
+// a landed shot sits a beat, a miss sails a little past and comes back slower.
+function extOf(p, res) {
   if (p.t <= 0) return 0;
   if (p.t < p.load) return -0.12 * (p.t / p.load);
-  if (p.t < p.load + p.snap) { const k = (p.t - p.load) / p.snap; return 1 - (1 - k) ** 3; }
-  return 1 - smooth((p.t - p.load - p.snap) / p.ret);
+  if (p.t < p.load + p.snap) { const k = (p.t - p.load) / p.snap; return 1.25 * k - 0.25 * k * k; }
+  const k = (p.t - p.load - p.snap) / p.ret;
+  if (res === 'miss') return 1 + 0.08 * Math.sin(Math.PI * clamp(k / 0.3, 0, 1)) - smooth((k - 0.15) / 0.85);
+  return 1 - smooth((k - (res === 'land' ? 0.12 : 0.06)) / (res === 'land' ? 0.88 : 0.94));
 }
 // Defense envelope: in fast, hold, out.
 function defEnv(d) {
@@ -52,7 +78,7 @@ export function makeMen(THREE, scene) {
   const shoe = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
   const kit = [0xb3201c, 0x1d4fb3].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55 }));
   const unitCyl = new THREE.CylinderGeometry(1, 1, 1, 10);
-  const up = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+  const up = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3();
 
   function seg(mat, r) {
     const m = new THREE.Mesh(unitCyl, mat);
@@ -80,12 +106,14 @@ export function makeMen(THREE, scene) {
     const glove = () => { const g = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), kit[i]); g.scale.set(1.25, 1, 1); g.castShadow = true; scene.add(g); return g; };
     const foot = () => { const f = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.1), shoe); f.castShadow = true; scene.add(f); return f; };
     return {
-      body, torso, head, gloves: [glove(), glove()], feet: [foot(), foot()],
+      body, torso, trunks, head, gloves: [glove(), glove()], feet: [foot(), foot()],
       arms: [seg(skin, 0.045), seg(skin, 0.04), seg(skin, 0.045), seg(skin, 0.04)],
       legs: [seg(skin, 0.065), seg(skin, 0.05), seg(skin, 0.065), seg(skin, 0.05)],
-      // Pose state (local, mirrored): smoothed gloves, the punch we last saw, hit snap.
-      g: { lead: null, rear: null }, punch: null, from: null, hit: null, yaw: 0, dip: 0,
-      ph: i * 2.1, busy: 1, sp: null,
+      // Pose state (local, mirrored): smoothed gloves, the punch we last saw and how it ended.
+      g: { lead: null, rear: null }, punch: null, from: null, res: null,
+      f: null, D: null, t: i * 31.7, ph: i * 2.1, busy: 1, act: 1, hold: 0, nextHold: 3, feint: null,
+      sp: null, ft: null, step: null,
+      yaw: S1(), hip: S1(), w: S1(0.45), fold: S1(), off: S3(), chest: S3(), headK: S3(), pend: [],
     };
   });
 
@@ -102,34 +130,38 @@ export function makeMen(THREE, scene) {
     return [(dx * c + dz * sn) / s, y / s, ((-dx * sn + dz * c) / s) * side];
   }
 
-  // Two-bone arm: elbow from shoulder S and glove G, bent toward `pole`.
-  function elbow(S, G, armL, pole) {
-    const d = sub(G, S), dl = len(d) || 1e-6, half = armL / 2;
+  // Two-bone limb: the joint between root S and end G, bent toward `pole`.
+  function elbow(S, G, L, pole) {
+    const d = sub(G, S), dl = len(d) || 1e-6, half = L / 2;
     const mid = mix(S, G, 0.5);
     const bend = Math.sqrt(Math.max(half * half - (dl / 2) * (dl / 2), 0));
-    // Pole minus its part along the arm, normalized.
     const u = mul(d, 1 / dl), pd = pole[0] * u[0] + pole[1] * u[1] + pole[2] * u[2];
     let pv = sub(pole, mul(u, pd)); const pl = len(pv) || 1; pv = mul(pv, 1 / pl);
     return add(mid, mul(pv, bend));
   }
 
-  // A landed shot snaps him: head (or torso, to the body) goes with the punch, then springs back.
+  // A landed shot is an impulse: the chest takes it now, the head whips after it 35 ms later and
+  // wobbles back once. The puncher feels a bit of it back through his arm. Body shots fold him.
   function onContact(e) {
+    const P = men[e.corner];
+    if (P.punch && P.punch.kind === e.kind) P.res = e.result;
     if (e.result !== 'land') return;
-    const R = men[1 - e.corner];
-    // Direction in HIS local frame: straights push back, hooks push across, uppers lift.
-    // push: toward his left (-1) or right (+1), real sides; update() mirrors it for southpaws.
+    const R = men[1 - e.corner], amp = HIT_AMP[e.q] || 0.05;
+    // Direction in HIS local frame (real sides; update() mirrors z for southpaws).
     const push = e.side === 'right' ? -1 : e.side === 'left' ? 1 : 0;
     const dir = e.kind.includes('upper') ? [-0.4, 0.8, 0] : push ? [-0.3, 0, push] : [-1, 0.1, 0];
-    R.hit = { t: 0, dir, amp: HIT_AMP[e.q] || 0.05, body: e.region === 'body' };
+    if (e.region === 'body') { R.fold.v += amp * 14 / 0.47 * 1.4; R.chest.v[0] -= amp * 6; }
+    else {
+      for (let j = 0; j < 3; j++) R.chest.v[j] += dir[j] * amp * 16 * 0.45;
+      R.pend.push({ t: 0.035, v: mul(dir, amp * 18 / 0.52) });
+    }
+    P.chest.v[0] -= amp * 3.5; // the puncher's recoil
+    if (e.q === 'flush') R.shove = { dir, amp };
   }
 
-  // Draw one frame from engine state. dt: render seconds since last frame.
-  // m.ta (<= 0): how far behind the last tick this frame sits, when main interpolates between ticks;
-  // punch and defense clocks are read at that same moment so everything lines up.
   // The hips glide on a critically damped spring toward where the engine has him, so a quick
-  // engine step reads as a weight shift, not a hop. Feet stay exactly where the engine plants them.
-  const GLIDE = 26;
+  // engine step reads as a weight shift, not a hop.
+  const GLIDE = 32;
   function glide(R, m, dt) {
     const S = R.sp;
     if (!S || Math.hypot(m.x - S.x, m.z - S.z) > 1) { R.sp = { x: m.x, z: m.z, vx: 0, vz: 0 }; return R.sp; }
@@ -141,75 +173,225 @@ export function makeMen(THREE, scene) {
     return S;
   }
 
+  // ---- Feet. The engine says where he stands; the render keeps each foot planted where it landed
+  // and only picks it up to step: the engine's own steps (first foot, then the other), the step in
+  // behind a punch (lead foot lands as the punch does), or when the planted foot has drifted too far
+  // from where it belongs (turning, a pull, a shove). The foot nearest the way he's going moves first.
+  function stanceSpot(c, th, h, D, s, side) {
+    const l = FOOT[h];
+    const p = world({ x: c.x, z: c.z, th }, [l[0] * D.len, 0, l[1] * D.wid], s, side);
+    return { x: p.x, z: p.z, yaw: th - (h === 'lead' ? TOE.lead : TOE.rear * (D.uw > 0.04 ? 0.7 : 1)) * side };
+  }
+  function lift(F, to, dur, h) {
+    F.sw = { fx: F.x, fz: F.z, fyaw: F.yaw, to, t: 0, dur, h };
+  }
+  function feet(R, m, dt, s, side, ta) {
+    const D = R.D, c = { x: m.x, z: m.z };
+    const want = { lead: stanceSpot(c, m.th, 'lead', D, s, side), rear: stanceSpot(c, m.th, 'rear', D, s, side) };
+    if (!R.ft || Math.hypot(R.ft.lead.x - want.lead.x, R.ft.lead.z - want.lead.z) > 1) {
+      R.ft = { lead: { ...want.lead, sw: null, y: 0 }, rear: { ...want.rear, sw: null, y: 0 } };
+      R.step = null;
+      return;
+    }
+    const F = R.ft;
+    // A foot that's somehow way out of place (sim jumped ahead) just goes home.
+    for (const h of ['lead', 'rear']) if (Math.hypot(F[h].x - want[h].x, F[h].z - want[h].z) > 0.6 * s) Object.assign(F[h], want[h], { sw: null, es: null, y: 0 });
+    // Engine step: follow its clock exactly. First foot over 0..60%, the other over 40..100%.
+    // Only while he's really on that step: a step left hanging while a pull moves him isn't one.
+    const st = m.step, k = st ? clamp((st.t + ta) / st.dur, 0, 1) : 0, ek = smooth(k);
+    if (st && Math.hypot(m.x - (st.from.x + (st.to.x - st.from.x) * ek), m.z - (st.from.z + (st.to.z - st.from.z) * ek)) < 0.05) {
+      if (R.step !== st) { R.step = st; F.lead.sw = F.rear.sw = null; F.lead.es = F.rear.es = null; }
+      const land = { lead: stanceSpot(st.to, m.th, 'lead', D, s, side), rear: stanceSpot(st.to, m.th, 'rear', D, s, side) };
+      const dist = Math.hypot(st.to.x - st.from.x, st.to.z - st.from.z);
+      for (const h of ['lead', 'rear']) {
+        const first = h === (st.first || 'lead');
+        const u = first ? clamp(k / 0.6, 0, 1) : clamp((k - 0.4) / 0.6, 0, 1);
+        const f = F[h];
+        if (u <= 0) continue;
+        if (!f.es) {
+          // Normally from where the foot is; if it's lost (the sim jumped ahead), from the step's start.
+          const st0 = stanceSpot(st.from, m.th, h, D, s, side);
+          f.es = Math.hypot(f.x - st0.x, f.z - st0.z) > 0.25 * s ? { fx: st0.x, fz: st0.z, fyaw: st0.yaw } : { fx: f.x, fz: f.z, fyaw: f.yaw };
+        }
+        const e = smooth(u);
+        f.x = f.es.fx + (land[h].x - f.es.fx) * e; f.z = f.es.fz + (land[h].z - f.es.fz) * e;
+        f.yaw = f.es.fyaw + wrapA(land[h].yaw - f.es.fyaw) * e;
+        f.y = Math.min(D.swing, 0.012 + dist * 0.12) * Math.sin(Math.PI * u) * (u < 1 ? 1 : 0);
+      }
+      return;
+    }
+    R.step = null; F.lead.es = F.rear.es = null;
+    // The step in behind a punch: the lead foot goes now and lands with the punch.
+    const p = m.punch;
+    if (p && p !== R.stepPunch) {
+      R.stepPunch = p;
+      const left = p.step - p.stepped;
+      if (left > 0.03) {
+        const to = { x: m.x + Math.cos(m.th) * left, z: m.z + Math.sin(m.th) * left };
+        lift(F.lead, () => stanceSpot(to, m.th, 'lead', D, s, side), Math.max(p.load + p.snap - (p.t + ta), 0.06), D.swing * 0.7);
+      }
+    }
+    // A big shot moves his feet: the rear foot catches him.
+    if (R.shove) {
+      const { dir, amp } = R.shove, b = mul(dir, amp * 1.2);
+      const w = world({ x: 0, z: 0, th: m.th }, [b[0], 0, b[2] * side], s, side);
+      const base = want.rear;
+      if (!F.rear.sw) lift(F.rear, () => ({ ...base, x: base.x + w.x, z: base.z + w.z }), 0.14, 0.02);
+      R.shove = null;
+    }
+    // Swings in flight.
+    for (const h of ['lead', 'rear']) {
+      const f = F[h];
+      if (!f.sw) continue;
+      const S = f.sw, to = typeof S.to === 'function' ? S.to() : want[h];
+      S.t += dt;
+      const u = clamp(S.t / S.dur, 0, 1), e = smooth(u);
+      f.x = S.fx + (to.x - S.fx) * e; f.z = S.fz + (to.z - S.fz) * e;
+      f.yaw = S.fyaw + wrapA(to.yaw - S.fyaw) * e;
+      f.y = S.h * Math.sin(Math.PI * u);
+      if (u >= 1) { f.sw = null; f.y = 0; }
+    }
+    // Drift: pick up the foot that's furthest out of place, if the other one is down (or nearly).
+    const err = (h) => Math.hypot(want[h].x - F[h].x, want[h].z - F[h].z);
+    const yerr = (h) => Math.abs(wrapA(want[h].yaw - F[h].yaw));
+    const busy = (h) => F[h].sw && F[h].sw.t < F[h].sw.dur * 0.55;
+    const need = (h) => !F[h].sw && (err(h) > 0.07 * s || yerr(h) > 0.44);
+    const cand = ['lead', 'rear'].filter(need);
+    if (cand.length) {
+      // The foot nearest the way he's going moves first.
+      const mvx = (want.lead.x - F.lead.x + want.rear.x - F.rear.x) / 2, mvz = (want.lead.z - F.lead.z + want.rear.z - F.rear.z) / 2;
+      const ahead = (h) => (F[h].x - m.x) * mvx + (F[h].z - m.z) * mvz;
+      cand.sort((a, b) => ahead(b) - ahead(a));
+      const h = cand[0], o = h === 'lead' ? 'rear' : 'lead';
+      if (!busy(o)) {
+        const d = err(h);
+        // A real move gets a real lift; turning in place is a pivot, the foot barely leaves the canvas.
+        if (d > 0.025 * s) lift(F[h], null, clamp(d / 1.6, 0.1, 0.2), Math.max(0.012, Math.min(D.swing, 0.01 + d * 0.15)));
+        else lift(F[h], null, 0.12, 0.004);
+      }
+    }
+  }
+
   function update(raw, dt = 1 / 60) {
-    const state = raw.map((m, i) => { const S = glide(men[i], m, dt); return { ...m, x: S.x, z: S.z }; });
+    const state = raw.map((m, i) => { const S = glide(men[i], m, dt); return { ...m, x: S.x, z: S.z, vx: S.vx, vz: S.vz }; });
     state.forEach((m, i) => {
       const R = men[i], o = state[1 - i], g = GUARD[m.f.guard] || GUARD.standard;
+      if (R.f !== m.f) { R.f = m.f; R.D = moveDNA(m.f, i); R.ft = null; }
+      const D = R.D;
       const s = m.f.height / 1.78, side = m.f.stance === 'southpaw' ? -1 : 1;
       const armL = m.f.arm / s;                                    // shoulder to glove, local units
       const ta = m.ta || 0;
       const p = m.punch, P = p && p.P;
       const pt = p && { ...p, t: p.t + ta };                       // the punch as of this frame
       const d = m.def && { ...m.def, t: m.def.t + ta }, env = defEnv(d);
+      R.t += dt;
 
-      // --- Life: bounce on the toes, a weave, a dip mid-step. Calms down while he punches or defends.
-      const L = LIFE[m.f.style] || LIFE.boxer;
-      R.busy += ((p || env > 0 ? 0.25 : 1) - R.busy) * (1 - Math.exp(-dt * 8));
-      R.ph += dt * Math.PI * 2 * L.hz;
-      let bob = L.bob * Math.sin(R.ph) * R.busy;
-      const weave = L.weave * Math.sin(R.ph * 0.37) * R.busy;
+      feet(R, raw[i], dt, s, side, ta);
+
+      // --- Life: his own bounce, weave and rhythm. Some stays on while he punches or defends.
+      R.busy += ((p || env > 0 ? D.busy : 1) - R.busy) * (1 - Math.exp(-dt * 8));
+      if (D.hold) {
+        // Rhythm breaks: every few seconds he goes still for a beat, then picks it back up.
+        if (R.hold > 0) R.hold -= dt;
+        else if ((R.nextHold -= dt) <= 0) { R.hold = D.rng.range(0.3, 0.8); R.nextHold = D.hold * D.rng.range(0.6, 1.4); }
+      }
+      R.act += ((R.hold > 0 ? 0.15 : 1) - R.act) * (1 - Math.exp(-dt * 6));
+      const life = R.busy * R.act;
+      R.ph += dt * Math.PI * 2 * D.hz * (1 + 0.12 * noise(R.t * 0.4, D.seed));
+      const u = (R.ph / (Math.PI * 2)) % 1;
+      // Soft bounce is a sine on the knees; a hop is push off, float, land (feet leave the floor).
+      const shape = (1 - D.hop) * (0.5 + 0.5 * Math.sin(Math.PI * 2 * u)) + D.hop * Math.sin(Math.PI * u) ** 1.5;
+      let bob = D.bob * (shape - 0.5) * 2 * life;
+      // Weave: noise, not a sine, plus the head going with his feet when he moves sideways.
+      const latV = (-Math.sin(m.th) * m.vx + Math.cos(m.th) * m.vz) * side;
+      let weave = D.weave * noise(R.t * D.weaveHz, D.seed + 3) * 1.6 * life + clamp(latV, -1.5, 1.5) * 0.025;
+      // Peekaboo / rollers: the U. Side to side, dipping through the middle; it comes and goes.
+      let uDip = 0;
+      if (D.uw > 0) {
+        const gate = clamp(noise(R.t * 0.25, D.seed + 9) * 1.5 + 0.4, 0, 1) * life;
+        const a = R.t * Math.PI * 2 * 0.6;
+        weave += D.uw * 0.9 * Math.sin(a) * gate;
+        uDip = D.uw * Math.cos(a) ** 2 * gate;
+      }
       if (m.step) {
         const k = clamp((m.step.t + ta) / m.step.dur, 0, 1);
         bob -= 0.022 * Math.sin(Math.PI * k);                     // sink into the step, rise out of it
       }
-      const crouch = g.crouch - bob;
 
-      // --- Punch: which hand, how far along, torso turn behind it.
+      // --- Punch: which hand, how far along, the torso and weight behind it.
       let e = 0, hand = null;
       if (p) {
-        if (p !== R.punch) { R.punch = p; R.from = R.g[P.hand] ? R.g[P.hand].slice() : null; }
-        e = extOf(pt); hand = P.hand;
+        if (p !== R.punch) { R.punch = p; R.res = null; R.from = R.g[P.hand] ? R.g[P.hand].slice() : null; }
+        e = extOf(pt, R.res); hand = P.hand;
       } else R.punch = null;
-      const turn = p ? (P.hand === 'rear' ? 0.55 : P.fam === 'hook' ? -0.3 : 0.12) * Math.max(e, 0) : 0;
-      R.yaw += (turn - R.yaw) * (1 - Math.exp(-dt * 30));
+      const T = p ? (TURN[P.kind] || 0) * D.turn : 0;
+      // Load coils the other way, the snap throws it through, the return brings it home.
+      const turnGoal = p ? (e < 0 ? T * e * 2 : T * Math.min(e, 1)) : 0;
+      let wGoal = p && e > 0 ? 0.45 + (WEIGHT[P.kind] - 0.45) * Math.min(e, 1) : 0.45 + D.lean * 0.6;
       const bodyDip = p && P.tgt === 'body' ? 0.1 * Math.max(e, 0) : 0;
 
       // --- Defense: head/torso offset (local, mirrored) and where the gloves go.
-      let off = [0, 0, weave];
+      const peek = D.uw > 0.04;
+      let off = [0, -uDip, weave], hipExtra = 0, roll = 0;
       if (d && env > 0) {
         const lat = d.side === 'lead' ? 1 : -1;                    // away from the hand that's coming
-        if (d.kind === 'slip') off = [0.03, -0.07, 0.15 * lat];
-        else if (d.kind === 'roll') off = [0.06, -0.22, 0.1 * lat * Math.sin(Math.PI * clamp(d.t / d.dur, 0, 1))];
-        else if (d.kind === 'pull') off = [-0.13, 0.01, 0];
-        else if (d.kind === 'block') off = [-0.02, -0.03, 0];
-        off = add(mul(off, env), [0, 0, weave]);
+        const k = clamp(d.t / d.dur, 0, 1);
+        let o3 = [0, 0, 0];
+        if (d.kind === 'slip') o3 = [0.03, peek ? -0.15 : -0.08, 0.15 * lat];
+        else if (d.kind === 'roll') { o3 = [0.06, -0.22, 0.12 * lat * Math.sin(Math.PI * k)]; hipExtra = 0.3 * lat * Math.sin(Math.PI * k); }
+        else if (d.kind === 'pull') { o3 = [m.f.guard === 'handslow' ? -0.18 : -0.13, 0.01, 0]; wGoal = 0.15; }
+        else if (d.kind === 'block') {
+          if (m.f.guard === 'philly') { o3 = [-0.04, -0.03, 0.03]; roll = -0.4; wGoal = 0.3; } // shoulder roll: turn away, shoulder up, sit back
+          else o3 = [-0.02, -0.03, 0];
+        }
+        off = add(mul(o3, env), mul(off, 1 - env * 0.5));
       }
-      // --- Hit snap (render time), springs back over ~.3 s.
-      let snap = [0, 0, 0], bodySnap = 0;
-      if (R.hit) {
-        R.hit.t += dt;
-        const k = R.hit.t, a = k < 0.06 ? k / 0.06 : Math.exp(-(k - 0.06) * 9);
-        if (R.hit.body) bodySnap = R.hit.amp * a; else { snap = mul(R.hit.dir, R.hit.amp * a); snap[2] *= side; }
-        if (k > 0.6) R.hit = null;
-      }
-      R.dip += (bodyDip + bodySnap * 0.6 - R.dip) * (1 - Math.exp(-dt * 25));
+      // Offsets ride a spring, so a defense move flows instead of popping.
+      const offS = spring3(R.off, off, 30, 0.9, dt);
 
-      // Body group: position, facing, crouch; torso turns and leans with the defense.
-      R.body.position.set(m.x, -(crouch + R.dip * 0.5) * s, m.z);
+      // Torso: hips lead, shoulders follow and overshoot a touch (follow-through), then settle.
+      const yaw = spring(R.yaw, turnGoal + roll, 26, 0.62, dt);
+      const hipYaw = spring(R.hip, turnGoal * 0.5 + hipExtra + roll * 0.4, 34, 0.85, dt);
+      const w = spring(R.w, wGoal, 18, 0.9, dt);
+      const fold = spring(R.fold, bodyDip, 14, 0.7, dt);
+
+      // Hits: chest and (delayed) head impulses on springs that wobble back once.
+      for (let k = R.pend.length - 1; k >= 0; k--) {
+        const q = R.pend[k]; q.t -= dt;
+        if (q.t <= 0) { for (let j = 0; j < 3; j++) R.headK.v[j] += q.v[j]; R.pend.splice(k, 1); }
+      }
+      const chest = spring3(R.chest, [0, 0, 0], 14, 0.75, dt);
+      const hk = spring3(R.headK, [0, 0, 0], 18, 0.55, dt);
+      // ch/hd: the same pushes in his mirrored local frame (chest/headK hold real sides).
+      const ch = [chest[0], chest[1], chest[2] * side], hd = [hk[0], hk[1], hk[2] * side];
+
+      // Knees carry the drops (slip, roll, U): the body goes down, not just the neck.
+      const knee = Math.max(-offS[1], 0) * 0.65;
+      const crouch = g.crouch + D.drop * 0.5 - bob + knee + fold * 0.3;
+      const offT = [offS[0], offS[1] + knee, offS[2]];             // what's left for the torso and head
+
+      // Pelvis rides over the loaded foot (fore-aft), the hips glide between the planted feet.
+      const shift = (w - 0.45) * 0.2 * D.len;
+      const lean = D.lean;
+      const bx = m.x + Math.cos(m.th) * shift * s, bz = m.z + Math.sin(m.th) * shift * s;
+      R.body.position.set(bx, -crouch * s, bz);
       R.body.rotation.y = -m.th;
       R.body.scale.setScalar(s);
-      R.torso.rotation.y = (-0.5 + R.yaw) * side;
-      R.torso.position.set(off[0] * 0.5, 1.24 + off[1] * 0.6, off[2] * side * 0.5);
-      R.torso.rotation.z = -R.dip * 1.2 - off[0] * 0.8;              // lean back on a pull, fold on a body shot
-      const headL = add(add(HEAD, off), snap);
-      R.head.position.set(headL[0] + R.dip * 0.6, headL[1] - crouch * 0 - R.dip * 0.4, headL[2] * side);
+      R.trunks.rotation.y = (-0.35 + hipYaw) * side;
+      R.torso.rotation.y = (-0.5 + yaw) * side;
+      R.torso.position.set(offT[0] * 0.5 + ch[0] * 0.5 + lean * 0.12, 1.24 + offT[1] * 0.6, offT[2] * side * 0.5 + chest[2] * 0.5);
+      R.torso.rotation.z = -fold * 1.2 - offT[0] * 0.8 - lean - ch[0] * 2;   // lean, pull back, fold on a body shot
+      R.torso.rotation.x = offT[2] * side * 1.1 + chest[2] * 2;                // side bend on a slip or a hook
+      const headL = add(add(add(HEAD, offT), [lean * 0.22 + ch[0], -D.drop * 0.5, ch[2]]), hd);
+      R.head.position.set(headL[0] + fold * 0.6, headL[1] - fold * 0.4, headL[2] * side);
+      const bodyM = { x: bx, z: bz, th: m.th };
 
-      // Shoulders turn with the torso.
-      const dy = -(crouch + R.dip * 0.5);
-      const sh = {
-        lead: add(rotY(SHOULDER.lead, -R.yaw), [off[0] * 0.6, dy + off[1] * 0.6, off[2] * 0.6]),
-        rear: add(rotY(SHOULDER.rear, -R.yaw), [off[0] * 0.6, dy + off[1] * 0.6, off[2] * 0.6]),
-      };
+      // Shoulders turn with the torso (and a shoulder roll lifts the lead one).
+      const dy = -crouch;
+      const sh = {};
+      for (const h of ['lead', 'rear']) {
+        sh[h] = add(rotY(SHOULDER[h], -yaw), [offT[0] * 0.6 + lean * 0.12 + ch[0] * 0.6, dy + offT[1] * 0.6 + (h === 'lead' && roll ? 0.04 * env : 0), offT[2] * 0.6]);
+      }
 
       // Target: his head or body, live, in my local frame.
       let tgt = null;
@@ -218,14 +400,21 @@ export function makeMen(THREE, scene) {
         const tw = head
           ? { x: o.x + Math.cos(o.th) * 0.04 * os, y: 1.64 * os, z: o.z + Math.sin(o.th) * 0.04 * os }
           : { x: o.x + Math.cos(o.th) * 0.02 * os, y: 1.2 * os, z: o.z + Math.sin(o.th) * 0.02 * os };
-        tgt = local(m, tw.x, tw.y, tw.z, s, side);
+        tgt = local(bodyM, tw.x, tw.y, tw.z, s, side);
       }
 
+      // Feints: the lead hand pokes out and back now and then (more for the busy hands).
+      if (!R.feint && !p && env === 0 && D.rng.chance(D.feint * dt * R.act)) R.feint = { t: 0, dur: D.rng.range(0.14, 0.24), a: D.rng.range(0.05, 0.1) };
+      let feintX = 0;
+      if (R.feint) { R.feint.t += dt; const k = R.feint.t / R.feint.dur; feintX = R.feint.a * Math.sin(Math.PI * clamp(k, 0, 1)); if (k >= 1 || p) R.feint = null; }
+
       for (const h of ['lead', 'rear']) {
-        const base = mix(g[h], BLOCK[h], d && d.kind === 'block' ? env : d && d.kind === 'roll' ? env * 0.6 : 0);
-        const sway = h === 'lead' ? [0.008 * Math.cos(R.ph * 0.5), 0.01 * Math.sin(R.ph * 0.5), 0] : [0.006 * Math.sin(R.ph * 0.45), 0.008 * Math.cos(R.ph * 0.45), 0];
-        let want = add(base, [off[0] * 0.8 + sway[0] * R.busy, off[1] * 0.8 - crouch + sway[1] * R.busy, off[2] * 0.8]);
-        want[1] -= R.dip * 0.4;
+        const blk = d && d.kind === 'block' && !(m.f.guard === 'philly' && h === 'lead');
+        const base = mix(g[h], BLOCK[h], blk ? env : d && d.kind === 'roll' ? env * 0.6 : 0);
+        const ns = D.sway * life, sd = D.seed + (h === 'lead' ? 11 : 23);
+        const sway = [0.012 * ns * noise(R.t * 0.7, sd), 0.012 * ns * noise(R.t * 0.6, sd + 1), 0.006 * ns * noise(R.t * 0.5, sd + 2)];
+        let want = add(base, [offT[0] * 0.8 + sway[0] + (h === 'lead' ? feintX : 0) + lean * 0.1 + ch[0] * 0.6, offT[1] * 0.8 - crouch + sway[1], offT[2] * 0.8 + sway[2]]);
+        want[1] -= fold * 0.4;
         if (hand === h && tgt) {
           const S = sh[h];
           // The glove stops on the surface (head or ribs); a block stops it on his gloves; out of reach
@@ -235,7 +424,7 @@ export function makeMen(THREE, scene) {
           const reach = Math.min(armL, dT - stop);
           const end = add(S, mul(toT, reach / dT));
           const from = R.from && pt.t < p.load + p.snap ? R.from : want;
-          const k = clamp(e, 0, 1);
+          const k = Math.max(e, 0);
           if (P.fam === 'straight') {
             want = e < 0 ? add(from, [e * 0.4, 0, 0]) : mix(from, end, k);
           } else if (P.fam === 'hook') {
@@ -250,6 +439,9 @@ export function makeMen(THREE, scene) {
             const endU = add(end, [-0.04, -0.06, 0]);
             want = e < 0 ? add(from, [0, e * 0.8, 0]) : add(mix(from, endU, k), [-drop * 0.3, -drop, 0]);
           }
+          // Never longer than his arm.
+          const fromS = sub(want, S), lw = len(fromS);
+          if (lw > armL) want = add(S, mul(fromS, armL / lw));
           R.g[h] = want; // the punching glove isn't smoothed: the snap is the snap
         } else {
           const cur = R.g[h] || want;
@@ -257,28 +449,47 @@ export function makeMen(THREE, scene) {
         }
       }
 
-      // Gloves, arms (two-bone), legs.
+      // Gloves, arms (two-bone).
       const gl = R.g.lead, gr = R.g.rear;
-      R.gloves[0].position.copy(world(m, gl, s, side)); R.gloves[1].position.copy(world(m, gr, s, side));
+      R.gloves[0].position.copy(world(bodyM, gl, s, side)); R.gloves[1].position.copy(world(bodyM, gr, s, side));
       R.gloves[0].rotation.y = R.gloves[1].rotation.y = -m.th;
       for (const [h, gi, ai] of [['lead', gl, 0], ['rear', gr, 2]]) {
         const out = h === 'lead' ? -1 : 1, hookUp = hand === h && P.fam === 'hook' ? 0.9 : 0;
         const E = elbow(sh[h], gi, armL * 0.98, [-0.2, -1 + hookUp * 1.6, out * (0.8 + hookUp)]);
-        place(R.arms[ai], world(m, sh[h], s, side), world(m, E, s, side));
-        place(R.arms[ai + 1], world(m, E, s, side), world(m, gi, s, side));
+        place(R.arms[ai], world(bodyM, sh[h], s, side), world(bodyM, E, s, side));
+        place(R.arms[ai + 1], world(bodyM, E, s, side), world(bodyM, gi, s, side));
       }
-      const fl = V(m.feet.lead.x, 0.04, m.feet.lead.z), fr = V(m.feet.rear.x, 0.04, m.feet.rear.z);
-      R.feet[0].position.copy(fl); R.feet[1].position.copy(fr);
-      R.feet[0].rotation.y = -m.th + 0.3 * side; R.feet[1].rotation.y = -m.th + (0.9 - R.yaw * 0.6) * side;
-      const hy = 0.9 - crouch - R.dip * 0.5;
-      const hipL = world(m, [0.02, hy, -0.09], s, side), hipR = world(m, [-0.02, hy, 0.09], s, side);
-      for (const [hip, ft, k] of [[hipL, fl, 0], [hipR, fr, 2]]) {
-        const knee = tmp2.addVectors(hip, ft).multiplyScalar(0.5).clone();
-        knee.x += Math.cos(m.th) * 0.07; knee.z += Math.sin(m.th) * 0.07; knee.y += 0.02 - (crouch + R.dip) * 0.5;
-        place(R.legs[k], hip, knee); place(R.legs[k + 1], knee, ft);
+
+      // Feet: planted spots from feet(); the rear heel turns out on a rear-hand punch and the lead
+      // foot turns in on a lead hook, both pivoting on the ball. Heels up by style, more as he hops.
+      const F = R.ft;
+      const piv = { lead: P && P.hand === 'lead' && P.fam === 'hook' ? -0.4 * Math.max(e, 0) : 0, rear: P && P.hand === 'rear' ? 0.7 * Math.max(e, 0) : 0 };
+      const hop = D.hop * Math.max(shape - 0.5, 0) * 2 * life * D.bob * 1.5;
+      for (const [h, k] of [['lead', 0], ['rear', 1]]) {
+        const f = F[h], a = piv[h] * side;
+        const ballX = f.x + Math.cos(f.yaw) * BALL * s, ballZ = f.z + Math.sin(f.yaw) * BALL * s;
+        const yw = f.yaw + a;
+        const heel = (h === 'rear' ? D.heel : D.heel * 0.4) + Math.abs(piv[h]) * 0.03 + hop * 0.5;
+        const pitch = Math.asin(clamp(heel / (0.2 * s), 0, 0.6));
+        const fx = ballX - Math.cos(yw) * BALL * s, fz = ballZ - Math.sin(yw) * BALL * s;
+        R.feet[k].position.set(fx, 0.04 * s + f.y + hop + Math.sin(pitch) * BALL * s, fz);
+        R.feet[k].rotation.set(0, -yw, -pitch);
+        f.draw = [fx, 0.04 * s + f.y + hop, fz];
+      }
+
+      // Legs: hip -> knee -> ankle, knee bent forward and a little out.
+      const hy = (0.9 - crouch) * s;
+      const hips = { lead: world(bodyM, [0.02, 0.9 - crouch, -0.09], s, side), rear: world(bodyM, [-0.02, 0.9 - crouch, 0.09], s, side) };
+      const legL = 0.9 * s, fw = [Math.cos(m.th), 0, Math.sin(m.th)];
+      for (const [h, k] of [['lead', 0], ['rear', 2]]) {
+        const hp = [hips[h].x, hy, hips[h].z], ft = F[h].draw;
+        const outW = h === 'lead' ? -0.3 * side : 0.3 * side;
+        const pole = [fw[0] - Math.sin(m.th) * outW, 0.1, fw[2] + Math.cos(m.th) * outW];
+        const kn = elbow(hp, ft, legL, pole);
+        place(R.legs[k], V(...hp), V(...kn)); place(R.legs[k + 1], V(...kn), V(...ft));
       }
     });
     return state; // the glided positions, for the camera
   }
-  return { update, onContact };
+  return { update, onContact, rig: men };
 }

@@ -12,6 +12,7 @@
 - `node v2/tests/audit.js [N]`: CompuBox-style audit (targets ~53 / ~15 / ~29%, straights ~95% extended). `node v2/tests/footwork.js [N]`: footwork report.
 - `node v2/tests/poses.mjs <three.module.min.js>`: freezes the sim at punch contact / mid-defense, screenshots `shots/pose-*.png`.
 - `node v2/tests/strip.mjs <three.module.min.js>`: fake-clock strip of consecutive frames, to check motion is smooth.
+- `node v2/tests/rig.mjs <three.module.min.js>`: render smoothness from every drawn frame (hip/head jolts, foot-slide frames). Random matchup: average 3 runs.
 - `node v2/tests/shot.mjs <three.module.min.js>` opens the page headless, checks page errors, taps the quality buttons, screenshots into `v2/shots/` (gitignored). jsdelivr is blocked in the sandbox, so serve a local copy: `npm pack three@0.170.0` into the scratchpad and pass `package/build/three.module.min.js`.
 
 ## Code rules
