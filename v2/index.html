@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Last Bell v2</title>
+<style>
+:root { --bg: #050608; --ink: #e9e6df; --dim: #8b8f98; --accent: #e0452c; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden;
+  font: 14px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+#app { position: fixed; inset: 0; }
+#app canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.perf { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 12px; white-space: pre;
+  font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; background: rgba(0,0,0,.55); padding: 6px 8px;
+  border-radius: 6px; pointer-events: none; }
+.qbar { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 14px);
+  display: flex; justify-content: center; gap: 8px; padding: 0 16px; }
+.qbar button { flex: 0 1 110px; min-height: 48px; border: 1px solid #2b2f38; border-radius: 10px;
+  background: rgba(16,18,23,.85); color: var(--ink); font: 600 15px system-ui, sans-serif; }
+.qbar button small { display: block; font-weight: 400; font-size: 11px; color: var(--dim); }
+.qbar button:active { border-color: var(--accent); }
+.fatal { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+  padding: 0 24px; text-align: center; }
+.fatal h1 { font-size: 22px; margin: 0 0 8px; }
+.fatal p { color: var(--dim); margin: 0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+// BUILD OUTPUT of v2/build.js. Don't edit: change v2/src and rebuild.
+// render3d/three.js
+const __m0 = (() => {
+
+// three.js, pinned. Loaded with a dynamic import so a failed load shows a screen, not a blank page.
+const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
+const loadThree = () => import(THREE_URL);
+return { THREE_URL, loadThree };
+})();
+
+// core/math.js
+const __m1 = (() => {
+
+// Small shared math. Engine units are meters and seconds. y is up, y = 0 is the canvas.
+const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const TAU = Math.PI * 2;
+
+// The ring, in meters (FOUNDATION section 5). Shared by engine and render.
+const RING = {
+  inside: 6.1,          // 20 ft inside the ropes
+  half: 3.05,
+  ropes: [0.46, 0.76, 1.07, 1.37], // rope heights off the canvas (18/30/42/54 in)
+  ropeR: 0.025,
+  post: 3.2,            // post center, each axis
+  postH: 1.5,
+  apron: 0.75,          // canvas past the ropes
+  floorDrop: 1.0,       // canvas height above the arena floor
+};
+return { clamp, lerp, TAU, RING };
+})();
+
+// render3d/ring.js
+const __m2 = (() => {
+const { RING } = __m1;
+// The empty ring at real size, plus the dark arena around it.
+// Instanced where it repeats, to keep draw calls low on phones.
+
+
+function buildRing(THREE, scene) {
+  const H = RING.half, P = RING.post, plat = H + RING.apron;
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
+
+  // Platform: canvas top at y = 0, skirt down to the arena floor.
+  const canvas = new THREE.Mesh(
+    new THREE.BoxGeometry(plat * 2, 0.08, plat * 2),
+    new THREE.MeshStandardMaterial({ color: 0xc7ccd3, roughness: 0.92 }),
+  );
+  canvas.position.y = -0.04;
+  canvas.receiveShadow = true;
+  scene.add(canvas);
+
+  const skirt = new THREE.Mesh(
+    new THREE.BoxGeometry(plat * 2 + 0.02, RING.floorDrop - 0.08, plat * 2 + 0.02),
+    new THREE.MeshStandardMaterial({ color: 0x15171c, roughness: 1 }),
+  );
+  skirt.position.y = -0.08 - (RING.floorDrop - 0.08) / 2;
+  scene.add(skirt);
+
+  // Apron edge trim, so the canvas reads as a platform from the TV angle.
+  const trim = new THREE.Mesh(
+    new THREE.BoxGeometry(plat * 2 + 0.04, 0.06, plat * 2 + 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x7a1717, roughness: 0.7 }),
+  );
+  trim.position.y = -0.11;
+  scene.add(trim);
+
+  // Posts.
+  const posts = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.055, 0.055, RING.postH, 12),
+    new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.7, roughness: 0.35 }),
+    4,
+  );
+  const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  corners.forEach(([sx, sz], i) => {
+    posts.setMatrixAt(i, m.compose(v.set(sx * P, RING.postH / 2, sz * P), q.identity(), s));
+  });
+  posts.castShadow = true;
+  scene.add(posts);
+
+  // Corner pads: red, neutral, blue, neutral.
+  const pads = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.22, 1.12, 0.22),
+    new THREE.MeshStandardMaterial({ roughness: 0.6 }),
+    4,
+  );
+  const padCol = [0xb3201c, 0xe8e8e8, 0x1d4fb3, 0xe8e8e8].map((c) => new THREE.Color(c));
+  corners.forEach(([sx, sz], i) => {
+    const d = H + 0.06;
+    q.setFromAxisAngle(v.set(0, 1, 0), Math.atan2(sx, sz));
+    pads.setMatrixAt(i, m.compose(new THREE.Vector3(sx * d, 0.92, sz * d), q, s));
+    pads.setColorAt(i, padCol[i]);
+  });
+  pads.castShadow = true;
+  scene.add(pads);
+
+  // Ropes: 4 heights x 4 sides. Inner face of each rope sits on the 6.1 m square.
+  const len = P * 2;
+  const ropes = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(RING.ropeR, RING.ropeR, len, 8),
+    new THREE.MeshStandardMaterial({ roughness: 0.5 }),
+    16,
+  );
+  const ropeCol = [0xd8d8d8, 0xb3201c, 0xd8d8d8, 0x1d4fb3].map((c) => new THREE.Color(c));
+  const r = H + RING.ropeR;
+  let k = 0;
+  RING.ropes.forEach((y, level) => {
+    for (const [x, z, alongX] of [[0, -r, 1], [0, r, 1], [-r, 0, 0], [r, 0, 0]]) {
+      q.setFromAxisAngle(v.set(alongX ? 0 : 1, 0, alongX ? 1 : 0), Math.PI / 2);
+      ropes.setMatrixAt(k, m.compose(new THREE.Vector3(x, y, z), q, s));
+      ropes.setColorAt(k++, ropeCol[level]);
+    }
+  });
+  ropes.castShadow = true;
+  scene.add(ropes);
+
+  // Arena floor and ringside risers, mostly lost in the dark.
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 80),
+    new THREE.MeshStandardMaterial({ color: 0x0b0c0f, roughness: 1 }),
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -RING.floorDrop;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const risers = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0x14161b, roughness: 1 }),
+    12,
+  );
+  k = 0;
+  for (let row = 0; row < 3; row++) {
+    const d = 7.5 + row * 1.6, h = 0.5 + row * 0.7, w = d * 2;
+    for (const [x, z, sx, sz] of [[0, -d, w, 1.4], [0, d, w, 1.4], [-d, 0, 1.4, w], [d, 0, 1.4, w]]) {
+      risers.setMatrixAt(k++, m.compose(new THREE.Vector3(x, -RING.floorDrop + h / 2, z), q.identity(), new THREE.Vector3(sx, h, sz)));
+    }
+  }
+  scene.add(risers);
+
+  return { canvas, posts, pads, ropes };
+}
+
+// Hot key light over the ring, a dim fill, dark everywhere else.
+function buildLights(THREE, scene) {
+  scene.background = new THREE.Color(0x050608);
+  scene.fog = new THREE.Fog(0x050608, 12, 30);
+
+  const key = new THREE.SpotLight(0xfff1dc, 180, 0, Math.PI / 5.2, 0.45, 1.6);
+  key.position.set(0, 8.5, 0.6);
+  key.target.position.set(0, 0, 0);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.near = 4;
+  key.shadow.camera.far = 12;
+  key.shadow.bias = -0.0004;
+  scene.add(key, key.target);
+
+  scene.add(new THREE.HemisphereLight(0x8090a8, 0x050505, 0.18));
+
+  const rim = new THREE.DirectionalLight(0x6f86b0, 0.35);
+  rim.position.set(-6, 5, -8);
+  scene.add(rim);
+
+  return { key };
+}
+return { buildRing, buildLights };
+})();
+
+// render3d/camera.js
+const __m3 = (() => {
+const { RING } = __m1;
+// The TV camera: elevated, one side of the ring, a slow sway so it never sits dead still.
+// Distance is fitted so the whole ring stays on screen in portrait or landscape.
+
+
+function makeTvCamera(THREE) {
+  const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 60);
+  const target = new THREE.Vector3(0, 0.55, 0);
+  const elev = 0.42;                    // ~24 degrees down
+  const radius = RING.half + RING.apron + 0.3; // what must fit across
+
+  function update(t, aspect) {
+    cam.aspect = aspect;
+    const vf = (cam.fov * Math.PI) / 180;
+    const hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
+    const dist = Math.max(radius / Math.sin(Math.min(hf, vf) / 2) * 0.92, 7);
+    const az = Math.sin(t * 0.09) * 0.1;
+    cam.position.set(
+      target.x + Math.sin(az) * Math.cos(elev) * dist,
+      target.y + Math.sin(elev) * dist,
+      target.z + Math.cos(az) * Math.cos(elev) * dist,
+    );
+    cam.lookAt(target);
+    cam.updateProjectionMatrix();
+    return dist;
+  }
+  return { cam, update };
+}
+return { makeTvCamera };
+})();
+
+// ui/quality.js
+const __m4 = (() => {
+
+// Quality switch: pixel ratio, shadows, fps cap. Remembered per phone (best effort).
+const KEY = 'lb2.quality';
+const OPTIONS = {
+  pr: ['1.5', '2', 'native'],
+  shadows: ['on', 'off'],
+  cap: ['60', '30'],
+};
+const DEFAULTS = { pr: '2', shadows: 'on', cap: '60' };
+
+function loadQuality() {
+  try {
+    const q = JSON.parse(localStorage.getItem(KEY) || '{}');
+    const out = { ...DEFAULTS };
+    for (const k in OPTIONS) if (OPTIONS[k].includes(q[k])) out[k] = q[k];
+    return out;
+  } catch { return { ...DEFAULTS }; }
+}
+
+function saveQuality(q) {
+  try { localStorage.setItem(KEY, JSON.stringify(q)); } catch { /* private mode: fine */ }
+}
+
+function pixelRatio(q, dpr) {
+  return q.pr === 'native' ? dpr : Math.min(dpr, Number(q.pr));
+}
+return { OPTIONS, loadQuality, saveQuality, pixelRatio };
+})();
+
+// ui/hud.js
+const __m5 = (() => {
+const { OPTIONS } = __m4;
+// DOM on top of the 3D view: perf overlay and the quality bar.
+
+
+function makeHud(root, q, onChange) {
+  const perf = document.createElement('div');
+  perf.className = 'perf';
+  root.appendChild(perf);
+
+  const bar = document.createElement('div');
+  bar.className = 'qbar';
+  const labels = { pr: 'res', shadows: 'shadows', cap: 'fps cap' };
+  for (const k in OPTIONS) {
+    const b = document.createElement('button');
+    const paint = () => { b.innerHTML = `<small>${labels[k]}</small>${q[k]}`; };
+    paint();
+    b.onclick = () => {
+      const o = OPTIONS[k];
+      q[k] = o[(o.indexOf(q[k]) + 1) % o.length];
+      paint();
+      onChange(q);
+    };
+    bar.appendChild(b);
+  }
+  root.appendChild(bar);
+
+  return {
+    perf(s) {
+      perf.textContent =
+        `${s.fps.toFixed(0)} fps  ${s.ms.toFixed(1)} ms\n` +
+        `${s.calls} calls  ${(s.tris / 1000).toFixed(1)}k tris\n` +
+        `${s.w}x${s.h} @${s.pr.toFixed(2)}`;
+    },
+  };
+}
+
+function fatal(root, title, msg) {
+  root.innerHTML = `<div class="fatal"><h1>${title}</h1><p>${msg}</p></div>`;
+}
+return { makeHud, fatal };
+})();
+
+// main.js
+const __m6 = (() => {
+const { loadThree } = __m0;
+const { buildRing, buildLights } = __m2;
+const { makeTvCamera } = __m3;
+const { loadQuality, saveQuality, pixelRatio } = __m4;
+const { makeHud, fatal } = __m5;
+// Last Bell v2 entry. M0: the empty ring, the TV camera, perf overlay, quality switch.
+
+
+
+
+
+
+const root = document.getElementById('app');
+
+function hasWebGL() {
+  try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); }
+  catch { return false; }
+}
+
+async function start() {
+  if (!hasWebGL()) return fatal(root, "Your phone can't run it", 'Last Bell needs WebGL. Try a newer browser or phone.');
+  let THREE;
+  try { THREE = await loadThree(); }
+  catch { return fatal(root, 'No ring today', "Couldn't load the 3D engine. Check your connection and reload."); }
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  root.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  buildRing(THREE, scene);
+  const { key } = buildLights(THREE, scene);
+  const tv = makeTvCamera(THREE);
+
+  const q = loadQuality();
+  let interval = 0;
+  function applyQuality() {
+    renderer.setPixelRatio(pixelRatio(q, window.devicePixelRatio || 1));
+    const sh = q.shadows === 'on';
+    if (renderer.shadowMap.enabled !== sh) {
+      renderer.shadowMap.enabled = sh;
+      key.castShadow = sh;
+      scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
+    }
+    interval = 1000 / Number(q.cap);
+    resize();
+  }
+  function resize() {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+  const hud = makeHud(root, q, () => { saveQuality(q); applyQuality(); });
+  window.addEventListener('resize', resize);
+  renderer.shadowMap.enabled = q.shadows !== 'on'; // force the first apply to set it
+  applyQuality();
+
+  // Render loop with an fps cap. Stats every half second.
+  const t0 = performance.now();
+  let last = 0, frames = 0, statT = t0, workMs = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (now - last < interval - 2) return;
+    last = now;
+    const w0 = performance.now();
+    const dist = tv.update((now - t0) / 1000, window.innerWidth / window.innerHeight);
+    scene.fog.near = dist + 2; scene.fog.far = dist + 22; // haze past the ring, whatever the fit
+    renderer.render(scene, tv.cam);
+    workMs += performance.now() - w0;
+    frames++;
+    if (now - statT >= 500) {
+      const dt = now - statT, sz = renderer.getDrawingBufferSize(new THREE.Vector2());
+      hud.perf({
+        fps: (frames * 1000) / dt, ms: workMs / frames,
+        calls: renderer.info.render.calls, tris: renderer.info.render.triangles,
+        w: sz.x, h: sz.y, pr: renderer.getPixelRatio(),
+      });
+      frames = 0; workMs = 0; statT = now;
+    }
+  }
+  requestAnimationFrame(frame);
+  window.__lb = { renderer, scene, THREE }; // for headless checks
+}
+
+start();
+return {  };
+})();
+</script>
+</body>
+</html>
