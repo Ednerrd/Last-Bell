@@ -40,6 +40,17 @@ Influences: Fight Night Champion (look, damage, replays, Legacy mode), Thrill of
   - Numbers match CompuBox (~53 thrown, ~15 landed a round). Stoppages run ~25–30%.
   - Round shape: R1 is a feel-out, rounds get stolen in the last 30 s, gassers fade.
   - Contact comes in three grades: glancing, solid, flush.
+  - **Upset curve** (Oct 9, Ed: "whatever makes sense, research stats"). The lower level's win %:
+    - same level: ~50
+    - 1 level down: 15–20
+    - 2 down: 5–8
+    - 3 down (Novice vs Worldclass): ~1, the miracle shot
+    - About 60% of upsets come by stoppage. A one-punch KO is how the underdog wins, and judges lean to the A-side.
+    - **Basis.** No clean boxing dataset was reachable (the proxy blocked it), so this is anchored on proxies:
+      - UFC closing lines: favorites win 66%, and favorites priced 80%+ win ~85% [snippet, fightful.com].
+      - An elite BoxRec rating gap of 550–800 points: the favorite won 91% (30 of 33) [snippet, eugenewei.com].
+      - Fight outcomes overall: 46.5% decision, 35% TKO, 18% KO [snippet, aan.com abstract].
+      - The 60% stoppage share is a design call, not data. Re-check if a real dataset turns up.
 - **Open:**
   - Fight speed: real time (3-minute rounds) or sped up? v1 runs sped up.
   - Do round counts vary (4, 6, 8, 10, 12) by career level?
