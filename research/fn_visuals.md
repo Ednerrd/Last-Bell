@@ -28,6 +28,45 @@ Ed: the v2 look is mostly the Fight Night series (Round 3, Round 4, Champion). T
 - FNR3: no bars by default. FNR4: bars on by default, with a toggle to turn them off. FNC: one visible stamina bar, fed by four hidden pools.
 - Undisputed: stamina, an ECG-style heart line, and body-part bars that appear when that part gets hit (snip).
 
+## From Ed's screenshots (Oct 9, the real target)
+Ed sent 5 frames. Read by eye, so these are first-hand rather than snippets. The images aren't in the repo (EA copyright).
+
+**1. FNC close-up, a hook landing (the "money shot").**
+- Camera low at shoulder height, very close, long lens. The crowd behind is blurred out (shallow depth of field) into warm dark blobs.
+- Skin is very glossy with sweat: hard specular highlights on shoulders, arms and face.
+- Damage: bloodied brow and cheek, a swollen eye, blood smeared on the hand wraps and tape.
+- Impact: the hit man's face distorts and his mouth opens, and his head turns with the punch.
+- Red ropes. Tattoos.
+
+**2. FNR3/4 heavyweights (the "arena glow" shot).**
+- Camera at waist height looking slightly up, so the fighters loom.
+- Strong overhead backlight gives rim-lit silhouettes and a blown-out glow around the lights (bloom and lens flare).
+- Cool blue haze and light beams over a near-black arena. Banners hang in the dark.
+- Warm, saturated skin pops against the cool background. That's the core color contrast.
+- White wrist tape, thick waistbands on the trunks, big glossy gloves.
+
+**3. Undisputed, the elevated gameplay cam.**
+- Camera high in a corner (~3–4 m up), looking down at ~35°, wide. That's close to our current TV cam, which shows it's a real gameplay view.
+- Here the crowd is lit and dense, not dark. A black canvas with big sponsor logos, white ropes and pads, and a referee in the ring.
+- Brighter, flatter lighting than FN.
+
+**4. FNC gym (Champion mode).**
+- Brick walls, fight posters, heavy bags, weights.
+- A sepia/desaturated warm grade with high contrast, crushed blacks and a vignette.
+- This is the look for the gym/training screens and the "back-room gym" venue tier.
+
+**5. FNC amateur bout, the standard fight cam and HUD.**
+- Camera at chest/head height, just outside the ropes, side-on to the fighters. They fill most of the frame height in landscape.
+- Blue canvas with a logo, red ropes with white tape spacers, red/blue corner pads with logos, a dark crowd.
+- HUD sits at the bottom only: name plus a thin stamina bar bottom-left, and a center scorebug with punch totals on each side (266 / 206), the clock (1:50) and "ROUND 4 OF 4". Gold-on-black. Nothing at the top of the screen.
+
+**What this means for v2 (est.)**
+- **Two cams.** A *fight cam* (FN default: low, side-on, close, tracks the midpoint, keeps both men in frame) and the *wide cam* (what we have now, Undisputed-style). The fight cam is the default, with a button to switch.
+- **The FN look comes from contrast:** warm glossy skin against a cool, hazy, near-black arena, with rim light from overhead. Copy that before anything else.
+- **Shallow depth of field** is too pricey as a real effect on a phone. Fake it with a darker, softer crowd and fog.
+- **HUD goes to the bottom:** a scorebug with the clock, round and punch totals, plus name and stamina corners. The top stays clear for the action.
+- **Ring kit options** per venue: blue canvas with red ropes (amateur/FNC), black canvas with white ropes (modern PPV).
+
 ## Reference links (from search results, not opened)
 1. https://www.engadget.com/2010-11-15-fight-night-champion-screens-are-a-knockout.html (FNC screens)
 2. https://www.gematsu.com/2010/12/new-fight-night-champion-clips-have-heart (FNC clips)
