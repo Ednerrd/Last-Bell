@@ -11,6 +11,7 @@
 - `node v2/tests/run.js [filter]` runs every `tests/*.test.js` plus the determinism hash (`tests/HASH`, `HASH=update` after an intended change). Everything seeded goes into `tests/determinism.js`.
 - `node v2/tests/audit.js [N]`: CompuBox-style audit (targets ~53 / ~15 / ~29%, straights ~95% extended). `node v2/tests/footwork.js [N]`: footwork report.
 - `node v2/tests/poses.mjs <three.module.min.js>`: freezes the sim at punch contact / mid-defense, screenshots `shots/pose-*.png`.
+- `node v2/tests/strip.mjs <three.module.min.js>`: fake-clock strip of consecutive frames, to check motion is smooth.
 - `node v2/tests/shot.mjs <three.module.min.js>` opens the page headless, checks page errors, taps the quality buttons, screenshots into `v2/shots/` (gitignored). jsdelivr is blocked in the sandbox, so serve a local copy: `npm pack three@0.170.0` into the scratchpad and pass `package/build/three.module.min.js`.
 
 ## Code rules
