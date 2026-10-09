@@ -13,7 +13,14 @@ Start here.
 - **v2**: M0 (skeleton) and M1 (footwork) done Oct 9, preview link in `v2/CLAUDE.md`. Next is **M2** (punches and defense).
   - M1: `src/engine/space.js` (real space, no-overlap guarantee), `src/engine/fight.js` (60 Hz fixed step), `src/brain/footwork.js` (modes: feel, circle, hold, press, cut, back, escape; style DNA in `FOOT`), `src/render3d/men.js` (placeholder men, guards). Report: `node v2/tests/footwork.js 10`.
   - Ed's S25 Ultra test (Oct 9): 60 fps on every quality setting (native res, shadows on, M1 with two men). Defaults stay res 2 / shadows on / cap 60 to save battery; there's headroom for M7 looks.
-  - Look target (Ed, Oct 9): mostly the Fight Night series. Visual research: `research/fn_visuals.md`.
+  - Look target (Ed, Oct 9): mostly the Fight Night series. Visual research: `research/fn_visuals.md` (read "From Ed's screenshots" first).
+  - **Camera call (Ed, Oct 9):** he watches mostly in **portrait**, and portrait gets the close FN-style **fight cam** (low, side-on, tracks the pair, both men in frame). **Landscape** gets the **wide whole-ring cam** (what M0/M1 has now). Ed's "not sure", so make it a switch, with the default picked by orientation.
+
+## M2 kickoff (next session)
+- FOUNDATION section 5 (punches) and section 9 M2: jab, cross, hooks, uppercuts, body shots; block, slip, roll, pull back; keyed poses. Done when the audit runs with thrown/landed/connect % near targets (~53 / ~15 / ~29% per round) and straights land at ~95% extension.
+- Order: (1) the fight cam per the camera call above (render only, keep the hash); (2) the punch model in the engine (phases load → snap → contact → retract, land/block/miss, glancing/solid/flush, region), with events on the bus; (3) defense; (4) `tests/audit.js` CompuBox-style; (5) keyed poses in the render.
+- Reuse v1 knowledge, not code: `docs/NOTES.md` (combat), `research/combat_research.md`, `research/combat_audit.md`.
+- Balance and visuals never share a commit. Sims before and after every engine change.
 
 ## M0 spec (skeleton)
 - Create the folder layout from FOUNDATION section 8: `v2/src/{core,engine,brain,fighter,career,render3d,ui}`, `v2/tests`, `v2/build.js`, `v2/CLAUDE.md` (short v2 working rules).
