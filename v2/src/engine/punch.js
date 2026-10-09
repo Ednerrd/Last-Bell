@@ -3,6 +3,7 @@
 // (head or body, and which side of HIS body). The renderer picks the exact glove spot.
 import { clamp } from '../core/math.js';
 import { dist, wrap } from './space.js';
+import { defVs } from './defense.js';
 
 // Trainer numbers: 1 jab, 2 cross, 3 lead hook, 4 rear hook, 5 lead upper, 6 rear upper; b = to the body.
 // hand: which arm. fam: straight / hook / upper. load, snap, ret: seconds (body speed scales them).
@@ -10,7 +11,7 @@ import { dist, wrap } from './space.js';
 // reach: share of the arm the punch uses at lockout (a hook lands bent). sweet: best extension.
 // step: the most he steps in behind it. pow: rough relative power (damage comes in M3).
 export const PUNCH = {
-  jab:    { n: '1',  hand: 'lead', fam: 'straight', tgt: 'head', load: 0.04, snap: 0.11, ret: 0.14, off: 0.18, reach: 1,    sweet: 0.95, step: 0.2,  pow: 0.45 },
+  jab:    { n: '1',  hand: 'lead', fam: 'straight', tgt: 'head', load: 0.04, snap: 0.11, ret: 0.14, off: 0.18, reach: 1,    sweet: 0.95, step: 0.15, pow: 0.45 },
   cross:  { n: '2',  hand: 'rear', fam: 'straight', tgt: 'head', load: 0.08, snap: 0.13, ret: 0.17, off: 0.22, reach: 1,    sweet: 0.95, step: 0.12, pow: 1 },
   lhook:  { n: '3',  hand: 'lead', fam: 'hook',     tgt: 'head', load: 0.09, snap: 0.13, ret: 0.17, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.05, pow: 1 },
   rhook:  { n: '4',  hand: 'rear', fam: 'hook',     tgt: 'head', load: 0.11, snap: 0.14, ret: 0.19, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.05, pow: 1.05 },
@@ -38,9 +39,11 @@ export function extAt(f, P, d) {
 export function distFor(f, P, e) {
   return P.off + TGT[P.tgt] + f.arm * P.reach * e;
 }
-// Can this punch reach from here, counting the step he can take behind it?
+// Is this the punch for here? It has to reach (counting the step he can take behind it),
+// and not be smothered: a straight wants room to straighten.
+const PICK_MIN = { straight: 0.9, hook: 0.35, upper: 0.2 };
 export function reaches(f, P, d) {
-  return extAt(f, P, d - P.step) <= MAX_EXT - 0.04 && extAt(f, P, d) >= JAM[P.fam];
+  return extAt(f, P, d - P.step) <= MAX_EXT - 0.04 && extAt(f, P, d) >= PICK_MIN[P.fam];
 }
 
 export function timing(f, P) {
@@ -63,9 +66,9 @@ function sideOf(m, P) {
   return left ? 'right' : 'left';
 }
 
-// Contact. The defender's state comes in as `def` (null when he isn't defending).
+// Contact. His defense (o.def) gets its say first, then his guard.
 // Returns { result: land|block|miss, how, q, region, side, ext }.
-export function resolve(m, o, rng, def) {
+export function resolve(m, o, rng) {
   const P = m.punch.P, d = dist(m, o), e = extAt(m.f, P, d);
   const out = { kind: P.kind, result: 'miss', how: null, q: null, region: P.tgt, side: sideOf(m, P), ext: e, d };
   const toHim = Math.atan2(o.z - m.z, o.x - m.x);
@@ -73,22 +76,22 @@ export function resolve(m, o, rng, def) {
   if (e > MAX_EXT) { out.how = 'short'; return out; }
   if (P.fam === 'straight' && off > WIDE) { out.how = 'wide'; return out; }
 
-  if (def) {
-    const r = def.vs(P, e);
-    if (r) { Object.assign(out, r); if (out.result !== 'land') return out; }
-  }
+  // His defense: it beats the punch, makes it worse (slipped into it), or doesn't matter.
+  const dv = defVs(o.def, P, rng);
+  if (dv && dv.result && dv.result !== 'land') return Object.assign(out, dv);
+  const into = dv && dv.result === 'land';
   // Passive cover: the gloves and elbows sit in the way even when he isn't reacting.
-  if (out.result !== 'land' && rng.chance(coverChance(o, P))) { out.result = 'block'; out.how = 'guard'; return out; }
+  if (!into && rng.chance(coverChance(o, P))) { out.result = 'block'; out.how = 'guard'; return out; }
 
   out.result = 'land';
+  out.how = dv ? dv.how : null;
   // How clean: near the sweet spot and on line is solid or better; jammed or reaching is glancing.
   const jam = e < JAM[P.fam] + 0.15, reach = e > 0.99;
   const sweetness = clamp(1 - Math.abs(e - P.sweet) / 0.35, 0, 1) * clamp(1 - off / WIDE, 0.3, 1);
-  let flush = 0.1 + 0.18 * sweetness + (o.punch && o.punch.phase !== 'retract' ? 0.18 : 0);
-  let glance = 0.12 + (jam ? 0.35 : 0) + (reach ? 0.3 : 0) + (out.q === 'glancing' ? 1 : 0);
-  if (out.q === 'flush') flush += 0.4;
+  const flush = 0.1 + 0.18 * sweetness + (o.punch && o.punch.phase !== 'retract' ? 0.18 : 0);
+  const glance = 0.12 + (jam ? 0.35 : 0) + (reach ? 0.3 : 0);
   const r = rng.next();
-  out.q = r < glance ? 'glancing' : r < glance + flush ? 'flush' : 'solid';
+  out.q = into ? dv.q : r < glance ? 'glancing' : r < glance + flush ? 'flush' : 'solid';
   if (jam && !out.how) out.how = 'jammed';
   return out;
 }
@@ -104,11 +107,12 @@ const COVER = {
   handslow: { head: [0.08, 0.08, 0.06], body: [0.1, 0.1, 0.08] },
 };
 const FAM_I = { straight: 0, hook: 1, upper: 2 };
+const JAB_K = { jab: 3, bjab: 1.8 }; // the rear glove parries and catches jabs all night
 export function coverChance(o, P) {
   const c = COVER[o.f.guard] || COVER.standard;
   // A man mid-punch has a hand away from his face.
   const k = o.punch && o.punch.phase !== 'load' ? 0.5 : 1;
-  return c[P.tgt][FAM_I[P.fam]] * k;
+  return c[P.tgt][FAM_I[P.fam]] * k * (JAB_K[P.kind] || 1.2);
 }
 
 // Advance a punch one tick. Returns 'contact' on the tick it reaches the target, 'done' when it's home.

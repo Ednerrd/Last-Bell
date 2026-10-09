@@ -31,8 +31,24 @@ test('punch: too far is short, off line is wide', () => {
   const rng = makeRng(3);
   const a = man(-1.2, 0), b = man(1.2, Math.PI);
   startPunch(a, b, 'jab');
-  ok(resolve(a, b, rng, null).how === 'short', 'short');
+  ok(resolve(a, b, rng).how === 'short', 'short');
   const c = man(-0.48, 0.8), d = man(0.48, Math.PI);
   startPunch(c, d, 'jab');
-  ok(resolve(c, d, rng, null).how === 'wide', 'wide');
+  ok(resolve(c, d, rng).how === 'wide', 'wide');
+});
+
+test('defense: the right move beats the punch, the wrong one walks into it', async () => {
+  const { defVs, startDefense } = await import('../src/engine/defense.js');
+  const rng = makeRng(9);
+  let slipJab = 0, slipHook = 0, late = 0;
+  for (let i = 0; i < 400; i++) {
+    const o = { def: null };
+    startDefense(o, 'slip', 'lead').t = 0.1;
+    const a = defVs(o.def, PUNCH.jab, rng), b = defVs(o.def, PUNCH.lhook, rng);
+    if (a && a.how === 'slipped') slipJab++;
+    if (b && b.result === 'land' && b.how === 'into it') slipHook++;
+    o.def.t = -0.05;
+    if (defVs(o.def, PUNCH.jab, rng).how === 'late') late++;
+  }
+  ok(slipJab > 280 && slipHook > 220 && late === 400, `${slipJab} ${slipHook} ${late}`);
 });

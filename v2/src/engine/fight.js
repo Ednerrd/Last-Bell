@@ -7,6 +7,8 @@ import { MIN_D, separate, feetAt, wrap, clampRing } from './space.js';
 import { pickMode, planStep, pauseFor, interrupt } from '../brain/footwork.js';
 import { startPunch, stepPunch, resolve } from './punch.js';
 import { makeOffense, wantPunch, chainReady } from '../brain/offense.js';
+import { DEF, startDefense } from './defense.js';
+import { chooseDefense } from '../brain/defense.js';
 
 export const DT = 1 / 60;
 const TURN = 7; // rad/s, how fast he squares up to the other man
@@ -17,7 +19,7 @@ function makeMan(spec, corner) {
   const m = {
     f, corner, x: c, z: c, th: corner === 0 ? Math.PI / 4 : -3 * Math.PI / 4,
     vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0,
-    feet: null, steps: 0, punch: null, off: makeOffense(),
+    feet: null, steps: 0, punch: null, off: makeOffense(), def: null,
   };
   m.feet = feetAt(m, m.th, f.stance);
   return m;
@@ -35,7 +37,7 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
       const s = i === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
       m.x = c; m.z = c; m.th = i === 0 ? Math.PI / 4 : -3 * Math.PI / 4;
       m.step = null; m.pause = rng.range(0.2, 0.8); m.vx = m.vz = 0;
-      m.punch = null; m.off = makeOffense();
+      m.punch = null; m.off = makeOffense(); m.def = null;
       m.feelSec = F.round === 1 ? rng.range(10, 22) : rng.range(2, 8);
       m.mode = 'feel'; m.modeT = m.feelSec;
       m.feet = feetAt(m, m.th, m.f.stance);
@@ -54,14 +56,34 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
     F.ticks++; F.clock += DT;
     const prev = men.map((m) => ({ x: m.x, z: m.z }));
 
+    // Defense moves run their clock; a pull back steps him away for real.
+    for (const m of men) {
+      const d = m.def;
+      if (!d) continue;
+      d.t += DT;
+      if (d.kind === 'pull' && d.t > 0) {
+        const k = Math.min(d.t / (d.dur * 0.6), 1), want = DEF.pull.back * k * k * (3 - 2 * k), dd = want - d.moved;
+        m.x -= Math.cos(m.th) * dd; m.z -= Math.sin(m.th) * dd; d.moved = want;
+        clampRing(m);
+      }
+      if (d.t >= d.dur) { m.def = null; emit('defenseEnd', { corner: m.corner }); }
+    }
+
     // Punches: start, step in behind them, land or miss at contact, come home.
     for (const m of men) {
       const o = men[1 - m.corner];
-      if (!m.punch || chainReady(m.punch)) {
+      if ((!m.punch || chainReady(m.punch)) && !(m.def && m.def.t >= 0)) {
         const k = wantPunch(m, o, rng, DT);
         if (k) {
-          startPunch(m, o, k); m.step = null;
+          const p = startPunch(m, o, k); m.step = null;
           emit('punch', { corner: m.corner, kind: k, combo: m.off.combo, t: F.clock });
+          const dc = chooseDefense(o, m, p.P, rng);
+          if (dc) {
+            // He starts moving after his reaction time (t < 0 until then).
+            startDefense(o, dc.kind, p.P.hand).t = -dc.delay;
+            o.step = null;
+            emit('defend', { corner: o.corner, kind: dc.kind, vs: k, delay: dc.delay, t: F.clock });
+          }
         }
       }
       const p = m.punch;
@@ -74,7 +96,7 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
         clampRing(m);
       }
       if (ev === 'contact') {
-        p.res = resolve(m, o, rng, null);
+        p.res = resolve(m, o, rng);
         emit('contact', { corner: m.corner, t: F.clock, ...p.res });
       } else if (ev === 'done') m.punch = null;
     }
@@ -83,7 +105,7 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
       const o = men[1 - m.corner];
       m.modeT -= DT;
       if (m.modeT <= 0 || (!m.step && interrupt(m, o, rng))) setMode(m, o);
-      if (m.punch) continue; // planted while he throws
+      if (m.punch || (m.def && m.def.t >= 0)) continue; // planted while he throws or defends
       if (m.step) {
         const s = m.step;
         s.t += DT;

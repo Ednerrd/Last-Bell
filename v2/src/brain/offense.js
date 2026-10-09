@@ -19,9 +19,9 @@ for (const s in COMBOS) PARSED[s] = Object.entries(COMBOS[s]).map(([str, w]) => 
 
 // Per style: how often he looks to throw (per second while he has range), and mode leanings.
 const OFF = {
-  outboxer: { rate: 0.4 },
-  boxer:    { rate: 0.42 },
-  pressure: { rate: 0.5 },
+  outboxer: { rate: 0.84 },
+  boxer:    { rate: 0.61 },
+  pressure: { rate: 0.385 },
 };
 const MODE_K = { feel: 0.35, circle: 0.8, hold: 1, press: 1.25, cut: 1.1, back: 0.45, escape: 0.15 };
 
