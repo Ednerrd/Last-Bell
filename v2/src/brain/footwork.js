@@ -22,7 +22,7 @@ const unit = (x, z) => { const m = Math.hypot(x, z) || 1; return { x: x / m, z: 
 // The distance he wants, center to center.
 export function wantRange(me, opp, mode) {
   const mine = jabRange(me.f), his = jabRange(opp.f);
-  let w = me.f.style === 'outboxer' ? his + 0.12 : me.f.style === 'pressure' ? Math.max(mine * 0.72, MIN_D + 0.2) : mine + 0.02;
+  let w = me.f.style === 'outboxer' ? his + 0.12 : me.f.style === 'pressure' ? Math.max(mine * 0.82, MIN_D + 0.3) : mine + 0.02;
   if (mode === 'feel') w += 0.35;
   return w;
 }
@@ -120,6 +120,8 @@ export function pauseFor(me, rng) {
 export function interrupt(me, opp, rng) {
   if (me.mode === 'escape' || me.mode === 'feel') return false;
   const d = dist(me, opp), want = wantRange(me, opp);
-  if (ropeGap(me) < 0.35 && d < want + 0.4 && me.f.style !== 'pressure') return rng.chance(0.08);
+  if (me.f.style === 'pressure') return false;
+  if (ropeGap(me) < 0.35 && d < want + 0.4) return rng.chance(0.08);
+  if (d < want * 0.75 && me.mode !== 'back') return rng.chance(0.06); // crowded: get out
   return false;
 }
