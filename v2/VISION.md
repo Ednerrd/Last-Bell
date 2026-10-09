@@ -63,4 +63,5 @@ Plus there's levels to this, so new fights will get demolished fighting an elite
   - He picks what's next: unify the belts, move up in weight, take the rematch, cash out, or retire.
   - His wants come from his personality: ambition, ego, age, money, legacy.
 - **The coach trains him and works his corner.** What he wants decides the fights he chases. Open: whether you can advise him on a fight, with him listening according to the relationship.
-- Open: 9 or 17 weight classes. (v1 had 9 weight classes and 4 fictional belts: WPC, GRF, IFU, RUO.)
+- **9 weight classes** (Ed, Oct 9): fly, bantam, feather, light, welter, middle, light heavy, cruiser, heavy. 4 fictional belts, same as v1.
+- **Advice on fights (Claude's proposal, Ed to OK):** when he's weighing a fight, you get one say: take it, wait, or pass, plus why. He decides, weighing your advice by the relationship. If you were right, trust goes up ("coach called it"). If you were wrong, it goes down. If he ignores you and gets hurt, that's the drama. You can never veto.
