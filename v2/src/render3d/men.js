@@ -1,5 +1,5 @@
 // Placeholder men: simple shapes, drawn exactly where the engine says they are.
-// M2 keyed poses: punches (straight / hook / upper paths to the live target), defense moves
+// M2 keyed poses, plus life between steps (bounce, weave, step dip): punches (straight / hook / upper paths to the live target), defense moves
 // (block, slip, roll, pull), hit snaps, torso turn, two-bone arms. Render only: reads the state
 // it's handed and the bus, never changes a result.
 // Local frame: [forward, up, right] for a man 1.78 m tall, mirrored for southpaws (lead = -right).
@@ -17,6 +17,12 @@ const SHOULDER = { lead: [0.06, 1.42, -0.17], rear: [-0.04, 1.42, 0.17] };
 const HEAD = [0.02, 1.64, 0];
 const BLOCK = { lead: [0.2, 1.6, -0.075], rear: [0.19, 1.61, 0.075] };
 const HIT_AMP = { glancing: 0.035, solid: 0.075, flush: 0.13 };
+// Life between the steps, so he's never frozen: bounce (Hz, amplitude) and a weave side to side, by style.
+const LIFE = {
+  outboxer: { hz: 2.3, bob: 0.016, weave: 0.012 },
+  boxer:    { hz: 1.8, bob: 0.011, weave: 0.016 },
+  pressure: { hz: 1.4, bob: 0.008, weave: 0.035 },
+};
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const smooth = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
@@ -29,6 +35,7 @@ const rotY = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * 
 
 // Punch progress 0 (guard) .. 1 (contact), with a small load back. Same curve the engine times.
 function extOf(p) {
+  if (p.t <= 0) return 0;
   if (p.t < p.load) return -0.12 * (p.t / p.load);
   if (p.t < p.load + p.snap) { const k = (p.t - p.load) / p.snap; return 1 - (1 - k) ** 3; }
   return 1 - smooth((p.t - p.load - p.snap) / p.ret);
@@ -78,6 +85,7 @@ export function makeMen(THREE, scene) {
       legs: [seg(skin, 0.065), seg(skin, 0.05), seg(skin, 0.065), seg(skin, 0.05)],
       // Pose state (local, mirrored): smoothed gloves, the punch we last saw, hit snap.
       g: { lead: null, rear: null }, punch: null, from: null, hit: null, yaw: 0, dip: 0,
+      ph: i * 2.1, busy: 1, sp: null,
     };
   });
 
@@ -117,33 +125,64 @@ export function makeMen(THREE, scene) {
   }
 
   // Draw one frame from engine state. dt: render seconds since last frame.
-  function update(state, dt = 1 / 60) {
+  // m.ta (<= 0): how far behind the last tick this frame sits, when main interpolates between ticks;
+  // punch and defense clocks are read at that same moment so everything lines up.
+  // The hips glide on a critically damped spring toward where the engine has him, so a quick
+  // engine step reads as a weight shift, not a hop. Feet stay exactly where the engine plants them.
+  const GLIDE = 26;
+  function glide(R, m, dt) {
+    const S = R.sp;
+    if (!S || Math.hypot(m.x - S.x, m.z - S.z) > 1) { R.sp = { x: m.x, z: m.z, vx: 0, vz: 0 }; return R.sp; }
+    const n = Math.ceil(dt / (1 / 120)), h = dt / n;
+    for (let k = 0; k < n; k++) {
+      S.vx += (GLIDE * GLIDE * (m.x - S.x) - 2 * GLIDE * S.vx) * h; S.x += S.vx * h;
+      S.vz += (GLIDE * GLIDE * (m.z - S.z) - 2 * GLIDE * S.vz) * h; S.z += S.vz * h;
+    }
+    return S;
+  }
+
+  function update(raw, dt = 1 / 60) {
+    const state = raw.map((m, i) => { const S = glide(men[i], m, dt); return { ...m, x: S.x, z: S.z }; });
     state.forEach((m, i) => {
       const R = men[i], o = state[1 - i], g = GUARD[m.f.guard] || GUARD.standard;
       const s = m.f.height / 1.78, side = m.f.stance === 'southpaw' ? -1 : 1;
       const armL = m.f.arm / s;                                    // shoulder to glove, local units
-      const p = m.punch, P = p && p.P, d = m.def, env = defEnv(d);
-      const crouch = g.crouch;
+      const ta = m.ta || 0;
+      const p = m.punch, P = p && p.P;
+      const pt = p && { ...p, t: p.t + ta };                       // the punch as of this frame
+      const d = m.def && { ...m.def, t: m.def.t + ta }, env = defEnv(d);
+
+      // --- Life: bounce on the toes, a weave, a dip mid-step. Calms down while he punches or defends.
+      const L = LIFE[m.f.style] || LIFE.boxer;
+      R.busy += ((p || env > 0 ? 0.25 : 1) - R.busy) * (1 - Math.exp(-dt * 8));
+      R.ph += dt * Math.PI * 2 * L.hz;
+      let bob = L.bob * Math.sin(R.ph) * R.busy;
+      const weave = L.weave * Math.sin(R.ph * 0.37) * R.busy;
+      if (m.step) {
+        const k = clamp((m.step.t + ta) / m.step.dur, 0, 1);
+        bob -= 0.022 * Math.sin(Math.PI * k);                     // sink into the step, rise out of it
+      }
+      const crouch = g.crouch - bob;
 
       // --- Punch: which hand, how far along, torso turn behind it.
       let e = 0, hand = null;
       if (p) {
         if (p !== R.punch) { R.punch = p; R.from = R.g[P.hand] ? R.g[P.hand].slice() : null; }
-        e = extOf(p); hand = P.hand;
+        e = extOf(pt); hand = P.hand;
       } else R.punch = null;
       const turn = p ? (P.hand === 'rear' ? 0.55 : P.fam === 'hook' ? -0.3 : 0.12) * Math.max(e, 0) : 0;
       R.yaw += (turn - R.yaw) * (1 - Math.exp(-dt * 30));
       const bodyDip = p && P.tgt === 'body' ? 0.1 * Math.max(e, 0) : 0;
 
       // --- Defense: head/torso offset (local, mirrored) and where the gloves go.
-      let off = [0, 0, 0];
+      let off = [0, 0, weave];
       if (d && env > 0) {
         const lat = d.side === 'lead' ? 1 : -1;                    // away from the hand that's coming
         if (d.kind === 'slip') off = [0.03, -0.07, 0.15 * lat];
         else if (d.kind === 'roll') off = [0.06, -0.22, 0.1 * lat * Math.sin(Math.PI * clamp(d.t / d.dur, 0, 1))];
         else if (d.kind === 'pull') off = [-0.13, 0.01, 0];
         else if (d.kind === 'block') off = [-0.02, -0.03, 0];
-        off = mul(off, env);
+        off = add(mul(off, env), [0, 0, weave]);
       }
       // --- Hit snap (render time), springs back over ~.3 s.
       let snap = [0, 0, 0], bodySnap = 0;
@@ -184,7 +223,8 @@ export function makeMen(THREE, scene) {
 
       for (const h of ['lead', 'rear']) {
         const base = mix(g[h], BLOCK[h], d && d.kind === 'block' ? env : d && d.kind === 'roll' ? env * 0.6 : 0);
-        let want = add(base, [off[0] * 0.8, off[1] * 0.8 - crouch, off[2] * 0.8]);
+        const sway = h === 'lead' ? [0.008 * Math.cos(R.ph * 0.5), 0.01 * Math.sin(R.ph * 0.5), 0] : [0.006 * Math.sin(R.ph * 0.45), 0.008 * Math.cos(R.ph * 0.45), 0];
+        let want = add(base, [off[0] * 0.8 + sway[0] * R.busy, off[1] * 0.8 - crouch + sway[1] * R.busy, off[2] * 0.8]);
         want[1] -= R.dip * 0.4;
         if (hand === h && tgt) {
           const S = sh[h];
@@ -194,7 +234,7 @@ export function makeMen(THREE, scene) {
           const stop = o.def && o.def.kind === 'block' && o.def.t >= 0 ? 0.24 : P.tgt === 'head' ? 0.15 : 0.19;
           const reach = Math.min(armL, dT - stop);
           const end = add(S, mul(toT, reach / dT));
-          const from = R.from && p.t < p.load + p.snap ? R.from : want;
+          const from = R.from && pt.t < p.load + p.snap ? R.from : want;
           const k = clamp(e, 0, 1);
           if (P.fam === 'straight') {
             want = e < 0 ? add(from, [e * 0.4, 0, 0]) : mix(from, end, k);
@@ -238,6 +278,7 @@ export function makeMen(THREE, scene) {
         place(R.legs[k], hip, knee); place(R.legs[k + 1], knee, ft);
       }
     });
+    return state; // the glided positions, for the camera
   }
   return { update, onContact };
 }

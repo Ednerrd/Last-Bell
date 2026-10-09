@@ -248,7 +248,7 @@ function makeTvCamera(THREE) {
 function makeFightCamera(THREE) {
   const cam = new THREE.PerspectiveCamera(34, 1, 0.1, 60);
   const target = new THREE.Vector3(0, 1.1, 0);
-  let az = Math.PI / 2, dist = 5, fov = 40, lift = 0, ready = false, cutT = 0; // az: from the pair's middle to the lens
+  let az = Math.PI / 2, ready = false, cutT = 0; // az: from the pair's middle to the lens
   const HEIGHT = 1.6;                    // lens height off the canvas
   const PAD = 0.5;                       // room past each man's center (shoulder, glove)
   const SKEW = 0.42;                     // ~25 degrees off square: a touch of depth, a narrower pair
@@ -266,6 +266,18 @@ function makeFightCamera(THREE) {
   const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
   // men: [{x, z}, {x, z}]. dt in seconds (render time, never the sim's).
+  // Critically damped spring: no snaps, no overshoot, velocity carries through.
+  const springs = {};
+  function spring(key, goal, w, dt, wrapAng = false) {
+    const S = springs[key] || (springs[key] = { x: goal, v: 0 });
+    const n = Math.ceil(dt / (1 / 120)), h = dt / n;
+    for (let i = 0; i < n; i++) {
+      const err = wrapAng ? angDiff(goal, S.x) : goal - S.x;
+      S.v += (w * w * err - 2 * w * S.v) * h; S.x += S.v * h;
+    }
+    return S.x;
+  }
+
   function update(dt, aspect, men) {
     const [a, b] = men;
     const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
@@ -274,32 +286,31 @@ function makeFightCamera(THREE) {
     const baseFov = aspect < 1 ? 56 : 32;
     const hfOf = (f) => Math.atan(Math.tan((f * Math.PI) / 360) * aspect);
     const needD = Math.max(half / Math.tan(hfOf(baseFov)), 2.6);
-    // Both side-on directions; stay on the nearer one unless the ropes box it in.
+    // Both side-on directions; stay on the nearer one. Cut to the other side only when the ropes
+    // really box the lens in, and not again for a while (a TV director, not a jittery one).
     const p1 = Math.atan2(ax, -az2) + SKEW, p2 = p1 + Math.PI;
     let want = Math.abs(angDiff(p1, az)) <= Math.abs(angDiff(p2, az)) ? p1 : p2;
     const other = want === p1 ? p2 : p1;
     cutT -= dt;
     let cut = !ready;
-    if (ready && cutT <= 0 && room(mx, mz, want) < needD * 0.45 && room(mx, mz, other) > needD * 0.8) { want = other; cut = true; }
-    // Short of room: open the lens until the pair fits. If even the widest lens can't hold them
-    // (far apart, like corner to corner at the bell), back out past the ropes and rise over them.
-    const inside = room(mx, mz, want);
-    const fitMax = half / Math.tan(hfOf(MAXFOV));
-    const d = inside >= Math.min(needD, fitMax) * 0.92 ? Math.min(needD, inside) : Math.min(needD, fitMax);
-    let wantFov = baseFov;
-    if (d < needD) {
-      const hf = Math.atan(half / d);
-      wantFov = Math.min(MAXFOV, (2 * Math.atan(Math.tan(hf) / aspect) * 180) / Math.PI);
+    if (ready && cutT <= 0 && room(mx, mz, az) < needD * 0.32 && room(mx, mz, other) > needD * 0.9) { want = other; cut = true; }
+    if (cut) {
+      for (const k in springs) delete springs[k];
+      az = want; target.set(mx, 1.1, mz); ready = true; cutT = 10;
     }
-    const wantLift = d > inside ? clamp((d - inside) / 1.2, 0.3, 1) * 1.3 : 0;
-    if (cut) { az = want; dist = d; fov = wantFov; lift = wantLift; target.set(mx, 1.1, mz); ready = true; cutT = 4; }
-    az += angDiff(want, az) * (1 - Math.exp(-dt * 2.2));
-    dist += (d - dist) * (1 - Math.exp(-dt * 3));
-    if (wantLift === 0) dist = Math.min(dist, room(mx, mz, az)); // inside: never through the ropes, even mid-swing
-    lift += (wantLift - lift) * (1 - Math.exp(-dt * 3));
-    fov += (wantFov - fov) * (1 - Math.exp(-dt * 3));
-    const k = 1 - Math.exp(-dt * 5);
-    target.x += (mx - target.x) * k; target.z += (mz - target.z) * k;
+    az = spring('az', want, 3, dt, true);
+    // Inside the ropes when it can; when even a wide lens can't hold them (corner to corner at the
+    // bell), it eases out past the ropes and up over them. All of it continuous, so nothing snaps.
+    const inside = room(mx, mz, az);
+    const fitMax = (half / Math.tan(hfOf(MAXFOV))) * 0.9;
+    const d = Math.min(needD, Math.max(inside, fitMax));
+    const hf = Math.atan(half / d);
+    const wantFov = d < needD ? Math.min(MAXFOV, (2 * Math.atan(Math.tan(hf) / aspect) * 180) / Math.PI) : baseFov;
+    const wantLift = clamp((d - inside) / 1.0, 0, 1) * 1.2;
+    const dist = spring('dist', d, 4, dt);
+    const fov = spring('fov', wantFov, 4, dt);
+    const lift = spring('lift', wantLift, 4, dt);
+    target.x = spring('tx', mx, 6, dt); target.z = spring('tz', mz, 6, dt);
     target.y = aspect < 1 ? 1.0 : 1.15;
     cam.fov = fov; cam.aspect = aspect;
     cam.position.set(target.x + Math.cos(az) * dist, HEIGHT + lift, target.z + Math.sin(az) * dist);
@@ -410,7 +421,7 @@ return { makeHud, fatal };
 const __m6 = (() => {
 
 // Placeholder men: simple shapes, drawn exactly where the engine says they are.
-// M2 keyed poses: punches (straight / hook / upper paths to the live target), defense moves
+// M2 keyed poses, plus life between steps (bounce, weave, step dip): punches (straight / hook / upper paths to the live target), defense moves
 // (block, slip, roll, pull), hit snaps, torso turn, two-bone arms. Render only: reads the state
 // it's handed and the bus, never changes a result.
 // Local frame: [forward, up, right] for a man 1.78 m tall, mirrored for southpaws (lead = -right).
@@ -428,6 +439,12 @@ const SHOULDER = { lead: [0.06, 1.42, -0.17], rear: [-0.04, 1.42, 0.17] };
 const HEAD = [0.02, 1.64, 0];
 const BLOCK = { lead: [0.2, 1.6, -0.075], rear: [0.19, 1.61, 0.075] };
 const HIT_AMP = { glancing: 0.035, solid: 0.075, flush: 0.13 };
+// Life between the steps, so he's never frozen: bounce (Hz, amplitude) and a weave side to side, by style.
+const LIFE = {
+  outboxer: { hz: 2.3, bob: 0.016, weave: 0.012 },
+  boxer:    { hz: 1.8, bob: 0.011, weave: 0.016 },
+  pressure: { hz: 1.4, bob: 0.008, weave: 0.035 },
+};
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const smooth = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
@@ -440,6 +457,7 @@ const rotY = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * 
 
 // Punch progress 0 (guard) .. 1 (contact), with a small load back. Same curve the engine times.
 function extOf(p) {
+  if (p.t <= 0) return 0;
   if (p.t < p.load) return -0.12 * (p.t / p.load);
   if (p.t < p.load + p.snap) { const k = (p.t - p.load) / p.snap; return 1 - (1 - k) ** 3; }
   return 1 - smooth((p.t - p.load - p.snap) / p.ret);
@@ -489,6 +507,7 @@ function makeMen(THREE, scene) {
       legs: [seg(skin, 0.065), seg(skin, 0.05), seg(skin, 0.065), seg(skin, 0.05)],
       // Pose state (local, mirrored): smoothed gloves, the punch we last saw, hit snap.
       g: { lead: null, rear: null }, punch: null, from: null, hit: null, yaw: 0, dip: 0,
+      ph: i * 2.1, busy: 1, sp: null,
     };
   });
 
@@ -528,33 +547,64 @@ function makeMen(THREE, scene) {
   }
 
   // Draw one frame from engine state. dt: render seconds since last frame.
-  function update(state, dt = 1 / 60) {
+  // m.ta (<= 0): how far behind the last tick this frame sits, when main interpolates between ticks;
+  // punch and defense clocks are read at that same moment so everything lines up.
+  // The hips glide on a critically damped spring toward where the engine has him, so a quick
+  // engine step reads as a weight shift, not a hop. Feet stay exactly where the engine plants them.
+  const GLIDE = 26;
+  function glide(R, m, dt) {
+    const S = R.sp;
+    if (!S || Math.hypot(m.x - S.x, m.z - S.z) > 1) { R.sp = { x: m.x, z: m.z, vx: 0, vz: 0 }; return R.sp; }
+    const n = Math.ceil(dt / (1 / 120)), h = dt / n;
+    for (let k = 0; k < n; k++) {
+      S.vx += (GLIDE * GLIDE * (m.x - S.x) - 2 * GLIDE * S.vx) * h; S.x += S.vx * h;
+      S.vz += (GLIDE * GLIDE * (m.z - S.z) - 2 * GLIDE * S.vz) * h; S.z += S.vz * h;
+    }
+    return S;
+  }
+
+  function update(raw, dt = 1 / 60) {
+    const state = raw.map((m, i) => { const S = glide(men[i], m, dt); return { ...m, x: S.x, z: S.z }; });
     state.forEach((m, i) => {
       const R = men[i], o = state[1 - i], g = GUARD[m.f.guard] || GUARD.standard;
       const s = m.f.height / 1.78, side = m.f.stance === 'southpaw' ? -1 : 1;
       const armL = m.f.arm / s;                                    // shoulder to glove, local units
-      const p = m.punch, P = p && p.P, d = m.def, env = defEnv(d);
-      const crouch = g.crouch;
+      const ta = m.ta || 0;
+      const p = m.punch, P = p && p.P;
+      const pt = p && { ...p, t: p.t + ta };                       // the punch as of this frame
+      const d = m.def && { ...m.def, t: m.def.t + ta }, env = defEnv(d);
+
+      // --- Life: bounce on the toes, a weave, a dip mid-step. Calms down while he punches or defends.
+      const L = LIFE[m.f.style] || LIFE.boxer;
+      R.busy += ((p || env > 0 ? 0.25 : 1) - R.busy) * (1 - Math.exp(-dt * 8));
+      R.ph += dt * Math.PI * 2 * L.hz;
+      let bob = L.bob * Math.sin(R.ph) * R.busy;
+      const weave = L.weave * Math.sin(R.ph * 0.37) * R.busy;
+      if (m.step) {
+        const k = clamp((m.step.t + ta) / m.step.dur, 0, 1);
+        bob -= 0.022 * Math.sin(Math.PI * k);                     // sink into the step, rise out of it
+      }
+      const crouch = g.crouch - bob;
 
       // --- Punch: which hand, how far along, torso turn behind it.
       let e = 0, hand = null;
       if (p) {
         if (p !== R.punch) { R.punch = p; R.from = R.g[P.hand] ? R.g[P.hand].slice() : null; }
-        e = extOf(p); hand = P.hand;
+        e = extOf(pt); hand = P.hand;
       } else R.punch = null;
       const turn = p ? (P.hand === 'rear' ? 0.55 : P.fam === 'hook' ? -0.3 : 0.12) * Math.max(e, 0) : 0;
       R.yaw += (turn - R.yaw) * (1 - Math.exp(-dt * 30));
       const bodyDip = p && P.tgt === 'body' ? 0.1 * Math.max(e, 0) : 0;
 
       // --- Defense: head/torso offset (local, mirrored) and where the gloves go.
-      let off = [0, 0, 0];
+      let off = [0, 0, weave];
       if (d && env > 0) {
         const lat = d.side === 'lead' ? 1 : -1;                    // away from the hand that's coming
         if (d.kind === 'slip') off = [0.03, -0.07, 0.15 * lat];
         else if (d.kind === 'roll') off = [0.06, -0.22, 0.1 * lat * Math.sin(Math.PI * clamp(d.t / d.dur, 0, 1))];
         else if (d.kind === 'pull') off = [-0.13, 0.01, 0];
         else if (d.kind === 'block') off = [-0.02, -0.03, 0];
-        off = mul(off, env);
+        off = add(mul(off, env), [0, 0, weave]);
       }
       // --- Hit snap (render time), springs back over ~.3 s.
       let snap = [0, 0, 0], bodySnap = 0;
@@ -595,7 +645,8 @@ function makeMen(THREE, scene) {
 
       for (const h of ['lead', 'rear']) {
         const base = mix(g[h], BLOCK[h], d && d.kind === 'block' ? env : d && d.kind === 'roll' ? env * 0.6 : 0);
-        let want = add(base, [off[0] * 0.8, off[1] * 0.8 - crouch, off[2] * 0.8]);
+        const sway = h === 'lead' ? [0.008 * Math.cos(R.ph * 0.5), 0.01 * Math.sin(R.ph * 0.5), 0] : [0.006 * Math.sin(R.ph * 0.45), 0.008 * Math.cos(R.ph * 0.45), 0];
+        let want = add(base, [off[0] * 0.8 + sway[0] * R.busy, off[1] * 0.8 - crouch + sway[1] * R.busy, off[2] * 0.8]);
         want[1] -= R.dip * 0.4;
         if (hand === h && tgt) {
           const S = sh[h];
@@ -605,7 +656,7 @@ function makeMen(THREE, scene) {
           const stop = o.def && o.def.kind === 'block' && o.def.t >= 0 ? 0.24 : P.tgt === 'head' ? 0.15 : 0.19;
           const reach = Math.min(armL, dT - stop);
           const end = add(S, mul(toT, reach / dT));
-          const from = R.from && p.t < p.load + p.snap ? R.from : want;
+          const from = R.from && pt.t < p.load + p.snap ? R.from : want;
           const k = clamp(e, 0, 1);
           if (P.fam === 'straight') {
             want = e < 0 ? add(from, [e * 0.4, 0, 0]) : mix(from, end, k);
@@ -649,6 +700,7 @@ function makeMen(THREE, scene) {
         place(R.legs[k], hip, knee); place(R.legs[k + 1], knee, ft);
       }
     });
+    return state; // the glided positions, for the camera
   }
   return { update, onContact };
 }
@@ -1539,13 +1591,14 @@ async function start() {
     stance: pickRng.chance(0.25) ? 'southpaw' : 'orthodox',
     height: pickRng.range(1.68, 1.9),
   });
-  let fight = null, rest = 0, speed = '1x', acc = 0;
+  let fight = null, rest = 0, speed = '1x', acc = 0, prevS = null;
   function newRound() {
     const red = randMan(), blue = randMan();
     red.reach = red.height * pickRng.range(0.98, 1.06);
     blue.reach = blue.height * pickRng.range(0.98, 1.06);
     fight = makeFight({ seed: pickRng.int(1, 1e9), red, blue, bus });
     fight.startRound();
+    prevS = null;
   }
   newRound();
 
@@ -1571,6 +1624,25 @@ async function start() {
   renderer.shadowMap.enabled = q.shadows !== 'on'; // force the first apply to set it
   applyQuality();
 
+  // Render interpolation: positions, facing and feet from the tick before, blended to the last tick.
+  function snapPrev() {
+    prevS = fight.men.map((m) => ({ x: m.x, z: m.z, th: m.th, feet: { lead: { ...m.feet.lead }, rear: { ...m.feet.rear } } }));
+  }
+  const L = (a, b, k) => a + (b - a) * k;
+  const LP = (a, b, k) => ({ x: L(a.x, b.x, k), z: L(a.z, b.z, k) });
+  function interp(k) {
+    return fight.men.map((m, i) => {
+      const a = prevS && prevS[i];
+      if (!a || k >= 1) return m;
+      const dth = Math.atan2(Math.sin(m.th - a.th), Math.cos(m.th - a.th));
+      return {
+        ...m, x: L(a.x, m.x, k), z: L(a.z, m.z, k), th: a.th + dth * k,
+        feet: { lead: LP(a.feet.lead, m.feet.lead, k), rear: LP(a.feet.rear, m.feet.rear, k) },
+        ta: -(1 - k) * DT,
+      };
+    });
+  }
+
   // Render loop with an fps cap. Stats every half second.
   const t0 = performance.now();
   let last = 0, frames = 0, statT = t0, workMs = 0;
@@ -1586,16 +1658,22 @@ async function start() {
     else {
       acc += dt * parseInt(speed);
       let n = 0;
-      while (acc >= DT && n++ < 30) { acc -= DT; if (!fight.tick()) { rest = 3; acc = 0; break; } }
+      while (acc >= DT && n++ < 30) {
+        acc -= DT;
+        snapPrev();
+        if (!fight.tick()) { rest = 3; acc = 0; break; }
+      }
     }
-    drawMen.update(fight.men, window.__lb && window.__lb.hold ? 0.5 : rest > 0 ? dt : dt * parseInt(speed));
+    // Draw between the last two ticks, so motion is smooth whatever the frame timing.
+    const view = interp(rest > 0 || (window.__lb && window.__lb.hold) ? 1 : acc / DT);
+    const shown = drawMen.update(view, window.__lb && window.__lb.hold ? 0.5 : rest > 0 ? dt : dt * parseInt(speed));
     const aspect = window.innerWidth / window.innerHeight;
     // Cam: 'auto' gives portrait the fight cam and landscape the wide cam (Ed's call).
     const useFight = q.cam === 'fight' || (q.cam === 'auto' && aspect < 1);
     let cam, dist;
-    if (useFight) { dist = fc.update(dt, aspect, fight.men); cam = fc.cam; }
+    if (useFight) { dist = fc.update(dt, aspect, shown); cam = fc.cam; }
     else {
-      const mid = { x: (fight.men[0].x + fight.men[1].x) / 2, z: (fight.men[0].z + fight.men[1].z) / 2 };
+      const mid = { x: (shown[0].x + shown[1].x) / 2, z: (shown[0].z + shown[1].z) / 2 };
       dist = tv.update((now - t0) / 1000, aspect, mid); cam = tv.cam;
     }
     scene.fog.near = dist + 2; scene.fog.far = dist + 22; // haze past the ring, whatever the fit

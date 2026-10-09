@@ -36,7 +36,7 @@ export function makeTvCamera(THREE) {
 export function makeFightCamera(THREE) {
   const cam = new THREE.PerspectiveCamera(34, 1, 0.1, 60);
   const target = new THREE.Vector3(0, 1.1, 0);
-  let az = Math.PI / 2, dist = 5, fov = 40, lift = 0, ready = false, cutT = 0; // az: from the pair's middle to the lens
+  let az = Math.PI / 2, ready = false, cutT = 0; // az: from the pair's middle to the lens
   const HEIGHT = 1.6;                    // lens height off the canvas
   const PAD = 0.5;                       // room past each man's center (shoulder, glove)
   const SKEW = 0.42;                     // ~25 degrees off square: a touch of depth, a narrower pair
@@ -54,6 +54,18 @@ export function makeFightCamera(THREE) {
   const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
   // men: [{x, z}, {x, z}]. dt in seconds (render time, never the sim's).
+  // Critically damped spring: no snaps, no overshoot, velocity carries through.
+  const springs = {};
+  function spring(key, goal, w, dt, wrapAng = false) {
+    const S = springs[key] || (springs[key] = { x: goal, v: 0 });
+    const n = Math.ceil(dt / (1 / 120)), h = dt / n;
+    for (let i = 0; i < n; i++) {
+      const err = wrapAng ? angDiff(goal, S.x) : goal - S.x;
+      S.v += (w * w * err - 2 * w * S.v) * h; S.x += S.v * h;
+    }
+    return S.x;
+  }
+
   function update(dt, aspect, men) {
     const [a, b] = men;
     const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
@@ -62,32 +74,31 @@ export function makeFightCamera(THREE) {
     const baseFov = aspect < 1 ? 56 : 32;
     const hfOf = (f) => Math.atan(Math.tan((f * Math.PI) / 360) * aspect);
     const needD = Math.max(half / Math.tan(hfOf(baseFov)), 2.6);
-    // Both side-on directions; stay on the nearer one unless the ropes box it in.
+    // Both side-on directions; stay on the nearer one. Cut to the other side only when the ropes
+    // really box the lens in, and not again for a while (a TV director, not a jittery one).
     const p1 = Math.atan2(ax, -az2) + SKEW, p2 = p1 + Math.PI;
     let want = Math.abs(angDiff(p1, az)) <= Math.abs(angDiff(p2, az)) ? p1 : p2;
     const other = want === p1 ? p2 : p1;
     cutT -= dt;
     let cut = !ready;
-    if (ready && cutT <= 0 && room(mx, mz, want) < needD * 0.45 && room(mx, mz, other) > needD * 0.8) { want = other; cut = true; }
-    // Short of room: open the lens until the pair fits. If even the widest lens can't hold them
-    // (far apart, like corner to corner at the bell), back out past the ropes and rise over them.
-    const inside = room(mx, mz, want);
-    const fitMax = half / Math.tan(hfOf(MAXFOV));
-    const d = inside >= Math.min(needD, fitMax) * 0.92 ? Math.min(needD, inside) : Math.min(needD, fitMax);
-    let wantFov = baseFov;
-    if (d < needD) {
-      const hf = Math.atan(half / d);
-      wantFov = Math.min(MAXFOV, (2 * Math.atan(Math.tan(hf) / aspect) * 180) / Math.PI);
+    if (ready && cutT <= 0 && room(mx, mz, az) < needD * 0.32 && room(mx, mz, other) > needD * 0.9) { want = other; cut = true; }
+    if (cut) {
+      for (const k in springs) delete springs[k];
+      az = want; target.set(mx, 1.1, mz); ready = true; cutT = 10;
     }
-    const wantLift = d > inside ? clamp((d - inside) / 1.2, 0.3, 1) * 1.3 : 0;
-    if (cut) { az = want; dist = d; fov = wantFov; lift = wantLift; target.set(mx, 1.1, mz); ready = true; cutT = 4; }
-    az += angDiff(want, az) * (1 - Math.exp(-dt * 2.2));
-    dist += (d - dist) * (1 - Math.exp(-dt * 3));
-    if (wantLift === 0) dist = Math.min(dist, room(mx, mz, az)); // inside: never through the ropes, even mid-swing
-    lift += (wantLift - lift) * (1 - Math.exp(-dt * 3));
-    fov += (wantFov - fov) * (1 - Math.exp(-dt * 3));
-    const k = 1 - Math.exp(-dt * 5);
-    target.x += (mx - target.x) * k; target.z += (mz - target.z) * k;
+    az = spring('az', want, 3, dt, true);
+    // Inside the ropes when it can; when even a wide lens can't hold them (corner to corner at the
+    // bell), it eases out past the ropes and up over them. All of it continuous, so nothing snaps.
+    const inside = room(mx, mz, az);
+    const fitMax = (half / Math.tan(hfOf(MAXFOV))) * 0.9;
+    const d = Math.min(needD, Math.max(inside, fitMax));
+    const hf = Math.atan(half / d);
+    const wantFov = d < needD ? Math.min(MAXFOV, (2 * Math.atan(Math.tan(hf) / aspect) * 180) / Math.PI) : baseFov;
+    const wantLift = clamp((d - inside) / 1.0, 0, 1) * 1.2;
+    const dist = spring('dist', d, 4, dt);
+    const fov = spring('fov', wantFov, 4, dt);
+    const lift = spring('lift', wantLift, 4, dt);
+    target.x = spring('tx', mx, 6, dt); target.z = spring('tz', mz, 6, dt);
     target.y = aspect < 1 ? 1.0 : 1.15;
     cam.fov = fov; cam.aspect = aspect;
     cam.position.set(target.x + Math.cos(az) * dist, HEIGHT + lift, target.z + Math.sin(az) * dist);

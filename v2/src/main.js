@@ -44,13 +44,14 @@ async function start() {
     stance: pickRng.chance(0.25) ? 'southpaw' : 'orthodox',
     height: pickRng.range(1.68, 1.9),
   });
-  let fight = null, rest = 0, speed = '1x', acc = 0;
+  let fight = null, rest = 0, speed = '1x', acc = 0, prevS = null;
   function newRound() {
     const red = randMan(), blue = randMan();
     red.reach = red.height * pickRng.range(0.98, 1.06);
     blue.reach = blue.height * pickRng.range(0.98, 1.06);
     fight = makeFight({ seed: pickRng.int(1, 1e9), red, blue, bus });
     fight.startRound();
+    prevS = null;
   }
   newRound();
 
@@ -76,6 +77,25 @@ async function start() {
   renderer.shadowMap.enabled = q.shadows !== 'on'; // force the first apply to set it
   applyQuality();
 
+  // Render interpolation: positions, facing and feet from the tick before, blended to the last tick.
+  function snapPrev() {
+    prevS = fight.men.map((m) => ({ x: m.x, z: m.z, th: m.th, feet: { lead: { ...m.feet.lead }, rear: { ...m.feet.rear } } }));
+  }
+  const L = (a, b, k) => a + (b - a) * k;
+  const LP = (a, b, k) => ({ x: L(a.x, b.x, k), z: L(a.z, b.z, k) });
+  function interp(k) {
+    return fight.men.map((m, i) => {
+      const a = prevS && prevS[i];
+      if (!a || k >= 1) return m;
+      const dth = Math.atan2(Math.sin(m.th - a.th), Math.cos(m.th - a.th));
+      return {
+        ...m, x: L(a.x, m.x, k), z: L(a.z, m.z, k), th: a.th + dth * k,
+        feet: { lead: LP(a.feet.lead, m.feet.lead, k), rear: LP(a.feet.rear, m.feet.rear, k) },
+        ta: -(1 - k) * DT,
+      };
+    });
+  }
+
   // Render loop with an fps cap. Stats every half second.
   const t0 = performance.now();
   let last = 0, frames = 0, statT = t0, workMs = 0;
@@ -91,16 +111,22 @@ async function start() {
     else {
       acc += dt * parseInt(speed);
       let n = 0;
-      while (acc >= DT && n++ < 30) { acc -= DT; if (!fight.tick()) { rest = 3; acc = 0; break; } }
+      while (acc >= DT && n++ < 30) {
+        acc -= DT;
+        snapPrev();
+        if (!fight.tick()) { rest = 3; acc = 0; break; }
+      }
     }
-    drawMen.update(fight.men, window.__lb && window.__lb.hold ? 0.5 : rest > 0 ? dt : dt * parseInt(speed));
+    // Draw between the last two ticks, so motion is smooth whatever the frame timing.
+    const view = interp(rest > 0 || (window.__lb && window.__lb.hold) ? 1 : acc / DT);
+    const shown = drawMen.update(view, window.__lb && window.__lb.hold ? 0.5 : rest > 0 ? dt : dt * parseInt(speed));
     const aspect = window.innerWidth / window.innerHeight;
     // Cam: 'auto' gives portrait the fight cam and landscape the wide cam (Ed's call).
     const useFight = q.cam === 'fight' || (q.cam === 'auto' && aspect < 1);
     let cam, dist;
-    if (useFight) { dist = fc.update(dt, aspect, fight.men); cam = fc.cam; }
+    if (useFight) { dist = fc.update(dt, aspect, shown); cam = fc.cam; }
     else {
-      const mid = { x: (fight.men[0].x + fight.men[1].x) / 2, z: (fight.men[0].z + fight.men[1].z) / 2 };
+      const mid = { x: (shown[0].x + shown[1].x) / 2, z: (shown[0].z + shown[1].z) / 2 };
       dist = tv.update((now - t0) / 1000, aspect, mid); cam = tv.cam;
     }
     scene.fog.near = dist + 2; scene.fog.far = dist + 22; // haze past the ring, whatever the fit
