@@ -12,7 +12,8 @@ Start here.
 - **v1** (`index.html` at the root) is frozen. It's the reference and the fallback. No new v1 work, unless it's Ed's items in `ROADMAP.md` (publishing live, the phone test).
 - **v2**: M0 (skeleton) and M1 (footwork) done Oct 9, preview link in `v2/CLAUDE.md`. Next is **M2** (punches and defense).
   - M1: `src/engine/space.js` (real space, no-overlap guarantee), `src/engine/fight.js` (60 Hz fixed step), `src/brain/footwork.js` (modes: feel, circle, hold, press, cut, back, escape; style DNA in `FOOT`), `src/render3d/men.js` (placeholder men, guards). Report: `node v2/tests/footwork.js 10`.
-  - Waiting on Ed: fps on the S25 Ultra for each quality setting.
+  - Ed's S25 Ultra test (Oct 9): 60 fps on every quality setting (native res, shadows on, M1 with two men). Defaults stay res 2 / shadows on / cap 60 to save battery; there's headroom for M7 looks.
+  - Look target (Ed, Oct 9): mostly the Fight Night series. Visual research: `research/fn_visuals.md`.
 
 ## M0 spec (skeleton)
 - Create the folder layout from FOUNDATION section 8: `v2/src/{core,engine,brain,fighter,career,render3d,ui}`, `v2/tests`, `v2/build.js`, `v2/CLAUDE.md` (short v2 working rules).

@@ -18,7 +18,8 @@
 - render3d never imports engine internals and never changes a result. It listens on the event bus (`src/core/events.js`).
 - three.js pinned at **0.170.0** from jsdelivr, loaded by dynamic `import()` in `src/render3d/three.js`.
 - Published-page rules: scripts only from jsdelivr/cdnjs, fonts only Google Fonts, no other network calls (`build.js` enforces it).
-- Budget (S25 Ultra): 60 fps, pixel ratio ≤ 2 by default, one 1024 shadow light, < 150 draw calls (M0 ring: 8, M1 with two men: 38).
+- Budget (S25 Ultra): 60 fps, pixel ratio ≤ 2 by default, one 1024 shadow light, < 150 draw calls (M0 ring: 8, M1 with two men: 38). Ed's S25: 60 fps on every setting, native res included.
+- The look is mostly Fight Night (Ed, Oct 9): `research/fn_visuals.md`.
 
 ## Working rules
 - Small steps, commit each, push to the session branch. No PR unless Ed asks. No model names in commits.
