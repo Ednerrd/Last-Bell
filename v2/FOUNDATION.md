@@ -169,9 +169,9 @@ v2/
 | M3 | **Damage, gas, rules.** Knockdowns, counts, cuts, the doctor, judges, 10-point must. | Full fights end in real results. Stoppages and body KDs near target. |
 | M4 | **Body + skills + levels** (section 4). | Upsets one level down at 15–20%. Same level ~50%. |
 | M5 | **The brain** (section 6), in order: intent, memory, anticipation, counters, setups, hurt, adjusting, clarity. | The brain report per piece. Styles 48–53%. |
-| M6 | **Coach.** Shouts, the corner between rounds, corner talk, listening. | The coach shout sim: a smart coach beats no coach by a real margin, and a random coach doesn't. |
+| M6 | **Coach.** Shouts (follow for a short window, then drift back; ignore chance by relationship + ego), the corner between rounds, corner talk, relationship value. | The coach shout sim: a smart coach beats no coach by a real margin, and a random coach doesn't. |
 | M7 | **Look.** Fighters by build, damage on faces, venues, crowd, replays, commentary. | You play it for a week and the phone stays cool. |
-| M8 | **Career and gym.** Walk-ins, stable, training (teaches skills and knowledge), fighters picking their own fights and goals, rankings, legends, saves. | A 3-year gym sim runs headless. Then you publish. |
+| M8 | **Career and gym.** Created coach, walk-ins, stable, training incl. sparring (teaches skills, knowledge, stances, blocking; specials unlocked by beating the top), gym business + upgrades, fighters picking their own fights and goals, leaving/rivals/retiring, 9 weight classes × 4 belts, legends, HOF + coach retirement, sim-forward, saves. | A 3-year gym sim runs headless. Then you publish. |
 
 From M2 on, every engine change gets a sim before and after, same as v1.
 
@@ -184,8 +184,9 @@ From M2 on, every engine change gets a sim before and after, same as v1.
 
 ---
 
-## Questions for Ed (one word each is fine)
-1. **Body vs skills (section 4):** yes, or change it?
-2. **First weight class:** start with one division (welter?) and add the rest later, or all of them from M8?
-3. **No 2D fallback:** OK to drop it, or keep a cheap 2D view for weak phones?
-4. **M0 next:** go?
+## Decisions (Oct 9, Ed's calls in `VISION.md`)
+- Body vs skills split (section 4): Ed didn't object, so this is the default. Flag it to him again at M4.
+- 3D only: no 2D fallback. Weak phones get a "can't run" screen.
+- 9 weight classes, 4 fictional belts.
+- M0: go (Ed: "go off our list").
+- Leftover Open items in `GAME.md` (staff, amateurs, media and hype, walkouts, sound, free camera): **later** by default. Ed can pull any of them in.

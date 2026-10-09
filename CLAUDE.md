@@ -2,7 +2,7 @@
 
 Phone-first auto-boxing career sim. One self-contained file: `index.html` (~4,600 lines). Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
-**v2 (Oct 9): Ed is restarting from ground zero in `v2/`, 3D first. Blueprint: `v2/FOUNDATION.md` (waiting on Ed's answers). v1 below stays as the reference and fallback.**
+**v2 (Oct 9): Ed is restarting from ground zero in `v2/`, 3D first. Start at `v2/HANDOFF.md`. v1 below is frozen: reference and fallback only.**
 
 **What to do next (v1): `ROADMAP.md`** (the only to-do list). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
 

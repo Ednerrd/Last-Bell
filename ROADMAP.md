@@ -1,6 +1,6 @@
 # Roadmap (one list, in order)
 
-**v2 restart (Oct 9):** `v2/FOUNDATION.md` is the new plan. Its build order (M0–M8) replaces the Claude list below once Ed signs off. v1 items stay here until then.
+**v2 restart (Oct 9): signed off.** Claude's to-do is now `v2/HANDOFF.md` → `v2/FOUNDATION.md` section 9 (M0–M8). v1 is frozen; the "Claude" list below is history. Ed's items below still apply.
 
 The only to-do list. When something is done, delete its line here and put the numbers in `docs/NOTES.md`.
 
