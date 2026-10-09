@@ -10,13 +10,16 @@ Start here.
 
 ## Where things stand
 - **v1** (`index.html` at the root) is frozen. It's the reference and the fallback. No new v1 work, unless it's Ed's items in `ROADMAP.md` (publishing live, the phone test).
-- **v2**: M0 (skeleton) and M1 (footwork) done Oct 9, preview link in `v2/CLAUDE.md`. Next is **M2** (punches and defense).
+- **v2**: M0 (skeleton), M1 (footwork) and M2 (punches and defense) done Oct 9, preview link in `v2/CLAUDE.md`. Next is **M3** (damage, gas, rules).
+  - M2: `src/engine/punch.js` (10 punches by trainer number, load → snap → contact → retract, step-in, land/block/miss, glancing/solid/flush, head/body + side), `src/engine/defense.js` (block, slip, roll, pull back: windows, right vs wrong move), `src/brain/offense.js` (combos by style, picked for the range), `src/brain/defense.js` (sees it or not, reaction, read or habit by style and guard). Events: `punch`, `contact`, `defend`, `defenseEnd`. Render: `src/render3d/men.js` keyed poses, `src/render3d/camera.js` fight cam + wide cam (`cam` button: auto/fight/wide).
+  - M2 audit (`node v2/tests/audit.js 60`): 52.3 thrown / 15.0 landed / 28.6% per man per round; jabs 25.6%, power 30.6%; straights land at median 95% (mean 93%) extension. Pose check: `node v2/tests/poses.mjs <three>`.
+  - Known for later: flush share is high (~32% of landed; wrong-way defense "into it" is 8.5% of all punches), power connect is a bit under real (~31 vs ~35%), outboxer lands least (26%). Skills are placeholders (`f.def` .5, `f.handSpeed` 1) until M4; damage does nothing until M3.
   - M1: `src/engine/space.js` (real space, no-overlap guarantee), `src/engine/fight.js` (60 Hz fixed step), `src/brain/footwork.js` (modes: feel, circle, hold, press, cut, back, escape; style DNA in `FOOT`), `src/render3d/men.js` (placeholder men, guards). Report: `node v2/tests/footwork.js 10`.
   - Ed's S25 Ultra test (Oct 9): 60 fps on every quality setting (native res, shadows on, M1 with two men). Defaults stay res 2 / shadows on / cap 60 to save battery; there's headroom for M7 looks.
   - Look target (Ed, Oct 9): mostly the Fight Night series. Visual research: `research/fn_visuals.md` (read "From Ed's screenshots" first).
   - **Camera call (Ed, Oct 9):** he watches mostly in **portrait**, and portrait gets the close FN-style **fight cam** (low, side-on, tracks the pair, both men in frame). **Landscape** gets the **wide whole-ring cam** (what M0/M1 has now). Ed's "not sure", so make it a switch, with the default picked by orientation.
 
-## M2 kickoff (next session)
+## M2 kickoff (done Oct 9, kept for the record)
 - FOUNDATION section 5 (punches) and section 9 M2: jab, cross, hooks, uppercuts, body shots; block, slip, roll, pull back; keyed poses. Done when the audit runs with thrown/landed/connect % near targets (~53 / ~15 / ~29% per round) and straights land at ~95% extension.
 - Order: (1) the fight cam per the camera call above (render only, keep the hash); (2) the punch model in the engine (phases load → snap → contact → retract, land/block/miss, glancing/solid/flush, region), with events on the bus; (3) defense; (4) `tests/audit.js` CompuBox-style; (5) keyed poses in the render.
 - Reuse v1 knowledge, not code: `docs/NOTES.md` (combat), `research/combat_research.md`, `research/combat_audit.md`.
