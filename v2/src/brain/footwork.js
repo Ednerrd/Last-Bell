@@ -91,12 +91,16 @@ export function planStep(me, opp, rng) {
     case 'back': add(u, -1); add(L, 0.4); break;
     case 'escape': add(L, 1); add(toC, 0.5); add(u, -0.2); break;
   }
+  // Well out of range: he walks up to it with real strides, no feeling-out baby steps.
+  const far = d - want;
+  me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape';
+  if (me.walk) add(u, 1.2);
   const gap = ropeGap(me);
   if (me.mode !== 'escape' && gap < 0.5) add(toC, 0.6 * (1 - gap / 0.5));
   if (Math.hypot(dx, dz) < 0.05) return null;
 
   const dir = unit(dx, dz), span = LEN[me.mode];
-  const len = rng.range(span[0], span[1]);
+  const len = me.walk ? Math.min(rng.range(0.38, 0.52), far - 0.1) : rng.range(span[0], span[1]);
   const to = { x: me.x + dir.x * len, z: me.z + dir.z * len };
   clampRing(to);
   const real = Math.hypot(to.x - me.x, to.z - me.z);
@@ -105,10 +109,11 @@ export function planStep(me, opp, rng) {
   const f = { x: Math.cos(me.th), z: Math.sin(me.th) };
   const along = dir.x * f.x + dir.z * f.z;
   const first = along >= 0 ? 'lead' : 'rear';
-  return { to, dur: clamp(real / dna.speed, 0.14, 0.32), first };
+  return { to, dur: clamp(real / (dna.speed * (me.walk ? 1.3 : 1)), 0.14, 0.32), first };
 }
 
 export function pauseFor(me, rng) {
+  if (me.walk) return rng.range(0, 0.04); // walking up: one stride into the next
   const p = FOOT[me.f.style].pause;
   if (me.mode === 'feel' || me.mode === 'hold') return rng.range(p[0] + 0.15, p[1] + 0.35);
   if (me.mode === 'escape') return rng.range(0.02, 0.08);

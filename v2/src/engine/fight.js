@@ -18,7 +18,7 @@ function makeMan(spec, corner) {
   const s = corner === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
   const m = {
     f, corner, x: c, z: c, th: corner === 0 ? Math.PI / 4 : -3 * Math.PI / 4,
-    vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0,
+    vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0, walk: false,
     feet: null, steps: 0, punch: null, off: makeOffense(), def: null,
   };
   m.feet = feetAt(m, m.th, f.stance);
@@ -36,7 +36,7 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
     men.forEach((m, i) => {
       const s = i === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
       m.x = c; m.z = c; m.th = i === 0 ? Math.PI / 4 : -3 * Math.PI / 4;
-      m.step = null; m.pause = rng.range(0.2, 0.8); m.vx = m.vz = 0;
+      m.step = null; m.pause = rng.range(0.2, 0.8); m.vx = m.vz = 0; m.walk = false;
       m.punch = null; m.off = makeOffense(); m.def = null;
       m.feelSec = F.round === 1 ? rng.range(10, 22) : rng.range(2, 8);
       m.mode = 'feel'; m.modeT = m.feelSec;
