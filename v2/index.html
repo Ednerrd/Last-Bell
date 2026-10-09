@@ -209,7 +209,7 @@ return { buildRing, buildLights };
 
 // render3d/camera.js
 const __m3 = (() => {
-const { RING } = __m1;
+const { RING, clamp } = __m1;
 // The TV camera: elevated, one side of the ring, a slow sway so it never sits dead still.
 // Distance is fitted so the whole ring stays on screen in portrait or landscape.
 
@@ -248,7 +248,7 @@ function makeTvCamera(THREE) {
 function makeFightCamera(THREE) {
   const cam = new THREE.PerspectiveCamera(34, 1, 0.1, 60);
   const target = new THREE.Vector3(0, 1.1, 0);
-  let az = Math.PI / 2, dist = 5, fov = 40, ready = false, cutT = 0; // az: from the pair's middle to the lens
+  let az = Math.PI / 2, dist = 5, fov = 40, lift = 0, ready = false, cutT = 0; // az: from the pair's middle to the lens
   const HEIGHT = 1.6;                    // lens height off the canvas
   const PAD = 0.5;                       // room past each man's center (shoulder, glove)
   const SKEW = 0.42;                     // ~25 degrees off square: a touch of depth, a narrower pair
@@ -281,23 +281,28 @@ function makeFightCamera(THREE) {
     cutT -= dt;
     let cut = !ready;
     if (ready && cutT <= 0 && room(mx, mz, want) < needD * 0.45 && room(mx, mz, other) > needD * 0.8) { want = other; cut = true; }
-    const d = Math.min(needD, room(mx, mz, want));
-    // Short of room: open the lens until the pair fits again.
+    // Short of room: open the lens until the pair fits. If even the widest lens can't hold them
+    // (far apart, like corner to corner at the bell), back out past the ropes and rise over them.
+    const inside = room(mx, mz, want);
+    const fitMax = half / Math.tan(hfOf(MAXFOV));
+    const d = inside >= Math.min(needD, fitMax) * 0.92 ? Math.min(needD, inside) : Math.min(needD, fitMax);
     let wantFov = baseFov;
     if (d < needD) {
       const hf = Math.atan(half / d);
       wantFov = Math.min(MAXFOV, (2 * Math.atan(Math.tan(hf) / aspect) * 180) / Math.PI);
     }
-    if (cut) { az = want; dist = d; fov = wantFov; target.set(mx, 1.1, mz); ready = true; cutT = 4; }
+    const wantLift = d > inside ? clamp((d - inside) / 1.2, 0.3, 1) * 1.3 : 0;
+    if (cut) { az = want; dist = d; fov = wantFov; lift = wantLift; target.set(mx, 1.1, mz); ready = true; cutT = 4; }
     az += angDiff(want, az) * (1 - Math.exp(-dt * 2.2));
     dist += (d - dist) * (1 - Math.exp(-dt * 3));
-    dist = Math.min(dist, room(mx, mz, az));                  // never through the ropes, even mid-swing
+    if (wantLift === 0) dist = Math.min(dist, room(mx, mz, az)); // inside: never through the ropes, even mid-swing
+    lift += (wantLift - lift) * (1 - Math.exp(-dt * 3));
     fov += (wantFov - fov) * (1 - Math.exp(-dt * 3));
     const k = 1 - Math.exp(-dt * 5);
     target.x += (mx - target.x) * k; target.z += (mz - target.z) * k;
     target.y = aspect < 1 ? 1.0 : 1.15;
     cam.fov = fov; cam.aspect = aspect;
-    cam.position.set(target.x + Math.cos(az) * dist, HEIGHT, target.z + Math.sin(az) * dist);
+    cam.position.set(target.x + Math.cos(az) * dist, HEIGHT + lift, target.z + Math.sin(az) * dist);
     cam.lookAt(target);
     cam.updateProjectionMatrix();
     return dist;
