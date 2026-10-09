@@ -45,8 +45,13 @@ async function start() {
     height: pickRng.range(1.68, 1.9),
   });
   let fight = null, rest = 0, speed = '1x', acc = 0, prevS = null;
+  // Test hook: ?m=pressure.peekaboo,boxer.philly.southpaw forces the matchup (style.guard[.stance]).
+  const force = (new URLSearchParams(location.search).get('m') || '').split(',').filter(Boolean).map((t) => {
+    const [style, guard, stance] = t.split('.');
+    return { style, guard, ...(stance ? { stance } : {}) };
+  });
   function newRound() {
-    const red = randMan(), blue = randMan();
+    const red = { ...randMan(), ...force[0] }, blue = { ...randMan(), ...force[1] };
     red.reach = red.height * pickRng.range(0.98, 1.06);
     blue.reach = blue.height * pickRng.range(0.98, 1.06);
     fight = makeFight({ seed: pickRng.int(1, 1e9), red, blue, bus });
