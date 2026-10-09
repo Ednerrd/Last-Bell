@@ -1,5 +1,6 @@
 // Rendered-rig smoothness (render only): records every frame the page draws, then counts hip and
-// head jolts (> 40 m/s2 change in a frame) and frames where a foot slides on the canvas.
+// head jolts (> 40 m/s2 change in a frame) and frames where a foot slides on the canvas, plus the gait:
+// steps, stride length, and stop-go frames (hips stalled while he's moving overall).
 // node v2/tests/rig.mjs <three.module.min.js> [page.html] [secs]. The matchup is random, so average a few runs.
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -27,6 +28,21 @@ await page.clock.pauseAt(new Date(Date.now() + 3000));
 const logs = []; let jHip = 0, jHead = 0, slide = 0, n = 0;
 for (let i = 0; i < secs; i++) await page.clock.runFor(1000);
 const hist = (await page.evaluate(() => window.__rec)).map((h, i, A) => ({ ...h, dt: i ? (h.t - A[i - 1].t) / 1000 : 0.0167 }));
+// Gait: steps (a foot off the canvas, then down), their length, hip speed stops.
+{
+  let steps = 0, strideSum = 0, stops = 0, moving = 0;
+  for (let k = 0; k < 4; k++) {
+    let up = null;
+    for (const h of hist) { const f = h.r[2][k]; if (!f) continue; const lifted = f[1] > 0.06;
+      if (lifted && !up) up = f; else if (!lifted && up) { const d = Math.hypot(f[0] - up[0], f[2] - up[2]); if (d > 0.03) { steps++; strideSum += d; } up = null; } }
+  }
+  for (let g = 0; g < 2; g++) { let win = [];
+    for (let i = 1; i < hist.length; i++) { const v = Math.hypot(hist[i].r[g][0] - hist[i - 1].r[g][0], hist[i].r[g][2] - hist[i - 1].r[g][2]) / hist[i].dt; win.push(v); }
+    // over 0.5 s windows: moving overall but stopped in the middle = stop-go
+    for (let i = 30; i < win.length; i++) { const w = win.slice(i - 30, i), avg = w.reduce((a, b) => a + b, 0) / 30; if (avg > 0.25) { moving++; if (win[i - 15] < 0.08) stops++; } }
+  }
+  console.log('gait: steps', steps, 'avg stride', (strideSum / Math.max(steps, 1)).toFixed(3), 'm; stop-go frames', stops, 'of', moving, 'moving');
+}
 for (let i = 2; i < hist.length; i++) {
   const [a, b, c] = [hist[i - 2], hist[i - 1], hist[i]];
   for (let g = 0; g < 2; g++) for (const [off, cnt] of [[0, 'hip'], [3, 'head']]) {

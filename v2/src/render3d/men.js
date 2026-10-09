@@ -147,9 +147,10 @@ export function makeMen(THREE, scene) {
     if (e.q === 'flush') R.shove = { dir, amp };
   }
 
-  // The hips glide on a critically damped spring toward where the engine has him, so a quick
-  // engine step reads as a weight shift, not a hop.
-  const GLIDE = 32;
+  // The hips flow on a critically damped spring toward where the engine has him. The engine moves
+  // in short steps with pauses between; this is slow enough that he carries through the pauses like
+  // a real boxer instead of stop-go, and quick enough that a slip or a step-in still reads.
+  const GLIDE = 10;
   function glide(R, m, dt) {
     const S = R.sp;
     if (!S || Math.hypot(m.x - S.x, m.z - S.z) > 1) { R.sp = { x: m.x, z: m.z, vx: 0, vz: 0 }; return R.sp; }
@@ -161,54 +162,35 @@ export function makeMen(THREE, scene) {
     return S;
   }
 
-  // ---- Feet. The engine says where he stands; the render keeps each foot planted where it landed
-  // and only picks it up to step: the engine's own steps (first foot, then the other), the step in
-  // behind a punch (lead foot lands as the punch does), or when the planted foot has drifted too far
-  // from where it belongs (turning, a pull, a shove). The foot nearest the way he's going moves first.
+  // ---- Feet: a gait, not a copy of the engine's steps (that read as baby steps). Each foot stays
+  // planted until it's too far from where it belongs, then strides there; where it belongs leads
+  // the way he's moving, so the stride lands ahead of him and he walks through it. One foot at a
+  // time (the next can go once the first is mostly down), and a foot in the air keeps aiming at
+  // where he's going. The step in behind a punch and the catch step after a big shot ride on top.
   function stanceSpot(c, th, h, D, s, side) {
     const l = FOOT[h];
     const p = world({ x: c.x, z: c.z, th }, [l[0] * D.len, 0, l[1] * D.wid], s, side);
     return { x: p[0], z: p[2], yaw: th - (h === 'lead' ? TOE.lead : TOE.rear * (D.uw > 0.04 ? 0.7 : 1)) * side };
   }
   function lift(F, to, dur, h) {
-    F.sw = { fx: F.x, fz: F.z, fyaw: F.yaw, to, t: 0, dur, h };
+    F.sw = { fx: F.x, fz: F.z, fyaw: F.yaw, to, t: 0, dur, h, aim: null };
   }
-  function feet(R, m, dt, s, side, ta) {
+  function feet(R, m, dt, s, side) {
     const D = R.D, c = { x: m.x, z: m.z };
-    const want = { lead: stanceSpot(c, m.th, 'lead', D, s, side), rear: stanceSpot(c, m.th, 'rear', D, s, side) };
+    const spd = Math.hypot(m.vx, m.vz), lead = spd > 0.12 ? clamp(spd * 0.26, 0, 0.22 * s) / spd : 0;
+    const want = {};
+    for (const h of ['lead', 'rear']) {
+      const w = stanceSpot(c, m.th, h, D, s, side);
+      want[h] = { ...w, x: w.x + m.vx * lead, z: w.z + m.vz * lead };
+    }
     if (!R.ft || Math.hypot(R.ft.lead.x - want.lead.x, R.ft.lead.z - want.lead.z) > 1) {
       R.ft = { lead: { ...want.lead, sw: null, y: 0 }, rear: { ...want.rear, sw: null, y: 0 } };
-      R.step = null;
+      R.lift = 0;
       return;
     }
     const F = R.ft;
     // A foot that's somehow way out of place (sim jumped ahead) just goes home.
-    for (const h of ['lead', 'rear']) if (Math.hypot(F[h].x - want[h].x, F[h].z - want[h].z) > 0.6 * s) Object.assign(F[h], want[h], { sw: null, es: null, y: 0 });
-    // Engine step: follow its clock exactly. First foot over 0..60%, the other over 40..100%.
-    // Only while he's really on that step: a step left hanging while a pull moves him isn't one.
-    const st = m.step, k = st ? clamp((st.t + ta) / st.dur, 0, 1) : 0, ek = smooth(k);
-    if (st && Math.hypot(m.x - (st.from.x + (st.to.x - st.from.x) * ek), m.z - (st.from.z + (st.to.z - st.from.z) * ek)) < 0.05) {
-      if (R.step !== st) { R.step = st; F.lead.sw = F.rear.sw = null; F.lead.es = F.rear.es = null; }
-      const land = { lead: stanceSpot(st.to, m.th, 'lead', D, s, side), rear: stanceSpot(st.to, m.th, 'rear', D, s, side) };
-      const dist = Math.hypot(st.to.x - st.from.x, st.to.z - st.from.z);
-      for (const h of ['lead', 'rear']) {
-        const first = h === (st.first || 'lead');
-        const u = first ? clamp(k / 0.6, 0, 1) : clamp((k - 0.4) / 0.6, 0, 1);
-        const f = F[h];
-        if (u <= 0) continue;
-        if (!f.es) {
-          // Normally from where the foot is; if it's lost (the sim jumped ahead), from the step's start.
-          const st0 = stanceSpot(st.from, m.th, h, D, s, side);
-          f.es = Math.hypot(f.x - st0.x, f.z - st0.z) > 0.25 * s ? { fx: st0.x, fz: st0.z, fyaw: st0.yaw } : { fx: f.x, fz: f.z, fyaw: f.yaw };
-        }
-        const e = smooth(u);
-        f.x = f.es.fx + (land[h].x - f.es.fx) * e; f.z = f.es.fz + (land[h].z - f.es.fz) * e;
-        f.yaw = f.es.fyaw + wrapA(land[h].yaw - f.es.fyaw) * e;
-        f.y = Math.min(D.swing, 0.012 + dist * 0.12) * Math.sin(Math.PI * u) * (u < 1 ? 1 : 0);
-      }
-      return;
-    }
-    R.step = null; F.lead.es = F.rear.es = null;
+    for (const h of ['lead', 'rear']) if (Math.hypot(F[h].x - want[h].x, F[h].z - want[h].z) > 0.6 * s) Object.assign(F[h], want[h], { sw: null, y: 0 });
     // The step in behind a punch: the lead foot goes now and lands with the punch.
     const p = m.punch;
     if (p && p !== R.stepPunch) {
@@ -216,7 +198,7 @@ export function makeMen(THREE, scene) {
       const left = p.step - p.stepped;
       if (left > 0.03) {
         const to = { x: m.x + Math.cos(m.th) * left, z: m.z + Math.sin(m.th) * left };
-        lift(F.lead, () => stanceSpot(to, m.th, 'lead', D, s, side), Math.max(p.load + p.snap - (p.t + ta), 0.06), D.swing * 0.7);
+        lift(F.lead, () => stanceSpot(to, m.th, 'lead', D, s, side), Math.max(p.load + p.snap - (p.t + (m.ta || 0)), 0.08), D.swing * 0.7);
       }
     }
     // A big shot moves his feet: the rear foot catches him.
@@ -227,34 +209,39 @@ export function makeMen(THREE, scene) {
       if (!F.rear.sw) lift(F.rear, () => ({ ...base, x: base.x + w[0], z: base.z + w[2] }), 0.14, 0.02);
       R.shove = null;
     }
-    // Swings in flight.
+    // Swings in flight. A free stride keeps re-aiming at where he's going.
+    R.lift = 0;
     for (const h of ['lead', 'rear']) {
       const f = F[h];
       if (!f.sw) continue;
-      const S = f.sw, to = typeof S.to === 'function' ? S.to() : want[h];
+      const S = f.sw;
+      let to;
+      if (typeof S.to === 'function') to = S.to();
+      else {
+        if (!S.aim) S.aim = { ...want[h] };
+        const k = 1 - Math.exp(-10 * dt);
+        S.aim.x += (want[h].x - S.aim.x) * k; S.aim.z += (want[h].z - S.aim.z) * k; S.aim.yaw += wrapA(want[h].yaw - S.aim.yaw) * k;
+        to = S.aim;
+      }
       S.t += dt;
       const u = clamp(S.t / S.dur, 0, 1), e = smooth(u);
       f.x = S.fx + (to.x - S.fx) * e; f.z = S.fz + (to.z - S.fz) * e;
       f.yaw = S.fyaw + wrapA(to.yaw - S.fyaw) * e;
       f.y = S.h * Math.sin(Math.PI * u);
+      R.lift = Math.max(R.lift, f.y);
       if (u >= 1) { f.sw = null; f.y = 0; }
     }
-    // Drift: pick up the foot that's furthest out of place, if the other one is down (or nearly).
+    // Strides: the foot furthest from where it belongs goes, once the other is (nearly) down.
     const err = (h) => Math.hypot(want[h].x - F[h].x, want[h].z - F[h].z);
     const yerr = (h) => Math.abs(wrapA(want[h].yaw - F[h].yaw));
-    const busy = (h) => F[h].sw && F[h].sw.t < F[h].sw.dur * 0.55;
-    const need = (h) => !F[h].sw && (err(h) > 0.07 * s || yerr(h) > 0.44);
-    const cand = ['lead', 'rear'].filter(need);
+    const down = (h) => !F[h].sw || F[h].sw.t >= F[h].sw.dur * 0.55;
+    const thr = 0.13 * s;
+    const cand = ['lead', 'rear'].filter((h) => !F[h].sw && (err(h) > thr || yerr(h) > 0.44)).sort((a, b) => err(b) - err(a));
     if (cand.length) {
-      // The foot nearest the way he's going moves first.
-      const mvx = (want.lead.x - F.lead.x + want.rear.x - F.rear.x) / 2, mvz = (want.lead.z - F.lead.z + want.rear.z - F.rear.z) / 2;
-      const ahead = (h) => (F[h].x - m.x) * mvx + (F[h].z - m.z) * mvz;
-      cand.sort((a, b) => ahead(b) - ahead(a));
-      const h = cand[0], o = h === 'lead' ? 'rear' : 'lead';
-      if (!busy(o)) {
-        const d = err(h);
+      const h = cand[0], o = h === 'lead' ? 'rear' : 'lead', d = err(h);
+      if (down(o) || d > 0.35 * s) {
         // A real move gets a real lift; turning in place is a pivot, the foot barely leaves the canvas.
-        if (d > 0.025 * s) lift(F[h], null, clamp(d / 1.6, 0.1, 0.2), Math.max(0.012, Math.min(D.swing, 0.01 + d * 0.15)));
+        if (d > 0.025 * s) lift(F[h], null, clamp(0.22 - spd * 0.06, 0.12, 0.22) * (d > 0.35 * s ? 0.75 : 1), D.swing * clamp(d / (0.15 * s), 0.4, 1.2));
         else lift(F[h], null, 0.12, 0.004);
       }
     }
@@ -278,7 +265,7 @@ export function makeMen(THREE, scene) {
       const d = m.def && { ...m.def, t: m.def.t + ta }, env = defEnv(d);
       R.t += dt;
 
-      feet(R, raw[i], dt, s, side, ta);
+      feet(R, m, dt, s, side);
 
       // --- Life: his own bounce, weave and rhythm. Some stays on while he punches or defends.
       R.busy += ((p || env > 0 ? D.busy : 1) - R.busy) * (1 - Math.exp(-dt * 8));
@@ -305,10 +292,7 @@ export function makeMen(THREE, scene) {
         weave += D.uw * 0.9 * Math.sin(a) * gate;
         uDip = D.uw * Math.cos(a) ** 2 * gate;
       }
-      if (m.step) {
-        const k = clamp((m.step.t + ta) / m.step.dur, 0, 1);
-        bob -= 0.022 * Math.sin(Math.PI * k);                     // sink into the step, rise out of it
-      }
+      bob -= (R.lift || 0) * 0.3;                                  // he sinks a touch as he strides
 
       // --- Punch: which hand, how far along, the torso and weight behind it.
       let e = 0, hand = null;
