@@ -13,6 +13,7 @@
 - `node v2/tests/poses.mjs <three.module.min.js>`: freezes the sim at punch contact / mid-defense, screenshots `shots/pose-*.png`.
 - `node v2/tests/strip.mjs <three.module.min.js>`: fake-clock strip of consecutive frames, to check motion is smooth.
 - Force a matchup in the page: `index.html?m=pressure.peekaboo,boxer.philly.southpaw` (style.guard[.stance], red then blue).
+- `VIEWS=three,face,face1 node v2/tests/close.mjs <three.module.min.js> [matchup] [secs]`: close-ups of the bodies in a bare studio (side, front, back, three, face, face1).
 - `node v2/tests/rig.mjs <three.module.min.js>`: render smoothness from every drawn frame (hip/head jolts, foot-slide frames). Random matchup: average 3 runs.
 - `node v2/tests/shot.mjs <three.module.min.js>` opens the page headless, checks page errors, taps the quality buttons, screenshots into `v2/shots/` (gitignored). jsdelivr is blocked in the sandbox, so serve a local copy: `npm pack three@0.170.0` into the scratchpad and pass `package/build/three.module.min.js`.
 
@@ -23,7 +24,7 @@
 - render3d never imports engine internals and never changes a result. It listens on the event bus (`src/core/events.js`).
 - three.js pinned at **0.170.0** from jsdelivr, loaded by dynamic `import()` in `src/render3d/three.js`.
 - Published-page rules: scripts only from jsdelivr/cdnjs, fonts only Google Fonts, no other network calls (`build.js` enforces it).
-- Budget (S25 Ultra): 60 fps, pixel ratio ≤ 2 by default, one 1024 shadow light, < 150 draw calls (M0 ring: 8, M1 with two men: 38). Ed's S25: 60 fps on every setting, native res included.
+- Budget (S25 Ultra): 60 fps, pixel ratio ≤ 2 by default, one 1024 shadow light, < 150 draw calls (M0 ring: 8, two skinned men: ~20). Ed's S25: 60 fps on every setting, native res included.
 - The look is mostly Fight Night (Ed, Oct 9): `research/fn_visuals.md`.
 
 ## Working rules

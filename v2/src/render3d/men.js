@@ -1,11 +1,14 @@
-// Placeholder men: simple shapes, drawn where the engine says they are. Render only: reads the
-// state it's handed and the bus, never changes a result.
+// The men, drawn where the engine says they are. Render only: reads the state it's handed and the
+// bus, never changes a result.
 // Movement pass (research/move_plan.md): feet plant and step (lift, swing, land, pivot on the ball),
 // the hips ride between them with the weight shifting foot to foot, the torso turns into punches
 // (hips lead, shoulders follow, a little follow-through), hits land as impulses (chest first, the
 // head whips after), and every man has his own way of moving (moves.js).
+// Bodies (body.js): one skinned body per man; this file works out the joints and frames its bones.
 // Local frame: [forward, up, right] for a man 1.78 m tall, mirrored for southpaws (lead = -right).
 import { moveDNA, noise } from './moves.js';
+import { makeBody, lookOf, BIND, ANKLE } from './body.js';
+import { makeRng } from '../core/rng.js';
 
 // Glove spots in guard: [x forward, y up, z right]. Lead = left = -z.
 const GUARD = {
@@ -37,6 +40,10 @@ const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const len = (a) => Math.hypot(a[0], a[1], a[2]);
 const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm = (a) => mul(a, 1 / (len(a) || 1e-9));
+const perp = (v, d) => sub(v, mul(d, dot(v, d)));   // v with its part along unit d taken out
 const rotY = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[2] * s, p[1], p[0] * s + p[2] * c]; };
 const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
@@ -74,70 +81,51 @@ function defEnv(d) {
 }
 
 export function makeMen(THREE, scene) {
-  const skin = new THREE.MeshStandardMaterial({ color: 0xb98a6a, roughness: 0.7 });
-  const shoe = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
-  const kit = [0xb3201c, 0x1d4fb3].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55 }));
-  const unitCyl = new THREE.CylinderGeometry(1, 1, 1, 10);
-  const up = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3();
+  const men = [0, 1].map((i) => ({
+    B: null, // the body (body.js), built when we first see who he is
+    // Pose state (local, mirrored): smoothed gloves, the punch we last saw and how it ended.
+    g: { lead: null, rear: null }, punch: null, from: null, res: null,
+    f: null, D: null, t: i * 31.7, ph: i * 2.1, busy: 1, act: 1, hold: 0, nextHold: 3, feint: null,
+    sp: null, ft: null, step: null,
+    yaw: S1(), hip: S1(), w: S1(0.45), fold: S1(), off: S3(), chest: S3(), headK: S3(), pend: [],
+    probe: null, // drawn hip / head / feet, for the headless checks
+  }));
 
-  function seg(mat, r) {
-    const m = new THREE.Mesh(unitCyl, mat);
-    m.userData.r = r; m.castShadow = true; scene.add(m);
-    return m;
+  // Bone frames. Every bone gets a world frame (origin, right-handed axes, scale); bones in body.js
+  // were bound the same way, so the skin follows.
+  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _qC = new THREE.Quaternion(), _qP = new THREE.Quaternion();
+  const _e = new THREE.Euler(), _v = new THREE.Vector3();
+  const ax = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  function quat(q, x, y, z) {
+    _m.makeBasis(ax[0].set(x[0], x[1], x[2]), ax[1].set(y[0], y[1], y[2]), ax[2].set(z[0], z[1], z[2]));
+    return q.setFromRotationMatrix(_m);
   }
-  // Stretch a unit cylinder between two world points.
-  function place(m, a, b) {
-    tmp.subVectors(b, a); const l = tmp.length();
-    m.position.copy(a).addScaledVector(tmp, 0.5);
-    m.quaternion.setFromUnitVectors(up, tmp.divideScalar(l || 1));
-    m.scale.set(m.userData.r, l, m.userData.r);
+  function setBone(b, o, q, s, sy = s) { b.position.set(o[0], o[1], o[2]); b.quaternion.copy(q); b.scale.set(s, sy, s); }
+  // A limb bone: from o along unit d, front f (square to d). Bound as x = front, y = back up the limb.
+  function limb(b, o, d, f, s, sy = s) { setBone(b, o, quat(_q, f, mul(d, -1), cross(d, f)), s, sy); }
+  // Two-bone reach: the joint between root S and end G (lengths L1, L2), bent toward `pole`.
+  function ik(S, G, L1, L2, pole) {
+    const d = sub(G, S), dl = Math.max(len(d), 1e-6), u = mul(d, 1 / dl);
+    const D = clamp(dl, Math.abs(L1 - L2) + 1e-4, L1 + L2 - 1e-5);
+    const a = (L1 * L1 - L2 * L2 + D * D) / (2 * D), h = Math.sqrt(Math.max(L1 * L1 - a * a, 0));
+    return add(add(S, mul(u, a)), mul(norm(perp(pole, u)), h));
   }
 
-  const men = [0, 1].map((i) => {
-    const body = new THREE.Group();
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.3, 4, 10), skin);
-    torso.scale.set(0.85, 1, 1.15); torso.position.y = 1.24;
-    const trunks = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.15, 0.24, 12), kit[i]);
-    trunks.scale.set(0.9, 1, 1.2); trunks.position.y = 0.97;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 12), skin);
-    head.scale.set(1.05, 1.15, 0.95);
-    for (const m of [torso, trunks, head]) { m.castShadow = true; body.add(m); }
-    scene.add(body);
-    const glove = () => { const g = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), kit[i]); g.scale.set(1.25, 1, 1); g.castShadow = true; scene.add(g); return g; };
-    const foot = () => { const f = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.1), shoe); f.castShadow = true; scene.add(f); return f; };
-    return {
-      body, torso, trunks, head, gloves: [glove(), glove()], feet: [foot(), foot()],
-      arms: [seg(skin, 0.045), seg(skin, 0.04), seg(skin, 0.045), seg(skin, 0.04)],
-      legs: [seg(skin, 0.065), seg(skin, 0.05), seg(skin, 0.065), seg(skin, 0.05)],
-      // Pose state (local, mirrored): smoothed gloves, the punch we last saw and how it ended.
-      g: { lead: null, rear: null }, punch: null, from: null, res: null,
-      f: null, D: null, t: i * 31.7, ph: i * 2.1, busy: 1, act: 1, hold: 0, nextHold: 3, feint: null,
-      sp: null, ft: null, step: null,
-      yaw: S1(), hip: S1(), w: S1(0.45), fold: S1(), off: S3(), chest: S3(), headK: S3(), pend: [],
-    };
-  });
-
-  const V = (x, y, z) => new THREE.Vector3(x, y, z);
   // Local [fwd, up, right] (mirrored by side) -> world, for a man at (x, z) facing th, scale s.
   function world(m, l, s, side) {
     const c = Math.cos(m.th), sn = Math.sin(m.th);
     const f = l[0] * s, r = l[2] * side * s;
-    return V(m.x + c * f - sn * r, l[1] * s, m.z + sn * f + c * r);
+    return [m.x + c * f - sn * r, l[1] * s, m.z + sn * f + c * r];
+  }
+  // The same for a direction (no move, no scale).
+  function wdir(th, l, side) {
+    const c = Math.cos(th), sn = Math.sin(th), r = l[2] * side;
+    return [c * l[0] - sn * r, l[1], sn * l[0] + c * r];
   }
   // World (x, y, z) -> his local mirrored frame.
   function local(m, x, y, z, s, side) {
     const c = Math.cos(m.th), sn = Math.sin(m.th), dx = x - m.x, dz = z - m.z;
     return [(dx * c + dz * sn) / s, y / s, ((-dx * sn + dz * c) / s) * side];
-  }
-
-  // Two-bone limb: the joint between root S and end G, bent toward `pole`.
-  function elbow(S, G, L, pole) {
-    const d = sub(G, S), dl = len(d) || 1e-6, half = L / 2;
-    const mid = mix(S, G, 0.5);
-    const bend = Math.sqrt(Math.max(half * half - (dl / 2) * (dl / 2), 0));
-    const u = mul(d, 1 / dl), pd = pole[0] * u[0] + pole[1] * u[1] + pole[2] * u[2];
-    let pv = sub(pole, mul(u, pd)); const pl = len(pv) || 1; pv = mul(pv, 1 / pl);
-    return add(mid, mul(pv, bend));
   }
 
   // A landed shot is an impulse: the chest takes it now, the head whips after it 35 ms later and
@@ -180,7 +168,7 @@ export function makeMen(THREE, scene) {
   function stanceSpot(c, th, h, D, s, side) {
     const l = FOOT[h];
     const p = world({ x: c.x, z: c.z, th }, [l[0] * D.len, 0, l[1] * D.wid], s, side);
-    return { x: p.x, z: p.z, yaw: th - (h === 'lead' ? TOE.lead : TOE.rear * (D.uw > 0.04 ? 0.7 : 1)) * side };
+    return { x: p[0], z: p[2], yaw: th - (h === 'lead' ? TOE.lead : TOE.rear * (D.uw > 0.04 ? 0.7 : 1)) * side };
   }
   function lift(F, to, dur, h) {
     F.sw = { fx: F.x, fz: F.z, fyaw: F.yaw, to, t: 0, dur, h };
@@ -236,7 +224,7 @@ export function makeMen(THREE, scene) {
       const { dir, amp } = R.shove, b = mul(dir, amp * 1.2);
       const w = world({ x: 0, z: 0, th: m.th }, [b[0], 0, b[2] * side], s, side);
       const base = want.rear;
-      if (!F.rear.sw) lift(F.rear, () => ({ ...base, x: base.x + w.x, z: base.z + w.z }), 0.14, 0.02);
+      if (!F.rear.sw) lift(F.rear, () => ({ ...base, x: base.x + w[0], z: base.z + w[2] }), 0.14, 0.02);
       R.shove = null;
     }
     // Swings in flight.
@@ -276,7 +264,11 @@ export function makeMen(THREE, scene) {
     const state = raw.map((m, i) => { const S = glide(men[i], m, dt); return { ...m, x: S.x, z: S.z, vx: S.vx, vz: S.vz }; });
     state.forEach((m, i) => {
       const R = men[i], o = state[1 - i], g = GUARD[m.f.guard] || GUARD.standard;
-      if (R.f !== m.f) { R.f = m.f; R.D = moveDNA(m.f, i); R.ft = null; }
+      if (R.f !== m.f) {
+        R.f = m.f; R.D = moveDNA(m.f, i); R.ft = null;
+        if (R.B) R.B.dispose();
+        R.B = makeBody(THREE, scene, lookOf(m.f, i, makeRng([m.f.name, m.f.height.toFixed(3), m.f.reach.toFixed(3), i, 'look'].join('|'))));
+      }
       const D = R.D;
       const s = m.f.height / 1.78, side = m.f.stance === 'southpaw' ? -1 : 1;
       const armL = m.f.arm / s;                                    // shoulder to glove, local units
@@ -374,16 +366,7 @@ export function makeMen(THREE, scene) {
       const shift = (w - 0.45) * 0.2 * D.len;
       const lean = D.lean;
       const bx = m.x + Math.cos(m.th) * shift * s, bz = m.z + Math.sin(m.th) * shift * s;
-      R.body.position.set(bx, -crouch * s, bz);
-      R.body.rotation.y = -m.th;
-      R.body.scale.setScalar(s);
-      R.trunks.rotation.y = (-0.35 + hipYaw) * side;
-      R.torso.rotation.y = (-0.5 + yaw) * side;
-      R.torso.position.set(offT[0] * 0.5 + ch[0] * 0.5 + lean * 0.12, 1.24 + offT[1] * 0.6, offT[2] * side * 0.5 + chest[2] * 0.5);
-      R.torso.rotation.z = -fold * 1.2 - offT[0] * 0.8 - lean - ch[0] * 2;   // lean, pull back, fold on a body shot
-      R.torso.rotation.x = offT[2] * side * 1.1 + chest[2] * 2;                // side bend on a slip or a hook
       const headL = add(add(add(HEAD, offT), [lean * 0.22 + ch[0], -D.drop * 0.5, ch[2]]), hd);
-      R.head.position.set(headL[0] + fold * 0.6, headL[1] - fold * 0.4, headL[2] * side);
       const bodyM = { x: bx, z: bz, th: m.th };
 
       // Shoulders turn with the torso (and a shoulder roll lifts the lead one).
@@ -449,15 +432,58 @@ export function makeMen(THREE, scene) {
         }
       }
 
-      // Gloves, arms (two-bone).
-      const gl = R.g.lead, gr = R.g.rear;
-      R.gloves[0].position.copy(world(bodyM, gl, s, side)); R.gloves[1].position.copy(world(bodyM, gr, s, side));
-      R.gloves[0].rotation.y = R.gloves[1].rotation.y = -m.th;
-      for (const [h, gi, ai] of [['lead', gl, 0], ['rear', gr, 2]]) {
+      // ---- The body. Joints in world space, then a frame for every bone.
+      const Pw = (l) => world(bodyM, l, s, side), Dw = (l) => wdir(m.th, l, side);
+      const Bn = R.B.bones, I = R.B.I, UP = [0, 1, 0];
+      // His +z side (the mesh's P side) is his real right: the rear for an orthodox, the lead for a southpaw.
+      const sP = side > 0 ? 'rear' : 'lead', sN = side > 0 ? 'lead' : 'rear';
+
+      // Chest: across the shoulders, tilted by lean, pull, fold and side bend.
+      const tz = -fold * 1.2 - offT[0] * 0.8 - lean - ch[0] * 2, tx = offT[2] * 1.1 + ch[2] * 2;
+      const SPw = Pw(sh[sP]), SNw = Pw(sh[sN]);
+      const zC = norm(sub(SPw, SNw)), yC = norm(perp(Dw([-Math.sin(tz), Math.cos(tz), Math.sin(tx)]), zC)), xC = cross(yC, zC);
+      const Cc = sub(mix(SPw, SNw, 0.5), mul(yC, (BIND.shY - BIND.chest) * s));
+      const qC = quat(_qC, xC, yC, zC);
+      setBone(Bn[I.chest], Cc, qC, s);
+
+      // Pelvis: bladed a bit less than the shoulders, turning with the hips; leans a little with him.
+      const ha = -0.3 + hipYaw;
+      const zP = mul(Dw([Math.sin(ha), 0, Math.cos(ha)]), side);
+      const yP = norm(perp(mix(UP, yC, 0.3), zP)), xP = cross(yP, zP);
+      const Pp = Pw([offT[0] * 0.15 + ch[0] * 0.2, BIND.pelvis - crouch, offT[2] * 0.2]);
+      const qP = quat(_qP, xP, yP, zP);
+      setBone(Bn[I.pelvis], Pp, qP, s);
+      // Spine: halfway, stretched to fit.
+      const kS = (BIND.spine - BIND.pelvis) / (BIND.chest - BIND.pelvis);
+      setBone(Bn[I.spine], mix(Pp, Cc, kS), _q2.copy(qP).slerp(qC, 0.5), s, s * clamp(len(sub(Cc, Pp)) / ((BIND.chest - BIND.pelvis) * s), 0.7, 1.4));
+
+      // Head: faces his man, tips with the hits and with the neck.
+      const H = Pw([headL[0] + fold * 0.6, headL[1] - fold * 0.4 - crouch, headL[2]]);
+      const NB = add(Cc, mul(yC, (BIND.neckBase - BIND.chest) * s));
+      const fH = norm(mix(Dw([1, 0, 0]), xC, 0.35));
+      const yH = norm(add(add(mul(UP, 0.6), mul(norm(sub(H, NB)), 0.4)), Dw([hd[0] * 3, 0, hd[2] * 3])));
+      const xH = norm(perp(fH, yH));
+      setBone(Bn[I.head], H, quat(_q, xH, yH, cross(xH, yH)), s);
+      const HB = sub(H, mul(yH, (BIND.head[1] - BIND.headBase) * s)), yN = norm(sub(HB, NB)), xN = norm(perp(fH, yN));
+      setBone(Bn[I.neck], NB, quat(_q, xN, yN, cross(xN, yN)), s, s * clamp(len(sub(HB, NB)) / ((BIND.headBase - BIND.neckBase) * s), 0.6, 1.8));
+
+      // Arms: shoulder -> elbow -> glove. The forearm and glove are one stiff piece.
+      const L1 = armL * 0.48 * s, L2 = armL * 0.52 * s;
+      for (const h of ['lead', 'rear']) {
+        const isP = h === sP, gi = R.g[h], S = isP ? SPw : SNw, G = Pw(gi);
         const out = h === 'lead' ? -1 : 1, hookUp = hand === h && P.fam === 'hook' ? 0.9 : 0;
-        const E = elbow(sh[h], gi, armL * 0.98, [-0.2, -1 + hookUp * 1.6, out * (0.8 + hookUp)]);
-        place(R.arms[ai], world(bodyM, sh[h], s, side), world(bodyM, E, s, side));
-        place(R.arms[ai + 1], world(bodyM, E, s, side), world(bodyM, gi, s, side));
+        const pole = Dw([-0.2, -1 + hookUp * 1.6, out * (0.8 + hookUp)]);
+        const E = ik(S, G, L1, L2, pole);
+        const d1 = norm(sub(E, S)), d2 = norm(sub(G, E));
+        const f1 = norm(add(perp(d2, d1), mul(perp(mul(pole, -1), d1), 0.1)));
+        const b = cross(d1, f1), f2 = cross(b, d2);
+        limb(Bn[isP ? I.uaP : I.uaN], S, d1, f1, s);
+        limb(Bn[isP ? I.faP : I.faN], E, d2, f2, s, s * Math.max(len(sub(G, E)) / L2, 1));
+        // Glove along the forearm; the palm turns in and down, so the thumb sits where it should.
+        const inward = isP ? mul(zC, -1) : zC;
+        const palm = norm(perp(add(inward, [0, -0.8, 0]), d2)), gy = mul(palm, -1);
+        const gm = R.B.gloves[isP ? 1 : 0];
+        gm.position.set(G[0], G[1], G[2]); gm.quaternion.copy(quat(_q, d2, gy, cross(d2, gy))); gm.scale.setScalar(s);
       }
 
       // Feet: planted spots from feet(); the rear heel turns out on a rear-hand punch and the lead
@@ -465,29 +491,32 @@ export function makeMen(THREE, scene) {
       const F = R.ft;
       const piv = { lead: P && P.hand === 'lead' && P.fam === 'hook' ? -0.4 * Math.max(e, 0) : 0, rear: P && P.hand === 'rear' ? 0.7 * Math.max(e, 0) : 0 };
       const hop = D.hop * Math.max(shape - 0.5, 0) * 2 * life * D.bob * 1.5;
-      for (const [h, k] of [['lead', 0], ['rear', 1]]) {
-        const f = F[h], a = piv[h] * side;
+      const fw = [Math.cos(m.th), 0, Math.sin(m.th)], feetW = [];
+      for (const h of ['lead', 'rear']) {
+        const f = F[h], a = piv[h] * side, isP = h === sP;
         const ballX = f.x + Math.cos(f.yaw) * BALL * s, ballZ = f.z + Math.sin(f.yaw) * BALL * s;
         const yw = f.yaw + a;
         const heel = (h === 'rear' ? D.heel : D.heel * 0.4) + Math.abs(piv[h]) * 0.03 + hop * 0.5;
         const pitch = Math.asin(clamp(heel / (0.2 * s), 0, 0.6));
         const fx = ballX - Math.cos(yw) * BALL * s, fz = ballZ - Math.sin(yw) * BALL * s;
-        R.feet[k].position.set(fx, 0.04 * s + f.y + hop + Math.sin(pitch) * BALL * s, fz);
-        R.feet[k].rotation.set(0, -yw, -pitch);
-        f.draw = [fx, 0.04 * s + f.y + hop, fz];
-      }
-
-      // Legs: hip -> knee -> ankle, knee bent forward and a little out.
-      const hy = (0.9 - crouch) * s;
-      const hips = { lead: world(bodyM, [0.02, 0.9 - crouch, -0.09], s, side), rear: world(bodyM, [-0.02, 0.9 - crouch, 0.09], s, side) };
-      const legL = 0.9 * s, fw = [Math.cos(m.th), 0, Math.sin(m.th)];
-      for (const [h, k] of [['lead', 0], ['rear', 2]]) {
-        const hp = [hips[h].x, hy, hips[h].z], ft = F[h].draw;
+        const fc = [fx, 0.04 * s + f.y + hop + Math.sin(pitch) * BALL * s, fz];
+        f.draw = [fx, 0.04 * s + f.y + hop, fz]; feetW.push(fc);
+        _e.set(0, -yw, -pitch); _q.setFromEuler(_e);
+        const ak = _v.set(ANKLE[0] * s, ANKLE[1] * s, ANKLE[2] * s).applyQuaternion(_q);
+        const A = [fc[0] + ak.x, fc[1] + ak.y, fc[2] + ak.z];
+        setBone(Bn[isP ? I.ftP : I.ftN], A, _q, s);
+        // Leg: hip -> knee -> ankle, knee forward and a little out.
+        const Hp = add(add(Pp, mul(zP, (isP ? 1 : -1) * BIND.hipZ * s)), mul(yP, (BIND.hipY - BIND.pelvis) * s));
         const outW = h === 'lead' ? -0.3 * side : 0.3 * side;
         const pole = [fw[0] - Math.sin(m.th) * outW, 0.1, fw[2] + Math.cos(m.th) * outW];
-        const kn = elbow(hp, ft, legL, pole);
-        place(R.legs[k], V(...hp), V(...kn)); place(R.legs[k + 1], V(...kn), V(...ft));
+        const T1 = BIND.thigh * s, T2 = BIND.shin * s, K = ik(Hp, A, T1, T2, pole);
+        const d1 = norm(sub(K, Hp)), d2 = norm(sub(A, K));
+        const f1 = norm(add(mul(perp(d2, d1), -1), mul(perp(pole, d1), 0.1)));
+        const b = cross(d1, f1), f2 = cross(b, d2);
+        limb(Bn[isP ? I.thP : I.thN], Hp, d1, f1, s);
+        limb(Bn[isP ? I.shP : I.shN], K, d2, f2, s, s * Math.max(len(sub(A, K)) / T2, 1));
       }
+      R.probe = { hip: [bx, -crouch * s, bz], head: H, feet: feetW };
     });
     return state; // the glided positions, for the camera
   }

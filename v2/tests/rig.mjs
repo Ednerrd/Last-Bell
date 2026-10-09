@@ -15,13 +15,8 @@ await page.route(/cdn\.jsdelivr\.net\/npm\/three@/, (r) => r.fulfill({ body: rea
 await page.goto('file://' + file);
 await page.waitForFunction(() => window.__lb && window.__lb.fight);
 await page.evaluate(() => {
-  const S = window.__lb.scene, T = window.__lb.THREE;
-  const groups = S.children.filter((c) => c.type === 'Group' && c.children.length === 3);
-  const feet = S.children.filter((c) => c.isMesh && c.geometry.parameters && c.geometry.parameters.width === 0.26);
-  window.__probe = () => {
-    const v = new T.Vector3();
-    return [...groups.map((g) => { g.children[2].getWorldPosition(v); return [g.position.x, g.position.y, g.position.z, v.x, v.y, v.z]; }), feet.map((f) => [f.position.x, f.position.y, f.position.z])];
-  };
+  const rig = window.__lb.men.rig;
+  window.__probe = () => [...rig.map((R) => [...R.probe.hip, ...R.probe.head]), rig.flatMap((R) => R.probe.feet.map((f) => [...f]))];
 });
 await page.evaluate(() => {
   window.__rec = [];

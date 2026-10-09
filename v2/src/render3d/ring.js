@@ -106,7 +106,7 @@ export function buildRing(THREE, scene) {
   return { canvas, posts, pads, ropes };
 }
 
-// Hot key light over the ring, a dim fill, dark everywhere else.
+// Hot key light over the ring, soft fills on the men, dark everywhere else.
 export function buildLights(THREE, scene) {
   scene.background = new THREE.Color(0x050608);
   scene.fog = new THREE.Fog(0x050608, 12, 30);
@@ -119,13 +119,17 @@ export function buildLights(THREE, scene) {
   key.shadow.camera.near = 4;
   key.shadow.camera.far = 12;
   key.shadow.bias = -0.0004;
+  key.shadow.normalBias = 0.03; // no self-shadow blotches on the curved skin
   scene.add(key, key.target);
 
-  scene.add(new THREE.HemisphereLight(0x8090a8, 0x050505, 0.18));
-
-  const rim = new THREE.DirectionalLight(0x6f86b0, 0.35);
+  // Sky fill, plus the bounce off a white canvas under a hot light: legs and faces aren't black.
+  scene.add(new THREE.HemisphereLight(0x8592ad, 0x6a6058, 0.55));
+  // Warm fill from the broadcast side, cool rim from the far side: the Fight Night skin pop.
+  const fill = new THREE.DirectionalLight(0xffdcc0, 0.55);
+  fill.position.set(5, 4, 7);
+  const rim = new THREE.DirectionalLight(0x7a92c0, 0.8);
   rim.position.set(-6, 5, -8);
-  scene.add(rim);
+  scene.add(fill, rim);
 
   return { key };
 }
