@@ -1,7 +1,8 @@
 // The determinism hash: everything seeded goes in here.
-// RNG streams, plus headless rounds (positions, facing and modes, sampled every 6 ticks).
+// RNG streams, plus headless rounds (positions, facing and modes, sampled every 6 ticks; every contact).
 import { makeRng } from '../src/core/rng.js';
 import { makeFight } from '../src/engine/fight.js';
+import { makeBus } from '../src/core/events.js';
 import { hash } from './t.js';
 
 export function determinism() {
@@ -12,7 +13,9 @@ export function determinism() {
     for (let i = 0; i < 200; i++) out.push(Math.round(r.gauss(0, 1) * 1e6));
   }
   for (const [a, b] of [['pressure', 'outboxer'], ['boxer', 'boxer']]) {
-    const F = makeFight({ seed: 'hash-' + a + b, red: { style: a }, blue: { style: b, stance: 'southpaw' } });
+    const bus = makeBus();
+    bus.on('contact', (c) => out.push(c.corner, c.kind, c.result, c.how, c.q, Math.round(c.ext * 1e4)));
+    const F = makeFight({ seed: 'hash-' + a + b, red: { style: a }, blue: { style: b, stance: 'southpaw' }, bus });
     for (let rd = 0; rd < 2; rd++) {
       F.startRound();
       while (F.tick()) if (F.ticks % 6 === 0) for (const m of F.men) out.push(Math.round(m.x * 1e4), Math.round(m.z * 1e4), Math.round(m.th * 1e4), m.mode);
