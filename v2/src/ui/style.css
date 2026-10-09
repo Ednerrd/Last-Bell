@@ -16,3 +16,13 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
   padding: 0 24px; text-align: center; }
 .fatal h1 { font-size: 22px; margin: 0 0 8px; }
 .fatal p { color: var(--dim); margin: 0; }
+.perf { top: auto; bottom: calc(env(safe-area-inset-bottom) + 76px); }
+.fightbar { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 12px; right: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; pointer-events: none; }
+.fightbar .clock { grid-column: 1 / -1; justify-self: center; font: 700 18px/1 ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums; background: rgba(0,0,0,.6); padding: 6px 12px; border-radius: 6px; }
+.fightbar .man { background: rgba(0,0,0,.55); padding: 6px 8px; border-radius: 6px; font-size: 12px; min-width: 0;
+  border-top: 3px solid var(--c); }
+.fightbar .man b { text-transform: uppercase; letter-spacing: .04em; }
+.fightbar .man span { display: block; color: var(--dim); font: 12px ui-monospace, Menlo, monospace; }
+.fightbar .red { --c: #c8302a; } .fightbar .blue { --c: #2f63c9; text-align: right; }

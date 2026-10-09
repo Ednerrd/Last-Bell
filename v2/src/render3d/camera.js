@@ -8,8 +8,10 @@ export function makeTvCamera(THREE) {
   const elev = 0.42;                    // ~24 degrees down
   const radius = RING.half + RING.apron + 0.3; // what must fit across
 
-  function update(t, aspect) {
+  // focus: optional {x, z} the camera leans toward (the action), damped.
+  function update(t, aspect, focus) {
     cam.aspect = aspect;
+    if (focus) { target.x += (focus.x * 0.4 - target.x) * 0.03; target.z += (focus.z * 0.3 - target.z) * 0.03; }
     const vf = (cam.fov * Math.PI) / 180;
     const hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
     const dist = Math.max(radius / Math.sin(Math.min(hf, vf) / 2) * 0.92, 7);

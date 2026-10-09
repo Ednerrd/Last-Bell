@@ -23,6 +23,16 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
   padding: 0 24px; text-align: center; }
 .fatal h1 { font-size: 22px; margin: 0 0 8px; }
 .fatal p { color: var(--dim); margin: 0; }
+.perf { top: auto; bottom: calc(env(safe-area-inset-bottom) + 76px); }
+.fightbar { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 12px; right: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; pointer-events: none; }
+.fightbar .clock { grid-column: 1 / -1; justify-self: center; font: 700 18px/1 ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums; background: rgba(0,0,0,.6); padding: 6px 12px; border-radius: 6px; }
+.fightbar .man { background: rgba(0,0,0,.55); padding: 6px 8px; border-radius: 6px; font-size: 12px; min-width: 0;
+  border-top: 3px solid var(--c); }
+.fightbar .man b { text-transform: uppercase; letter-spacing: .04em; }
+.fightbar .man span { display: block; color: var(--dim); font: 12px ui-monospace, Menlo, monospace; }
+.fightbar .red { --c: #c8302a; } .fightbar .blue { --c: #2f63c9; text-align: right; }
 </style>
 </head>
 <body>
@@ -210,8 +220,10 @@ function makeTvCamera(THREE) {
   const elev = 0.42;                    // ~24 degrees down
   const radius = RING.half + RING.apron + 0.3; // what must fit across
 
-  function update(t, aspect) {
+  // focus: optional {x, z} the camera leans toward (the action), damped.
+  function update(t, aspect, focus) {
     cam.aspect = aspect;
+    if (focus) { target.x += (focus.x * 0.4 - target.x) * 0.03; target.z += (focus.z * 0.3 - target.z) * 0.03; }
     const vf = (cam.fov * Math.PI) / 180;
     const hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
     const dist = Math.max(radius / Math.sin(Math.min(hf, vf) / 2) * 0.92, 7);
@@ -289,7 +301,25 @@ function makeHud(root, q, onChange) {
   }
   root.appendChild(bar);
 
+  const top = document.createElement('div');
+  top.className = 'fightbar';
+  root.appendChild(top);
+
   return {
+    // Round clock plus each man's style, guard, stance and current footwork mode.
+    fight(f) {
+      const mm = Math.floor(f.clock / 60), ss = String(Math.floor(f.clock % 60)).padStart(2, '0');
+      const row = (m, c) => `<div class="man ${c}"><b>${m.f.style}</b> ${m.f.guard} · ${m.f.stance}<span>${m.mode}</span></div>`;
+      top.innerHTML = `<div class="clock">R${f.round} ${f.rest ? 'rest' : mm + ':' + ss}</div>${row(f.men[0], 'red')}${row(f.men[1], 'blue')}`;
+    },
+    // Extra button on the bar (watch speed).
+    button(label, values, get, set) {
+      const b = document.createElement('button');
+      const paint = () => { b.innerHTML = `<small>${label}</small>${get()}`; };
+      paint();
+      b.onclick = () => { set(values[(values.indexOf(get()) + 1) % values.length]); paint(); };
+      bar.appendChild(b);
+    },
     perf(s) {
       perf.textContent =
         `${s.fps.toFixed(0)} fps  ${s.ms.toFixed(1)} ms\n` +
@@ -305,14 +335,528 @@ function fatal(root, title, msg) {
 return { makeHud, fatal };
 })();
 
-// main.js
+// render3d/men.js
 const __m6 = (() => {
+
+// Placeholder men (M1): simple shapes, drawn exactly where the engine says they are.
+// Local frame: facing +x, y up, +z is his right. Guards set the glove spots (FOUNDATION section 7 brings real rigs).
+
+// Glove spots for an orthodox man 1.78 m tall: [x forward, y up, z right]. Lead = left = -z.
+const GUARD = {
+  standard: { lead: [0.32, 1.42, -0.12], rear: [0.2, 1.45, 0.12], crouch: 0 },
+  high:     { lead: [0.26, 1.55, -0.1], rear: [0.2, 1.56, 0.1], crouch: 0 },
+  peekaboo: { lead: [0.24, 1.43, -0.08], rear: [0.22, 1.44, 0.08], crouch: 0.07 },
+  philly:   { lead: [0.16, 1.02, -0.06], rear: [0.18, 1.5, 0.13], crouch: 0 },
+  cross:    { lead: [0.27, 1.43, 0.06], rear: [0.29, 1.5, -0.05], crouch: 0.03 },
+  handslow: { lead: [0.3, 1.08, -0.16], rear: [0.2, 1.22, 0.16], crouch: 0 },
+};
+
+function makeMen(THREE, scene) {
+  const skin = new THREE.MeshStandardMaterial({ color: 0xb98a6a, roughness: 0.7 });
+  const shoe = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
+  const kit = [0xb3201c, 0x1d4fb3].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55 }));
+  const unitCyl = new THREE.CylinderGeometry(1, 1, 1, 10);
+  const up = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+
+  function seg(mat, r) {
+    const m = new THREE.Mesh(unitCyl, mat);
+    m.userData.r = r; m.castShadow = true; scene.add(m);
+    return m;
+  }
+  // Stretch a unit cylinder between two world points.
+  function place(m, a, b) {
+    tmp.subVectors(b, a); const len = tmp.length();
+    m.position.copy(a).addScaledVector(tmp, 0.5);
+    m.quaternion.setFromUnitVectors(up, tmp.divideScalar(len || 1));
+    m.scale.set(m.userData.r, len, m.userData.r);
+  }
+
+  const men = [0, 1].map((i) => {
+    const body = new THREE.Group();
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.3, 4, 10), skin);
+    torso.scale.set(0.85, 1, 1.15); torso.position.y = 1.24;
+    const trunks = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.15, 0.24, 12), kit[i]);
+    trunks.scale.set(0.9, 1, 1.2); trunks.position.y = 0.97;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 12), skin);
+    head.scale.set(1.05, 1.15, 0.95);
+    head.position.set(0.02, 1.64, 0);
+    for (const m of [torso, trunks, head]) { m.castShadow = true; body.add(m); }
+    scene.add(body);
+    const glove = () => { const g = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), kit[i]); g.scale.set(1.25, 1, 1); g.castShadow = true; scene.add(g); return g; };
+    const foot = () => { const f = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.1), shoe); f.castShadow = true; scene.add(f); return f; };
+    return {
+      body, torso, head, gloves: [glove(), glove()], feet: [foot(), foot()],
+      arms: [seg(skin, 0.045), seg(skin, 0.04), seg(skin, 0.045), seg(skin, 0.04)],
+      legs: [seg(skin, 0.065), seg(skin, 0.05), seg(skin, 0.065), seg(skin, 0.05)],
+    };
+  });
+
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  // Local [fwd, up, right] -> world, for a man at (x, z) facing th.
+  function world(m, l, s) {
+    const c = Math.cos(m.th), sn = Math.sin(m.th);
+    const f = l[0] * s, r = l[2] * s;
+    return V(m.x + c * f - sn * r, l[1] * s, m.z + sn * f + c * r);
+  }
+
+  // Draw one frame from engine state: [{x, z, th, feet, f:{guard, stance, height}}, ...]
+  function update(state) {
+    state.forEach((m, i) => {
+      const R = men[i], g = GUARD[m.f.guard] || GUARD.standard;
+      const s = m.f.height / 1.78, side = m.f.stance === 'southpaw' ? -1 : 1;
+      const mir = (p) => [p[0], p[1] - g.crouch, p[2] * side];
+      R.body.position.set(m.x, -g.crouch * s, m.z);
+      R.body.rotation.y = -m.th;
+      R.body.scale.setScalar(s);
+      R.torso.rotation.y = -0.5 * side; // bladed: lead shoulder forward
+      // Gloves and two-piece arms (shoulder -> elbow -> glove).
+      const lead = world(m, mir(g.lead), s), rear = world(m, mir(g.rear), s);
+      R.gloves[0].position.copy(lead); R.gloves[1].position.copy(rear);
+      R.gloves[0].rotation.y = R.gloves[1].rotation.y = -m.th;
+      const shL = world(m, mir([0.06, 1.42, -0.17]), s), shR = world(m, mir([-0.04, 1.42, 0.17]), s);
+      const elL = world(m, mir([0.12, 1.2, -0.22]), s), elR = world(m, mir([0.04, 1.2, 0.22]), s);
+      place(R.arms[0], shL, elL); place(R.arms[1], elL, lead);
+      place(R.arms[2], shR, elR); place(R.arms[3], elR, rear);
+      // Feet where the engine planted them; legs hip -> knee -> foot.
+      const fl = V(m.feet.lead.x, 0.04, m.feet.lead.z), fr = V(m.feet.rear.x, 0.04, m.feet.rear.z);
+      R.feet[0].position.copy(fl); R.feet[1].position.copy(fr);
+      R.feet[0].rotation.y = -m.th + 0.3 * side; R.feet[1].rotation.y = -m.th + 0.9 * side;
+      const hipL = world(m, mir([0.02, 0.9, -0.09]), s), hipR = world(m, mir([-0.02, 0.9, 0.09]), s);
+      for (const [hip, ft, k] of [[hipL, fl, 0], [hipR, fr, 2]]) {
+        const knee = tmp2.addVectors(hip, ft).multiplyScalar(0.5).clone();
+        knee.x += Math.cos(m.th) * 0.07; knee.z += Math.sin(m.th) * 0.07; knee.y += 0.02 - g.crouch * 0.5;
+        place(R.legs[k], hip, knee); place(R.legs[k + 1], knee, ft);
+      }
+    });
+  }
+  return { update };
+}
+return { makeMen };
+})();
+
+// core/rng.js
+const __m7 = (() => {
+
+// Seeded PRNG (sfc32). Same seed, same sequence, in Node and in the browser.
+// Every random call in the engine goes through one of these, never Math.random.
+
+function hashSeed(seed) {
+  // String or number -> four 32-bit words (splitmix-style mixing).
+  let h = 1779033703 ^ String(seed).length;
+  const s = String(seed);
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(h ^ s.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  const out = [];
+  for (let i = 0; i < 4; i++) {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    out.push((h ^= h >>> 16) >>> 0);
+  }
+  return out;
+}
+
+function makeRng(seed = 1) {
+  let [a, b, c, d] = hashSeed(seed);
+  let spare = null;
+
+  // Float in [0, 1).
+  function next() {
+    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
+    let t = (a + b) | 0;
+    a = b ^ (b >>> 9);
+    b = (c + (c << 3)) | 0;
+    c = (c << 21) | (c >>> 11);
+    d = (d + 1) | 0;
+    t = (t + d) | 0;
+    c = (c + t) | 0;
+    return (t >>> 0) / 4294967296;
+  }
+  for (let i = 0; i < 12; i++) next(); // warm up
+
+  return {
+    next,
+    // Float in [lo, hi).
+    range: (lo, hi) => lo + (hi - lo) * next(),
+    // Integer in [lo, hi] inclusive.
+    int: (lo, hi) => lo + Math.floor((hi - lo + 1) * next()),
+    pick: (arr) => arr[Math.floor(arr.length * next())],
+    chance: (p) => next() < p,
+    // Normal distribution (Box-Muller, caches the spare).
+    gauss(mean = 0, sd = 1) {
+      if (spare !== null) { const z = spare; spare = null; return mean + sd * z; }
+      let u = 0, v = 0;
+      while (u === 0) u = next();
+      v = next();
+      const r = Math.sqrt(-2 * Math.log(u)), th = 2 * Math.PI * v;
+      spare = r * Math.sin(th);
+      return mean + sd * r * Math.cos(th);
+    },
+    // Snapshot / restore, for replays that resume mid-fight.
+    state: () => [a, b, c, d, spare],
+    setState(s) { [a, b, c, d, spare] = s; },
+  };
+}
+return { makeRng };
+})();
+
+// fighter/make.js
+const __m8 = (() => {
+
+// A fighter as the engine sees him. M1: frame, stance, guard, style only.
+// Body stats and skills arrive in M4 (FOUNDATION section 4).
+
+const GUARDS = ['standard', 'high', 'peekaboo', 'philly', 'cross', 'handslow'];
+const STYLES = ['outboxer', 'boxer', 'pressure'];
+
+function makeFighter(spec = {}) {
+  const f = {
+    name: 'Fighter',
+    stance: 'orthodox',  // or 'southpaw'
+    guard: 'standard',
+    style: 'boxer',
+    height: 1.78,        // m
+    reach: 1.83,         // m, fingertip to fingertip
+    ...spec,
+  };
+  // Arm length from reach minus shoulder width; shoulders scale with height.
+  f.shoulder = 0.23 * f.height;
+  f.arm = (f.reach - f.shoulder) / 2;
+  return f;
+}
+
+// Center-to-center distance where his lead hand lands at ~95% straight on the other man's head.
+// Lead shoulder sits ~0.18 m ahead of center when bladed; a head sits ~0.12 m ahead of center.
+function jabRange(f) {
+  return 0.18 + f.arm * 0.95 + 0.12;
+}
+return { GUARDS, STYLES, makeFighter, jabRange };
+})();
+
+// engine/space.js
+const __m9 = (() => {
+const { RING, clamp } = __m1;
+// Real space. Meters, x across the ring, z toward the TV camera, y up. Facing is an angle in the x-z plane.
+
+
+const BODY_R = 0.27;          // a man's footprint radius, gloves in guard included
+const MIN_D = BODY_R * 2;     // centers never closer than this: no overlap, ever
+const EDGE = RING.half - 0.2; // farthest a center goes from the ring middle (ropes give a little)
+
+const dist = (a, b) => Math.hypot(b.x - a.x, b.z - a.z);
+const fwd = (th) => ({ x: Math.cos(th), z: Math.sin(th) });
+// Right-hand side for a man facing th (y up): f x up = (-fz, fx).
+const rightOf = (th) => ({ x: -Math.sin(th), z: Math.cos(th) });
+const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+// How close a point is to the ropes (0 = on the edge limit).
+const ropeGap = (p) => EDGE - Math.max(Math.abs(p.x), Math.abs(p.z));
+const inCorner = (p) => Math.abs(p.x) > EDGE - 0.7 && Math.abs(p.z) > EDGE - 0.7;
+
+function clampRing(p) {
+  p.x = clamp(p.x, -EDGE, EDGE);
+  p.z = clamp(p.z, -EDGE, EDGE);
+}
+
+// Push two men apart and keep both inside the ropes. Returns false if they still overlap
+// (both pinned), and then the caller keeps last tick's positions, which were legal.
+function separate(a, b) {
+  for (let i = 0; i < 4; i++) {
+    let dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+    if (d >= MIN_D) return true;
+    if (d < 1e-6) { dx = 1; dz = 0; } else { dx /= d; dz /= d; }
+    const need = MIN_D - d + 1e-6;
+    // A man on the ropes can't give ground, so the other one takes it all.
+    const aStuck = ropeGap(a) < 0.02, bStuck = ropeGap(b) < 0.02;
+    const sa = aStuck && !bStuck ? 0 : bStuck && !aStuck ? 1 : 0.5;
+    a.x -= dx * need * sa; a.z -= dz * need * sa;
+    b.x += dx * need * (1 - sa); b.z += dz * need * (1 - sa);
+    clampRing(a); clampRing(b);
+  }
+  return dist(a, b) >= MIN_D;
+}
+
+// Planted feet for a man at p facing th. Lead foot forward, rear foot back and out.
+function feetAt(p, th, stance) {
+  const f = fwd(th), r = rightOf(th), side = stance === 'southpaw' ? 1 : -1;
+  return {
+    lead: { x: p.x + f.x * 0.22 + r.x * 0.1 * side, z: p.z + f.z * 0.22 + r.z * 0.1 * side },
+    rear: { x: p.x - f.x * 0.2 - r.x * 0.12 * side, z: p.z - f.z * 0.2 - r.z * 0.12 * side },
+  };
+}
+return { BODY_R, MIN_D, EDGE, dist, fwd, rightOf, wrap, ropeGap, inCorner, clampRing, separate, feetAt };
+})();
+
+// brain/footwork.js
+const __m10 = (() => {
+const { jabRange } = __m8;
+const { MIN_D, dist, rightOf, ropeGap, inCorner, clampRing } = __m9;
+const { clamp } = __m1;
+// Footwork intent (M1). He's always in one mode that lasts seconds; every step is picked inside it.
+// Modes here are the footwork half of FOUNDATION section 6: feel-out, circle, hold center,
+// press, cut off, back up, escape the ropes. Punch modes join them in M2/M5.
+
+
+
+
+// Style DNA for footwork: mode weights, step speed (m/s), pause between steps (s), escape instinct.
+const FOOT = {
+  outboxer: { w: { circle: 0.5, back: 0.15, hold: 0.22, feel: 0.13 }, speed: 1.7, pause: [0.04, 0.2], escape: 0.85 },
+  boxer:    { w: { circle: 0.33, hold: 0.32, press: 0.25, feel: 0.1 },   speed: 1.5, pause: [0.08, 0.3], escape: 0.6 },
+  pressure: { w: { cut: 0.6, press: 0.35, feel: 0.05 },                speed: 1.35, pause: [0.12, 0.38], escape: 0.3 },
+};
+const LEN = {
+  feel: [0.14, 0.22], circle: [0.16, 0.26], hold: [0.12, 0.2], press: [0.28, 0.36],
+  cut: [0.26, 0.36], back: [0.26, 0.36], escape: [0.36, 0.46],
+};
+const MODE_T = { back: [0.6, 1.4], escape: [0.8, 1.6] };
+
+const unit = (x, z) => { const m = Math.hypot(x, z) || 1; return { x: x / m, z: z / m }; };
+
+// The distance he wants, center to center.
+function wantRange(me, opp, mode) {
+  const mine = jabRange(me.f), his = jabRange(opp.f);
+  let w = me.f.style === 'outboxer' ? his + 0.12 : me.f.style === 'pressure' ? Math.max(mine * 0.82, MIN_D + 0.3) : mine + 0.02;
+  if (mode === 'feel') w += 0.35;
+  return w;
+}
+
+// The lateral direction (+1/-1 around him) that heads toward his lead hand, away from his power hand.
+function awayFromPower(me, opp, u) {
+  const r = rightOf(opp.th), lead = opp.f.stance === 'southpaw' ? r : { x: -r.x, z: -r.z };
+  return (-u.z * lead.x + u.x * lead.z) > 0 ? 1 : -1;
+}
+
+// Which way along the ropes has more room: away from the corner and away from him.
+function roomySide(me, opp, u) {
+  let best = 1, bestScore = -1e9;
+  for (const s of [1, -1]) {
+    const p = { x: me.x - u.z * s * 0.8, z: me.z + u.x * s * 0.8 };
+    clampRing(p);
+    const score = ropeGap(p) * 2 + dist(p, opp) - (inCorner(p) ? 1.5 : 0);
+    if (score > bestScore) { bestScore = score; best = s; }
+  }
+  return best;
+}
+
+function pickMode(me, opp, rng, clock) {
+  const dna = FOOT[me.f.style], d = dist(me, opp), want = wantRange(me, opp);
+  const u = unit(opp.x - me.x, opp.z - me.z);
+  let mode;
+  if (clock < me.feelSec) mode = 'feel';
+  else if (ropeGap(me) < 0.45 && d < want + 0.5 && rng.chance(dna.escape)) mode = 'escape';
+  else if (d < want - 0.25 && me.f.style !== 'pressure' && rng.chance(0.6)) mode = 'back';
+  else {
+    let sum = 0;
+    for (const k in dna.w) sum += dna.w[k];
+    let r = rng.next() * sum;
+    for (const k in dna.w) { r -= dna.w[k]; if (r <= 0) { mode = k; break; } }
+    mode = mode || Object.keys(dna.w)[0];
+  }
+  const span = MODE_T[mode] || [1.5, 4.5];
+  me.modeT = rng.range(span[0], span[1]);
+  me.circle = mode === 'escape' ? roomySide(me, opp, u) : rng.chance(0.7) ? awayFromPower(me, opp, u) : rng.pick([1, -1]);
+  return mode;
+}
+
+// Plan one step: a target point and a duration, or null to stay planted.
+function planStep(me, opp, rng) {
+  const d = dist(me, opp), want = wantRange(me, opp, me.mode), dna = FOOT[me.f.style];
+  const u = unit(opp.x - me.x, opp.z - me.z);
+  const L = { x: -u.z * me.circle, z: u.x * me.circle };
+  const radial = clamp((d - want) / 0.4, -1, 1);
+  const toC = unit(-me.x, -me.z);
+  let dx = 0, dz = 0;
+  const add = (v, k) => { dx += v.x * k; dz += v.z * k; };
+
+  switch (me.mode) {
+    case 'feel': add(u, radial * 0.8); add(L, 0.5); break;
+    case 'circle': add(L, 1); add(u, radial * 0.7); break;
+    case 'hold': add(u, radial * 0.6); if (Math.hypot(me.x, me.z) > 0.8) add(toC, 0.4); else add(L, 0.3); break;
+    case 'press': add(u, Math.max(radial, 0.3)); break;
+    case 'cut': {
+      // Stand between him and the open ring, and lead his lateral move, so he backs into the ropes.
+      const oc = unit(-opp.x, -opp.z), far = Math.hypot(opp.x, opp.z) > 0.6;
+      const tx = opp.x + (far ? oc.x : -u.x) * want + opp.vx * 0.5;
+      const tz = opp.z + (far ? oc.z : -u.z) * want + opp.vz * 0.5;
+      add(unit(tx - me.x, tz - me.z), 1);
+      break;
+    }
+    case 'back': add(u, -1); add(L, 0.4); break;
+    case 'escape': add(L, 1); add(toC, 0.5); add(u, -0.2); break;
+  }
+  const gap = ropeGap(me);
+  if (me.mode !== 'escape' && gap < 0.5) add(toC, 0.6 * (1 - gap / 0.5));
+  if (Math.hypot(dx, dz) < 0.05) return null;
+
+  const dir = unit(dx, dz), span = LEN[me.mode];
+  const len = rng.range(span[0], span[1]);
+  const to = { x: me.x + dir.x * len, z: me.z + dir.z * len };
+  clampRing(to);
+  const real = Math.hypot(to.x - me.x, to.z - me.z);
+  if (real < 0.04) return null;
+  // Which foot moves first: the one on the side he's stepping toward.
+  const f = { x: Math.cos(me.th), z: Math.sin(me.th) };
+  const along = dir.x * f.x + dir.z * f.z;
+  const first = along >= 0 ? 'lead' : 'rear';
+  return { to, dur: clamp(real / dna.speed, 0.14, 0.32), first };
+}
+
+function pauseFor(me, rng) {
+  const p = FOOT[me.f.style].pause;
+  if (me.mode === 'feel' || me.mode === 'hold') return rng.range(p[0] + 0.15, p[1] + 0.35);
+  if (me.mode === 'escape') return rng.range(0.02, 0.08);
+  if (me.mode === 'circle') return rng.range(p[0] + 0.12, p[1] + 0.2);
+  return rng.range(p[0], p[1]);
+}
+
+// Situations that end a mode early.
+function interrupt(me, opp, rng) {
+  if (me.mode === 'escape' || me.mode === 'feel') return false;
+  const d = dist(me, opp), want = wantRange(me, opp);
+  if (me.f.style === 'pressure') return false;
+  if (ropeGap(me) < 0.35 && d < want + 0.4) return rng.chance(0.08);
+  if (d < want * 0.75 && me.mode !== 'back') return rng.chance(0.06); // crowded: get out
+  return false;
+}
+return { FOOT, wantRange, pickMode, planStep, pauseFor, interrupt };
+})();
+
+// engine/fight.js
+const __m11 = (() => {
+const { makeRng } = __m7;
+const { RING, clamp } = __m1;
+const { makeFighter } = __m8;
+const { MIN_D, separate, feetAt, wrap } = __m9;
+const { pickMode, planStep, pauseFor, interrupt } = __m10;
+// The fight sim: fixed 60 steps a second, seeded, deterministic. Zero DOM.
+// M1: two men, one ring, footwork, facing. No punches yet.
+
+
+
+
+
+
+const DT = 1 / 60;
+const TURN = 7; // rad/s, how fast he squares up to the other man
+
+function makeMan(spec, corner) {
+  const f = makeFighter(spec);
+  const s = corner === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
+  const m = {
+    f, corner, x: c, z: c, th: corner === 0 ? Math.PI / 4 : -3 * Math.PI / 4,
+    vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0,
+    feet: null, steps: 0,
+  };
+  m.feet = feetAt(m, m.th, f.stance);
+  return m;
+}
+
+function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null } = {}) {
+  const rng = makeRng(seed);
+  const men = [makeMan({ name: 'Red', ...red }, 0), makeMan({ name: 'Blue', ...blue }, 1)];
+  const F = { rng, men, round: 0, clock: 0, roundSec, ticks: 0, over: false };
+  const emit = (t, d) => bus && bus.emit(t, d);
+
+  F.startRound = function () {
+    F.round++; F.clock = 0;
+    men.forEach((m, i) => {
+      const s = i === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
+      m.x = c; m.z = c; m.th = i === 0 ? Math.PI / 4 : -3 * Math.PI / 4;
+      m.step = null; m.pause = rng.range(0.2, 0.8); m.vx = m.vz = 0;
+      m.feelSec = F.round === 1 ? rng.range(10, 22) : rng.range(2, 8);
+      m.mode = 'feel'; m.modeT = m.feelSec;
+      m.feet = feetAt(m, m.th, m.f.stance);
+    });
+    emit('round', { n: F.round });
+  };
+
+  function setMode(m, o) {
+    const prev = m.mode;
+    m.mode = pickMode(m, o, rng, F.clock);
+    if (m.mode !== prev) emit('mode', { corner: m.corner, mode: m.mode, t: F.clock });
+  }
+
+  F.tick = function () {
+    if (F.clock >= F.roundSec) return false;
+    F.ticks++; F.clock += DT;
+    const prev = men.map((m) => ({ x: m.x, z: m.z }));
+
+    for (const m of men) {
+      const o = men[1 - m.corner];
+      m.modeT -= DT;
+      if (m.modeT <= 0 || (!m.step && interrupt(m, o, rng))) setMode(m, o);
+      if (m.step) {
+        const s = m.step;
+        s.t += DT;
+        const k = clamp(s.t / s.dur, 0, 1), e = k * k * (3 - 2 * k);
+        m.x = s.from.x + (s.to.x - s.from.x) * e;
+        m.z = s.from.z + (s.to.z - s.from.z) * e;
+        if (k >= 1) { m.step = null; m.pause = pauseFor(m, rng); m.steps++; }
+      } else if ((m.pause -= DT) <= 0) {
+        const p = planStep(m, o, rng);
+        if (p) m.step = { from: { x: m.x, z: m.z }, to: p.to, dur: p.dur, t: 0, first: p.first };
+        else m.pause = pauseFor(m, rng);
+      }
+    }
+
+    // No overlap, ever: push apart, and if they're both pinned, keep last tick's legal spots.
+    const [a, b] = men;
+    if (!separate(a, b)) {
+      men.forEach((m, i) => { m.x = prev[i].x; m.z = prev[i].z; if (m.step) { m.step = null; m.pause = 0.1; } });
+    }
+
+    for (const m of men) {
+      const o = men[1 - m.corner];
+      const want = Math.atan2(o.z - m.z, o.x - m.x);
+      const dth = wrap(want - m.th), mx = TURN * DT;
+      m.th = wrap(m.th + clamp(dth, -mx, mx));
+      // Smoothed velocity, used by the man cutting the ring to lead this one.
+      m.vx += ((m.x - prev[m.corner].x) / DT - m.vx) * 0.1;
+      m.vz += ((m.z - prev[m.corner].z) / DT - m.vz) * 0.1;
+      m.feet = footPos(m);
+    }
+
+    if (F.clock >= F.roundSec) emit('roundEnd', { n: F.round });
+    return true;
+  };
+
+  // Feet: planted when he's still. In a step the first foot leads and the other follows.
+  function footPos(m) {
+    const s = m.step;
+    if (!s) return feetAt(m, m.th, m.f.stance);
+    const k = clamp(s.t / s.dur, 0, 1), e = k * k * (3 - 2 * k);
+    const kf = clamp(k / 0.6, 0, 1), ks = clamp((k - 0.4) / 0.6, 0, 1);
+    const sx = s.to.x - s.from.x, sz = s.to.z - s.from.z;
+    const at = (kk) => feetAt({ x: m.x + sx * (kk - e), z: m.z + sz * (kk - e) }, m.th, m.f.stance);
+    const A = at(kf), B = at(ks);
+    return s.first === 'lead' ? { lead: A.lead, rear: B.rear } : { lead: B.lead, rear: A.rear };
+  }
+
+  F.runRound = function () { F.startRound(); while (F.tick()); };
+  F.MIN_D = MIN_D;
+  return F;
+}
+return { DT, makeFight };
+})();
+
+// main.js
+const __m12 = (() => {
 const { loadThree } = __m0;
 const { buildRing, buildLights } = __m2;
 const { makeTvCamera } = __m3;
 const { loadQuality, saveQuality, pixelRatio } = __m4;
 const { makeHud, fatal } = __m5;
-// Last Bell v2 entry. M0: the empty ring, the TV camera, perf overlay, quality switch.
+const { makeMen } = __m6;
+const { makeFight, DT } = __m11;
+const { makeRng } = __m7;
+const { GUARDS, STYLES } = __m8;
+// Last Bell v2 entry. M1: two men footworking in the ring, perf overlay, quality switch, watch speed.
+
+
+
+
 
 
 
@@ -342,6 +886,24 @@ async function start() {
   buildRing(THREE, scene);
   const { key } = buildLights(THREE, scene);
   const tv = makeTvCamera(THREE);
+  const drawMen = makeMen(THREE, scene);
+
+  // A fresh random matchup every round, so the phone test shows every style, guard and stance.
+  const pickRng = makeRng(Date.now() % 1e9);
+  const randMan = () => ({
+    style: pickRng.pick(STYLES), guard: pickRng.pick(GUARDS),
+    stance: pickRng.chance(0.25) ? 'southpaw' : 'orthodox',
+    height: pickRng.range(1.68, 1.9),
+  });
+  let fight = null, rest = 0, speed = '1x', acc = 0;
+  function newRound() {
+    const red = randMan(), blue = randMan();
+    red.reach = red.height * pickRng.range(0.98, 1.06);
+    blue.reach = blue.height * pickRng.range(0.98, 1.06);
+    fight = makeFight({ seed: pickRng.int(1, 1e9), red, blue });
+    fight.startRound();
+  }
+  newRound();
 
   const q = loadQuality();
   let interval = 0;
@@ -360,6 +922,7 @@ async function start() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   }
   const hud = makeHud(root, q, () => { saveQuality(q); applyQuality(); });
+  hud.button('speed', ['1x', '2x', '4x'], () => speed, (v) => { speed = v; });
   window.addEventListener('resize', resize);
   renderer.shadowMap.enabled = q.shadows !== 'on'; // force the first apply to set it
   applyQuality();
@@ -370,9 +933,19 @@ async function start() {
   function frame(now) {
     requestAnimationFrame(frame);
     if (now - last < interval - 2) return;
+    const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
     const w0 = performance.now();
-    const dist = tv.update((now - t0) / 1000, window.innerWidth / window.innerHeight);
+    // Fixed-step sim: the engine ticks at 60/s whatever the frame rate.
+    if (rest > 0) { if ((rest -= dt * parseInt(speed)) <= 0) newRound(); }
+    else {
+      acc += dt * parseInt(speed);
+      let n = 0;
+      while (acc >= DT && n++ < 30) { acc -= DT; if (!fight.tick()) { rest = 3; acc = 0; break; } }
+    }
+    drawMen.update(fight.men);
+    const mid = { x: (fight.men[0].x + fight.men[1].x) / 2, z: (fight.men[0].z + fight.men[1].z) / 2 };
+    const dist = tv.update((now - t0) / 1000, window.innerWidth / window.innerHeight, mid);
     scene.fog.near = dist + 2; scene.fog.far = dist + 22; // haze past the ring, whatever the fit
     renderer.render(scene, tv.cam);
     workMs += performance.now() - w0;
@@ -386,9 +959,10 @@ async function start() {
       });
       frames = 0; workMs = 0; statT = now;
     }
+    if (frames % 6 === 0) hud.fight({ ...fight, rest: rest > 0 });
   }
   requestAnimationFrame(frame);
-  window.__lb = { renderer, scene, THREE }; // for headless checks
+  window.__lb = { renderer, scene, THREE, get fight() { return fight; } }; // for headless checks
 }
 
 start();
