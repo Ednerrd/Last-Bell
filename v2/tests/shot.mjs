@@ -33,6 +33,12 @@ for (const [name, vp] of [['portrait', { width: 412, height: 915 }], ['landscape
   const perf = await page.$eval('.perf', (e) => e.textContent).catch(() => '(no perf overlay)');
   const fatal = await page.$eval('.fatal', (e) => e.textContent).catch(() => null);
   await page.screenshot({ path: join(out, `m0-${name}.png`) });
+  // Mid-round frames: run the sim ahead (render-side only) and grab a few shots.
+  for (const sec of [25, 60, 110]) {
+    await page.evaluate((s) => { const f = window.__lb.fight; while (f.clock < s && f.tick()); }, sec);
+    await page.waitForTimeout(1800);
+    await page.screenshot({ path: join(out, `mid-${name}-${sec}.png`) });
+  }
   // Tap every quality button through all its options and back.
   for (const b of await page.$$('.qbar button')) for (let i = 0; i < 3; i++) { await b.click(); await page.waitForTimeout(150); }
   const after = await page.$$eval('.qbar button', (bs) => bs.map((b) => b.textContent).join(' | ')).catch(() => '');

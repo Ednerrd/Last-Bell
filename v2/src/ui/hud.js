@@ -8,7 +8,7 @@ export function makeHud(root, q, onChange) {
 
   const bar = document.createElement('div');
   bar.className = 'qbar';
-  const labels = { pr: 'res', shadows: 'shadows', cap: 'fps cap' };
+  const labels = { pr: 'res', shadows: 'shadows', cap: 'fps cap', cam: 'cam' };
   for (const k in OPTIONS) {
     const b = document.createElement('button');
     const paint = () => { b.innerHTML = `<small>${labels[k]}</small>${q[k]}`; };

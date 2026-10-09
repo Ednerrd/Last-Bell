@@ -1,11 +1,12 @@
-// Quality switch: pixel ratio, shadows, fps cap. Remembered per phone (best effort).
+// Quality switch: pixel ratio, shadows, fps cap, plus the camera pick. Remembered per phone (best effort).
 const KEY = 'lb2.quality';
 export const OPTIONS = {
   pr: ['1.5', '2', 'native'],
   shadows: ['on', 'off'],
   cap: ['60', '30'],
+  cam: ['auto', 'fight', 'wide'],
 };
-const DEFAULTS = { pr: '2', shadows: 'on', cap: '60' };
+const DEFAULTS = { pr: '2', shadows: 'on', cap: '60', cam: 'auto' };
 
 export function loadQuality() {
   try {

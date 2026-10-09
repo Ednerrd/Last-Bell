@@ -1,7 +1,7 @@
 // Last Bell v2 entry. M1: two men footworking in the ring, perf overlay, quality switch, watch speed.
 import { loadThree } from './render3d/three.js';
 import { buildRing, buildLights } from './render3d/ring.js';
-import { makeTvCamera } from './render3d/camera.js';
+import { makeTvCamera, makeFightCamera } from './render3d/camera.js';
 import { loadQuality, saveQuality, pixelRatio } from './ui/quality.js';
 import { makeHud, fatal } from './ui/hud.js';
 import { makeMen } from './render3d/men.js';
@@ -31,7 +31,7 @@ async function start() {
   const scene = new THREE.Scene();
   buildRing(THREE, scene);
   const { key } = buildLights(THREE, scene);
-  const tv = makeTvCamera(THREE);
+  const tv = makeTvCamera(THREE), fc = makeFightCamera(THREE);
   const drawMen = makeMen(THREE, scene);
 
   // A fresh random matchup every round, so the phone test shows every style, guard and stance.
@@ -90,10 +90,17 @@ async function start() {
       while (acc >= DT && n++ < 30) { acc -= DT; if (!fight.tick()) { rest = 3; acc = 0; break; } }
     }
     drawMen.update(fight.men);
-    const mid = { x: (fight.men[0].x + fight.men[1].x) / 2, z: (fight.men[0].z + fight.men[1].z) / 2 };
-    const dist = tv.update((now - t0) / 1000, window.innerWidth / window.innerHeight, mid);
+    const aspect = window.innerWidth / window.innerHeight;
+    // Cam: 'auto' gives portrait the fight cam and landscape the wide cam (Ed's call).
+    const useFight = q.cam === 'fight' || (q.cam === 'auto' && aspect < 1);
+    let cam, dist;
+    if (useFight) { dist = fc.update(dt, aspect, fight.men); cam = fc.cam; }
+    else {
+      const mid = { x: (fight.men[0].x + fight.men[1].x) / 2, z: (fight.men[0].z + fight.men[1].z) / 2 };
+      dist = tv.update((now - t0) / 1000, aspect, mid); cam = tv.cam;
+    }
     scene.fog.near = dist + 2; scene.fog.far = dist + 22; // haze past the ring, whatever the fit
-    renderer.render(scene, tv.cam);
+    renderer.render(scene, cam);
     workMs += performance.now() - w0;
     frames++;
     if (now - statT >= 500) {
