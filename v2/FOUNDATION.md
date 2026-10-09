@@ -9,7 +9,7 @@ v1 (`index.html` at the repo root) stays as it is. It's still playable and still
 ---
 
 ## 1. The game in one breath
-You run a boxing gym. Fighters walk in: raw kids, journeymen, veterans, ranked pros. You train them, book their fights, and work their corner. The fight plays itself in 3D on your phone. Between rounds you tell him what to change, and during the round you can shout. Whether he listens and whether he can do it depends on who he is.
+You run a boxing gym. Fighters walk in: raw kids, journeymen, veterans, ranked pros. You train them and work their corner. Each fighter runs his own career and picks his next fight. The fight plays itself in 3D on your phone. Between rounds you tell him what to change, and during the round you can shout. Whether he listens and whether he can do it depends on who he is.
 
 Influences: Fight Night Champion (the look, the replays, the damage), Thrill of the Fight (contact feel), real 2026 boxing (styles, CompuBox numbers, rules).
 
@@ -146,7 +146,7 @@ v2/
     engine/          fight sim: space, punches, defense, damage, rules, judges
     brain/           intent, memory, anticipation, counters, setups, adjusting
     fighter/         body, skills, knowledge, levels, generation
-    career/          gym, stable, training, booking, rankings, saves
+    career/          gym, stable, training, fighter goals + fight choice, rankings, saves
     render3d/        scene, rigs, poses, camera, fx (never imports engine internals)
     ui/              screens, HUD, corner talk
   tests/             node, headless, import src/ directly
@@ -171,7 +171,7 @@ v2/
 | M5 | **The brain** (section 6), in order: intent, memory, anticipation, counters, setups, hurt, adjusting, clarity. | The brain report per piece. Styles 48–53%. |
 | M6 | **Coach.** Shouts, the corner between rounds, corner talk, listening. | The coach shout sim: a smart coach beats no coach by a real margin, and a random coach doesn't. |
 | M7 | **Look.** Fighters by build, damage on faces, venues, crowd, replays, commentary. | You play it for a week and the phone stays cool. |
-| M8 | **Career and gym.** Walk-ins, stable, training (teaches skills and knowledge), booking, rankings, legends, saves. | A 3-year gym sim runs headless. Then you publish. |
+| M8 | **Career and gym.** Walk-ins, stable, training (teaches skills and knowledge), fighters picking their own fights and goals, rankings, legends, saves. | A 3-year gym sim runs headless. Then you publish. |
 
 From M2 on, every engine change gets a sim before and after, same as v1.
 

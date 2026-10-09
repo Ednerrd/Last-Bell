@@ -23,10 +23,10 @@ Influences: Fight Night Champion (look, damage, replays, Legacy mode), Thrill of
 ---
 
 ## 1. The core loop
-- **Idea:** gym week → train → book → camp → fight night (you in the corner) → results → the gym grows.
+- **Idea:** gym week → train → he picks his next fight (his career, his call) → camp → fight night (you in the corner) → results → the gym grows.
 - **Known:**
   - One weekly clock for the whole gym (v1 gym mode).
-  - Camp is N weeks out from a booked fight.
+  - Camp is N weeks out from the fight he signs for.
   - Reputation grows with wins and belts, and better rep brings better walk-ins.
 - **Open:**
   - How long a session is meant to be (one fight per sitting? a whole year?).

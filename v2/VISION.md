@@ -54,5 +54,13 @@ Plus there's levels to this, so new fights will get demolished fighting an elite
   - Watching any other fight in the world is an option.
 
 **Ed on the goal (Oct 9):** "just like in boxing there is someone who holds a belt in every division so yeah. And when I say division I mean like weight classes."
-- So the big goal is **a belt holder from your gym in every weight class at the same time.** That's one of the HOF paths, next to the coach's total legacy.
-- v1 had 9 weight classes (fly → heavy) and 4 fictional belts (WPC, GRF, IFU, RUO). Real boxing has 17. Open: 9 or 17 for v2.
+- ~~So the big goal is a belt holder from your gym in every weight class at the same time.~~ Corrected by Ed, below.
+
+**Ed, corrected (Oct 9):** "he doesn't have to own all belts, but it's prob like an ultimate achievement, I would say getting a belt in the fighters own weight division is the gold star for them or achievable goal, then whatever the ai or they decide what they want next. Cause the fighter chooses what they want next. So they decision should be on them not the coach, your just the trainer"
+- **For each fighter, the gold star is a belt in his own weight class.** That's the realistic goal.
+- **A belt holder in every weight class is the ultimate achievement.** It's rare and optional.
+- **The fighter runs his own career. You're the trainer.**
+  - He picks what's next: unify the belts, move up in weight, take the rematch, cash out, or retire.
+  - His wants come from his personality: ambition, ego, age, money, legacy.
+- **The coach trains him and works his corner.** What he wants decides the fights he chases. Open: whether you can advise him on a fight, with him listening according to the relationship.
+- Open: 9 or 17 weight classes. (v1 had 9 weight classes and 4 fictional belts: WPC, GRF, IFU, RUO.)
