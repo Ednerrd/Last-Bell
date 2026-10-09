@@ -52,3 +52,7 @@ Plus there's levels to this, so new fights will get demolished fighting an elite
 - **Fight night.**
   - You're in the corner for your own fighters' fights, with sim-forward to skip one.
   - Watching any other fight in the world is an option.
+
+**Ed on the goal (Oct 9):** "just like in boxing there is someone who holds a belt in every division so yeah. And when I say division I mean like weight classes."
+- So the big goal is **a belt holder from your gym in every weight class at the same time.** That's one of the HOF paths, next to the coach's total legacy.
+- v1 had 9 weight classes (fly → heavy) and 4 fictional belts (WPC, GRF, IFU, RUO). Real boxing has 17. Open: 9 or 17 for v2.
