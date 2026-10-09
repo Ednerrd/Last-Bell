@@ -1,4 +1,4 @@
-// Last Bell v2 entry. M1: two men footworking in the ring, perf overlay, quality switch, watch speed.
+// Last Bell v2 entry. M2: two men boxing (footwork, punches, defense), perf overlay, quality and cam switch, watch speed.
 import { loadThree } from './render3d/three.js';
 import { buildRing, buildLights } from './render3d/ring.js';
 import { makeTvCamera, makeFightCamera } from './render3d/camera.js';
@@ -7,6 +7,7 @@ import { makeHud, fatal } from './ui/hud.js';
 import { makeMen } from './render3d/men.js';
 import { makeFight, DT } from './engine/fight.js';
 import { makeRng } from './core/rng.js';
+import { makeBus } from './core/events.js';
 import { GUARDS, STYLES } from './fighter/make.js';
 
 const root = document.getElementById('app');
@@ -33,6 +34,8 @@ async function start() {
   const { key } = buildLights(THREE, scene);
   const tv = makeTvCamera(THREE), fc = makeFightCamera(THREE);
   const drawMen = makeMen(THREE, scene);
+  const bus = makeBus();
+  bus.on('contact', (e) => drawMen.onContact(e));
 
   // A fresh random matchup every round, so the phone test shows every style, guard and stance.
   const pickRng = makeRng(Date.now() % 1e9);
@@ -46,7 +49,7 @@ async function start() {
     const red = randMan(), blue = randMan();
     red.reach = red.height * pickRng.range(0.98, 1.06);
     blue.reach = blue.height * pickRng.range(0.98, 1.06);
-    fight = makeFight({ seed: pickRng.int(1, 1e9), red, blue });
+    fight = makeFight({ seed: pickRng.int(1, 1e9), red, blue, bus });
     fight.startRound();
   }
   newRound();
@@ -83,13 +86,14 @@ async function start() {
     last = now;
     const w0 = performance.now();
     // Fixed-step sim: the engine ticks at 60/s whatever the frame rate.
-    if (rest > 0) { if ((rest -= dt * parseInt(speed)) <= 0) newRound(); }
+    if (window.__lb && window.__lb.hold) { /* headless pose checks freeze the sim */ }
+    else if (rest > 0) { if ((rest -= dt * parseInt(speed)) <= 0) newRound(); }
     else {
       acc += dt * parseInt(speed);
       let n = 0;
       while (acc >= DT && n++ < 30) { acc -= DT; if (!fight.tick()) { rest = 3; acc = 0; break; } }
     }
-    drawMen.update(fight.men);
+    drawMen.update(fight.men, window.__lb && window.__lb.hold ? 0.5 : rest > 0 ? dt : dt * parseInt(speed));
     const aspect = window.innerWidth / window.innerHeight;
     // Cam: 'auto' gives portrait the fight cam and landscape the wide cam (Ed's call).
     const useFight = q.cam === 'fight' || (q.cam === 'auto' && aspect < 1);
