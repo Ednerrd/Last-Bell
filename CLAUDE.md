@@ -25,6 +25,7 @@ Phone-first auto-boxing career sim. One self-contained file: `index.html` (~4,60
 - Render-only changes must keep the `same.js` hash (now **7f58e976**).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
+- Helpers (`.claude/agents/`, Haiku): `researcher` (web + code lookups) and `sim-runner` (long sims, numbers only). Ed's rule: always verify what Haiku reports before it goes into code, data or docs.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
 
 ## Code map (markers `/* ===== LAST BELL : ... ===== */`)
