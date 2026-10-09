@@ -1,6 +1,6 @@
 # Last Bell: the game (what it is, before how)
 
-Draft, Oct 9 2026. This is the "what". `FOUNDATION.md` is the "how" and comes after this.
+Draft, Oct 9 2026. This is the "what", serving `VISION.md` (Ed's words, the source of truth). `FOUNDATION.md` is the "how" and comes after this.
 
 Every aspect has three parts:
 - **Idea:** the one-line point of it.
