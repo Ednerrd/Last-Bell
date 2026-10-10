@@ -6,8 +6,7 @@ with sync_playwright() as p:
     pg=b.new_page(viewport={'width':412,'height':915})
     errs=[];pg.on('pageerror',lambda e: errs.append(str(e)))
     pg.goto('file://'+S+'/'+HTML); pg.wait_for_timeout(400)
-    pg.evaluate("ACT.newSlot({i:0})"); pg.evaluate("ACT.newCareer({i:0})"); pg.evaluate("ACT.startCareer()"); pg.evaluate("ACT.offers()"); pg.evaluate("ACT.sign({i:1})")
-    pg.evaluate("save.pending.campDone=true; startFight(); FX.speed=1")
+    pg.evaluate("FX.speed=1")  # the page boots straight into a fight
     pg.wait_for_function("F && F.phase==='fight'", timeout=20000)
     r=pg.evaluate("""(()=>{ window.requestAnimationFrame=()=>0; cancelAnimationFrame(rafId);
       const st=F.step.bind(F); let steps=0; F.step=function(d){steps++; return st(d)};

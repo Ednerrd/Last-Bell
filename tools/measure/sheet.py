@@ -6,8 +6,7 @@ with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome')
     pg=b.new_page(viewport={'width':412,'height':915},device_scale_factor=2)
     pg.goto('file://'+S+'/'+os.environ.get('HTML','rec.html')); pg.wait_for_timeout(500)
-    pg.evaluate("ACT.newSlot({i:0})"); pg.evaluate("ACT.newCareer({i:0})"); pg.evaluate("ACT.startCareer()"); pg.evaluate("ACT.offers()"); pg.evaluate("ACT.sign({i:1})")
-    pg.evaluate("save.pending.campDone=true; startFight(); FX.speed=1")
+    pg.evaluate("FX.speed=1")  # the page boots straight into a fight
     pg.wait_for_function("F && F.phase==='fight'", timeout=20000); pg.wait_for_timeout(int(os.environ.get('WAIT','9000')))
     pg.evaluate("""(()=>{window.__go=0; const st=F.step.bind(F); F.step=function(dt){ st(dt); if(!window.__go && F.stepEv.some(e=>e.type==='throw' && F.f[e.a].queue.length>=2) && Math.abs(F.f[0].x-F.f[1].x)<75){ window.__go=1; } }; })()""")
     pg.wait_for_function("window.__go===1", timeout=60000, polling=1)
