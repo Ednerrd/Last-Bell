@@ -2170,7 +2170,7 @@ function makeMan(spec, corner) {
   const m = {
     f, corner, x: c, z: c, th: corner === 0 ? Math.PI / 4 : -3 * Math.PI / 4,
     vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0, walk: false,
-    mv: { x: 0, z: 0 }, aim: { x: 0, z: 0 }, beat: 0, // flow movement: velocity, where it's easing to, rhythm phase
+    mv: { x: 0, z: 0 }, ma: { x: 0, z: 0 }, aim: { x: 0, z: 0 }, beat: 0, // flow movement: velocity, its rate of change, where it's headed, rhythm phase
     feet: null, steps: 0, punch: null, off: makeOffense(), def: null,
   };
   m.feet = feetAt(m, m.th, f.stance);
@@ -2189,9 +2189,9 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
       const s = i === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
       m.x = c; m.z = c; m.th = i === 0 ? Math.PI / 4 : -3 * Math.PI / 4;
       m.step = null; m.pause = rng.range(0.1, 0.4); m.vx = m.vz = 0; m.walk = false;
-      m.mv = { x: 0, z: 0 }; m.aim = { x: 0, z: 0 }; m.beat = rng.range(0, 6.3);
+      m.mv = { x: 0, z: 0 }; m.ma = { x: 0, z: 0 }; m.aim = { x: 0, z: 0 }; m.beat = rng.range(0, 6.3);
       m.punch = null; m.off = makeOffense(); m.def = null;
-      m.feelSec = F.round === 1 ? rng.range(10, 22) : rng.range(2, 8);
+      m.feelSec = F.round === 1 ? rng.range(4, 8) : rng.range(1, 3); // FNC starts with action
       m.mode = 'feel'; m.modeT = m.feelSec;
       m.feet = feetAt(m, m.th, m.f.stance);
     });
@@ -2267,7 +2267,7 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
       if (m.modeT <= 0 || interrupt(m, o, rng)) setMode(m, o);
       if (m.punch || (m.def && m.def.t >= 0)) {
         // Planted while he throws or defends: what he was carrying bleeds off fast.
-        const k = Math.exp(-14 * DT); m.mv.x *= k; m.mv.z *= k;
+        const k = Math.exp(-14 * DT); m.mv.x *= k; m.mv.z *= k; m.ma.x = m.ma.z = 0;
       } else {
         if ((m.pause -= DT) <= 0) { m.aim = planMove(m, o, rng); m.pause = thinkFor(m, rng); }
         // Rhythm: in and out toward him, never quite still (not while walking up).
@@ -2275,9 +2275,10 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
         m.beat += DT * Math.PI * 2 * dna.hz;
         const r = m.walk ? 0 : Math.sin(m.beat) * dna.bob * (m.mode === 'back' || m.mode === 'escape' ? 0.4 : 1);
         const d = dist(m, o) || 1, ux = (o.x - m.x) / d, uz = (o.z - m.z) / d;
-        // Ease into the new speed (~0.12 s): weight shifts, no snapping.
-        const k = 1 - Math.exp(-8 * DT);
-        m.mv.x += (m.aim.x + ux * r - m.mv.x) * k; m.mv.z += (m.aim.z + uz * r - m.mv.z) * k;
+        // His speed rides a spring (w 11, damping 0.9): he pushes off into a move and settles out of it.
+        const W = 11, Z = 0.9, gx = m.aim.x + ux * r, gz = m.aim.z + uz * r;
+        m.ma.x += (W * W * (gx - m.mv.x) - 2 * Z * W * m.ma.x) * DT; m.mv.x += m.ma.x * DT;
+        m.ma.z += (W * W * (gz - m.mv.z) - 2 * Z * W * m.ma.z) * DT; m.mv.z += m.ma.z * DT;
       }
       m.x += m.mv.x * DT; m.z += m.mv.z * DT;
       clampRing(m);
@@ -2286,7 +2287,7 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
     // No overlap, ever: push apart, and if they're both pinned, keep last tick's legal spots.
     const [a, b] = men;
     if (!separate(a, b)) {
-      men.forEach((m, i) => { m.x = prev[i].x; m.z = prev[i].z; m.mv.x = m.mv.z = 0; });
+      men.forEach((m, i) => { m.x = prev[i].x; m.z = prev[i].z; m.mv.x = m.mv.z = 0; m.ma.x = m.ma.z = 0; });
     }
 
     for (const m of men) {
