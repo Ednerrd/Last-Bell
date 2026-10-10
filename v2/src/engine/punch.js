@@ -7,20 +7,21 @@ import { defVs } from './defense.js';
 
 // Trainer numbers: 1 jab, 2 cross, 3 lead hook, 4 rear hook, 5 lead upper, 6 rear upper; b = to the body.
 // hand: which arm. fam: straight / hook / upper. load, snap, ret: seconds (body speed scales them).
+// Snap is fast (a real jab reaches full extension in ~60 ms); the weight is in the slower return.
 // off: how far ahead of his center the punching shoulder sits at contact (the cross turns the hips in).
 // reach: share of the arm the punch uses at lockout (a hook lands bent). sweet: best extension.
 // step: the most he steps in behind it. pow: rough relative power (damage comes in M3).
 export const PUNCH = {
-  jab:    { n: '1',  hand: 'lead', fam: 'straight', tgt: 'head', load: 0.04, snap: 0.11, ret: 0.14, off: 0.18, reach: 1,    sweet: 0.95, step: 0.15, pow: 0.45 },
-  cross:  { n: '2',  hand: 'rear', fam: 'straight', tgt: 'head', load: 0.08, snap: 0.13, ret: 0.17, off: 0.22, reach: 1,    sweet: 0.95, step: 0.12, pow: 1 },
-  lhook:  { n: '3',  hand: 'lead', fam: 'hook',     tgt: 'head', load: 0.09, snap: 0.13, ret: 0.17, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.05, pow: 1 },
-  rhook:  { n: '4',  hand: 'rear', fam: 'hook',     tgt: 'head', load: 0.11, snap: 0.14, ret: 0.19, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.05, pow: 1.05 },
-  lupper: { n: '5',  hand: 'lead', fam: 'upper',    tgt: 'head', load: 0.09, snap: 0.13, ret: 0.18, off: 0.1,  reach: 0.62, sweet: 0.75, step: 0.04, pow: 0.9 },
-  rupper: { n: '6',  hand: 'rear', fam: 'upper',    tgt: 'head', load: 0.11, snap: 0.14, ret: 0.2,  off: 0.1,  reach: 0.62, sweet: 0.75, step: 0.04, pow: 1 },
-  bjab:   { n: '1b', hand: 'lead', fam: 'straight', tgt: 'body', load: 0.06, snap: 0.12, ret: 0.15, off: 0.16, reach: 1,    sweet: 0.95, step: 0.22, pow: 0.45 },
-  bcross: { n: '2b', hand: 'rear', fam: 'straight', tgt: 'body', load: 0.1,  snap: 0.14, ret: 0.18, off: 0.2,  reach: 1,    sweet: 0.95, step: 0.14, pow: 0.95 },
-  bhook:  { n: '3b', hand: 'lead', fam: 'hook',     tgt: 'body', load: 0.1,  snap: 0.14, ret: 0.18, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.06, pow: 1 },
-  brhook: { n: '4b', hand: 'rear', fam: 'hook',     tgt: 'body', load: 0.12, snap: 0.15, ret: 0.2,  off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.06, pow: 1 },
+  jab:    { n: '1',  hand: 'lead', fam: 'straight', tgt: 'head', load: 0.04, snap: 0.065, ret: 0.168, off: 0.18, reach: 1,    sweet: 0.95, step: 0.15, pow: 0.45 },
+  cross:  { n: '2',  hand: 'rear', fam: 'straight', tgt: 'head', load: 0.07, snap: 0.075, ret: 0.204, off: 0.22, reach: 1,    sweet: 0.95, step: 0.12, pow: 1 },
+  lhook:  { n: '3',  hand: 'lead', fam: 'hook',     tgt: 'head', load: 0.08, snap: 0.075, ret: 0.204, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.05, pow: 1 },
+  rhook:  { n: '4',  hand: 'rear', fam: 'hook',     tgt: 'head', load: 0.095, snap: 0.085, ret: 0.228, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.05, pow: 1.05 },
+  lupper: { n: '5',  hand: 'lead', fam: 'upper',    tgt: 'head', load: 0.08, snap: 0.075, ret: 0.216, off: 0.1,  reach: 0.62, sweet: 0.75, step: 0.04, pow: 0.9 },
+  rupper: { n: '6',  hand: 'rear', fam: 'upper',    tgt: 'head', load: 0.095, snap: 0.085, ret: 0.24,  off: 0.1,  reach: 0.62, sweet: 0.75, step: 0.04, pow: 1 },
+  bjab:   { n: '1b', hand: 'lead', fam: 'straight', tgt: 'body', load: 0.06, snap: 0.07, ret: 0.18, off: 0.16, reach: 1,    sweet: 0.95, step: 0.22, pow: 0.45 },
+  bcross: { n: '2b', hand: 'rear', fam: 'straight', tgt: 'body', load: 0.088,  snap: 0.085, ret: 0.216, off: 0.2,  reach: 1,    sweet: 0.95, step: 0.14, pow: 0.95 },
+  bhook:  { n: '3b', hand: 'lead', fam: 'hook',     tgt: 'body', load: 0.088,  snap: 0.085, ret: 0.216, off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.06, pow: 1 },
+  brhook: { n: '4b', hand: 'rear', fam: 'hook',     tgt: 'body', load: 0.105, snap: 0.09, ret: 0.24,  off: 0.12, reach: 0.74, sweet: 0.8,  step: 0.06, pow: 1 },
 };
 export const BY_NUM = Object.fromEntries(Object.entries(PUNCH).map(([k, p]) => [p.n, k]));
 for (const k in PUNCH) PUNCH[k].kind = k;

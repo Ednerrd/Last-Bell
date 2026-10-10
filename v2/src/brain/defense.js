@@ -30,7 +30,10 @@ export function chooseDefense(me, opp, P, rng) {
   if (me.punch && me.punch.phase !== 'retract') return null;           // his hands are busy: counters land here
   const skill = me.f.def ?? 0.5;
   if (!rng.chance(0.66 + 0.6 * skill)) return null;
-  const delay = rng.range(0.03, 0.13) * (1.3 - 0.6 * skill);           // reaction time (he reads the shoulder)
+  // Reaction time: he reads the shoulder and the setup, not the fist. Power shots mostly come
+  // behind something (the jab, a feint), so he's a beat later on them.
+  const late = P.fam === 'straight' && P.hand === 'lead' ? 1 : 1.4;
+  const delay = rng.range(0.015, 0.075) * (1.3 - 0.6 * skill) * late;
   const room = ropeGap(me) > 0.25;
   const habit = HABIT[me.f.style], gk = GUARD_K[me.f.guard] || {};
   const read = rng.chance(0.45 + 0.5 * skill);                          // did he read which punch?
