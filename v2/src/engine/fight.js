@@ -6,7 +6,7 @@ import { makeFighter } from '../fighter/make.js';
 import { MIN_D, separate, feetAt, wrap, clampRing, dist } from './space.js';
 import { pickMode, planMove, thinkFor, interrupt, FOOT } from '../brain/footwork.js';
 import { startPunch, stepPunch, resolve } from './punch.js';
-import { makeOffense, wantPunch, chainReady } from '../brain/offense.js';
+import { makeOffense, wantPunch, chainReady, react, exitAfter } from '../brain/offense.js';
 import { DEF, startDefense } from './defense.js';
 import { chooseDefense } from '../brain/defense.js';
 
@@ -99,7 +99,15 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
       if (ev === 'contact') {
         p.res = resolve(m, o, rng);
         emit('contact', { corner: m.corner, t: F.clock, ...p.res });
-      } else if (ev === 'done') m.punch = null;
+        react(o, p.res, rng);
+      } else if (ev === 'done') {
+        m.punch = null;
+        // Combo over: a mover gets out at an angle.
+        if (exitAfter(m, rng)) {
+          m.mode = 'exit'; m.modeT = rng.range(0.45, 0.8); m.circle = rng.pick([1, -1]); m.pause = 0;
+          emit('mode', { corner: m.corner, mode: 'exit', t: F.clock });
+        }
+      }
     }
 
     for (const m of men) {

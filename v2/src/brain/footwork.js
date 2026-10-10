@@ -66,7 +66,7 @@ export function pickMode(me, opp, rng, clock) {
 // (planMove), and the engine eases his velocity toward it. On top rides his rhythm: a constant
 // small in-and-out toward his man, the feeling-out bounce, so he's never frozen in place.
 // Speed per mode, as a share of his style speed (m/s). Walking up from far is its own speed.
-const PACE = { feel: 0.32, hold: 0.36, circle: 0.6, press: 0.8, cut: 0.85, back: 0.68, escape: 0.95 };
+const PACE = { feel: 0.32, hold: 0.36, circle: 0.6, press: 0.8, cut: 0.85, back: 0.68, escape: 0.95, exit: 0.9 };
 const WALK = 1.25;
 export function planMove(me, opp, rng) {
   const d = dist(me, opp), want = wantRange(me, opp, me.mode), dna = FOOT[me.f.style];
@@ -92,10 +92,11 @@ export function planMove(me, opp, rng) {
     }
     case 'back': add(u, -1); add(L, 0.4); break;
     case 'escape': add(L, 1); add(toC, 0.5); add(u, -0.2); break;
+    case 'exit': add(u, -0.9); add(L, 0.9); break;   // out at an angle after his combo
   }
   // Well out of range: he walks straight up to it, no feeling-out.
   const far = d - want;
-  me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape';
+  me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape' && me.mode !== 'exit';
   if (me.walk) add(u, 1.2);
   const gap = ropeGap(me);
   if (me.mode !== 'escape' && gap < 0.5) add(toC, 0.6 * (1 - gap / 0.5));
@@ -114,7 +115,7 @@ export function thinkFor(me, rng) {
 
 // Situations that end a mode early.
 export function interrupt(me, opp, rng) {
-  if (me.mode === 'escape' || me.mode === 'feel') return false;
+  if (me.mode === 'escape' || me.mode === 'feel' || me.mode === 'exit') return false;
   const d = dist(me, opp), want = wantRange(me, opp);
   if (me.f.style === 'pressure') return false;
   if (ropeGap(me) < 0.35 && d < want + 0.4) return rng.chance(0.08);

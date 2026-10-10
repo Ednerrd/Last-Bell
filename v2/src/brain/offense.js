@@ -19,11 +19,48 @@ for (const s in COMBOS) PARSED[s] = Object.entries(COMBOS[s]).map(([str, w]) => 
 
 // Per style: how often he looks to throw (per second while he has range), and mode leanings.
 const OFF = {
-  outboxer: { rate: 0.84 },
-  boxer:    { rate: 0.61 },
-  pressure: { rate: 0.385 },
+  outboxer: { rate: 1.2 },
+  boxer:    { rate: 0.76 },
+  pressure: { rate: 0.43 },
 };
-const MODE_K = { feel: 0.35, circle: 0.8, hold: 1, press: 1.25, cut: 1.1, back: 0.45, escape: 0.15 };
+const MODE_K = { feel: 0.35, circle: 0.8, hold: 1, press: 1.25, cut: 1.1, back: 0.45, escape: 0.15, exit: 0.2 };
+
+// Reacting, the first slice of the brain (M5 does the rest): a man who makes a punch miss or
+// eats it on the gloves fires back in the gap it leaves; a man who gets tagged answers; a mover
+// gets out after his combo. Chances per style; skill shades them from M4 on.
+const REACT = {
+  outboxer: { counter: 0.5, fire: 0.15, exit: 0.45 },
+  boxer:    { counter: 0.65, fire: 0.28, exit: 0.35 },
+  pressure: { counter: 0.5, fire: 0.5, exit: 0.05 },
+};
+// The counter that fits the gap (trainer numbers).
+const COUNTER = {
+  slipped: ['2', '2-3', '3', '3-2', '2b-3'],   // slip outside or in, come back with the other hand
+  rolled:  ['3', '3-2', '6-3', '3b-3'],        // come up out of the roll with a hook
+  ducked:  ['6-3', '3', '5-2'],
+  pulled:  ['2', '2-3', '1-2'],                // the pull counter: lean back, fire the right hand
+  block:   ['1-2', '2', '3-2', '2-3'],         // return fire off the block
+  guard:   ['1-2', '2', '3-2'],
+};
+const FIRE = ['1-2', '3-2', '2-3', '1-2-3', '3'];
+const toQ = (str) => str.split('-').map((n) => BY_NUM[n]);
+
+// The punch he threw at `m` just resolved as `res`: does `m` counter or fire back?
+export function react(m, res, rng) {
+  if (m.punch && m.punch.phase !== 'retract') return;
+  const R = REACT[m.f.style], A = m.off;
+  let str = null;
+  if (res.result !== 'land' && COUNTER[res.how] && rng.chance(R.counter)) str = rng.pick(COUNTER[res.how]);
+  else if (res.result === 'land' && rng.chance(R.fire)) str = rng.pick(FIRE);
+  if (!str) return;
+  A.queue = toQ(str); A.combo = 'counter ' + str;
+  A.beat = rng.range(0.04, 0.12);
+}
+
+// His combo is done: does he get out?
+export function exitAfter(m, rng) {
+  return !m.off.queue.length && rng.chance(REACT[m.f.style].exit);
+}
 
 export function makeOffense() {
   return { queue: [], beat: 0, combo: null, last: null };
@@ -32,8 +69,8 @@ export function makeOffense() {
 // Called every tick he isn't punching. Returns a punch kind to start now, or null.
 export function wantPunch(m, o, rng, dt) {
   const A = m.off, d = dist(m, o);
+  if (A.beat > 0) { A.beat -= dt; return null; }
   if (A.queue.length) {
-    if (A.beat > 0) { A.beat -= dt; return null; }
     const k = A.queue.shift();
     if (k === '~') { A.beat = rng.range(0.1, 0.22); return null; }
     if (reaches(m.f, PUNCH[k], d)) return k;

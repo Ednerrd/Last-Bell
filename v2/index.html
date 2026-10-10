@@ -1667,7 +1667,7 @@ function pickMode(me, opp, rng, clock) {
 // (planMove), and the engine eases his velocity toward it. On top rides his rhythm: a constant
 // small in-and-out toward his man, the feeling-out bounce, so he's never frozen in place.
 // Speed per mode, as a share of his style speed (m/s). Walking up from far is its own speed.
-const PACE = { feel: 0.32, hold: 0.36, circle: 0.6, press: 0.8, cut: 0.85, back: 0.68, escape: 0.95 };
+const PACE = { feel: 0.32, hold: 0.36, circle: 0.6, press: 0.8, cut: 0.85, back: 0.68, escape: 0.95, exit: 0.9 };
 const WALK = 1.25;
 function planMove(me, opp, rng) {
   const d = dist(me, opp), want = wantRange(me, opp, me.mode), dna = FOOT[me.f.style];
@@ -1693,10 +1693,11 @@ function planMove(me, opp, rng) {
     }
     case 'back': add(u, -1); add(L, 0.4); break;
     case 'escape': add(L, 1); add(toC, 0.5); add(u, -0.2); break;
+    case 'exit': add(u, -0.9); add(L, 0.9); break;   // out at an angle after his combo
   }
   // Well out of range: he walks straight up to it, no feeling-out.
   const far = d - want;
-  me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape';
+  me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape' && me.mode !== 'exit';
   if (me.walk) add(u, 1.2);
   const gap = ropeGap(me);
   if (me.mode !== 'escape' && gap < 0.5) add(toC, 0.6 * (1 - gap / 0.5));
@@ -1715,7 +1716,7 @@ function thinkFor(me, rng) {
 
 // Situations that end a mode early.
 function interrupt(me, opp, rng) {
-  if (me.mode === 'escape' || me.mode === 'feel') return false;
+  if (me.mode === 'escape' || me.mode === 'feel' || me.mode === 'exit') return false;
   const d = dist(me, opp), want = wantRange(me, opp);
   if (me.f.style === 'pressure') return false;
   if (ropeGap(me) < 0.35 && d < want + 0.4) return rng.chance(0.08);
@@ -1961,11 +1962,48 @@ for (const s in COMBOS) PARSED[s] = Object.entries(COMBOS[s]).map(([str, w]) => 
 
 // Per style: how often he looks to throw (per second while he has range), and mode leanings.
 const OFF = {
-  outboxer: { rate: 0.84 },
-  boxer:    { rate: 0.61 },
-  pressure: { rate: 0.385 },
+  outboxer: { rate: 1.2 },
+  boxer:    { rate: 0.76 },
+  pressure: { rate: 0.43 },
 };
-const MODE_K = { feel: 0.35, circle: 0.8, hold: 1, press: 1.25, cut: 1.1, back: 0.45, escape: 0.15 };
+const MODE_K = { feel: 0.35, circle: 0.8, hold: 1, press: 1.25, cut: 1.1, back: 0.45, escape: 0.15, exit: 0.2 };
+
+// Reacting, the first slice of the brain (M5 does the rest): a man who makes a punch miss or
+// eats it on the gloves fires back in the gap it leaves; a man who gets tagged answers; a mover
+// gets out after his combo. Chances per style; skill shades them from M4 on.
+const REACT = {
+  outboxer: { counter: 0.5, fire: 0.15, exit: 0.45 },
+  boxer:    { counter: 0.65, fire: 0.28, exit: 0.35 },
+  pressure: { counter: 0.5, fire: 0.5, exit: 0.05 },
+};
+// The counter that fits the gap (trainer numbers).
+const COUNTER = {
+  slipped: ['2', '2-3', '3', '3-2', '2b-3'],   // slip outside or in, come back with the other hand
+  rolled:  ['3', '3-2', '6-3', '3b-3'],        // come up out of the roll with a hook
+  ducked:  ['6-3', '3', '5-2'],
+  pulled:  ['2', '2-3', '1-2'],                // the pull counter: lean back, fire the right hand
+  block:   ['1-2', '2', '3-2', '2-3'],         // return fire off the block
+  guard:   ['1-2', '2', '3-2'],
+};
+const FIRE = ['1-2', '3-2', '2-3', '1-2-3', '3'];
+const toQ = (str) => str.split('-').map((n) => BY_NUM[n]);
+
+// The punch he threw at `m` just resolved as `res`: does `m` counter or fire back?
+function react(m, res, rng) {
+  if (m.punch && m.punch.phase !== 'retract') return;
+  const R = REACT[m.f.style], A = m.off;
+  let str = null;
+  if (res.result !== 'land' && COUNTER[res.how] && rng.chance(R.counter)) str = rng.pick(COUNTER[res.how]);
+  else if (res.result === 'land' && rng.chance(R.fire)) str = rng.pick(FIRE);
+  if (!str) return;
+  A.queue = toQ(str); A.combo = 'counter ' + str;
+  A.beat = rng.range(0.04, 0.12);
+}
+
+// His combo is done: does he get out?
+function exitAfter(m, rng) {
+  return !m.off.queue.length && rng.chance(REACT[m.f.style].exit);
+}
 
 function makeOffense() {
   return { queue: [], beat: 0, combo: null, last: null };
@@ -1974,8 +2012,8 @@ function makeOffense() {
 // Called every tick he isn't punching. Returns a punch kind to start now, or null.
 function wantPunch(m, o, rng, dt) {
   const A = m.off, d = dist(m, o);
+  if (A.beat > 0) { A.beat -= dt; return null; }
   if (A.queue.length) {
-    if (A.beat > 0) { A.beat -= dt; return null; }
     const k = A.queue.shift();
     if (k === '~') { A.beat = rng.range(0.1, 0.22); return null; }
     if (reaches(m.f, PUNCH[k], d)) return k;
@@ -2005,7 +2043,7 @@ function fit(m, c, d) {
   const P = PUNCH[c.q[0]], e = extAt(m.f, P, d);
   return Math.max(0.15, 1 - Math.abs(Math.min(e, P.sweet + 0.1) - P.sweet) * 1.4);
 }
-return { COMBOS, makeOffense, wantPunch, chainReady };
+return { COMBOS, react, exitAfter, makeOffense, wantPunch, chainReady };
 })();
 
 // brain/defense.js
@@ -2072,7 +2110,7 @@ const { makeFighter } = __m10;
 const { MIN_D, separate, feetAt, wrap, clampRing, dist } = __m11;
 const { pickMode, planMove, thinkFor, interrupt, FOOT } = __m12;
 const { startPunch, stepPunch, resolve } = __m14;
-const { makeOffense, wantPunch, chainReady } = __m15;
+const { makeOffense, wantPunch, chainReady, react, exitAfter } = __m15;
 const { DEF, startDefense } = __m13;
 const { chooseDefense } = __m16;
 // The fight sim: fixed 60 steps a second, seeded, deterministic. Zero DOM.
@@ -2176,7 +2214,15 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
       if (ev === 'contact') {
         p.res = resolve(m, o, rng);
         emit('contact', { corner: m.corner, t: F.clock, ...p.res });
-      } else if (ev === 'done') m.punch = null;
+        react(o, p.res, rng);
+      } else if (ev === 'done') {
+        m.punch = null;
+        // Combo over: a mover gets out at an angle.
+        if (exitAfter(m, rng)) {
+          m.mode = 'exit'; m.modeT = rng.range(0.45, 0.8); m.circle = rng.pick([1, -1]); m.pause = 0;
+          emit('mode', { corner: m.corner, mode: 'exit', t: F.clock });
+        }
+      }
     }
 
     for (const m of men) {
