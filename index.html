@@ -3471,624 +3471,12 @@ function modal(html) {
 }
 function closeModal() { document.querySelectorAll('.modal').forEach(m => m.remove()); }
 
-/* ---------- storage: localStorage always, claude db sync when available ---------- */
-const Store = {
-  KEY: 'lastbell_slots_v1', db: null, uid: null, chain: [Promise.resolve(), Promise.resolve(), Promise.resolve()],
-  load() { try { const s = JSON.parse(localStorage.getItem(this.KEY)); if (Array.isArray(s) && s.length === 3) return s.map(x => { try { return migrateSave(x); } catch (e) { return x; } }); } catch (e) { } return [null, null, null]; },
-  saveLocal() { try { localStorage.setItem(this.KEY, JSON.stringify(slots)); } catch (e) { } },
-  async connect() {
-    try {
-      if (!window.claude || !claude.use) return;
-      const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
-      if (!db || !user) return;
-      const id = await user.id(); if (!id) return;
-      this.db = db; this.uid = id; let changed = false;
-      for (let i = 0; i < 3; i++) {
-        try {
-          const snap = await db.doc(`data/users/${id}/slot${i}`).get();
-          if (snap.exists) {
-            const d = snap.data();
-            if (d && d.json) { const s = migrateSave(JSON.parse(d.json)); if (!slots[i] || (s.savedAt || 0) > (slots[i].savedAt || 0)) { slots[i] = s; changed = true; } }
-            else if (d && d.empty && slots[i] && (d.savedAt || 0) > (slots[i].savedAt || 0)) { slots[i] = null; changed = true; }
-          }
-        } catch (e) { }
-      }
-      if (changed) { this.saveLocal(); if (cur < 0) titleScreen(); }
-    } catch (e) { }
-  },
-  push(i) {
-    this.saveLocal();
-    if (!this.db) return;
-    const s = slots[i]; const ref = this.db.doc(`data/users/${this.uid}/slot${i}`);
-    const body = s ? { json: JSON.stringify(s), savedAt: s.savedAt || Date.now() } : { empty: true, savedAt: Date.now() };
-    this.chain[i] = this.chain[i].then(() => ref.set(body)).catch(() => { });
-  }
-};
-let slots = Store.load(); let cur = -1; let save = null;
-function persist() { const s = gymG || save; if (cur < 0 || !s) return; s.savedAt = Date.now(); slots[cur] = s; Store.push(cur); }
-const slotName = s => s.mode === 'gym' ? s.gym.name : s.player.name;
-
-/* ---------- backup codes: a whole career as text. Copy it out, paste it back on any device ---------- */
-const toB64 = u => { let t = ''; for (let i = 0; i < u.length; i += 0x8000) t += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(t); };
-const fromB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
-const pipeBytes = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
-const Backup = {
-  // LBz1. = gzipped (about a quarter of the size), LB1. = plain, for browsers without CompressionStream
-  async encode(s) {
-    const bytes = new TextEncoder().encode(JSON.stringify(s));
-    if (window.CompressionStream) { try { return 'LBz1.' + toB64(await pipeBytes(bytes, new CompressionStream('gzip'))); } catch (e) { } }
-    return 'LB1.' + toB64(bytes);
-  },
-  async decode(code) {
-    const m = String(code).replace(/\s+/g, '').match(/^LB(z?)1\.([A-Za-z0-9+/=]+)$/);
-    if (!m) throw new Error("That isn't a Last Bell backup code. Paste the whole thing, starting with LB.");
-    let bytes; try { bytes = fromB64(m[2]); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
-    if (m[1]) {
-      if (!window.DecompressionStream) throw new Error("This browser can't open compressed codes. Try a newer browser.");
-      try { bytes = await pipeBytes(bytes, new DecompressionStream('gzip')); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
-    }
-    let s; try { s = JSON.parse(new TextDecoder().decode(bytes)); } catch (e) { throw new Error('The code got cut off or changed. Copy it again.'); }
-    if (!s || (s.mode === 'gym' ? !s.gym || !Array.isArray(s.fighters) : !s.player || !s.player.stats || !s.world || !Array.isArray(s.world.roster))) throw new Error('That code is missing pieces of the career.');
-    return migrateSave(s);
-  }
-};
-async function copyText(t, ta) {
-  try { await navigator.clipboard.writeText(t); return true; } catch (e) { }
-  try { ta.focus(); ta.select(); ta.setSelectionRange(0, t.length); return document.execCommand('copy'); } catch (e) { return false; }
-}
-
-/* ---------- shared bits ---------- */
-const GUARD_SCOUT = {
-  standard: 'Textbook guard. No obvious hole, so just outwork him.',
-  high: 'Hands glued high. Dig to the body and split the gloves with uppercuts.',
-  peekaboo: 'Bobs and weaves inside. Stick the jab and touch the body before he gets there.',
-  philly: 'Shoulder roll. Lead with the right hand and make him reach for it.',
-  cross: 'Arms locked over his face. The ribs and liver are wide open.',
-  handslow: 'Hands down, eyes up. Sharp straight shots, then make him work tired.'
-};
-/* ---------- tale of the tape: his numbers next to yours, and what the corner makes of it ---------- */
-const TAPE_HIM = { power: 'he hits harder than you', speed: 'his hands are quicker', accuracy: "he's the sharper puncher", defense: "he's harder to hit", footwork: 'he moves better', chin: 'he takes a shot better', body: 'he takes the body better', stamina: "he's got the bigger gas tank", recovery: 'he bounces back quicker', heart: "he won't break easy" };
-const TAPE_YOU = { power: 'you hit harder', speed: 'your hands are quicker', accuracy: "you're the sharper puncher", defense: "you're harder to hit", footwork: 'you move better', chin: 'you take a shot better', body: 'you take the body better', stamina: "you've got more gas", recovery: 'you bounce back quicker', heart: "you've got more heart" };
-const TAPE_HOLE = { power: 'No real pop, so you can walk through him.', speed: 'Slow hands. Beat him to the punch.', accuracy: "He's wild. Make him miss and make him pay.", defense: "He's there to be hit.", footwork: 'Flat feet. Cut the ring off.', chin: "Chin's a question. Test it early.", body: 'Soft downstairs. Dig to the body.', stamina: 'He fades late. Make it a long night.', recovery: 'Once he is hurt he stays hurt. Jump on him.', heart: 'He folds when it gets ugly. Break his will.' };
-const cap1 = t => t[0].toUpperCase() + t.slice(1);
-const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
-// what anyone could tell you from his record
-function publicRead(save, f) {
-  const out = [], rc = f.record || { w: 0, l: 0, ko: 0 }, kp = pct(rc.ko, rc.w), L = f.last;
-  if (L && L.w === 0 && L.ko) out.push(L.you ? 'You stopped him last time out. He remembers.' : 'Got stopped last time out. The chin could be shaky.');
-  if (rc.w >= 6 && kp >= 70) out.push(`${kp}% of his wins by KO. Respect the power.`);
-  else if (rc.w >= 8 && kp <= 30) out.push(`Only ${kp}% KOs. He wins on points, not power.`);
-  if (f.age >= 34) out.push(`He's ${Math.floor(f.age)}. The legs might not be there late.`);
-  else if (f.age <= 23 && !f.club) out.push('Young and still getting better.');
-  return out.slice(0, 2);
-}
-function cornerRead(save, f) {
-  const me = save.player.stats, him = liveStats(f), known = isScouted(save, f);
-  const gap = ovr(him) - ovr(me);
-  const verdict = gap >= 8 ? "On paper he's a lot better than you." : gap >= 4 ? "He's the better fighter on paper." : gap > -4 ? 'Even fight on paper.' : gap > -8 ? "You're the better fighter on paper." : 'You should handle him.';
-  if (!known) return [verdict, ...publicRead(save, f), 'Get film on him to know more.'].join(' ');
-  let hk = null, yk = null;
-  for (const k of STATS) { const d = him[k] - me[k]; if (d >= 4 && (!hk || d > him[hk] - me[hk])) hk = k; if (d <= -4 && (!yk || d < him[yk] - me[yk])) yk = k; }
-  const edge = hk && yk ? cap1(TAPE_HIM[hk]) + ', but ' + TAPE_YOU[yk] + '.' : hk ? cap1(TAPE_HIM[hk]) + '.' : yk ? cap1(TAPE_YOU[yk]) + '.' : '';
-  const avg = STATS.reduce((t, k) => t + him[k], 0) / STATS.length;
-  let lo = null; for (const k of STATS) if (him[k] - avg <= -6 && k !== yk && (!lo || him[k] < him[lo])) lo = k;
-  return [verdict, edge, lo ? TAPE_HOLE[lo] : ''].filter(Boolean).join(' ');
-}
-function winLine(w) { return `<li class="${w.you ? 'you' : ''}">${w.you ? (w.ko ? 'Stopped <b>you</b>' : 'Beat <b>you</b>') : (w.ko ? 'KO ' : 'Beat ') + esc(w.n)}${w.r ? ` <small>(#${w.r})</small>` : ''}${w.t && w.t.length ? ' ' + beltChips(w.t) : ''}</li>`; }
-function lastLine(L) {
-  if (!L) return 'No pro fights on record.';
-  const who = L.you ? 'you' : esc(L.n);
-  return L.w == null ? `Drew with ${who}` : L.w ? `Beat ${who}${L.ko ? ' by KO' : ' on points'}` : `Lost to ${who}${L.ko ? ' by KO' : ' on points'}`;
-}
-// offer: the fight on the table. open: start expanded. The tape always shows the public side; his numbers need film
-function tapeHtml(save, offer, open, idx) {
-  const P = save.player, f = resumeOf(save, oppNow(save, offer)), known = isScouted(save, f), me = P.stats, him = liveStats(f);
-  const prow = (a, l, b) => `<span class="pv me">${a}</span><span class="l">${l}</span><span class="pv him">${b}</span>`;
-  const hr = f.club ? 'Unranked' : '#' + (rankList(save).findIndex(e => e.id === f.id) + 1), mr = P.points < 30 ? 'Unranked' : '#' + playerRank(save);
-  const pub = prow(Math.floor(age(save)), 'Age', Math.floor(f.age)) + prow(rec(P.record), 'Record', rec(f.record)) + prow(`${P.record.ko} <small>(${pct(P.record.ko, P.record.w)}%)</small>`, 'KOs', `${f.record.ko} <small>(${pct(f.record.ko, f.record.w)}%)</small>`) + prow(cap1(P.stance), 'Stance', cap1(f.stance)) + prow(mr, 'Ranking', hr);
-  const rows = STATS.map(k => {
-    const a = Math.round(me[k]), b = Math.round(him[k]);
-    return known ? `<span class="v ${a > b ? 'w' : ''}">${a}</span><span class="b me"><i style="width:${a}%"></i></span><span class="l">${STAT_LABEL[k]}</span><span class="b him"><i style="width:${b}%"></i></span><span class="v ${b > a ? 'w' : ''}">${b}</span>`
-      : `<span class="v">${a}</span><span class="b me"><i style="width:${a}%"></i></span><span class="l">${STAT_LABEL[k]}</span><span class="b him unk"></span><span class="v q">??</span>`;
-  }).join('');
-  const belts = f.club ? [] : beltsOf(save, f.id), ex = (f.exBelts || []).filter(k => !belts.includes(k));
-  const res = `<div class="resume"><h5>Notable wins</h5>${f.wins.length ? `<ul>${f.wins.map(winLine).join('')}</ul>` : '<p class="mute small">Nobody worth mentioning yet.</p>'}
-    <p class="small"><span class="mute">Last fight:</span> ${lastLine(f.last)}</p>
-    ${belts.length ? `<p class="small"><span class="mute">Holds:</span> ${beltChips(belts)}</p>` : ''}${ex.length ? `<p class="small"><span class="mute">Former champ:</span> ${beltChips(ex)}</p>` : ''}</div>`;
-  const c = scoutCost(offer);
-  const foot = known ? `<p class="mute tiny">${(P.history.some(h => h.oppId ? h.oppId === f.id : h.opp === f.name)) ? "You've been in there with him. You know what he has." : 'Scouted. Your corner has film on him.'}</p>`
-    : `<div class="scout"><button class="btn sm" data-act="scout" data-i="${idx}" ${P.money < c ? 'disabled' : ''}>Scout him: ${money(c)}</button><span class="mute tiny">Film study. Shows his real numbers for a year.</span></div>`;
-  return `<details class="tape" ${open ? 'open' : ''}><summary>Tale of the tape${known ? '' : ' <small class="mute">(not scouted)</small>'}</summary><div class="tt"><span class="h" style="grid-column:1/3">You</span><span></span><span class="h" style="grid-column:4/6;text-align:right">Him</span>${pub}${rows}
-    <span class="v w">${ovr(me)}</span><span></span><span class="l"><b>Overall</b></span><span></span><span class="v w">${ovr(him)}</span></div>${res}${foot}</details>`;
-}
 function gLabel(g) { return (GUARDS[g] || GUARDS.standard).label; }
-// pot: his ceiling stats, if known. Fit at the ceiling is where the guard is headed
-function guardCard(stats, g, iq, pot) {
-  const G = GUARDS[g] || GUARDS.standard, fit = guardSkill(stats, g), top = pot ? Math.max(fit, guardSkill(pot, g)) : null;
-  const pc = x => Math.round(x * 100), need = G.skill ? G.skill.map(k => STAT_LABEL[k]).join(', ') : '';
-  const warn = !G.skill || fit >= .5 ? ''
-    : top != null && top < .5 ? `<p class="alert small">Even at his ceiling he only half-runs this guard (fit ${pc(top)}%). The holes stay, the perks never fully arrive.</p>`
-    : `<p class="alert small">His stats can't run this yet (fit ${pc(fit)}%${top != null ? `, ${pc(top)}% at his ceiling` : ''}). The holes are there now, the perks come as ${esc(need)} climb.</p>`;
-  return `<div class="gcard"><div class="gtop"><b>${G.label}</b>${iq != null ? `<span>Ring IQ <b>${Math.round(iq)}</b></span>` : ''}</div><p class="mute small">${G.desc}</p>
-    ${G.skill ? `<div class="stat"><span class="sl">Guard fit</span><span class="bar"><i style="width:${pc(fit)}%"></i>${top != null ? `<b style="left:${pc(top)}%"></b>` : ''}</span><span class="sv">${pc(fit)}</span><span></span></div><p class="mute tiny">Runs on ${esc(need)}.${top != null ? ' The tick is his ceiling.' : ''}</p>` : ''}${warn}</div>`;
-}
-function beltChips(list) { return list.map(k => { const o = ORGS.find(x => x.k === k); return `<span class="belt" style="--bc:${o.c}">${k}</span>`; }).join(''); }
-function statRow(k, v, pot, delta) {
-  const d = delta ? `<span class="delta ${delta > 0 ? 'up' : 'down'}">${delta > 0 ? '+' : ''}${delta.toFixed(1)}</span>` : '';
-  return `<div class="stat"><span class="sl">${STAT_LABEL[k]}</span><span class="bar"><i style="width:${v}%"></i>${pot ? `<b style="left:${pot}%"></b>` : ''}</span><span class="sv">${Math.round(v)}</span>${d}</div>`;
-}
 function soundBtns() {
   return `<button class="tog ${Sfx.on ? 'on' : ''}" data-act="sound" aria-pressed="${Sfx.on}">Sound</button><button class="tog ${Comm.voice ? 'on' : ''}" data-act="voice" aria-pressed="${Comm.voice}">Voice</button>`;
 }
 ACT.sound = (d, b) => { Sfx.setOn(!Sfx.on); b.classList.toggle('on', Sfx.on); b.setAttribute('aria-pressed', Sfx.on); if (!Sfx.on) Comm.stop(); };
 ACT.voice = (d, b) => { Comm.setVoice(!Comm.voice); b.classList.toggle('on', Comm.voice); b.setAttribute('aria-pressed', Comm.voice); };
-
-/* ---------- title ---------- */
-function titleScreen() {
-  cur = -1; save = null; gymG = null;
-  const cards = slots.map((s, i) => {
-    if (!s) return `<button class="slot empty" data-act="newSlot" data-i="${i}"><span class="sn">Slot ${i + 1}</span><span class="st">Open a gym</span></button>`;
-    if (s.mode === 'gym') {
-      const act = s.fighters.filter(m => !m.retired), belts = act.reduce((a, m) => a.concat(m.belts), []);
-      return `<div class="slot"><button class="slot-main" data-act="loadSlot" data-i="${i}"><span class="sn">${esc(s.gym.name)}</span>
-        <span class="st">${esc(s.gym.town)}, ${yearWk(s.week).toLowerCase()}, ${act.length} fighter${act.length === 1 ? '' : 's'}</span>${belts.length ? `<span class="chips">${beltChips(belts)}</span>` : ''}</button>
-        <button class="x" data-act="backupSlot" data-i="${i}" aria-label="Backup slot ${i + 1}">Backup</button>
-        <button class="x" data-act="delSlot" data-i="${i}" aria-label="Delete slot ${i + 1}">Delete</button></div>`;
-    }
-    const P = s.player;
-    const status = P.retired ? 'Retired' : P.injury ? 'Injured' : `#${playerRank(s)} ${DIVS[P.div].name}`;
-    return `<div class="slot"><button class="slot-main" data-act="loadSlot" data-i="${i}">
-      <span class="sn">${P.nick ? `"${esc(P.nick)}" ` : ''}${esc(P.name)}</span>
-      <span class="st">${rec(P.record)} (${P.record.ko} KO), age ${Math.floor(age(s))}, ${esc(status)}</span>
-      ${P.belts.length ? `<span class="chips">${beltChips(P.belts)}</span>` : ''}</button>
-      <button class="x" data-act="backupSlot" data-i="${i}" aria-label="Backup slot ${i + 1}">Backup</button>
-      <button class="x" data-act="delSlot" data-i="${i}" aria-label="Delete slot ${i + 1}">Delete</button></div>`;
-  }).join('');
-  show(`<div class="title-wrap">
-    <div class="marquee"><div class="bulb"></div><h1>Last Bell</h1><p>You are the coach. Open a gym, find fighters, build champions. Then you work the corner.</p></div>
-    <div class="slots">${cards}</div>
-    <div class="row center"><button class="btn ghost sm" data-act="restore">Restore from a backup code</button></div>
-    <div class="row center">${soundBtns()}</div>
-  </div>`, 'title');
-}
-ACT.newSlot = d => show(`<div class="screen"><div class="topbar"><button class="link" data-act="toTitle">Back</button><span class="tb-title">Slot ${+d.i + 1}</span><span></span></div>
-  <button class="btn big" data-act="newGym" data-i="${d.i}">Open a gym</button><p class="mute small">You are the coach. Sign fighters, train them week by week, work their corners.</p>
-  <button class="btn ghost" data-act="newCareer" data-i="${d.i}">One fighter's career (classic)</button><p class="mute small">Build one boxer and take him all the way.</p></div>`, 'create');
-ACT.newGym = d => gymCreate(+d.i);
-ACT.newCareer = d => createScreen(+d.i);
-ACT.loadSlot = d => { cur = +d.i; const s = slots[cur]; if (s.mode === 'gym') { gymG = bindGym(s); gymHub(); } else { save = migrateSave(s); hub(); } };
-ACT.delSlot = d => {
-  const i = +d.i; const m = modal(`<h3>Delete this career?</h3><p class="mute">${esc(slotName(slots[i]))} will be gone for good.</p><div class="row"><button class="btn ghost" data-close>Keep it</button><button class="btn danger" data-del>Delete</button></div>`);
-  m.querySelector('[data-close]').onclick = closeModal;
-  m.querySelector('[data-del]').onclick = () => { slots[i] = null; Store.push(i); closeModal(); titleScreen(); };
-};
-
-ACT.backupSlot = async d => {
-  const i = +d.i, s = slots[i]; if (!s) return;
-  const m = modal(`<h3>Backup code</h3><p class="mute">${esc(slotName(s))}${s.mode === 'gym' ? '' : ', ' + rec(s.player.record)}. Copy this and keep it somewhere safe (notes app, text it to yourself). Paste it into "Restore from a backup code" to bring him back, on this phone or any other.</p>
-    <textarea class="code" readonly aria-label="Backup code">Making the code…</textarea><p class="mute tiny" data-msg></p>
-    <div class="row"><button class="btn ghost" data-close>Done</button><button class="btn" data-copy disabled>Copy code</button></div>`);
-  m.querySelector('[data-close]').onclick = closeModal;
-  const ta = m.querySelector('textarea'), btn = m.querySelector('[data-copy]'), msg = m.querySelector('[data-msg]');
-  let code; try { code = await Backup.encode(s); } catch (e) { ta.value = ''; msg.textContent = "Couldn't make a code on this browser."; return; }
-  ta.value = code; btn.disabled = false; msg.textContent = `${Math.ceil(code.length / 1000)}k characters. Copy all of it.`;
-  ta.onfocus = () => ta.select();
-  btn.onclick = async () => { const ok = await copyText(code, ta); btn.textContent = ok ? 'Copied' : 'Select all and copy'; if (!ok) ta.select(); };
-};
-ACT.restore = () => {
-  let pickI = slots.findIndex(x => !x); if (pickI < 0) pickI = 0;
-  const m = modal(`<h3>Restore a career</h3><p class="mute">Paste a backup code, then pick the slot it goes in.</p>
-    <textarea class="code" aria-label="Backup code" placeholder="LBz1.…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
-    <div class="seg small" data-slots></div><p class="alert small" data-err hidden></p>
-    <div class="row"><button class="btn ghost" data-close>Cancel</button><button class="btn" data-go>Restore</button></div>`);
-  const ta = m.querySelector('textarea'), err = m.querySelector('[data-err]'), go = m.querySelector('[data-go]'), seg = m.querySelector('[data-slots]');
-  const draw = () => {
-    seg.innerHTML = slots.map((x, i) => `<button class="${i === pickI ? 'on' : ''}" data-i="${i}">Slot ${i + 1}${x ? '' : ' (empty)'}</button>`).join('');
-    seg.querySelectorAll('button').forEach(b => b.onclick = () => { pickI = +b.dataset.i; draw(); });
-    go.textContent = slots[pickI] ? `Replace ${slotName(slots[pickI])}` : 'Restore';
-    go.classList.toggle('danger', !!slots[pickI]);
-  };
-  draw(); ta.oninput = () => { err.hidden = true; };
-  m.querySelector('[data-close]').onclick = closeModal;
-  go.onclick = async () => {
-    err.hidden = true; go.disabled = true;
-    try {
-      const s = await Backup.decode(ta.value); s.savedAt = Date.now();
-      slots[pickI] = s; Store.push(pickI); closeModal(); titleScreen();
-      const ok = modal(`<h3>He's back</h3><p class="mute">${esc(slotName(s))}, restored to slot ${pickI + 1}.</p><button class="btn" data-ok>OK</button>`);
-      ok.querySelector('[data-ok]').onclick = closeModal;
-    } catch (e) { err.textContent = e.message || 'That code did not work.'; err.hidden = false; go.disabled = false; }
-  };
-  setTimeout(() => ta.focus(), 50);
-};
-
-/* ---------- create ---------- */
-let draft = null;
-const BASE = 42, POOL = 100, CAP = 72;
-function rollDraft(mode, keep) {
-  const div = keep ? keep.div : 4; const style = pick(BASE_STYLES);
-  const d = { mode, slot: keep ? keep.slot : 0, name: keep && keep.nameLocked ? keep.name : pick(FIRST) + ' ' + pick(LAST), nick: keep && keep.nameLocked ? keep.nick : pick(NICKS), nameLocked: keep ? keep.nameLocked : false, div, style: keep && mode === 'build' ? keep.style : style, stance: R() < .22 ? 'southpaw' : 'orthodox', look: randLook(div) };
-  d.guard = keep && keep.guard ? keep.guard : mode === 'random' ? rollGuard(d.style) : 'standard';
-  if (keep && keep.lookLocked) { d.look = keep.look; d.lookLocked = true; }
-  if (mode === 'random') { d.stats = genStats(ri(50, 58), d.style); d.potAdd = {}; STATS.forEach(k => d.potAdd[k] = ri(16, 42)); }
-  else { d.stats = {}; STATS.forEach(k => d.stats[k] = BASE); d.potAdd = {}; STATS.forEach(k => d.potAdd[k] = ri(20, 38)); }
-  return d;
-}
-function spent() { return STATS.reduce((s, k) => s + (draft.stats[k] - BASE), 0); }
-function ceilingGrade() { const avg = STATS.reduce((s, k) => s + Math.min(97, draft.stats[k] + draft.potAdd[k]), 0) / STATS.length; return avg >= 86 ? 'A' : avg >= 80 ? 'B' : avg >= 74 ? 'C' : 'D'; }
-function createScreen(slot) { draft = rollDraft('random'); draft.slot = slot; renderCreate(); }
-function renderCreate() {
-  const D = draft; const build = D.mode === 'build'; const left = POOL - spent();
-  const statsHtml = STATS.map(k => build
-    ? `<div class="stat alloc"><span class="sl">${STAT_LABEL[k]}</span><button class="pm" data-act="pm" data-k="${k}" data-v="-1" aria-label="Lower ${STAT_LABEL[k]}">−</button><span class="bar"><i style="width:${D.stats[k]}%"></i></span><button class="pm" data-act="pm" data-k="${k}" data-v="1" aria-label="Raise ${STAT_LABEL[k]}">+</button><span class="sv">${D.stats[k]}</span></div>`
-    : statRow(k, D.stats[k])).join('');
-  show(`<div class="screen">
-    <div class="topbar"><button class="link" data-act="toTitle">Back</button><span class="tb-title">New fighter</span><span></span></div>
-    <div class="seg" role="tablist"><button class="${!build ? 'on' : ''}" data-act="mode" data-v="random">Random</button><button class="${build ? 'on' : ''}" data-act="mode" data-v="build">Build him</button></div>
-    <div class="create-top">
-      <canvas class="portrait" id="pv"></canvas>
-      <div class="ct-info">
-        <label>Name<input id="inName" maxlength="24" value="${esc(D.name)}"></label>
-        <label>Nickname<input id="inNick" maxlength="20" value="${esc(D.nick)}" placeholder="Optional"></label>
-        <div class="mini">Overall <b>${ovr(D.stats)}</b> &nbsp; Ceiling <b>${ceilingGrade()}</b> &nbsp; Ring IQ <b>${Math.round(ringIQ({ stats: D.stats, exp: 0 }))}</b></div>
-        ${!build ? `<button class="btn ghost sm" data-act="reroll">Reroll</button>` : ''}
-      </div>
-    </div>
-    <h4>Division</h4>
-    <select id="inDiv">${DIVS.map((v, i) => `<option value="${i}" ${i === D.div ? 'selected' : ''}>${v.name} (${v.lb})</option>`).join('')}</select>
-    <h4>Style <span class="pts">locked for the career</span></h4>
-    <div class="chips wrap">${BASE_STYLES.map(k => `<button class="chip ${D.style === k ? 'on' : ''}" data-act="style" data-v="${k}">${STYLES[k].label}</button>`).join('')}</div>
-    <p class="mute small">${esc(STYLES[D.style].desc)} The only way to change it later: beat a legend and learn his.</p>
-    <h4>Stance <span class="pts">can change in camp</span></h4>
-    <div class="seg small"><button class="${D.stance === 'orthodox' ? 'on' : ''}" data-act="stance" data-v="orthodox">Orthodox</button><button class="${D.stance === 'southpaw' ? 'on' : ''}" data-act="stance" data-v="southpaw">Southpaw</button></div>
-    <h4>Guard <span class="pts">locked for the career</span></h4>
-    <div class="chips wrap">${Object.keys(GUARDS).map(k => `<button class="chip ${D.guard === k ? 'on' : ''}" data-act="guard" data-v="${k}">${GUARDS[k].label}</button>`).join('')}</div>
-    ${guardCard(D.stats, D.guard, null, Object.fromEntries(STATS.map(k => [k, Math.min(97, D.stats[k] + D.potAdd[k])])))}
-    <h4>Look</h4>
-    <div class="swatches">${SKINS.map(c => `<button class="sw ${D.look.skin === c ? 'on' : ''}" style="background:${c}" data-act="look" data-k="skin" data-v="${c}" aria-label="Skin tone"></button>`).join('')}</div>
-    <div class="chips wrap">${HAIRS.map(h => `<button class="chip ${D.look.hair === h ? 'on' : ''}" data-act="look" data-k="hair" data-v="${h}">${h === 'bald' ? 'Bald' : h[0].toUpperCase() + h.slice(1)}</button>`).join('')}<button class="chip ${D.look.beard ? 'on' : ''}" data-act="beard">Beard</button></div>
-    <div class="swatches">${HAIR_COLS.map(c => `<button class="sw ${D.look.hairCol === c ? 'on' : ''}" style="background:${c}" data-act="look" data-k="hairCol" data-v="${c}" aria-label="Hair color"></button>`).join('')}</div>
-    <h4>Attributes ${build ? `<span class="pts ${left === 0 ? 'done' : ''}">${left} points left</span>` : ''}</h4>
-    <div class="stats">${statsHtml}</div>
-    <button class="btn big" data-act="startCareer" ${build && left > 0 ? 'disabled' : ''}>${build && left > 0 ? `Spend ${left} more points` : 'Start career'}</button>
-  </div>`, 'create');
-  Render.portrait($('#pv'), D.look, { stance: D.stance, guard: D.guard });
-  const keepName = () => { D.name = $('#inName').value; D.nick = $('#inNick').value; D.nameLocked = true; };
-  $('#inName').oninput = keepName; $('#inNick').oninput = keepName;
-  $('#inDiv').onchange = e => { const to = +e.target.value; D.look.build *= DIVS[to].build / DIVS[D.div].build; D.div = to; renderCreate(); }; // keeps his own size within the division
-}
-ACT.toTitle = () => titleScreen();
-ACT.mode = d => { const k = { slot: draft.slot, name: draft.name, nick: draft.nick, nameLocked: draft.nameLocked, div: draft.div, style: draft.style, guard: draft.guard, look: draft.look, lookLocked: true }; draft = rollDraft(d.v, k); renderCreate(); };
-ACT.reroll = () => { draft = rollDraft('random', { slot: draft.slot, name: draft.name, nick: draft.nick, nameLocked: draft.nameLocked, div: draft.div }); renderCreate(); };
-ACT.style = d => { draft.style = d.v; if (draft.mode === 'random') draft.stats = genStats(ovr(draft.stats), d.v); renderCreate(); };
-ACT.stance = d => { draft.stance = d.v; renderCreate(); };
-ACT.guard = d => { draft.guard = d.v; renderCreate(); };
-ACT.look = d => { draft.look[d.k] = d.v; draft.lookLocked = true; renderCreate(); };
-ACT.beard = () => { draft.look.beard = !draft.look.beard; renderCreate(); };
-ACT.pm = d => {
-  const k = d.k, v = +d.v; const left = POOL - spent();
-  if (v > 0 && (left <= 0 || draft.stats[k] >= CAP)) return;
-  if (v < 0 && draft.stats[k] <= BASE - 10) return;
-  draft.stats[k] += v; renderCreate();
-};
-ACT.startCareer = () => {
-  const D = draft; const name = (D.name || '').trim() || 'No Name';
-  const pot = {}; STATS.forEach(k => pot[k] = Math.min(97, D.stats[k] + D.potAdd[k]));
-  save = newCareer({ name, nick: (D.nick || '').trim(), div: D.div, style: D.style, guard: D.guard, stance: D.stance, stats: Object.assign({}, D.stats), pot, look: D.look, age: ri(19, 22) });
-  cur = D.slot; persist(); hub();
-};
-
-/* ===== LAST BELL : ui part 2 ===== */
-let hubTab = 'fighter';
-function hub(tab) {
-  if (tab) hubTab = tab;
-  const P = save.player; const rank = playerRank(save); const a = Math.floor(age(save));
-  const pend = save.pending;
-  let primary;
-  if (save.G) {
-    const G = save.G, n = P.fightWk - G.week;
-    primary = P.injury ? '' : P.booked ? (n <= 0 ? `<button class="btn big hot" data-act="gFight" data-id="${P.id}">Fight night: ${esc(P.booked.offer.opp.name)}</button>` : `<button class="btn big" data-act="gCamp">Fights ${esc(P.booked.offer.opp.name)} in ${n} week${n === 1 ? '' : 's'}</button>`)
-      : P.busy > 0 ? `<p class="alert gold">Resting after the fight: ${P.busy} more week${P.busy === 1 ? '' : 's'} before he can fight again.</p>` : `<button class="btn big" data-act="offers">Find him a fight</button>`;
-  } else if (P.retired) primary = `<button class="btn big ghost" data-act="toTitle">Back to menu</button>`;
-  else if (P.injury) primary = `<button class="btn big" data-act="rest">Rest and rehab (${P.injury.weeks} weeks left)</button>`;
-  else if (pend && pend.campDone) primary = `<button class="btn big hot" data-act="fightNight">Fight night: ${esc(pend.offer.opp.name)}</button>`;
-  else if (pend) primary = `<button class="btn big" data-act="camp">Start camp for ${esc(pend.offer.opp.name)}</button>`;
-  else primary = `<button class="btn big" data-act="offers">Find the next fight</button>`;
-  const status = P.injury ? `<div class="alert">${esc(P.injury.name)}. Out ${P.injury.weeks} more weeks.</div>` : '';
-  show(`<div class="screen">
-    <div class="topbar">${save.G ? '<button class="link" data-act="gymHub">Gym</button>' : '<button class="link" data-act="quit">Save &amp; exit</button>'}<span class="tb-title">${DIVS[P.div].name}</span><span class="cash">${money(P.money)}</span></div>
-    <div class="poster stitched">
-      <canvas class="portrait" id="pv"></canvas>
-      <div class="pinfo">
-        ${P.nick ? `<span class="nick">"${esc(P.nick)}"</span>` : ''}
-        <h2>${esc(P.name)}</h2>
-        <div class="recbig">${rec(P.record)} <small>${P.record.ko} KO</small></div>
-        <div class="mute">Age ${a}, ${STYLES[P.style].label.toLowerCase()}${P.styleFrom ? ` (learning, ${Math.round(P.styleFit * 100)}%)` : ''}, ${P.stance}${P.stanceFit != null ? ` (new, ${Math.round(P.stanceFit * 100)}%)` : ''}</div>
-        <div class="mute">${gLabel(P.guard).replace(/ guard$/i, '')} guard, Ring IQ ${playerIQ(save)}</div>
-        <div class="mute">${DIVS[P.div].name} (${DIVS[P.div].lb})${(P.titleDivs || []).length > 1 ? `, champion in ${P.titleDivs.length} divisions` : ''}</div>
-        <div class="mute">${P.retired ? 'Retired' : `Ranked #${rank} of ${save.world.roster.length + 1}`}${P.peakRank ? `, peak #${P.peakRank}` : ''}</div>
-        ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}
-      </div>
-    </div>
-    ${status}
-    <div class="wear"><span>Career damage</span><span class="bar warn"><i style="width:${P.wear}%"></i></span><span class="sv">${Math.round(P.wear)}</span></div>
-    ${primary}
-    ${save.G ? `<div class="row"><button class="btn ghost" data-act="gPlan">Training plan</button></div><p class="mute small">${esc(fStatus(save.G, P))}.</p>` : !P.retired ? `<div class="row"><button class="btn ghost" data-act="rest" ${P.injury ? 'disabled' : ''}>Rest 6 weeks</button><button class="btn ghost" data-act="weight" ${save.pending || P.injury ? 'disabled' : ''}>Weight class</button><button class="btn ghost" data-act="retire">Retire</button></div>` : ''}
-    <div class="tabs" role="tablist">${[['fighter', 'Fighter'], ['rank', 'Rankings'], ['locker', 'Locker'], ['history', 'Record']].map(([k, l]) => `<button class="${hubTab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div>
-    <div class="tabbody">${hubBody()}</div>
-  </div>`, 'hub');
-  Render.portrait($('#pv'), P.look, { stance: P.stance, guard: P.guard, dmg: Math.min(.5, P.wear / 200) });
-  if (hubTab === 'locker') { const c = $('#lockpv'); if (c) Render.portrait(c, P.look, { stance: P.stance, guard: P.guard }); }
-}
-function hubBody() {
-  const P = save.player;
-  if (hubTab === 'fighter') {
-    return `<div class="ovr">Overall <b>${ovr(P.stats)}</b><span class="mute"> The faint tick is his ceiling.</span></div><div class="stats">${STATS.map(k => statRow(k, P.stats[k], P.pot[k])).join('')}</div>
-    ${guardCard(P.stats, P.guard, playerIQ(save), P.pot)}<p class="mute tiny">Ring IQ grows with fights and with accuracy, head movement, footwork and heart. Smarter fighters read guards, cut off the ring and slip off the ropes.</p>
-    <p class="mute small">Gym: ${save.G ? esc(save.G.gym.name) : GYMS[P.gym].name}. Career earnings ${money(P.earnings)}.</p>`;
-  }
-  if (hubTab === 'rank') {
-    const list = rankList(save); const pr = playerRank(save);
-    const row = (e, i) => { const b = beltsOf(save, e.id); return `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}${e.f && e.f.legend ? ` <span class="lgd" title="${e.f.star ? 'Pound for pound' : 'Legend'}">★</span>` : ''}${b.length ? ' ' + beltChips(b) : ''}</span><span class="rc">${rec(e.record)}</span><span class="ov">${Math.round(e.rating)}</span></div>`; };
-    let rows = list.slice(0, 15).map(row).join('');
-    if (pr > 15) rows += `<div class="rk gap">…</div>` + row(list[pr - 1], pr - 1);
-    const champs = ORGS.map(o => { const id = save.world.belts[o.k]; const nm = id === save.player.id ? save.player.name : save.G && save.G.fighters.find(m => m.id === id) ? save.G.fighters.find(m => m.id === id).name : (findFighter(save, id) || {}).name || 'Vacant'; return `<div class="champ"><span class="belt" style="--bc:${o.c}">${o.k}</span><span>${esc(nm)}</span></div>`; }).join('');
-    const beat = save.player.beatLegends || [];
-    const lg = LEGENDS.map((L, d) => `<div class="rk ${beat.includes('L' + d) ? 'me' : ''}"><span class="n">${beat.includes('L' + d) ? '✓' : '★'}</span><span class="nm">${esc(L.name)}<small class="mute" style="display:block">${esc(STYLES[L.style].label)}, "${esc(L.nick)}"</small></span><span class="rc">${esc(DIVS[d].name)}</span></div>`).join('');
-    const pp = p4p(save).map((e, i) => `<div class="rk ${e.isPlayer ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(e.name)}</span><span class="rc">${esc(e.div)}</span></div>`).join('');
-    return `<h4>World champions</h4><div class="champs">${champs}</div><h4>${DIVS[P.div].name} rankings</h4><div class="rklist"><div class="rk head"><span class="n">#</span><span class="nm">Fighter</span><span class="rc">Record</span><span class="ov">OVR</span></div>${rows}</div><h4>Pound for pound</h4><div class="rklist">${pp}</div>
-      ${save.G ? '' : `<h4>Legends</h4><p class="mute small">One in every division, and nobody else fights like him. Beat him and you can learn his style in camp.</p><div class="rklist">${lg}</div>`}`;
-  }
-  if (hubTab === 'locker') {
-    const kinds = [['trunks', 'Trunks'], ['gloves', 'Gloves'], ['shoes', 'Boots']];
-    return `<canvas class="portrait wide" id="lockpv"></canvas><p class="mute small">Looks only. No stat boosts, just drip.</p>` + kinds.map(([k, l]) => `<h4>${l}</h4><div class="gear">${GEAR[k].map(g => {
-      const own = P.owned.includes(g.id), on = P.look[k] === g.id;
-      return `<button class="gi ${on ? 'on' : ''}" data-act="gear" data-k="${k}" data-id="${g.id}" ${!own && g.price > P.money ? 'disabled' : ''}><span class="gsw" style="background:${g.c}"></span><span>${g.name}</span><small>${on ? 'Wearing' : own ? 'Owned' : money(g.price)}</small></button>`;
-    }).join('')}</div>`).join('');
-  }
-  if (hubTab === 'history') {
-    if (!P.history.length) return `<p class="mute">No pro fights yet. Go get one.</p>`;
-    return `<div class="hist">${P.history.map(h => `<div class="hr ${h.r}"><span class="res">${h.r}</span><span class="hd"><b>${esc(h.opp)}</b> <small>${h.oppRec}</small><br><small>${esc(h.method)}${!h.dec ? `, R${h.round}` : ''} at ${esc(h.venue)}</small></span><span class="hp">${money(h.purse)}${h.title.length ? '<br>' + beltChips(h.title) : ''}</span></div>`).join('')}</div>`;
-  }
-  return '';
-}
-ACT.tab = d => hub(d.v);
-ACT.quit = () => { persist(); titleScreen(); };
-ACT.gear = d => {
-  const P = save.player; const g = GEAR[d.k].find(x => x.id === d.id);
-  if (!P.owned.includes(g.id)) { if (P.money < g.price) return; P.money -= g.price; P.owned.push(g.id); }
-  P.look[d.k] = g.id; persist(); hub();
-};
-ACT.rest = () => {
-  const r = rest(save); persist();
-  const lines = STATS.filter(k => Math.abs(r.delta[k]) >= .1).map(k => statRow(k, save.player.stats[k], 0, r.delta[k])).join('');
-  const m = modal(`<h3>${r.weeks} weeks off</h3><p class="mute">${r.healed ? 'Body feels better. Wear is down a little.' : 'Still healing.'} Time off costs sharpness.</p><div class="stats">${lines}</div><button class="btn" data-ok>OK</button>`);
-  m.querySelector('[data-ok]').onclick = () => { closeModal(); hub(); };
-};
-ACT.weight = () => {
-  const P = save.player, opt = (to, dir) => divMoveOk(save, to) ? `<button class="opt" data-div="${to}"><b>Move ${dir} to ${DIVS[to].name}</b><span>${DIVS[to].lb}</span><small>${dir === 'up' ? 'Bigger, stronger men. His power will not carry the same (power -2, chin -1), but he is the quicker man (hand speed +1).' : 'He hits harder at this weight (power +1, chin +1), but the cut drains him (stamina -3, recovery -2).'} He starts lower in the rankings${P.belts.length ? ' and vacates his belts' : ''}.</small></button>` : '';
-  const m = modal(`<h3>Weight class</h3><p class="mute">Fighting at ${DIVS[P.div].name.toLowerCase()} (${DIVS[P.div].lb}). Each division has its own rankings and champions.</p><div class="opts">${opt(P.div + 1, 'up')}${opt(P.div - 1, 'down')}</div><button class="btn ghost" data-close>Stay here</button>`);
-  m.querySelector('[data-close]').onclick = closeModal;
-  m.querySelectorAll('[data-div]').forEach(b => b.onclick = () => {
-    const notes = changeDiv(save, +b.dataset.div); persist(); closeModal(); hub();
-    if (notes) { const r = modal(`<h3>New weight class</h3>${notes.map(n => `<p class="alert">${esc(n)}</p>`).join('')}<button class="btn" data-ok>Back to the gym</button>`); r.querySelector('[data-ok]').onclick = closeModal; }
-  });
-};
-ACT.retire = () => {
-  const m = modal(`<h3>Hang up the gloves?</h3><p class="mute">This ends the career for good. The record is final.</p><div class="row"><button class="btn ghost" data-close>Not yet</button><button class="btn danger" data-go>Retire</button></div>`);
-  m.querySelector('[data-close]').onclick = closeModal;
-  m.querySelector('[data-go]').onclick = () => { save.player.retired = true; save.pending = null; persist(); closeModal(); retiredCard(); };
-};
-function retiredCard() {
-  const P = save.player;
-  const titles = P.history.filter(h => h.title.length && h.r === 'W').length;
-  show(`<div class="screen"><div class="poster stitched col"><canvas class="portrait wide" id="pv"></canvas>
-    <span class="nick">${P.nick ? `"${esc(P.nick)}"` : ''}</span><h2>${esc(P.name)}</h2>
-    <div class="recbig">${rec(P.record)} <small>${P.record.ko} KO</small></div>
-    <p class="mute">Retired at ${Math.floor(age(save))}. Peak rank #${P.peakRank || '-'}. ${titles} title fight wins. ${money(P.earnings)} earned.</p>
-    ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}</div>
-    <button class="btn big ghost" data-act="toTitle">Back to menu</button></div>`, 'hub');
-  Render.portrait($('#pv'), P.look, { stance: P.stance, guard: P.guard, dmg: Math.min(.5, P.wear / 200) });
-}
-
-/* ---------- offers ---------- */
-let offerCache = null;
-ACT.offers = () => { offerCache = genOffers(save); renderOffers(); };
-function renderOffers(openI) {
-  const cards = offerCache.map((o, i) => {
-    const f = o.opp; const fr = o.opp.club ? 'Unranked' : '#' + (rankList(save).findIndex(e => e.id === f.id) + 1);
-    return `<div class="offer stitched ${o.title.length ? 'title-fight' : ''}">
-      <div class="ol">${esc(o.label)}${o.title.length ? ' ' + beltChips(o.title) : ''}</div>
-      <div class="om"><canvas class="portrait sm" data-look="${i}"></canvas><div>
-        <h3>${esc(f.name)}</h3>${f.nick ? `<div class="nick">"${esc(f.nick)}"</div>` : ''}
-        <div class="mute">${rec(f.record)} (${f.record.ko} KO), ${fr}, OVR ${Math.round(f.rating)}</div>
-        <div class="mute">${STYLES[f.style].label}, ${gLabel(f.guard).toLowerCase()}, ${f.stance}, age ${Math.floor(f.age)}</div></div></div>
-      <p class="read"><b>Corner:</b> ${esc(cornerRead(save, oppNow(save, o)))}</p>
-      ${tapeHtml(save, o, openI === i, i)}
-      <div class="of"><div><span class="purse">${money(o.purse)}</span><small>${o.rounds} rounds at ${esc(VENUE_NAMES[o.venue])}</small></div><button class="btn" data-act="sign" data-i="${i}">Sign</button></div>
-    </div>`;
-  }).join('');
-  show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight offers</span><span class="cash">${money(save.player.money)}</span></div>
-    <p class="mute">Your promoter came back with these. Pick one.</p>${cards || '<p>No offers right now.</p>'}</div>`, 'offers');
-  document.querySelectorAll('canvas[data-look]').forEach(c => { const o = offerCache[+c.dataset.look]; Render.portrait(c, o.opp.look, { stance: o.opp.stance, guard: o.opp.guard, dir: -1 }); });
-}
-ACT.scout = d => {
-  const camp = d.i === 'camp', offer = camp ? save.pending.offer : offerCache[+d.i];
-  if (!scoutHim(save, offer)) return;
-  persist(); const y = window.scrollY;
-  if (camp) { campOpenTape = true; save.G ? gymCamp() : campScreen(); } else renderOffers(+d.i);
-  window.scrollTo(0, y);
-};
-let campOpenTape = false;
-ACT.backHub = () => hub();
-ACT.sign = d => { campOpenTape = false; if (save.G) { bookFight(save.G, save.player, offerCache[+d.i]); persist(); hub(); return; } save.pending = { offer: offerCache[+d.i], campDone: false }; persist(); campScreen(); };
-
-/* ---------- camp ---------- */
-let plan = null;
-ACT.camp = () => campScreen();
-function campScreen() {
-  const P = save.player; const o = save.pending.offer;
-  if (!plan) plan = { gym: P.gym, focus: ['technique', 'conditioning'], intensity: 'normal', sci: false, spar: false };
-  if (GYMS[plan.gym].cost > P.money) plan.gym = 0;
-  const need = focusNeed(); while (plan.focus.length > need) plan.focus.pop();
-  const sk = plan.learn || P.style, other = P.stance === 'southpaw' ? 'orthodox' : 'southpaw';
-  const prog = P.styleFrom ? ` Still learning it: ${Math.round(P.styleFit * 100)}% (was ${STYLES[P.styleFrom].label.toLowerCase()}).` : '';
-  const styleNote = plan.learn ? `New style: ${STYLES[sk].desc} One camp gets him part of the way. Fights and more camps finish the job.` : `${STYLES[sk].label}: ${STYLES[sk].desc}${prog}${campStyles(P).length < 2 ? ' His style is locked in. Beat a legend and you can learn his.' : ''}`;
-  const cost = campCost(plan); const after = P.money - cost;
-  show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight camp</span><span class="cash">${money(P.money)}</span></div>
-    <p class="mute">Eight weeks to get ready for ${esc(o.opp.name)} (${STYLES[o.opp.style].label.toLowerCase()}, ${gLabel(o.opp.guard).toLowerCase()}, OVR ${Math.round(o.opp.rating)}).</p>
-    <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
-    <p class="read"><b>Corner:</b> ${esc(cornerRead(save, oppNow(save, o)))}</p>
-    ${tapeHtml(save, o, campOpenTape, 'camp')}
-    <h4>Gym</h4><div class="opts">${GYMS.map((g, i) => `<button class="opt ${plan.gym === i ? 'on' : ''}" data-act="pgym" data-i="${i}" ${g.cost > P.money ? 'disabled' : ''}><b>${g.name}</b><span>${g.cost ? money(g.cost) + ' per camp' : 'Free'}</span><small>${g.note}</small></button>`).join('')}</div>
-    <h4>Style and stance <span class="pts">a change uses a focus slot</span></h4>
-    ${campStyles(P).length < 2 ? '' : `<div class="chips wrap">${campStyles(P).map(k => `<button class="chip ${sk === k ? 'on' : ''}" data-act="plearn" data-v="${k}">${STYLES[k].label}${k === P.style && !plan.learn ? ' (now)' : ''}</button>`).join('')}</div>`}
-    <p class="mute small">${esc(styleNote)}</p>
-    <div class="chips"><button class="chip ${plan.stance ? 'on' : ''}" data-act="pstance">Switch to ${other}</button></div>
-    <p class="mute small">${plan.stance ? `He will be rusty fighting ${other} for a while: a little less accurate, a little easier to hit.` : `Fights ${P.stance}${P.stanceFit != null ? `, still getting used to it (${Math.round(P.stanceFit * 100)}%)` : ''}.`}</p>
-    <h4>Focus <span class="pts">pick ${need === 2 ? 'two' : need === 1 ? 'one' : 'none'}</span></h4><div class="opts two">${Object.keys(FOCUS).map(k => `<button class="opt ${plan.focus.includes(k) ? 'on' : ''}" data-act="pfocus" data-k="${k}" ${need === 0 ? 'disabled' : ''}><b>${FOCUS[k].label}</b><small>${FOCUS[k].stats.map(s => STAT_LABEL[s]).join(', ')}</small></button>`).join('')}</div>
-    <h4>Intensity</h4><div class="seg">${INTENSITY.map(i => `<button class="${plan.intensity === i.k ? 'on' : ''}" data-act="pint" data-v="${i.k}">${i.label}</button>`).join('')}</div>
-    <p class="mute small">Hard camps build more but you can get hurt before fight night.</p>
-    <h4>Extras</h4><div class="opts">${Object.keys(ADDONS).map(k => `<button class="opt ${plan[k] ? 'on' : ''}" data-act="padd" data-k="${k}" ${!plan[k] && ADDONS[k].cost > P.money - cost ? 'disabled' : ''}><b>${ADDONS[k].label}</b><span>${money(ADDONS[k].cost)}</span><small>${ADDONS[k].desc}</small></button>`).join('')}</div>
-    <div class="sumbar"><span>Camp cost <b>${money(cost)}</b></span><span>Left after <b class="${after < 0 ? 'neg' : ''}">${money(after)}</b></span></div>
-    <button class="btn big" data-act="runCamp" ${after < 0 || plan.focus.length !== need ? 'disabled' : ''}>Start camp</button></div>`, 'camp');
-}
-ACT.pgym = d => { plan.gym = +d.i; campScreen(); };
-ACT.pfocus = d => { const i = plan.focus.indexOf(d.k); if (i >= 0) plan.focus.splice(i, 1); else { plan.focus.push(d.k); if (plan.focus.length > focusNeed()) plan.focus.shift(); } campScreen(); };
-function focusNeed() { return 2 - (plan.learn ? 1 : 0) - (plan.stance ? 1 : 0); }
-ACT.plearn = d => { plan.learn = d.v === save.player.style ? null : d.v; campScreen(); };
-ACT.pstance = () => { plan.stance = !plan.stance; campScreen(); };
-ACT.pint = d => { plan.intensity = d.v; campScreen(); };
-ACT.padd = d => { plan[d.k] = !plan[d.k]; campScreen(); };
-ACT.runCamp = () => {
-  const P = save.player; P.gym = plan.gym;
-  const r = runCamp(save, plan);
-  plan.learn = null; plan.stance = false;
-  if (r.injury) save.pending = null; else save.pending.campDone = true;
-  persist();
-  const lines = STATS.filter(k => Math.abs(r.delta[k]) >= .1).sort((a, b) => r.delta[b] - r.delta[a]).map(k => statRow(k, P.stats[k], P.pot[k], r.delta[k])).join('');
-  const m = modal(`<h3>${r.injury ? 'Camp ended early' : 'Camp report'}</h3>${r.notes.map(n => `<p class="alert">${esc(n)}</p>`).join('')}<div class="stats">${lines}</div>
-    <button class="btn ${r.injury ? '' : 'hot'}" data-ok>${r.injury ? 'Back to the gym' : 'Fight night'}</button>`);
-  m.querySelector('[data-ok]').onclick = () => { closeModal(); if (r.injury) hub(); else startFight(); };
-};
-ACT.fightNight = () => startFight();
-
-/* ===== LAST BELL : ui gym ===== */
-let gymG = null;
-const yearWk = w => `Year ${Math.floor(w / 52) + 1}, week ${w % 52 + 1}`;
-const potGrade = pot => { const a = STATS.reduce((s, k) => s + pot[k], 0) / STATS.length; return a >= 88 ? 'A' : a >= 83 ? 'B+' : a >= 78 ? 'B' : a >= 73 ? 'C+' : 'C'; };
-function fStatus(G, P) {
-  if (P.injury) return `Injured: ${P.injury.name.toLowerCase()}, ${P.injury.weeks} wk`;
-  if (P.booked) { const n = P.fightWk - G.week; return n <= 0 ? `Fight night vs ${P.booked.offer.opp.name}` : `Fights ${P.booked.offer.opp.name} in ${n} wk`; }
-  if (P.busy > 0) return `Resting after the fight, ${P.busy} wk`;
-  if (P.plan.rest) return 'Resting. No fight booked';
-  return 'Training ' + P.plan.focus.map(k => FOCUS[k].label.toLowerCase()).join(' + ') + '. No fight booked';
-}
-
-/* ---------- open a gym ---------- */
-function gymCreate(slot) {
-  show(`<div class="screen"><div class="topbar"><button class="link" data-act="toTitle">Back</button><span class="tb-title">Open a gym</span><span></span></div>
-    <p class="mute">You are a new coach. You scraped together enough to rent a garage and hang some bags. Nobody knows your name yet.</p>
-    <label>Gym name<input id="gname" maxlength="28" placeholder="Last Bell Boxing"></label>
-    <label style="margin-top:10px">Town<input id="gtown" maxlength="28" placeholder="Treasure Island, SF"></label>
-    <p class="mute small">Three kids walked in the first week. Sign one or all of them, and more will come as your name grows.</p>
-    <button class="btn big" data-act="gOpenGym" data-i="${slot}">Open the doors</button></div>`, 'create');
-}
-ACT.gOpenGym = d => {
-  const name = ($('#gname').value || '').trim() || 'Last Bell Boxing', town = ($('#gtown').value || '').trim() || 'Treasure Island, SF';
-  cur = +d.i; gymG = bindGym(newGym({ name, town })); save = null; persist(); gymHub();
-};
-
-/* ---------- the gym ---------- */
-ACT.gymHub = () => { plan = null; gymHub(); };
-function gymHub() {
-  const G = gymG; save = null; const L = GYM_LV[G.gym.level], due = fightsDue(G), act = G.fighters.filter(m => !m.retired), full = act.length >= L.cap;
-  const fcards = act.map(P => `<button class="gf stitched" data-act="gOpen" data-id="${P.id}"><canvas class="portrait sm" data-gl="${P.id}"></canvas><span class="gfi"><b>${P.nick ? `"${esc(P.nick)}" ` : ''}${esc(P.name)}</b><span class="mute">${rec(P.record)} · OVR ${ovr(P.stats)} · ${DIVS[P.div].name} #${playerRank(fv(G, P))}</span>${P.belts.length ? `<span class="chips">${beltChips(P.belts)}</span>` : ''}<span class="gst ${P.booked && P.fightWk <= G.week ? 'hot' : ''}">${esc(fStatus(G, P))}</span></span></button>`).join('');
-  const wcards = G.walkins.map((w, i) => `<div class="wk stitched"><div class="gtop"><b>${esc(w.name)}</b><span class="mute">${WALKIN[w.kind].label}</span></div>
-    <p class="small">Age ${Math.floor(w.age)}, ${DIVS[w.div].name.toLowerCase()}, ${w.kind === 'raw' ? 'never had a fight' : `${rec(w.record)}, ${STYLES[w.style].label.toLowerCase()}`}. ${w.kind === 'raw' ? 'Ceiling ' + potGrade(w.pot) : 'OVR ' + ovr(w.stats)}.</p>
-    <div class="of"><span>${w.fee ? money(w.fee) + ' to sign' : 'Free'}</span><button class="btn sm" data-act="gWalk" data-i="${i}">Talk to him</button></div></div>`).join('');
-  const next = due.length ? `<button class="btn big hot" data-act="gFight" data-id="${due[0].id}">Fight night: ${esc(due[0].name)} vs ${esc(due[0].booked.offer.opp.name)}</button>` : `<button class="btn big" data-act="gWeek">Next week</button>`;
-  const up = GYM_LV[G.gym.level + 1];
-  const log = G.log.filter(l => l.notes.length).slice(0, 4).map(l => l.notes.map(n => `<p class="small"><span class="mute">Week ${l.wk % 52 + 1}:</span> ${esc(n)}</p>`).join('')).join('');
-  show(`<div class="screen">
-    <div class="topbar"><button class="link" data-act="quit">Save &amp; exit</button><span class="tb-title">${yearWk(G.week)}</span><span class="cash">${money(G.gym.money)}</span></div>
-    <div class="gymhead stitched"><h2>${esc(G.gym.name)}</h2><div class="mute">${esc(G.gym.town)} · ${GYMS[G.gym.level].name}</div>
-      <div class="wear"><span>${esc(repLabel(G.gym.rep))}</span><span class="bar"><i style="width:${G.gym.rep}%"></i></span><span class="sv">${Math.round(G.gym.rep)}</span></div></div>
-    ${next}
-    <h4>Your fighters <span class="pts">${act.length}/${L.cap}</span></h4>${fcards || '<p class="mute">Nobody yet. Talk to the walk-ins.</p>'}
-    <h4>Walk-ins <span class="pts">${full ? 'gym is full' : 'new faces every 4 weeks'}</span></h4>${wcards || '<p class="mute">Nobody at the door right now.</p>'}
-    ${log ? `<h4>Around the gym</h4>${log}` : ''}
-    <h4>The gym</h4><p class="mute small">Members' dues bring in ${money(100 + Math.round(G.gym.rep * 20))} a week${L.upkeep ? `, rent and staff cost ${money(L.upkeep)}` : ''}. You take ${Math.round(GYM_CUT * 100)}% of every purse.</p>
-    ${up ? `<button class="btn ghost" data-act="gUp" ${G.gym.money < up.cost ? 'disabled' : ''}>Move up to a ${GYMS[G.gym.level + 1].name.toLowerCase()}: ${money(up.cost)}</button><p class="mute tiny">${GYMS[G.gym.level + 1].note} Better training, room for ${up.cap} fighters, ${money(up.upkeep)} a week to run.</p>` : ''}
-  </div>`, 'hub');
-  document.querySelectorAll('canvas[data-gl]').forEach(c => { const P = G.fighters.find(m => m.id === c.dataset.gl); Render.portrait(c, P.look, { stance: P.stance, guard: P.guard, dmg: Math.min(.5, P.wear / 200) }); });
-}
-ACT.gWeek = () => {
-  const notes = gymWeek(gymG); persist(); gymHub();
-  if (notes && notes.length) { const m = modal(`<h3>${yearWk(gymG.week)}</h3>${notes.map(n => `<p class="alert ${/Fight week/.test(n) ? 'gold' : ''}">${esc(n)}</p>`).join('')}<button class="btn" data-ok>OK</button>`); m.querySelector('[data-ok]').onclick = closeModal; }
-};
-ACT.gUp = () => { const G = gymG, up = GYM_LV[G.gym.level + 1]; if (!up || G.gym.money < up.cost) return; G.gym.money -= up.cost; G.gym.level++; bindGym(G); persist(); gymHub(); };
-ACT.gOpen = d => { save = fv(gymG, gymG.fighters.find(m => m.id === d.id)); hub('fighter'); };
-ACT.gFight = d => { const P = gymG.fighters.find(m => m.id === d.id); save = fv(gymG, P); plan = null; startFight(); };
-
-/* ---------- a walk-in: raw kids get shaped (weight, style, stance, guard), the others come as they are ---------- */
-let wSel = null;
-ACT.gWalk = d => { const w = gymG.walkins[+d.i]; wSel = { i: +d.i, div: w.div, style: w.style, stance: w.stance, guard: w.guard }; walkScreen(); };
-function walkScreen() {
-  const G = gymG, w = G.walkins[wSel.i], raw = w.kind === 'raw', full = G.fighters.filter(m => !m.retired).length >= gymCap(G);
-  const chips = (key, list, lab) => `<div class="chips wrap">${list.map(k => `<button class="chip ${String(wSel[key]) === String(k) ? 'on' : ''}" data-act="wSet" data-k="${key}" data-v="${k}">${esc(lab(k))}</button>`).join('')}</div>`;
-  const st = raw ? wSel.style : w.style;
-  show(`<div class="screen"><div class="topbar"><button class="link" data-act="gymHub">Back</button><span class="tb-title">${WALKIN[w.kind].label}</span><span class="cash">${money(G.gym.money)}</span></div>
-    <div class="poster stitched"><canvas class="portrait" id="pv"></canvas><div class="pinfo"><h2>${esc(w.name)}</h2>
-      <div class="recbig">${raw ? 'No fights' : rec(w.record) + ` <small>${w.record.ko} KO</small>`}</div>
-      <div class="mute">Age ${Math.floor(w.age)}${raw ? '' : `, ${STYLES[w.style].label.toLowerCase()}, ${w.stance}, ${gLabel(w.guard).toLowerCase()}`}</div>
-      <div class="mute">${raw ? 'Ceiling ' + potGrade(w.pot) : 'OVR ' + ovr(w.stats)}</div></div></div>
-    <p class="mute">${WALKIN[w.kind].note}</p>
-    ${raw ? `<h4>Weight class</h4>${chips('div', DIVS.map((_, i) => i), i => DIVS[i].name)}
-      <h4>Style</h4>${chips('style', BASE_STYLES, k => STYLES[k].label)}<p class="mute small">${esc(STYLES[st].desc)}</p>
-      <h4>Stance</h4>${chips('stance', ['orthodox', 'southpaw'], k => k)}
-      <h4>Guard</h4>${chips('guard', Object.keys(GUARDS), k => GUARDS[k].label)}<p class="mute small">${esc(GUARDS[wSel.guard].desc)}</p>` : ''}
-    <h4>${raw ? 'Where he starts' : 'What he brings'}</h4><div class="stats">${STATS.map(k => statRow(k, w.stats[k], raw ? w.pot[k] : 0)).join('')}</div>
-    ${raw ? '<p class="mute tiny">The faint tick is how far he can go if you build it.</p>' : ''}
-    <button class="btn big" data-act="wSign" ${full || G.gym.money < w.fee ? 'disabled' : ''}>${full ? 'Your gym is full' : w.fee ? 'Sign him for ' + money(w.fee) : 'Sign him'}</button></div>`, 'hub');
-  Render.portrait($('#pv'), w.look, { stance: raw ? wSel.stance : w.stance, guard: raw ? wSel.guard : w.guard });
-}
-ACT.wSet = d => { wSel[d.k] = d.k === 'div' ? +d.v : d.v; walkScreen(); };
-ACT.wSign = () => {
-  const G = gymG, w = G.walkins[wSel.i]; if (w.kind === 'raw') w.look.build = DIVS[wSel.div].build * rnd(.96, 1.04);
-  const P = signWalkin(G, w, wSel); if (!P) return; persist(); save = fv(G, P); hub('fighter');
-};
-
-/* ---------- weekly training plan ---------- */
-ACT.gPlan = () => planScreen();
-function planScreen() {
-  const P = save.player, pl = P.plan, G = gymG;
-  show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Training plan</span><span class="cash">${money(G.gym.money)}</span></div>
-    <p class="mute">What ${esc(P.name.split(' ')[0])} works on every week until you change it. Young fighters learn fastest. Anything he doesn't work on slowly gets rusty.</p>
-    <div class="chips"><button class="chip ${pl.rest ? 'on' : ''}" data-act="plRest">Rest weeks</button></div>
-    <h4>Focus <span class="pts">pick two</span></h4><div class="opts two">${Object.keys(FOCUS).map(k => `<button class="opt ${!pl.rest && pl.focus.includes(k) ? 'on' : ''}" data-act="plFocus" data-k="${k}" ${pl.rest ? 'disabled' : ''}><b>${FOCUS[k].label}</b><small>${FOCUS[k].stats.map(s => STAT_LABEL[s]).join(', ')}</small></button>`).join('')}</div>
-    <h4>Intensity</h4><div class="seg">${INTENSITY.map(i => `<button class="${pl.intensity === i.k ? 'on' : ''}" data-act="plInt" data-v="${i.k}">${i.label}</button>`).join('')}</div>
-    <p class="mute small">Hard weeks build more, but he can get hurt in the gym. Rest weeks heal wear and lose a little sharpness.</p>
-    <button class="btn big" data-act="backHub">Done</button></div>`, 'camp');
-}
-ACT.plRest = () => { save.player.plan.rest = !save.player.plan.rest; persist(); planScreen(); };
-ACT.plFocus = d => { const f = save.player.plan.focus, i = f.indexOf(d.k); if (i >= 0) { if (f.length > 1) f.splice(i, 1); } else { f.push(d.k); if (f.length > 2) f.shift(); } persist(); planScreen(); };
-ACT.plInt = d => { save.player.plan.intensity = d.v; persist(); planScreen(); };
-
-/* ---------- the booked fight: what we know about him ---------- */
-ACT.gCamp = () => gymCamp();
-function gymCamp() {
-  const P = save.player, o = P.booked.offer, n = P.fightWk - gymG.week;
-  show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">${n > 0 ? n + ' weeks out' : 'Fight week'}</span><span class="cash">${money(gymG.gym.money)}</span></div>
-    <p class="mute">${esc(TIERS[o.tier].label)}, ${o.rounds} rounds at ${esc(VENUE_NAMES[o.venue])}${o.title.length ? ' for ' + o.title.join(', ') : ''}. Purse ${money(o.purse)}.</p>
-    <h3>${esc(o.opp.name)}</h3><p class="mute">${STYLES[o.opp.style].label}, ${gLabel(o.opp.guard).toLowerCase()}, ${o.opp.stance}, OVR ${Math.round(o.opp.rating)}</p>
-    <p class="alert gold small"><b>Scouting:</b> ${GUARD_SCOUT[o.opp.guard] || GUARD_SCOUT.standard}</p>
-    <p class="read"><b>Corner:</b> ${esc(cornerRead(save, oppNow(save, o)))}</p>
-    ${tapeHtml(save, o, campOpenTape, 'camp')}
-    <p class="mute small">Until fight night he trains on his weekly plan: ${P.plan.rest ? 'resting' : P.plan.focus.map(k => FOCUS[k].label.toLowerCase()).join(' + ')}.</p>
-    <div class="row"><button class="btn ghost" data-act="gPlan">Training plan</button><button class="btn ghost" data-act="gPull">Pull out of the fight</button></div></div>`, 'camp');
-}
-ACT.gPull = () => { const P = save.player; P.booked = null; P.fightWk = null; persist(); hub(); };
 
 /* ===== LAST BELL : ui part 3 (fight) ===== */
 const CROWD_BASE = { gym: .12, hall: .35, civic: .5, coliseum: .62, vegas: .72 };
@@ -4096,36 +3484,6 @@ let F = null, FX = null, rafId = 0;
 // how different two colors look (weighted RGB distance, ~0..255)
 const CLASH = 70;
 function colorDist(a, b) { const p = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }; const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b), rm = (r1 + r2) / 2; return Math.sqrt((2 + rm / 256) * (r1 - r2) ** 2 + 4 * (g1 - g2) ** 2 + (2 + (255 - rm) / 256) * (b1 - b2) ** 2) / 3; }
-function startFight() {
-  const o = save.pending.offer; const A = playerSheet(save), B = oppSheet(save, o);
-  F = new Fight(A, B, { rounds: o.rounds, cutmanA: GYMS[save.player.gym].cut, cutmanB: .45 });
-  FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null };
-  // the two corners have to be told apart at a glance: trunks and gloves that look alike get swapped on the other man
-  const ta = gearItem('trunks', A.look.trunks).c;
-  if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
-  const ga = gearItem('gloves', A.look.gloves).c;
-  if (colorDist(ga, gearItem('gloves', B.look.gloves).c) < CLASH) { const alt = GEAR.gloves.filter(g => colorDist(g.c, ga) >= CLASH); if (alt.length) B.look = Object.assign({}, B.look, { gloves: pick(alt).id }); }
-  FX.looks = [A.look, B.look]; // the swaps have to reach the renderer
-  Render.reset(); Comm.reset();
-  const nm = s => esc(s.name.split(' ').slice(-1)[0]);
-  show(`<div class="fight">
-    <div class="hud">
-      <div class="hf l"><div class="hn">${nm(A)}</div><div class="hb"><i class="max" id="hm0"></i><i class="cur" id="hh0"></i></div><div class="sb"><i class="bd" id="hbd0"></i><i class="st" id="hs0"></i></div></div>
-      <div class="clock"><span id="rd">R1</span><b id="ck">3:00</b></div>
-      <div class="hf r"><div class="hn">${nm(B)}</div><div class="hb"><i class="max" id="hm1"></i><i class="cur" id="hh1"></i></div><div class="sb"><i class="bd" id="hbd1"></i><i class="st" id="hs1"></i></div></div>
-    </div>
-    <div class="stage"><canvas id="cv"></canvas><div class="ov" id="ov"></div><div class="pop" id="pop"></div><div class="yell" id="yell"></div></div>
-    <div class="feed" id="feed" aria-live="polite"></div>
-    <div class="shouts off" id="shouts" aria-label="Yell from the corner">${Object.keys(SHOUTS).map(k => `<button data-act="shout" data-v="${k}">${SHOUT_BTN[k]}<i></i></button>`).join('')}</div>
-    <div class="cornerbox" id="cbox"></div>
-    <div class="ctrl"><div class="seg small">${[1, 2, 4].map(s => `<button class="${FX.speed === s ? 'on' : ''}" data-act="speed" data-v="${s}">${s}x</button>`).join('')}</div><div class="row">${soundBtns()}</div></div>
-  </div>`, 'fightmode');
-  Render.init($('#cv'));
-  Sfx.init(); Comm.initVoices(); Sfx.crowd(CROWD_BASE[FX.venue], 1);
-  overlay(`<div class="intro"><span>${esc(TIERS[o.tier].label)}${o.title.length ? ' ' + beltChips(o.title) : ''}</span><b>${esc(A.name)}</b><em>vs</em><b>${esc(B.name)}</b><span>${o.rounds} rounds, ${esc(VENUE_NAMES[o.venue])}</span></div>`, 2300);
-  cancelAnimationFrame(rafId); rafId = requestAnimationFrame(loop);
-}
-window.addEventListener('resize', () => Render.resize());
 ACT.speed = (d, b) => { FX.speed = +d.v; b.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
 let ovTimer = 0;
 function overlay(html, ms) { const o = $('#ov'); if (!o) return; o.innerHTML = html; o.classList.add('show'); clearTimeout(ovTimer); if (ms) ovTimer = setTimeout(() => o.classList.remove('show'), ms); }
@@ -4422,7 +3780,7 @@ function talkWords(txt) {
 }
 function talkPrompt(txt) {
   const me = F.f[0], op = F.f[1], rl = F.roundLog[F.roundLog.length - 1] || { a: {}, b: {} }, a = rl.a, b = rl.b;
-  const S = X => STYLES[X.sheet.style] || STYLES[X.sk] || {}, r = save.player.record;
+  const S = X => STYLES[X.sheet.style] || STYLES[X.sk] || {}, r = me.sheet.record || { w: 0, l: 0, d: 0 };
   const ld = X => (X.landedJab || 0) + (X.landedPow || 0) + (X.landedBody || 0);
   const cond = [];
   if (me.head < me.headMax * .4 || me.headMax < 45) cond.push('you are hurt');
@@ -4534,37 +3892,104 @@ ACT.nextRound = () => {
   } else if (FX.strat !== 'auto') feed('Corner plan: ' + STRATS[FX.strat].label.toLowerCase() + '.');
 };
 
-/* ---------- results ---------- */
+/* ---------- the fight: straight in, random or picked fighters ---------- */
+const LAB = { div: 'r', a: 'r', b: 'r', ga: 'auto', gb: 'auto', rounds: 6, last: null, open: false };
+const LAB_STYLE_KEYS = Object.keys(STYLES);
+function labPickOpts(sel) {
+  return `<option value="r"${sel === 'r' ? ' selected' : ''}>Random</option>
+    <optgroup label="Pound for pound">${P4P_2026.map((s, i) => `<option value="s${i}"${sel === 's' + i ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</optgroup>
+    <optgroup label="Style">${LAB_STYLE_KEYS.map(k => `<option value="y${k}"${sel === 'y' + k ? ' selected' : ''}>${esc(STYLES[k].label)}</option>`).join('')}</optgroup>`;
+}
+function labGuardOpts(sel) { return `<option value="auto">Guard: fits style</option>` + Object.keys(GUARDS).map(k => `<option value="${k}"${sel === k ? ' selected' : ''}>${esc(GUARDS[k].label)}</option>`).join(''); }
+function labMake(pickV, guardV, div) {
+  let f;
+  if (pickV[0] === 's') f = genStar(+pickV.slice(1));
+  else {
+    const rating = Math.round(rnd(72, 91));
+    f = genFighter(div, rating, 100, ri(21, 34));
+    const pool = BASE_STYLES.concat(LAB_STYLE_KEYS.filter(k => STYLES[k].special && R() < .5));
+    const st = pickV[0] === 'y' ? pickV.slice(1) : pick(pool);
+    f.style = st; f.guard = rollGuard(st); f.stats = genStats(rating, st);
+  }
+  if (guardV !== 'auto') f.guard = guardV;
+  f.look = randLook(div);
+  return f;
+}
+function labSheet(f) { return { name: f.name, nick: f.nick, style: f.style, guard: f.guard, stance: f.stance, stats: f.stats, look: f.look, wear: 0, record: f.record || { w: 0, l: 0, d: 0 }, exp: f.record ? f.record.w + f.record.l + f.record.d : 0 }; }
+function labDesc(f) { return `${esc(STYLES[f.style].label)}, ${esc(gLabel(f.guard).toLowerCase())}, ${f.stance}, OVR ${Math.round(f.rating)}`; }
+function labNew(rematch) {
+  if (!rematch || !LAB.last) {
+    const starDiv = v => v[0] === 's' ? P4P_2026[+v.slice(1)].div : null;
+    const div = LAB.div !== 'r' ? +LAB.div : starDiv(LAB.a) ?? starDiv(LAB.b) ?? ri(0, DIVS.length - 1);
+    LAB.last = { A: labMake(LAB.a, LAB.ga, div), B: labMake(LAB.b, LAB.gb, div), div, venue: pick(Object.keys(VENUE_NAMES)) };
+  }
+  labFight(LAB.last);
+}
+function labFight(L) {
+  if (rafId) cancelAnimationFrame(rafId);
+  Comm.stop && Comm.stop();
+  const A = labSheet(L.A), B = labSheet(L.B), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
+  F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6 });
+  FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null };
+  const ta = gearItem('trunks', A.look.trunks).c;
+  if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
+  const ga = gearItem('gloves', A.look.gloves).c;
+  if (colorDist(ga, gearItem('gloves', B.look.gloves).c) < CLASH) { const alt = GEAR.gloves.filter(g => colorDist(g.c, ga) >= CLASH); if (alt.length) B.look = Object.assign({}, B.look, { gloves: pick(alt).id }); }
+  FX.looks = [A.look, B.look];
+  Render.reset(); Comm.reset();
+  const nm = s => esc(s.name.split(' ').slice(-1)[0]);
+  show(`<div class="fight">
+    ${labBar(L)}
+    <div class="hud">
+      <div class="hf l"><div class="hn">${nm(A)}</div><div class="hb"><i class="max" id="hm0"></i><i class="cur" id="hh0"></i></div><div class="sb"><i class="bd" id="hbd0"></i><i class="st" id="hs0"></i></div></div>
+      <div class="clock"><span id="rd">R1</span><b id="ck">3:00</b></div>
+      <div class="hf r"><div class="hn">${nm(B)}</div><div class="hb"><i class="max" id="hm1"></i><i class="cur" id="hh1"></i></div><div class="sb"><i class="bd" id="hbd1"></i><i class="st" id="hs1"></i></div></div>
+    </div>
+    <div class="stage"><canvas id="cv"></canvas><div class="ov" id="ov"></div><div class="pop" id="pop"></div><div class="yell" id="yell"></div></div>
+    <div class="feed" id="feed" aria-live="polite"></div>
+    <div class="shouts off" id="shouts" aria-label="Yell from the corner">${Object.keys(SHOUTS).map(k => `<button data-act="shout" data-v="${k}">${SHOUT_BTN[k]}<i></i></button>`).join('')}</div>
+    <div class="cornerbox" id="cbox"></div>
+    <div class="ctrl"><div class="seg small">${[1, 2, 4].map(s => `<button class="${FX.speed === s ? 'on' : ''}" data-act="speed" data-v="${s}">${s}x</button>`).join('')}</div><div class="row">${soundBtns()}</div></div>
+  </div>`, 'fightmode');
+  Render.init($('#cv'));
+  Sfx.init(); Comm.initVoices(); Sfx.crowd(CROWD_BASE[FX.venue], 1);
+  overlay(`<div class="intro"><span>${esc(DIVS[L.div].name)}</span><b>${esc(A.name)}</b><em>vs</em><b>${esc(B.name)}</b><span>${o.rounds} rounds, ${esc(VENUE_NAMES[o.venue])}</span></div>`, 2300);
+  rafId = requestAnimationFrame(loop);
+}
+function labBar(L) {
+  return `<div class="lab">
+    <div class="labrow"><button class="btn" data-act="labNew">🎲 New fight</button><button class="btn ghost" data-act="labRe">Rematch</button><button class="btn ghost" data-act="labSet">${LAB.open ? 'Hide' : 'Pick'}</button></div>
+    <div class="labwho"><span class="labA">${esc(L.A.name)}</span> ${labDesc(L.A)}<br><span class="labB">${esc(L.B.name)}</span> ${labDesc(L.B)}</div>
+    <div class="labset"${LAB.open ? '' : ' hidden'}>
+      <div class="labf"><b>Weight</b><select onchange="LAB.div=this.value"><option value="r">Random</option>${DIVS.map((d, i) => `<option value="${i}"${LAB.div === '' + i ? ' selected' : ''}>${esc(d.name)}</option>`).join('')}</select></div>
+      <div class="labf"><b>Rounds</b><select onchange="LAB.rounds=+this.value">${[4, 6, 8, 10, 12].map(n => `<option${LAB.rounds === n ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="labf"><b>Left</b><select onchange="LAB.a=this.value">${labPickOpts(LAB.a)}</select><select onchange="LAB.ga=this.value">${labGuardOpts(LAB.ga)}</select></div>
+      <div class="labf"><b>Right</b><select onchange="LAB.b=this.value">${labPickOpts(LAB.b)}</select><select onchange="LAB.gb=this.value">${labGuardOpts(LAB.gb)}</select></div>
+      <p class="mute small">Pick, then New fight. Random keeps rolling new men; a P4P star brings his own weight class.</p>
+    </div></div>`;
+}
+ACT.labNew = () => labNew(false);
+ACT.labRe = () => labNew(true);
+ACT.labSet = (d, b) => { LAB.open = !LAB.open; const s = document.querySelector('.labset'); if (s) s.hidden = !LAB.open; b.textContent = LAB.open ? 'Hide' : 'Pick'; };
+// the result: who won and how, the punch stats, then go again
 function resultScreen() {
-  if (!F || !save.pending) return;
+  if (!F || !F.result) return;
   Comm.stop();
-  const res = F.result; const o = save.pending.offer;
-  const out = applyResult(save, o, F); if (save.G) gymAfterFight(save.G, save.player, o, F, out); persist();
-  const A = F.f[0], B = F.f[1]; const win = res.winner === 0, draw = res.winner == null;
-  const verdict = draw ? 'Draw' : win ? 'Win' : 'Loss';
+  const res = F.result, A = F.f[0], B = F.f[1], L = LAB.last;
   const mName = { UD: 'Unanimous decision', SD: 'Split decision', MD: 'Majority decision' }[res.method] || res.method;
   const how = res.decision ? mName : `${mName}, round ${res.round} at ${res.time}`;
-  const cards = res.cards.map((c, i) => `<div><span>Judge ${i + 1}</span><b>${c[0]}-${c[1]}</b></div>`).join('');
+  const who = res.winner == null ? 'Draw' : esc([L.A, L.B][res.winner].name) + ' wins';
   const row = (l, k) => `<div class="pr"><b>${A.tot.landed[k]}/${A.tot.thrown[k]}</b><span>${l}</span><b>${B.tot.landed[k]}/${B.tot.thrown[k]}</b></div>`;
-  const tl = X => X.tot.landed.jab + X.tot.landed.power + X.tot.landed.body, tt = X => X.tot.thrown.jab + X.tot.thrown.power + X.tot.thrown.body;
-  const rankMove = out.rankBefore - out.rankAfter;
-  Sfx.crowd(0, 1.5);
-  show(`<div class="screen">
-    <div class="verdict ${verdict.toLowerCase()}"><h1>${verdict}</h1><p>${esc(how)}</p><p class="mute">vs ${esc(B.sheet.name)} at ${esc(VENUE_NAMES[o.venue])}</p></div>
-    ${out.notes.map(n => `<p class="alert ${/champion/.test(n) ? 'gold' : ''}">${esc(n)}</p>`).join('')}
-    <div class="sumgrid"><div><small>Purse</small><b>${money(o.purse)}</b></div><div><small>Rank</small><b>#${out.rankAfter}</b><small class="${rankMove > 0 ? 'up' : rankMove < 0 ? 'down' : ''}">${rankMove > 0 ? '▲ ' + rankMove : rankMove < 0 ? '▼ ' + (-rankMove) : 'No change'}</small></div><div><small>Record</small><b>${rec(save.player.record)}</b></div></div>
-    ${res.cards.some(c => c[0] + c[1] > 0) ? `<h4>Scorecards${res.decision ? '' : ' at the stoppage'}</h4><div class="cards">${cards}</div>` : ''}
-    <h4>Punch stats</h4><div class="pstats"><div class="pr head"><b>${esc(A.sheet.name.split(' ').slice(-1)[0])}</b><span></span><b>${esc(B.sheet.name.split(' ').slice(-1)[0])}</b></div>
-      <div class="pr"><b>${tl(A)}/${tt(A)}</b><span>Total</span><b>${tl(B)}/${tt(B)}</b></div>${row('Jabs', 'jab')}${row('Power', 'power')}${row('Body', 'body')}
-      <div class="pr"><b>${A.kd}</b><span>Knocked down</span><b>${B.kd}</b></div></div>
-    <p class="mute small">Damage absorbed this fight: ${Math.round(out.taken)}. Career damage now ${Math.round(save.player.wear)}.</p>
-    <button class="btn big" data-act="afterFight">Continue</button></div>`, 'result');
-  F = null;
+  const keys = Object.keys(A.tot.landed);
+  show(`<div class="screen">${labBar(L)}<h2>${who}</h2><p class="mute">${esc(how)}</p>
+    <div class="cards">${res.cards.map((c, i) => `<div><span>Judge ${i + 1}</span><b>${c[0]}-${c[1]}</b></div>`).join('')}</div>
+    <div class="pstats">${keys.map(k => row(k[0].toUpperCase() + k.slice(1), k)).join('')}</div></div>`, '');
 }
-ACT.afterFight = () => { plan = null; if (gymG) gymHub(); else hub('fighter'); };
-
-/* ---------- boot ---------- */
-titleScreen();
-Store.connect();
+const labCss = document.createElement('style');
+labCss.textContent = `.lab{margin:0 0 6px}.labrow{display:flex;gap:6px}.labrow .btn{flex:1;padding:8px 6px;font-size:15px}
+.labwho{font-size:12.5px;line-height:1.35;color:var(--mute,#999);margin:6px 2px}.labA,.labB{color:var(--ink,#2a2018);font-weight:700}
+.labset[hidden]{display:none}.labset{display:grid;gap:6px;margin:6px 0;font-size:13px}.labf{display:flex;gap:6px;align-items:center}.labf b{width:56px;flex:none;text-align:left}.labf select{flex:1;min-width:0;font:inherit;padding:6px;border-radius:8px;background:#fffaf2;color:#2a2018;border:1px solid #c9bba5}`;
+document.head.appendChild(labCss);
+labNew(false);
 
 </script></body></html>
