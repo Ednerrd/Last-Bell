@@ -87,7 +87,7 @@ export function makeMen(THREE, scene) {
     g: { lead: null, rear: null }, punch: null, from: null, res: null,
     f: null, D: null, t: i * 31.7, ph: i * 2.1, busy: 1, act: 1, hold: 0, nextHold: 3, feint: null,
     sp: null, ft: null, step: null,
-    yaw: S1(), hip: S1(), w: S1(0.45), fold: S1(), off: S3(), chest: S3(), headK: S3(), pend: [],
+    yaw: S1(), hip: S1(), w: S1(0.45), fold: S1(), off: S3(), chest: S3(), headK: S3(), gk: S3(), pend: [],
     probe: null, // drawn hip / head / feet, for the headless checks
   }));
 
@@ -133,6 +133,8 @@ export function makeMen(THREE, scene) {
   function onContact(e) {
     const P = men[e.corner];
     if (P.punch && P.punch.kind === e.kind) P.res = e.result;
+    // A block: his gloves take it and get knocked back toward his face, then spring home.
+    if (e.result === 'block') { const D = men[1 - e.corner]; D.gk.v[0] -= (HIT_AMP[e.q] || 0.075) * 14 + 0.6; }
     if (e.result !== 'land') return;
     const R = men[1 - e.corner], amp = HIT_AMP[e.q] || 0.05;
     // Direction in HIS local frame (real sides; update() mirrors z for southpaws).
@@ -341,6 +343,7 @@ export function makeMen(THREE, scene) {
       }
       const chest = spring3(R.chest, [0, 0, 0], 14, 0.75, dt);
       const hk = spring3(R.headK, [0, 0, 0], 18, 0.55, dt);
+      const gk = spring3(R.gk, [0, 0, 0], 24, 0.5, dt);           // block recoil on the gloves
       // ch/hd: the same pushes in his mirrored local frame (chest/headK hold real sides).
       const ch = [chest[0], chest[1], chest[2] * side], hd = [hk[0], hk[1], hk[2] * side];
 
@@ -385,6 +388,7 @@ export function makeMen(THREE, scene) {
         const sway = [0.012 * ns * noise(R.t * 0.7, sd), 0.012 * ns * noise(R.t * 0.6, sd + 1), 0.006 * ns * noise(R.t * 0.5, sd + 2)];
         let want = add(base, [offT[0] * 0.8 + sway[0] + (h === 'lead' ? feintX : 0) + lean * 0.1 + ch[0] * 0.6, offT[1] * 0.8 - crouch + sway[1], offT[2] * 0.8 + sway[2]]);
         want[1] -= fold * 0.4;
+        want[0] += gk[0];
         if (hand === h && tgt) {
           const S = sh[h];
           // The glove stops on the surface (head or ribs); a block stops it on his gloves; out of reach

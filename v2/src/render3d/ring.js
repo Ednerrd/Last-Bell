@@ -78,6 +78,20 @@ export function buildRing(THREE, scene) {
   });
   ropes.castShadow = true;
   scene.add(ropes);
+  // The fight cam rides just outside one side: that side's ropes step out of the shot (games do
+  // this; a rope slicing a phone screen reads worse than a missing one). side: { axis, sign } or null.
+  const keep = Array.from({ length: 16 }, (_, i) => { const mm = new THREE.Matrix4(); ropes.getMatrixAt(i, mm); return mm; });
+  const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+  let hidden = '';
+  function hideSide(side) {
+    const key = side ? side.axis + side.sign : '';
+    if (key === hidden) return;
+    hidden = key;
+    // Instance order per level: z = -r, z = +r, x = -r, x = +r.
+    const j = !side ? -1 : side.axis === 'z' ? (side.sign < 0 ? 0 : 1) : (side.sign < 0 ? 2 : 3);
+    for (let i = 0; i < 16; i++) ropes.setMatrixAt(i, i % 4 === j ? zero : keep[i]);
+    ropes.instanceMatrix.needsUpdate = true;
+  }
 
   // Arena floor and ringside risers, mostly lost in the dark.
   const floor = new THREE.Mesh(
@@ -103,7 +117,7 @@ export function buildRing(THREE, scene) {
   }
   scene.add(risers);
 
-  return { canvas, posts, pads, ropes };
+  return { canvas, posts, pads, ropes, hideSide };
 }
 
 // Hot key light over the ring, soft fills on the men, dark everywhere else.

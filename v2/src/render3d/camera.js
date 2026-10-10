@@ -28,83 +28,95 @@ export function makeTvCamera(THREE) {
   return { cam, update };
 }
 
-// The fight cam (Fight Night style, Ed's portrait pick): low, side-on to the pair, a steadicam
-// inside the ropes so no rope or post ever crosses the men. It sits a little off square to the
-// line between them, takes whichever side it's already nearer (it orbits with them), and backs off
-// just enough to keep both in frame. Boxed in by the ropes, it widens the lens; really boxed in,
-// it cuts to the other side, like a TV director would.
+// The fight cam: a Fight Night broadcast camera. It takes one side of the ring and keeps it: low
+// (lens ~1.3 m), close (~3.2 m), sliding along its side to follow the pair and panning to keep
+// them centered. It never orbits. It cuts to the other side rarely and for a reason: after a big
+// shot (with a long cooldown), or when the fight comes right onto the lens. A fighter can leave
+// frame for a moment when he's driven far; that's what the real camera does too. A little
+// handheld drift (noise, not a sine) and a thump on heavy shots. Render time only, never the sim's.
+import { noise } from './moves.js';
+import { makeRng } from '../core/rng.js';
 export function makeFightCamera(THREE) {
-  const cam = new THREE.PerspectiveCamera(34, 1, 0.1, 60);
+  const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 60);
   const target = new THREE.Vector3(0, 1.1, 0);
-  let az = Math.PI / 2, ready = false, cutT = 0; // az: from the pair's middle to the lens
-  const HEIGHT = 1.6;                    // lens height off the canvas
-  const PAD = 0.5;                       // room past each man's center (shoulder, glove)
-  const SKEW = 0.42;                     // ~25 degrees off square: a touch of depth, a narrower pair
-  const ROOM = RING.half - 0.12;         // the lens stays inside the ropes
-  const MAXFOV = 78;
+  const HEIGHT = 1.3, DIST = 3.2, ROOM = RING.half + 0.9; // out to the apron edge
+  // The side: its axis ('x' or 'z': the lens's fixed coordinate runs along it) and sign.
+  let side = null, cool = 0, t = 0, lined = 0;
+  let perp = 0, lat = 0, perpV = 0, latV = 0;
+  const kick = { p: [0, 0, 0], v: [0, 0, 0] }, rng = makeRng('fightcam');
+  const tgt = { x: 0, z: 0, vx: 0, vz: 0 };
+  const sp = (s, key, vkey, goal, w, h) => { s[vkey] += (w * w * (goal - s[key]) - 2 * w * s[vkey]) * h; s[key] += s[vkey] * h; };
 
-  // How far the lens can go from (mx, mz) along angle a before it hits the ropes.
-  function room(mx, mz, a) {
-    const c = Math.cos(a), s = Math.sin(a);
-    let t = 99;
-    if (c > 1e-4) t = Math.min(t, (ROOM - mx) / c); else if (c < -1e-4) t = Math.min(t, (-ROOM - mx) / c);
-    if (s > 1e-4) t = Math.min(t, (ROOM - mz) / s); else if (s < -1e-4) t = Math.min(t, (-ROOM - mz) / s);
-    return Math.max(t, 0.5);
-  }
-  const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
-
-  // men: [{x, z}, {x, z}]. dt in seconds (render time, never the sim's).
-  // Critically damped spring: no snaps, no overshoot, velocity carries through.
-  const springs = {};
-  function spring(key, goal, w, dt, wrapAng = false) {
-    const S = springs[key] || (springs[key] = { x: goal, v: 0 });
-    const n = Math.ceil(dt / (1 / 120)), h = dt / n;
-    for (let i = 0; i < n; i++) {
-      const err = wrapAng ? angDiff(goal, S.x) : goal - S.x;
-      S.v += (w * w * err - 2 * w * S.v) * h; S.x += S.v * h;
+  // The best side: sees the pair side-on, with room between the lens and the nearer man.
+  function pick(a, b, avoid) {
+    const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, gx = b.x - a.x, gz = b.z - a.z, gl = Math.hypot(gx, gz) || 1;
+    let best = null, bestS = -1e9;
+    for (const axis of ['z', 'x']) for (const sign of [1, -1]) {
+      const m = axis === 'z' ? mz : mx, p = Math.max(-ROOM, Math.min(ROOM, m + sign * DIST));
+      const px = axis === 'z' ? mx : p, pz = axis === 'z' ? p : mz;
+      const near = Math.min(Math.hypot(a.x - px, a.z - pz), Math.hypot(b.x - px, b.z - pz));
+      const vx = mx - px, vz = mz - pz, vl = Math.hypot(vx, vz) || 1;
+      const sideOn = 1 - Math.abs((vx * gx + vz * gz) / (vl * gl));
+      const sc = sideOn * 2 + Math.min(near, 3) - (avoid && avoid.axis === axis && avoid.sign === sign ? 10 : 0);
+      if (sc > bestS) { bestS = sc; best = { axis, sign }; }
     }
-    return S.x;
+    return best;
   }
+  function snapTo(a, b, s) {
+    side = s;
+    const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, m = s.axis === 'z' ? mz : mx;
+    perp = Math.max(-ROOM, Math.min(ROOM, m + s.sign * DIST)); perpV = 0;
+    lat = s.axis === 'z' ? mx : mz; latV = 0;
+    tgt.x = mx; tgt.z = mz; tgt.vx = tgt.vz = 0;
+  }
+
+  // A shot landed: q 'glancing' | 'solid' | 'flush'. Big ones thump the lens and may earn a cut.
+  let wantCut = false;
+  function hit(q) {
+    const k = q === 'flush' ? 1 : q === 'solid' ? 0.45 : 0;
+    if (!k) return;
+    kick.v[1] -= 0.35 * k; kick.v[0] += 0.25 * k * (rng.next() - 0.5);
+    if (q === 'flush' && cool <= 0 && rng.chance(0.3)) wantCut = true;
+  }
+  function newRound() { side = null; }
 
   function update(dt, aspect, men) {
     const [a, b] = men;
+    t += dt; cool -= dt;
     const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
-    const ax = b.x - a.x, az2 = b.z - a.z, gap = Math.hypot(ax, az2) || 1e-3;
-    const half = gap / 2 * Math.cos(SKEW) + PAD;            // half the pair's width, as the lens sees it
-    const baseFov = aspect < 1 ? 56 : 32;
-    const hfOf = (f) => Math.atan(Math.tan((f * Math.PI) / 360) * aspect);
-    const needD = Math.max(half / Math.tan(hfOf(baseFov)), 2.6);
-    // Both side-on directions; stay on the nearer one. Cut to the other side only when the ropes
-    // really box the lens in, and not again for a while (a TV director, not a jittery one).
-    const p1 = Math.atan2(ax, -az2) + SKEW, p2 = p1 + Math.PI;
-    let want = Math.abs(angDiff(p1, az)) <= Math.abs(angDiff(p2, az)) ? p1 : p2;
-    const other = want === p1 ? p2 : p1;
-    cutT -= dt;
-    let cut = !ready;
-    if (ready && cutT <= 0 && room(mx, mz, az) < needD * 0.32 && room(mx, mz, other) > needD * 0.9) { want = other; cut = true; }
-    if (cut) {
-      for (const k in springs) delete springs[k];
-      az = want; target.set(mx, 1.1, mz); ready = true; cutT = 10;
+    if (!side) snapTo(a, b, pick(a, b)), cool = 15;
+    const m = side.axis === 'z' ? mz : mx, l = side.axis === 'z' ? mx : mz;
+    // Fight right on top of the lens, or a big shot after a long while: cut across.
+    // Cut when: a man is right on the lens; one man hides the other (the pair lines up with the
+    // lens) for a while; or a big shot after a long while.
+    const px0 = side.axis === 'z' ? lat : perp, pz0 = side.axis === 'z' ? perp : lat;
+    const near = Math.min(Math.hypot(a.x - px0, a.z - pz0), Math.hypot(b.x - px0, b.z - pz0)) < 1.5;
+    const vx = mx - px0, vz = mz - pz0, gx = b.x - a.x, gz = b.z - a.z;
+    const inLine = Math.abs(vx * gx + vz * gz) / ((Math.hypot(vx, vz) * Math.hypot(gx, gz)) || 1) > 0.85;
+    lined = inLine ? lined + dt : 0;
+    if (near || (lined > 1.2 && cool <= 12) || (wantCut && cool <= 0)) { snapTo(a, b, pick(a, b, side)); cool = 18; lined = 0; }
+    wantCut = false;
+    const n = Math.ceil(dt / (1 / 120)), h = dt / n;
+    const S = { perp, perpV, lat, latV };
+    const goalPerp = Math.max(-ROOM, Math.min(ROOM, m + side.sign * DIST));
+    for (let i = 0; i < n; i++) {
+      sp(S, 'lat', 'latV', l, 2.2, h);                       // slides along its side
+      sp(S, 'perp', 'perpV', goalPerp, 0.7, h);              // drifts in or out only slowly
+      sp(tgt, 'x', 'vx', mx, 5, h); sp(tgt, 'z', 'vz', mz, 5, h);
+      for (let j = 0; j < 3; j++) { kick.v[j] += (-170 * kick.p[j] - 26 * kick.v[j]) * h; kick.p[j] += kick.v[j] * h; }
     }
-    az = spring('az', want, 3, dt, true);
-    // Inside the ropes when it can; when even a wide lens can't hold them (corner to corner at the
-    // bell), it eases out past the ropes and up over them. All of it continuous, so nothing snaps.
-    const inside = room(mx, mz, az);
-    const fitMax = (half / Math.tan(hfOf(MAXFOV))) * 0.9;
-    const d = Math.min(needD, Math.max(inside, fitMax));
-    const hf = Math.atan(half / d);
-    const wantFov = d < needD ? Math.min(MAXFOV, (2 * Math.atan(Math.tan(hf) / aspect) * 180) / Math.PI) : baseFov;
-    const wantLift = clamp((d - inside) / 1.0, 0, 1) * 1.2;
-    const dist = spring('dist', d, 4, dt);
-    const fov = spring('fov', wantFov, 4, dt);
-    const lift = spring('lift', wantLift, 4, dt);
-    target.x = spring('tx', mx, 6, dt); target.z = spring('tz', mz, 6, dt);
-    target.y = aspect < 1 ? 1.0 : 1.15;
-    cam.fov = fov; cam.aspect = aspect;
-    cam.position.set(target.x + Math.cos(az) * dist, HEIGHT + lift, target.z + Math.sin(az) * dist);
+    ({ perp, perpV, lat, latV } = S);
+    // Handheld: tiny drift on position and aim.
+    const hx = noise(t * 0.7, 11) * 0.015, hy = noise(t * 0.6, 12) * 0.012, hz = noise(t * 0.7, 13) * 0.015;
+    const px = side.axis === 'z' ? lat : perp, pz = side.axis === 'z' ? perp : lat;
+    cam.position.set(px + hx + kick.p[0], HEIGHT + hy + kick.p[1], pz + hz + kick.p[2]);
+    target.set(tgt.x + noise(t * 0.5, 14) * 0.012, aspect < 1 ? 1.05 : 1.12, tgt.z + noise(t * 0.5, 15) * 0.012);
     cam.lookAt(target);
+    cam.fov = aspect < 1 ? 64 : 40; cam.aspect = aspect;
     cam.updateProjectionMatrix();
-    return dist;
+    return Math.hypot(px - mx, pz - mz);
   }
-  return { cam, update };
+  // Where the lens is, for the ring to drop that side's ropes while it's outside them.
+  const where = () => (side && Math.abs(perp) > RING.half - 0.1 ? side : null);
+  return { cam, update, hit, newRound, where };
 }

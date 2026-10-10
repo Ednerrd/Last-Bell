@@ -30,12 +30,18 @@ async function start() {
   root.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  buildRing(THREE, scene);
+  const ring = buildRing(THREE, scene);
   const { key } = buildLights(THREE, scene);
   const tv = makeTvCamera(THREE), fc = makeFightCamera(THREE);
   const drawMen = makeMen(THREE, scene);
   const bus = makeBus();
-  bus.on('contact', (e) => drawMen.onContact(e));
+  // Hitstop: a solid or flush shot freezes the picture for a few frames (render frames; the sim
+  // just waits, so results never change), and the fight cam takes a thump.
+  let stop = 0;
+  bus.on('contact', (e) => {
+    drawMen.onContact(e);
+    if (e.result === 'land') { fc.hit(e.q); stop = Math.max(stop, e.q === 'flush' ? 4 : e.q === 'solid' ? 2 : 0); }
+  });
 
   // A fresh random matchup every round, so the phone test shows every style, guard and stance.
   const pickRng = makeRng(Date.now() % 1e9);
@@ -57,6 +63,7 @@ async function start() {
     fight = makeFight({ seed: pickRng.int(1, 1e9), red, blue, bus });
     fight.startRound();
     prevS = null;
+    fc.newRound();
   }
   newRound();
 
@@ -111,12 +118,15 @@ async function start() {
     last = now;
     const w0 = performance.now();
     // Fixed-step sim: the engine ticks at 60/s whatever the frame rate.
+    const frozen = stop > 0;
+    if (frozen) stop--;
     if (window.__lb && window.__lb.hold) { /* headless pose checks freeze the sim */ }
+    else if (frozen) { /* hitstop */ }
     else if (rest > 0) { if ((rest -= dt * parseInt(speed)) <= 0) newRound(); }
     else {
       acc += dt * parseInt(speed);
       let n = 0;
-      while (acc >= DT && n++ < 30) {
+      while (acc >= DT && n++ < 30 && !stop) {
         acc -= DT;
         snapPrev();
         if (!fight.tick()) { rest = 3; acc = 0; break; }
@@ -124,16 +134,17 @@ async function start() {
     }
     // Draw between the last two ticks, so motion is smooth whatever the frame timing.
     const view = interp(rest > 0 || (window.__lb && window.__lb.hold) ? 1 : acc / DT);
-    const shown = drawMen.update(view, window.__lb && window.__lb.hold ? 0.5 : rest > 0 ? dt : dt * parseInt(speed));
+    const shown = drawMen.update(view, window.__lb && window.__lb.hold ? 0.5 : frozen ? 0 : rest > 0 ? dt : dt * parseInt(speed));
     const aspect = window.innerWidth / window.innerHeight;
-    // Cam: 'auto' gives portrait the fight cam and landscape the wide cam (Ed's call).
-    const useFight = q.cam === 'fight' || (q.cam === 'auto' && aspect < 1);
+    // Cam: 'auto' and 'fight' are the broadcast fight cam in any orientation; 'wide' is the TV cam.
+    const useFight = q.cam !== 'wide';
     let cam, dist;
     if (useFight) { dist = fc.update(dt, aspect, shown); cam = fc.cam; }
     else {
       const mid = { x: (shown[0].x + shown[1].x) / 2, z: (shown[0].z + shown[1].z) / 2 };
       dist = tv.update((now - t0) / 1000, aspect, mid); cam = tv.cam;
     }
+    ring.hideSide(useFight ? fc.where() : null);
     scene.fog.near = dist + 2; scene.fog.far = dist + 22; // haze past the ring, whatever the fit
     renderer.render(scene, cam);
     workMs += performance.now() - w0;
