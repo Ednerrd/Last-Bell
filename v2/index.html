@@ -460,11 +460,14 @@ function makeFightCamera(THREE) {
     kick.v[1] -= 0.35 * k; kick.v[0] += 0.25 * k * (rng.next() - 0.5);
     if (q === 'flush' && cool <= 0 && rng.chance(0.3)) wantCut = true;
   }
+  // A man's hurt: the lens leans in ~15 cm, then eases back.
+  let pushT = 0; const push = { p: 0, v: 0 };
+  function stagger() { pushT = 0.3; }
   function newRound() { side = null; }
 
   function update(dt, aspect, men) {
     const [a, b] = men;
-    t += dt; cool -= dt;
+    t += dt; cool -= dt; pushT -= dt;
     const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
     if (!side) snapTo(a, b, pick(a, b)), cool = 15;
     const m = side.axis === 'z' ? mz : mx, l = side.axis === 'z' ? mx : mz;
@@ -489,12 +492,14 @@ function makeFightCamera(THREE) {
       sp(S, 'perp', 'perpV', goalPerp, 0.7, h);              // drifts in or out only slowly
       sp(tgt, 'x', 'vx', mx, 5, h); sp(tgt, 'z', 'vz', mz, 5, h);
       for (let j = 0; j < 3; j++) { kick.v[j] += (-170 * kick.p[j] - 26 * kick.v[j]) * h; kick.p[j] += kick.v[j] * h; }
+      sp(push, 'p', 'v', pushT > 0 ? 0.15 : 0, 9, h);
     }
     ({ perp, perpV, lat, latV } = S);
     // Handheld: tiny drift on position and aim.
     const hx = noise(t * 0.7, 11) * 0.015, hy = noise(t * 0.6, 12) * 0.012, hz = noise(t * 0.7, 13) * 0.015;
     const px = side.axis === 'z' ? lat : perp, pz = side.axis === 'z' ? perp : lat;
-    cam.position.set(px + hx + kick.p[0], HEIGHT + hy + kick.p[1], pz + hz + kick.p[2]);
+    const dl = Math.hypot(tgt.x - px, tgt.z - pz) || 1, inx = (tgt.x - px) / dl * push.p, inz = (tgt.z - pz) / dl * push.p;
+    cam.position.set(px + hx + kick.p[0] + inx, HEIGHT + hy + kick.p[1], pz + hz + kick.p[2] + inz);
     target.set(tgt.x + noise(t * 0.5, 14) * 0.012, aspect < 1 ? 1.05 : 1.12, tgt.z + noise(t * 0.5, 15) * 0.012);
     cam.lookAt(target);
     cam.fov = aspect < 1 ? 64 : 40; cam.aspect = aspect;
@@ -503,7 +508,7 @@ function makeFightCamera(THREE) {
   }
   // Where the lens is, for the ring to drop that side's ropes while it's outside them.
   const where = () => (side && Math.abs(perp) > RING.half - 0.1 ? side : null);
-  return { cam, update, hit, newRound, where };
+  return { cam, update, hit, newRound, where, stagger };
 }
 return { makeTvCamera, makeFightCamera };
 })();
@@ -1113,7 +1118,7 @@ function makeMen(THREE, scene) {
     g: { lead: null, rear: null }, punch: null, from: null, res: null,
     f: null, D: null, t: i * 31.7, ph: i * 2.1, busy: 1, act: 1, hold: 0, nextHold: 3, feint: null,
     sp: null, ft: null, step: null,
-    yaw: S1(), hip: S1(), w: S1(0.45), fold: S1(), off: S3(), chest: S3(), headK: S3(), gk: S3(), pend: [],
+    yaw: S1(), hip: S1(), w: S1(0.45), fold: S1(), off: S3(), chest: S3(), headK: S3(), gk: S3(), hurt: S1(), pend: [],
     probe: null, // drawn hip / head / feet, for the headless checks
   }));
 
@@ -1306,7 +1311,9 @@ function makeMen(THREE, scene) {
         else if ((R.nextHold -= dt) <= 0) { R.hold = D.rng.range(0.3, 0.8); R.nextHold = D.hold * D.rng.range(0.6, 1.4); }
       }
       R.act += ((R.hold > 0 ? 0.15 : 1) - R.act) * (1 - Math.exp(-dt * 6));
-      const life = R.busy * R.act;
+      // Hurt (stagger): guard sags, knees dip, he sways. Comes on fast, wears off slower.
+      const hurt = spring(R.hurt, m.stag > 0 ? 1 : 0, m.stag > 0 ? 14 : 4, 1, dt);
+      const life = R.busy * R.act * (1 - hurt * 0.6);
       R.ph += dt * Math.PI * 2 * D.hz * (1 + 0.12 * noise(R.t * 0.4, D.seed));
       const u = (R.ph / (Math.PI * 2)) % 1;
       // Soft bounce is a sine on the knees; a hop is push off, float, land (feet leave the floor).
@@ -1314,7 +1321,7 @@ function makeMen(THREE, scene) {
       let bob = D.bob * (shape - 0.5) * 2 * life;
       // Weave: noise, not a sine, plus the head going with his feet when he moves sideways.
       const latV = (-Math.sin(m.th) * m.vx + Math.cos(m.th) * m.vz) * side;
-      let weave = D.weave * noise(R.t * D.weaveHz, D.seed + 3) * 1.6 * life + clamp(latV, -1.5, 1.5) * 0.025;
+      let weave = D.weave * noise(R.t * D.weaveHz, D.seed + 3) * 1.6 * life + clamp(latV, -1.5, 1.5) * 0.025 + hurt * 0.05 * noise(R.t * 1.6, D.seed + 21);
       // Peekaboo / rollers: the U. Side to side, dipping through the middle; it comes and goes.
       let uDip = 0;
       if (D.uw > 0) {
@@ -1375,7 +1382,7 @@ function makeMen(THREE, scene) {
 
       // Knees carry the drops (slip, roll, U): the body goes down, not just the neck.
       const knee = Math.max(-offS[1], 0) * 0.65;
-      const crouch = g.crouch + D.drop * 0.5 - bob + knee + fold * 0.3;
+      const crouch = g.crouch + D.drop * 0.5 - bob + knee + fold * 0.3 + hurt * (0.035 + 0.02 * noise(R.t * 2.2, D.seed + 22));
       const offT = [offS[0], offS[1] + knee, offS[2]];             // what's left for the torso and head
 
       // Pelvis rides over the loaded foot (fore-aft), the hips glide between the planted feet.
@@ -1409,7 +1416,7 @@ function makeMen(THREE, scene) {
 
       for (const h of ['lead', 'rear']) {
         const blk = d && d.kind === 'block' && !(m.f.guard === 'philly' && h === 'lead');
-        const base = mix(g[h], BLOCK[h], blk ? env : d && d.kind === 'roll' ? env * 0.6 : 0);
+        const base = mix(mix(g[h], GUARD.handslow[h], hurt * 0.7), BLOCK[h], blk ? env : d && d.kind === 'roll' ? env * 0.6 : 0);
         const ns = D.sway * life, sd = D.seed + (h === 'lead' ? 11 : 23);
         const sway = [0.012 * ns * noise(R.t * 0.7, sd), 0.012 * ns * noise(R.t * 0.6, sd + 1), 0.006 * ns * noise(R.t * 0.5, sd + 2)];
         let want = add(base, [offT[0] * 0.8 + sway[0] + (h === 'lead' ? feintX : 0) + lean * 0.1 + ch[0] * 0.6, offT[1] * 0.8 - crouch + sway[1], offT[2] * 0.8 + sway[2]]);
@@ -2420,6 +2427,7 @@ async function start() {
     drawMen.onContact(e);
     if (e.result === 'land') { fc.hit(e.q); stop = Math.max(stop, e.q === 'flush' ? 4 : e.q === 'solid' ? 2 : 0); }
   });
+  bus.on('stagger', () => fc.stagger());
 
   // A fresh random matchup every round, so the phone test shows every style, guard and stance.
   const pickRng = makeRng(Date.now() % 1e9);

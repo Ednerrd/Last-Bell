@@ -42,6 +42,7 @@ async function start() {
     drawMen.onContact(e);
     if (e.result === 'land') { fc.hit(e.q); stop = Math.max(stop, e.q === 'flush' ? 4 : e.q === 'solid' ? 2 : 0); }
   });
+  bus.on('stagger', () => fc.stagger());
 
   // A fresh random matchup every round, so the phone test shows every style, guard and stance.
   const pickRng = makeRng(Date.now() % 1e9);

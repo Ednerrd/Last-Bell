@@ -78,11 +78,14 @@ export function makeFightCamera(THREE) {
     kick.v[1] -= 0.35 * k; kick.v[0] += 0.25 * k * (rng.next() - 0.5);
     if (q === 'flush' && cool <= 0 && rng.chance(0.3)) wantCut = true;
   }
+  // A man's hurt: the lens leans in ~15 cm, then eases back.
+  let pushT = 0; const push = { p: 0, v: 0 };
+  function stagger() { pushT = 0.3; }
   function newRound() { side = null; }
 
   function update(dt, aspect, men) {
     const [a, b] = men;
-    t += dt; cool -= dt;
+    t += dt; cool -= dt; pushT -= dt;
     const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
     if (!side) snapTo(a, b, pick(a, b)), cool = 15;
     const m = side.axis === 'z' ? mz : mx, l = side.axis === 'z' ? mx : mz;
@@ -107,12 +110,14 @@ export function makeFightCamera(THREE) {
       sp(S, 'perp', 'perpV', goalPerp, 0.7, h);              // drifts in or out only slowly
       sp(tgt, 'x', 'vx', mx, 5, h); sp(tgt, 'z', 'vz', mz, 5, h);
       for (let j = 0; j < 3; j++) { kick.v[j] += (-170 * kick.p[j] - 26 * kick.v[j]) * h; kick.p[j] += kick.v[j] * h; }
+      sp(push, 'p', 'v', pushT > 0 ? 0.15 : 0, 9, h);
     }
     ({ perp, perpV, lat, latV } = S);
     // Handheld: tiny drift on position and aim.
     const hx = noise(t * 0.7, 11) * 0.015, hy = noise(t * 0.6, 12) * 0.012, hz = noise(t * 0.7, 13) * 0.015;
     const px = side.axis === 'z' ? lat : perp, pz = side.axis === 'z' ? perp : lat;
-    cam.position.set(px + hx + kick.p[0], HEIGHT + hy + kick.p[1], pz + hz + kick.p[2]);
+    const dl = Math.hypot(tgt.x - px, tgt.z - pz) || 1, inx = (tgt.x - px) / dl * push.p, inz = (tgt.z - pz) / dl * push.p;
+    cam.position.set(px + hx + kick.p[0] + inx, HEIGHT + hy + kick.p[1], pz + hz + kick.p[2] + inz);
     target.set(tgt.x + noise(t * 0.5, 14) * 0.012, aspect < 1 ? 1.05 : 1.12, tgt.z + noise(t * 0.5, 15) * 0.012);
     cam.lookAt(target);
     cam.fov = aspect < 1 ? 64 : 40; cam.aspect = aspect;
@@ -121,5 +126,5 @@ export function makeFightCamera(THREE) {
   }
   // Where the lens is, for the ring to drop that side's ropes while it's outside them.
   const where = () => (side && Math.abs(perp) > RING.half - 0.1 ? side : null);
-  return { cam, update, hit, newRound, where };
+  return { cam, update, hit, newRound, where, stagger };
 }
