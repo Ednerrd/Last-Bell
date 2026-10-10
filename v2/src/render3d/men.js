@@ -147,10 +147,9 @@ export function makeMen(THREE, scene) {
     if (e.q === 'flush') R.shove = { dir, amp };
   }
 
-  // The hips flow on a critically damped spring toward where the engine has him. The engine moves
-  // in short steps with pauses between; this is slow enough that he carries through the pauses like
-  // a real boxer instead of stop-go, and quick enough that a slip or a step-in still reads.
-  const GLIDE = 10;
+  // The hips flow on a critically damped spring toward where the engine has him: smooths the
+  // tick-to-tick edges, quick enough that a slip or a step-in still reads.
+  const GLIDE = 16;
   function glide(R, m, dt) {
     const S = R.sp;
     if (!S || Math.hypot(m.x - S.x, m.z - S.z) > 1) { R.sp = { x: m.x, z: m.z, vx: 0, vz: 0 }; return R.sp; }
@@ -241,7 +240,7 @@ export function makeMen(THREE, scene) {
       const h = cand[0], o = h === 'lead' ? 'rear' : 'lead', d = err(h);
       if (down(o) || d > 0.35 * s) {
         // A real move gets a real lift; turning in place is a pivot, the foot barely leaves the canvas.
-        if (d > 0.025 * s) lift(F[h], null, clamp(0.22 - spd * 0.06, 0.12, 0.22) * (d > 0.35 * s ? 0.75 : 1), D.swing * clamp(d / (0.15 * s), 0.4, 1.2));
+        if (d > 0.025 * s) lift(F[h], null, clamp(0.22 - spd * 0.06, 0.12, 0.22) * (d > 0.35 * s ? 0.75 : 1), Math.max(0.018 * s, D.swing * clamp(d / (0.15 * s), 0.6, 1.3)));
         else lift(F[h], null, 0.12, 0.004);
       }
     }

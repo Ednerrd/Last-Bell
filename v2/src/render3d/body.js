@@ -214,7 +214,7 @@ function buildBody(look) {
     // Trunks: a sleeve over each thigh, flaring to the hem.
     loft(T, H0, { axis: leg, len: BIND.thigh, front: [1, 0, 0], side: legOut, t0: -0.12, t1: 0.6, n: 10, m: 18, open: true,
       shape: (t, a) => { const r = thighR(Math.max(t, -0.04), a) + 0.022 + 0.034 * smooth((t + 0.05) / 0.65); return [r * Math.cos(a), r * Math.sin(a) * 1.05]; },
-      wt: (p, t) => { const wp = 0.75 - 0.45 * smooth((t + 0.12) / 0.5); return W([I.pelvis, wp], [th, 1 - wp]); }, grp: () => 'trunks' });
+      wt: (p, t) => { const wp = 1 - smooth((t + 0.12) / 0.34); return W([I.pelvis, wp], [th, 1 - wp]); }, grp: () => 'trunks' }); // same weights as the thigh under it, so it can't poke through
   }
   // Trunks waist: the torso, a bit fuller, from the waistband down past the crotch.
   const tl = 1.51 - 0.83;
