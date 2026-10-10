@@ -1734,11 +1734,12 @@ function planMove(me, opp, rng) {
   const far = d - want;
   me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape' && me.mode !== 'exit';
   if (me.walk) add(u, 1.2);
+  if (me.stag > 0) add(u, -0.6);                   // hurt: he gives ground
   const gap = ropeGap(me);
   if (me.mode !== 'escape' && gap < 0.5) add(toC, 0.6 * (1 - gap / 0.5));
   const m = Math.hypot(dx, dz);
   // How hard the mode wants it (a weak pull moves him slower), a touch of variety per decision.
-  const speed = me.walk ? WALK : dna.speed * PACE[me.mode] * clamp(m, 0.35, 1) * rng.range(0.8, 1.15);
+  const speed = (me.walk ? WALK : dna.speed * PACE[me.mode] * clamp(m, 0.35, 1) * rng.range(0.8, 1.15)) * (me.stag > 0 ? 0.5 : 1);
   return m < 0.05 ? { x: 0, z: 0 } : { x: (dx / m) * speed, z: (dz / m) * speed };
 }
 
@@ -2026,7 +2027,7 @@ const toQ = (str) => str.split('-').map((n) => BY_NUM[n]);
 
 // The punch he threw at `m` just resolved as `res`: does `m` counter or fire back?
 function react(m, res, rng) {
-  if (m.punch && m.punch.phase !== 'retract') return;
+  if (m.stag > 0 || (m.punch && m.punch.phase !== 'retract')) return;
   const R = REACT[m.f.style], A = m.off;
   let str = null;
   if (res.result !== 'land' && COUNTER[res.how] && rng.chance(R.counter)) str = rng.pick(COUNTER[res.how]);
@@ -2048,6 +2049,7 @@ function makeOffense() {
 // Called every tick he isn't punching. Returns a punch kind to start now, or null.
 function wantPunch(m, o, rng, dt) {
   const A = m.off, d = dist(m, o);
+  if (m.stag > 0) { A.queue.length = 0; return null; }   // hurt: hands up, nothing coming back
   if (A.beat > 0) { A.beat -= dt; return null; }
   if (A.queue.length) {
     const k = A.queue.shift();
@@ -2056,7 +2058,7 @@ function wantPunch(m, o, rng, dt) {
     A.queue.length = 0; // out of range now: the rest of the combo is gone
     return null;
   }
-  const rate = OFF[m.f.style].rate * (MODE_K[m.mode] || 1);
+  const rate = OFF[m.f.style].rate * (MODE_K[m.mode] || 1) * (o.stag > 0 ? 1.8 : 1); // he's hurt: go get him
   if (!rng.chance(rate * dt)) return null;
   const opts = PARSED[m.f.style].filter((c) => reaches(m.f, PUNCH[c.q[0]], d));
   if (!opts.length) return null;
@@ -2116,7 +2118,7 @@ const GOOD = {
 function chooseDefense(me, opp, P, rng) {
   if (me.def && me.def.t < me.def.dur * 0.6) return null;             // already moving
   if (me.punch && me.punch.phase !== 'retract') return null;           // his hands are busy: counters land here
-  const skill = me.f.def ?? 0.5;
+  const skill = (me.f.def ?? 0.5) * (me.stag > 0 ? 0.5 : 1); // hurt: slow to see it
   if (!rng.chance(0.66 + 0.6 * skill)) return null;
   // Reaction time: he reads the shoulder and the setup, not the fist. Power shots mostly come
   // behind something (the jab, a feint), so he's a beat later on them.
@@ -2148,7 +2150,7 @@ const { RING, clamp } = __m1;
 const { makeFighter } = __m10;
 const { MIN_D, separate, feetAt, wrap, clampRing, dist } = __m11;
 const { pickMode, planMove, thinkFor, interrupt, FOOT } = __m12;
-const { startPunch, stepPunch, resolve } = __m14;
+const { startPunch, stepPunch, resolve, PUNCH } = __m14;
 const { makeOffense, wantPunch, chainReady, react, exitAfter } = __m15;
 const { DEF, startDefense } = __m13;
 const { chooseDefense } = __m16;
@@ -2173,6 +2175,7 @@ function makeMan(spec, corner) {
   const m = {
     f, corner, x: c, z: c, th: corner === 0 ? Math.PI / 4 : -3 * Math.PI / 4,
     vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0, walk: false,
+    stag: 0, lastSolid: -9, // hurt: seconds of stagger left; when he last took a solid shot
     mv: { x: 0, z: 0 }, ma: { x: 0, z: 0 }, aim: { x: 0, z: 0 }, beat: 0, // flow movement: velocity, its rate of change, where it's headed, rhythm phase
     feet: null, steps: 0, punch: null, off: makeOffense(), def: null,
   };
@@ -2191,7 +2194,7 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
     men.forEach((m, i) => {
       const s = i === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
       m.x = c; m.z = c; m.th = i === 0 ? Math.PI / 4 : -3 * Math.PI / 4;
-      m.step = null; m.pause = rng.range(0.1, 0.4); m.vx = m.vz = 0; m.walk = false;
+      m.step = null; m.pause = rng.range(0.1, 0.4); m.vx = m.vz = 0; m.walk = false; m.stag = 0; m.lastSolid = -9;
       m.mv = { x: 0, z: 0 }; m.ma = { x: 0, z: 0 }; m.aim = { x: 0, z: 0 }; m.beat = rng.range(0, 6.3);
       m.punch = null; m.off = makeOffense(); m.def = null;
       m.feelSec = F.round === 1 ? rng.range(4, 8) : rng.range(1, 3); // FNC starts with action
@@ -2214,6 +2217,7 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
 
     // Defense moves run their clock; a pull back steps him away for real.
     for (const m of men) {
+      if (m.stag > 0) m.stag = Math.max(0, m.stag - DT);
       const d = m.def;
       if (!d) continue;
       d.t += DT;
@@ -2253,6 +2257,14 @@ function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus = null }
       if (ev === 'contact') {
         p.res = resolve(m, o, rng);
         emit('contact', { corner: m.corner, t: F.clock, ...p.res });
+        // Stagger: a power shot to the head can hurt him for a moment: flush ones often, a solid one
+        // right after another solid one sometimes. (M3's damage will shade these.)
+        const pw = p.res.result === 'land' && p.res.region === 'head' && PUNCH[p.res.kind].pow >= 0.9;
+        if (pw && ((p.res.q === 'flush' && rng.chance(0.3)) || (p.res.q === 'solid' && F.clock - o.lastSolid < 1.5 && rng.chance(0.15)))) {
+          o.stag = rng.range(1, 1.8); o.off.queue.length = 0;
+          emit('stagger', { corner: o.corner, t: F.clock });
+        }
+        if (p.res.result === 'land' && p.res.q === 'solid') o.lastSolid = F.clock;
         react(o, p.res, rng);
       } else if (ev === 'done') {
         m.punch = null;

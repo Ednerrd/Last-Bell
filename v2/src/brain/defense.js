@@ -28,7 +28,7 @@ const GOOD = {
 export function chooseDefense(me, opp, P, rng) {
   if (me.def && me.def.t < me.def.dur * 0.6) return null;             // already moving
   if (me.punch && me.punch.phase !== 'retract') return null;           // his hands are busy: counters land here
-  const skill = me.f.def ?? 0.5;
+  const skill = (me.f.def ?? 0.5) * (me.stag > 0 ? 0.5 : 1); // hurt: slow to see it
   if (!rng.chance(0.66 + 0.6 * skill)) return null;
   // Reaction time: he reads the shoulder and the setup, not the fist. Power shots mostly come
   // behind something (the jab, a feint), so he's a beat later on them.

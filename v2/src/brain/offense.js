@@ -47,7 +47,7 @@ const toQ = (str) => str.split('-').map((n) => BY_NUM[n]);
 
 // The punch he threw at `m` just resolved as `res`: does `m` counter or fire back?
 export function react(m, res, rng) {
-  if (m.punch && m.punch.phase !== 'retract') return;
+  if (m.stag > 0 || (m.punch && m.punch.phase !== 'retract')) return;
   const R = REACT[m.f.style], A = m.off;
   let str = null;
   if (res.result !== 'land' && COUNTER[res.how] && rng.chance(R.counter)) str = rng.pick(COUNTER[res.how]);
@@ -69,6 +69,7 @@ export function makeOffense() {
 // Called every tick he isn't punching. Returns a punch kind to start now, or null.
 export function wantPunch(m, o, rng, dt) {
   const A = m.off, d = dist(m, o);
+  if (m.stag > 0) { A.queue.length = 0; return null; }   // hurt: hands up, nothing coming back
   if (A.beat > 0) { A.beat -= dt; return null; }
   if (A.queue.length) {
     const k = A.queue.shift();
@@ -77,7 +78,7 @@ export function wantPunch(m, o, rng, dt) {
     A.queue.length = 0; // out of range now: the rest of the combo is gone
     return null;
   }
-  const rate = OFF[m.f.style].rate * (MODE_K[m.mode] || 1);
+  const rate = OFF[m.f.style].rate * (MODE_K[m.mode] || 1) * (o.stag > 0 ? 1.8 : 1); // he's hurt: go get him
   if (!rng.chance(rate * dt)) return null;
   const opts = PARSED[m.f.style].filter((c) => reaches(m.f, PUNCH[c.q[0]], d));
   if (!opts.length) return null;

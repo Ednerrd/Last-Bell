@@ -98,11 +98,12 @@ export function planMove(me, opp, rng) {
   const far = d - want;
   me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape' && me.mode !== 'exit';
   if (me.walk) add(u, 1.2);
+  if (me.stag > 0) add(u, -0.6);                   // hurt: he gives ground
   const gap = ropeGap(me);
   if (me.mode !== 'escape' && gap < 0.5) add(toC, 0.6 * (1 - gap / 0.5));
   const m = Math.hypot(dx, dz);
   // How hard the mode wants it (a weak pull moves him slower), a touch of variety per decision.
-  const speed = me.walk ? WALK : dna.speed * PACE[me.mode] * clamp(m, 0.35, 1) * rng.range(0.8, 1.15);
+  const speed = (me.walk ? WALK : dna.speed * PACE[me.mode] * clamp(m, 0.35, 1) * rng.range(0.8, 1.15)) * (me.stag > 0 ? 0.5 : 1);
   return m < 0.05 ? { x: 0, z: 0 } : { x: (dx / m) * speed, z: (dz / m) * speed };
 }
 

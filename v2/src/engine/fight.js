@@ -5,7 +5,7 @@ import { RING, clamp } from '../core/math.js';
 import { makeFighter } from '../fighter/make.js';
 import { MIN_D, separate, feetAt, wrap, clampRing, dist } from './space.js';
 import { pickMode, planMove, thinkFor, interrupt, FOOT } from '../brain/footwork.js';
-import { startPunch, stepPunch, resolve } from './punch.js';
+import { startPunch, stepPunch, resolve, PUNCH } from './punch.js';
 import { makeOffense, wantPunch, chainReady, react, exitAfter } from '../brain/offense.js';
 import { DEF, startDefense } from './defense.js';
 import { chooseDefense } from '../brain/defense.js';
@@ -19,6 +19,7 @@ function makeMan(spec, corner) {
   const m = {
     f, corner, x: c, z: c, th: corner === 0 ? Math.PI / 4 : -3 * Math.PI / 4,
     vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0, walk: false,
+    stag: 0, lastSolid: -9, // hurt: seconds of stagger left; when he last took a solid shot
     mv: { x: 0, z: 0 }, ma: { x: 0, z: 0 }, aim: { x: 0, z: 0 }, beat: 0, // flow movement: velocity, its rate of change, where it's headed, rhythm phase
     feet: null, steps: 0, punch: null, off: makeOffense(), def: null,
   };
@@ -37,7 +38,7 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
     men.forEach((m, i) => {
       const s = i === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
       m.x = c; m.z = c; m.th = i === 0 ? Math.PI / 4 : -3 * Math.PI / 4;
-      m.step = null; m.pause = rng.range(0.1, 0.4); m.vx = m.vz = 0; m.walk = false;
+      m.step = null; m.pause = rng.range(0.1, 0.4); m.vx = m.vz = 0; m.walk = false; m.stag = 0; m.lastSolid = -9;
       m.mv = { x: 0, z: 0 }; m.ma = { x: 0, z: 0 }; m.aim = { x: 0, z: 0 }; m.beat = rng.range(0, 6.3);
       m.punch = null; m.off = makeOffense(); m.def = null;
       m.feelSec = F.round === 1 ? rng.range(4, 8) : rng.range(1, 3); // FNC starts with action
@@ -60,6 +61,7 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
 
     // Defense moves run their clock; a pull back steps him away for real.
     for (const m of men) {
+      if (m.stag > 0) m.stag = Math.max(0, m.stag - DT);
       const d = m.def;
       if (!d) continue;
       d.t += DT;
@@ -99,6 +101,14 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
       if (ev === 'contact') {
         p.res = resolve(m, o, rng);
         emit('contact', { corner: m.corner, t: F.clock, ...p.res });
+        // Stagger: a power shot to the head can hurt him for a moment: flush ones often, a solid one
+        // right after another solid one sometimes. (M3's damage will shade these.)
+        const pw = p.res.result === 'land' && p.res.region === 'head' && PUNCH[p.res.kind].pow >= 0.9;
+        if (pw && ((p.res.q === 'flush' && rng.chance(0.3)) || (p.res.q === 'solid' && F.clock - o.lastSolid < 1.5 && rng.chance(0.15)))) {
+          o.stag = rng.range(1, 1.8); o.off.queue.length = 0;
+          emit('stagger', { corner: o.corner, t: F.clock });
+        }
+        if (p.res.result === 'land' && p.res.q === 'solid') o.lastSolid = F.clock;
         react(o, p.res, rng);
       } else if (ev === 'done') {
         m.punch = null;
