@@ -98,7 +98,10 @@ export function makeFightCamera(THREE) {
     wantCut = false;
     const n = Math.ceil(dt / (1 / 120)), h = dt / n;
     const S = { perp, perpV, lat, latV };
-    const goalPerp = Math.max(-ROOM, Math.min(ROOM, m + side.sign * DIST));
+    // Close, but backs off (to 4.2 m) when the pair spreads wider than a narrow phone frame holds.
+    const fovNow = aspect < 1 ? 64 : 40, hf = Math.atan(Math.tan((fovNow * Math.PI) / 360) * aspect);
+    const want = Math.max(DIST, Math.min(4.2, (Math.abs(l - (side.axis === 'z' ? a.x : a.z)) + 0.45) / Math.tan(hf)));
+    const goalPerp = Math.max(-ROOM, Math.min(ROOM, m + side.sign * want));
     for (let i = 0; i < n; i++) {
       sp(S, 'lat', 'latV', l, 2.2, h);                       // slides along its side
       sp(S, 'perp', 'perpV', goalPerp, 0.7, h);              // drifts in or out only slowly

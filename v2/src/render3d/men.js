@@ -140,18 +140,18 @@ export function makeMen(THREE, scene) {
     // Direction in HIS local frame (real sides; update() mirrors z for southpaws).
     const push = e.side === 'right' ? -1 : e.side === 'left' ? 1 : 0;
     const dir = e.kind.includes('upper') ? [-0.4, 0.8, 0] : push ? [-0.3, 0, push] : [-1, 0.1, 0];
-    if (e.region === 'body') { R.fold.v += amp * 14 / 0.47 * 1.4; R.chest.v[0] -= amp * 6; }
+    if (e.region === 'body') { R.fold.v += amp * 14 / 0.47 * 2.3; R.chest.v[0] -= amp * 6; }
     else {
       for (let j = 0; j < 3; j++) R.chest.v[j] += dir[j] * amp * 16 * 0.45;
-      R.pend.push({ t: 0.035, v: mul(dir, amp * 18 / 0.52) });
+      R.pend.push({ t: 0.035, v: mul(dir, amp * 16) });
     }
     P.chest.v[0] -= amp * 3.5; // the puncher's recoil
     if (e.q === 'flush') R.shove = { dir, amp };
   }
 
   // The hips flow on a critically damped spring toward where the engine has him: smooths the
-  // tick-to-tick edges, quick enough that a slip or a step-in still reads.
-  const GLIDE = 16;
+  // tick-to-tick edges and gives him weight: he takes a beat to arrive where the engine has him.
+  const GLIDE = 9;
   function glide(R, m, dt) {
     const S = R.sp;
     if (!S || Math.hypot(m.x - S.x, m.z - S.z) > 1) { R.sp = { x: m.x, z: m.z, vx: 0, vz: 0 }; return R.sp; }
@@ -237,7 +237,7 @@ export function makeMen(THREE, scene) {
     const yerr = (h) => Math.abs(wrapA(want[h].yaw - F[h].yaw));
     if (R.follow && !F[R.follow].sw) {
       const h = R.follow; R.follow = null;
-      if (err(h) > 0.03 * s) lift(F[h], null, 0.12, Math.max(0.012 * s, D.swing * 0.5));
+      if (err(h) > 0.03 * s) lift(F[h], null, 0.155, Math.max(0.01 * s, D.swing * 0.42));
     }
     if (F.lead.sw || F.rear.sw || R.follow) return;
     const thr = 0.15 * s;
@@ -247,7 +247,7 @@ export function makeMen(THREE, scene) {
     const ahead = (h) => (F[h].x - m.x) * m.vx + (F[h].z - m.z) * m.vz;
     const h = ['lead', 'rear'].sort((x, y) => ahead(y) - ahead(x))[0], d = err(h);
     if (d > 0.025 * s) {
-      lift(F[h], null, clamp(0.17 - spd * 0.03, 0.12, 0.17), Math.max(0.018 * s, D.swing * clamp(d / (0.15 * s), 0.6, 1.3)));
+      lift(F[h], null, clamp(0.22 - spd * 0.04, 0.16, 0.22), Math.max(0.015 * s, D.swing * 0.85 * clamp(d / (0.15 * s), 0.6, 1.3)));
       F[h].sw.pair = h === 'lead' ? 'rear' : 'lead';
     } else lift(F[h], null, 0.12, 0.004); // turning in place: a pivot, the foot barely leaves the canvas
   }
@@ -318,8 +318,8 @@ export function makeMen(THREE, scene) {
         const lat = d.side === 'lead' ? 1 : -1;                    // away from the hand that's coming
         const k = clamp(d.t / d.dur, 0, 1);
         let o3 = [0, 0, 0];
-        if (d.kind === 'slip') o3 = [0.03, peek ? -0.15 : -0.08, 0.15 * lat];
-        else if (d.kind === 'roll') { o3 = [0.06, -0.22, 0.12 * lat * Math.sin(Math.PI * k)]; hipExtra = 0.3 * lat * Math.sin(Math.PI * k); }
+        if (d.kind === 'slip') o3 = [0.04, peek ? -0.17 : -0.11, 0.22 * lat];   // a whole-body lean you can see from the cheap seats
+        else if (d.kind === 'roll') { o3 = [0.07, -0.26, 0.15 * lat * Math.sin(Math.PI * k)]; hipExtra = 0.3 * lat * Math.sin(Math.PI * k); }
         else if (d.kind === 'pull') { o3 = [m.f.guard === 'handslow' ? -0.18 : -0.13, 0.01, 0]; wGoal = 0.15; }
         else if (d.kind === 'block') {
           if (m.f.guard === 'philly') { o3 = [-0.04, -0.03, 0.03]; roll = -0.4; wGoal = 0.3; } // shoulder roll: turn away, shoulder up, sit back
@@ -334,7 +334,7 @@ export function makeMen(THREE, scene) {
       const yaw = spring(R.yaw, turnGoal + roll, 26, 0.62, dt);
       const hipYaw = spring(R.hip, turnGoal * 0.5 + hipExtra + roll * 0.4, 34, 0.85, dt);
       const w = spring(R.w, wGoal, 18, 0.9, dt);
-      const fold = spring(R.fold, bodyDip, 14, 0.7, dt);
+      const fold = spring(R.fold, bodyDip, 9, 0.75, dt);         // a body shot folds him, and he's slow to come back up
 
       // Hits: chest and (delayed) head impulses on springs that wobble back once.
       for (let k = R.pend.length - 1; k >= 0; k--) {
@@ -342,7 +342,7 @@ export function makeMen(THREE, scene) {
         if (q.t <= 0) { for (let j = 0; j < 3; j++) R.headK.v[j] += q.v[j]; R.pend.splice(k, 1); }
       }
       const chest = spring3(R.chest, [0, 0, 0], 14, 0.75, dt);
-      const hk = spring3(R.headK, [0, 0, 0], 18, 0.55, dt);
+      const hk = spring3(R.headK, [0, 0, 0], 11, 0.45, dt);       // the head snaps, then wobbles back once
       const gk = spring3(R.gk, [0, 0, 0], 24, 0.5, dt);           // block recoil on the gloves
       // ch/hd: the same pushes in his mirrored local frame (chest/headK hold real sides).
       const ch = [chest[0], chest[1], chest[2] * side], hd = [hk[0], hk[1], hk[2] * side];
