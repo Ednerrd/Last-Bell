@@ -5,15 +5,12 @@ import { jabRange } from '../fighter/make.js';
 import { MIN_D, dist, rightOf, ropeGap, inCorner, clampRing } from '../engine/space.js';
 import { clamp } from '../core/math.js';
 
-// Style DNA for footwork: mode weights, step speed (m/s), pause between steps (s), escape instinct.
+// Style DNA for footwork: mode weights, top speed (m/s), how long between decisions (s), escape
+// instinct, rhythm (in-and-out bounces per second, and how far).
 export const FOOT = {
-  outboxer: { w: { circle: 0.5, back: 0.15, hold: 0.22, feel: 0.13 }, speed: 1.7, pause: [0.04, 0.2], escape: 0.85 },
-  boxer:    { w: { circle: 0.33, hold: 0.32, press: 0.25, feel: 0.1 },   speed: 1.5, pause: [0.08, 0.3], escape: 0.6 },
-  pressure: { w: { cut: 0.6, press: 0.35, feel: 0.05 },                speed: 1.35, pause: [0.12, 0.38], escape: 0.3 },
-};
-const LEN = {
-  feel: [0.14, 0.22], circle: [0.16, 0.26], hold: [0.12, 0.2], press: [0.28, 0.36],
-  cut: [0.26, 0.36], back: [0.26, 0.36], escape: [0.36, 0.46],
+  outboxer: { w: { circle: 0.5, back: 0.15, hold: 0.22, feel: 0.13 }, speed: 1.7, pause: [0.04, 0.2], escape: 0.85, hz: 1.7, bob: 0.22 },
+  boxer:    { w: { circle: 0.33, hold: 0.32, press: 0.25, feel: 0.1 },   speed: 1.5, pause: [0.08, 0.3], escape: 0.6, hz: 1.4, bob: 0.18 },
+  pressure: { w: { cut: 0.6, press: 0.35, feel: 0.05 },                speed: 1.35, pause: [0.12, 0.38], escape: 0.3, hz: 1.1, bob: 0.14 },
 };
 const MODE_T = { back: [0.6, 1.4], escape: [0.8, 1.6] };
 
@@ -65,8 +62,13 @@ export function pickMode(me, opp, rng, clock) {
   return mode;
 }
 
-// Plan one step: a target point and a duration, or null to stay planted.
-export function planStep(me, opp, rng) {
+// Movement is a flow, not steps: a few times a second he picks where he wants to go and how fast
+// (planMove), and the engine eases his velocity toward it. On top rides his rhythm: a constant
+// small in-and-out toward his man, the feeling-out bounce, so he's never frozen in place.
+// Speed per mode, as a share of his style speed (m/s). Walking up from far is its own speed.
+const PACE = { feel: 0.32, hold: 0.36, circle: 0.6, press: 0.8, cut: 0.85, back: 0.68, escape: 0.95 };
+const WALK = 1.25;
+export function planMove(me, opp, rng) {
   const d = dist(me, opp), want = wantRange(me, opp, me.mode), dna = FOOT[me.f.style];
   const u = unit(opp.x - me.x, opp.z - me.z);
   const L = { x: -u.z * me.circle, z: u.x * me.circle };
@@ -91,34 +93,23 @@ export function planStep(me, opp, rng) {
     case 'back': add(u, -1); add(L, 0.4); break;
     case 'escape': add(L, 1); add(toC, 0.5); add(u, -0.2); break;
   }
-  // Well out of range: he walks up to it with real strides, no feeling-out baby steps.
+  // Well out of range: he walks straight up to it, no feeling-out.
   const far = d - want;
   me.walk = far > 0.45 && me.mode !== 'back' && me.mode !== 'escape';
   if (me.walk) add(u, 1.2);
   const gap = ropeGap(me);
   if (me.mode !== 'escape' && gap < 0.5) add(toC, 0.6 * (1 - gap / 0.5));
-  if (Math.hypot(dx, dz) < 0.05) return null;
-
-  const dir = unit(dx, dz), span = LEN[me.mode];
-  const len = me.walk ? Math.min(rng.range(0.38, 0.52), far - 0.1) : rng.range(span[0], span[1]);
-  const to = { x: me.x + dir.x * len, z: me.z + dir.z * len };
-  clampRing(to);
-  const real = Math.hypot(to.x - me.x, to.z - me.z);
-  if (real < 0.04) return null;
-  // Which foot moves first: the one on the side he's stepping toward.
-  const f = { x: Math.cos(me.th), z: Math.sin(me.th) };
-  const along = dir.x * f.x + dir.z * f.z;
-  const first = along >= 0 ? 'lead' : 'rear';
-  return { to, dur: clamp(real / (dna.speed * (me.walk ? 1.3 : 1)), 0.14, 0.32), first };
+  const m = Math.hypot(dx, dz);
+  // How hard the mode wants it (a weak pull moves him slower), a touch of variety per decision.
+  const speed = me.walk ? WALK : dna.speed * PACE[me.mode] * clamp(m, 0.35, 1) * rng.range(0.8, 1.15);
+  return m < 0.05 ? { x: 0, z: 0 } : { x: (dx / m) * speed, z: (dz / m) * speed };
 }
 
-export function pauseFor(me, rng) {
-  if (me.walk) return rng.range(0, 0.04); // walking up: one stride into the next
+// How long until he decides again (s): busy feet decide often, a stalker less.
+export function thinkFor(me, rng) {
+  if (me.walk) return rng.range(0.1, 0.18);
   const p = FOOT[me.f.style].pause;
-  if (me.mode === 'feel' || me.mode === 'hold') return rng.range(p[0] + 0.15, p[1] + 0.35);
-  if (me.mode === 'escape') return rng.range(0.02, 0.08);
-  if (me.mode === 'circle') return rng.range(p[0] + 0.12, p[1] + 0.2);
-  return rng.range(p[0], p[1]);
+  return rng.range(0.14, 0.26) + rng.range(p[0], p[1]) * 0.5;
 }
 
 // Situations that end a mode early.

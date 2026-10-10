@@ -3,8 +3,8 @@
 import { makeRng } from '../core/rng.js';
 import { RING, clamp } from '../core/math.js';
 import { makeFighter } from '../fighter/make.js';
-import { MIN_D, separate, feetAt, wrap, clampRing } from './space.js';
-import { pickMode, planStep, pauseFor, interrupt } from '../brain/footwork.js';
+import { MIN_D, separate, feetAt, wrap, clampRing, dist } from './space.js';
+import { pickMode, planMove, thinkFor, interrupt, FOOT } from '../brain/footwork.js';
 import { startPunch, stepPunch, resolve } from './punch.js';
 import { makeOffense, wantPunch, chainReady } from '../brain/offense.js';
 import { DEF, startDefense } from './defense.js';
@@ -19,6 +19,7 @@ function makeMan(spec, corner) {
   const m = {
     f, corner, x: c, z: c, th: corner === 0 ? Math.PI / 4 : -3 * Math.PI / 4,
     vx: 0, vz: 0, step: null, pause: 0, mode: 'feel', modeT: 0, circle: 1, feelSec: 0, walk: false,
+    mv: { x: 0, z: 0 }, aim: { x: 0, z: 0 }, beat: 0, // flow movement: velocity, where it's easing to, rhythm phase
     feet: null, steps: 0, punch: null, off: makeOffense(), def: null,
   };
   m.feet = feetAt(m, m.th, f.stance);
@@ -36,7 +37,8 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
     men.forEach((m, i) => {
       const s = i === 0 ? -1 : 1, c = (RING.half - 0.7) * s;
       m.x = c; m.z = c; m.th = i === 0 ? Math.PI / 4 : -3 * Math.PI / 4;
-      m.step = null; m.pause = rng.range(0.2, 0.8); m.vx = m.vz = 0; m.walk = false;
+      m.step = null; m.pause = rng.range(0.1, 0.4); m.vx = m.vz = 0; m.walk = false;
+      m.mv = { x: 0, z: 0 }; m.aim = { x: 0, z: 0 }; m.beat = rng.range(0, 6.3);
       m.punch = null; m.off = makeOffense(); m.def = null;
       m.feelSec = F.round === 1 ? rng.range(10, 22) : rng.range(2, 8);
       m.mode = 'feel'; m.modeT = m.feelSec;
@@ -75,13 +77,12 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
       if ((!m.punch || chainReady(m.punch)) && !(m.def && m.def.t >= 0)) {
         const k = wantPunch(m, o, rng, DT);
         if (k) {
-          const p = startPunch(m, o, k); m.step = null;
+          const p = startPunch(m, o, k);
           emit('punch', { corner: m.corner, kind: k, combo: m.off.combo, t: F.clock });
           const dc = chooseDefense(o, m, p.P, rng);
           if (dc) {
             // He starts moving after his reaction time (t < 0 until then).
             startDefense(o, dc.kind, p.P.hand).t = -dc.delay;
-            o.step = null;
             emit('defend', { corner: o.corner, kind: dc.kind, vs: k, delay: dc.delay, t: F.clock });
           }
         }
@@ -104,26 +105,29 @@ export function makeFight({ seed = 1, red = {}, blue = {}, roundSec = 180, bus =
     for (const m of men) {
       const o = men[1 - m.corner];
       m.modeT -= DT;
-      if (m.modeT <= 0 || (!m.step && interrupt(m, o, rng))) setMode(m, o);
-      if (m.punch || (m.def && m.def.t >= 0)) continue; // planted while he throws or defends
-      if (m.step) {
-        const s = m.step;
-        s.t += DT;
-        const k = clamp(s.t / s.dur, 0, 1), e = k * k * (3 - 2 * k);
-        m.x = s.from.x + (s.to.x - s.from.x) * e;
-        m.z = s.from.z + (s.to.z - s.from.z) * e;
-        if (k >= 1) { m.step = null; m.pause = pauseFor(m, rng); m.steps++; }
-      } else if ((m.pause -= DT) <= 0) {
-        const p = planStep(m, o, rng);
-        if (p) m.step = { from: { x: m.x, z: m.z }, to: p.to, dur: p.dur, t: 0, first: p.first };
-        else m.pause = pauseFor(m, rng);
+      if (m.modeT <= 0 || interrupt(m, o, rng)) setMode(m, o);
+      if (m.punch || (m.def && m.def.t >= 0)) {
+        // Planted while he throws or defends: what he was carrying bleeds off fast.
+        const k = Math.exp(-14 * DT); m.mv.x *= k; m.mv.z *= k;
+      } else {
+        if ((m.pause -= DT) <= 0) { m.aim = planMove(m, o, rng); m.pause = thinkFor(m, rng); }
+        // Rhythm: in and out toward him, never quite still (not while walking up).
+        const dna = FOOT[m.f.style];
+        m.beat += DT * Math.PI * 2 * dna.hz;
+        const r = m.walk ? 0 : Math.sin(m.beat) * dna.bob * (m.mode === 'back' || m.mode === 'escape' ? 0.4 : 1);
+        const d = dist(m, o) || 1, ux = (o.x - m.x) / d, uz = (o.z - m.z) / d;
+        // Ease into the new speed (~0.12 s): weight shifts, no snapping.
+        const k = 1 - Math.exp(-8 * DT);
+        m.mv.x += (m.aim.x + ux * r - m.mv.x) * k; m.mv.z += (m.aim.z + uz * r - m.mv.z) * k;
       }
+      m.x += m.mv.x * DT; m.z += m.mv.z * DT;
+      clampRing(m);
     }
 
     // No overlap, ever: push apart, and if they're both pinned, keep last tick's legal spots.
     const [a, b] = men;
     if (!separate(a, b)) {
-      men.forEach((m, i) => { m.x = prev[i].x; m.z = prev[i].z; if (m.step) { m.step = null; m.pause = 0.1; } });
+      men.forEach((m, i) => { m.x = prev[i].x; m.z = prev[i].z; m.mv.x = m.mv.z = 0; });
     }
 
     for (const m of men) {
