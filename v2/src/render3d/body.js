@@ -205,8 +205,8 @@ function buildBody(look) {
       grp: (d) => ((d - TH) / SH > BOOT ? 'shoe' : 'skin') });
     // Foot (boot): heel to toe along +x, flat sole.
     const A0 = [0, BIND.hipY - TH - SH, sg * BIND.hipZ];
-    const FOOT = table([[-0.08, 0.04, 0.034], [-0.02, 0.05, 0.042], [0.05, 0.04, 0.047], [0.12, 0.029, 0.05], [0.19, 0.02, 0.036]]);
-    loft(G, A0, { axis: [1, 0, 0], len: 1, front: [0, 1, 0], side: [0, 0, sg], t0: -0.08, t1: 0.19, n: 12, m: 14,
+    const FOOT = table([[-0.08, 0.042, 0.03], [-0.02, 0.056, 0.036], [0.05, 0.043, 0.04], [0.12, 0.033, 0.04], [0.18, 0.024, 0.029]]); // a slim boxing boot, not a flipper
+    loft(G, A0, { axis: [1, 0, 0], len: 1, front: [0, 1, 0], side: [0, 0, sg], t0: -0.08, t1: 0.18, n: 12, m: 14,
       shape: (t, a) => { const k = FOOT(t), hh = k[1], hw = k[2]; return [-0.085 + hh + hh * pe(Math.cos(a), 3), hw * pe(Math.sin(a), 2.6)]; },
       wt: (p, t) => { const ws = 0.35 * (1 - smooth(t / 0.05)) * smooth((p[1] - A0[1] + 0.03) / 0.03); return W([sh, ws], [ft, 1 - ws]); },
       grp: () => 'shoe' });

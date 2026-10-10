@@ -161,11 +161,10 @@ export function makeMen(THREE, scene) {
     return S;
   }
 
-  // ---- Feet: a gait, not a copy of the engine's steps (that read as baby steps). Each foot stays
-  // planted until it's too far from where it belongs, then strides there; where it belongs leads
-  // the way he's moving, so the stride lands ahead of him and he walks through it. One foot at a
-  // time (the next can go once the first is mostly down), and a foot in the air keeps aiming at
-  // where he's going. The step in behind a punch and the catch step after a big shot ride on top.
+  // ---- Feet: push steps. Both feet stay planted until he's drifted far enough from his stance,
+  // then the foot on the side he's going steps (landing a little ahead, toward where he's headed)
+  // and the other snaps in behind it. A foot in the air keeps aiming at where he's going. The step
+  // in behind a punch and the catch step after a big shot ride on top.
   function stanceSpot(c, th, h, D, s, side) {
     const l = FOOT[h];
     const p = world({ x: c.x, z: c.z, th }, [l[0] * D.len, 0, l[1] * D.wid], s, side);
@@ -228,22 +227,27 @@ export function makeMen(THREE, scene) {
       f.yaw = S.fyaw + wrapA(to.yaw - S.fyaw) * e;
       f.y = S.h * Math.sin(Math.PI * u);
       R.lift = Math.max(R.lift, f.y);
-      if (u >= 1) { f.sw = null; f.y = 0; }
+      if (u >= 1) { if (S.pair) R.follow = S.pair; f.sw = null; f.y = 0; }
     }
-    // Strides: the foot furthest from where it belongs goes, once the other is (nearly) down.
+    // Push steps, like a boxer: the foot on the side he's going steps, the other snaps in right
+    // behind it, then both are down and set for a beat. Not a walk with a foot always in the air.
     const err = (h) => Math.hypot(want[h].x - F[h].x, want[h].z - F[h].z);
     const yerr = (h) => Math.abs(wrapA(want[h].yaw - F[h].yaw));
-    const down = (h) => !F[h].sw || F[h].sw.t >= F[h].sw.dur * 0.55;
-    const thr = 0.13 * s;
-    const cand = ['lead', 'rear'].filter((h) => !F[h].sw && (err(h) > thr || yerr(h) > 0.44)).sort((a, b) => err(b) - err(a));
-    if (cand.length) {
-      const h = cand[0], o = h === 'lead' ? 'rear' : 'lead', d = err(h);
-      if (down(o) || d > 0.35 * s) {
-        // A real move gets a real lift; turning in place is a pivot, the foot barely leaves the canvas.
-        if (d > 0.025 * s) lift(F[h], null, clamp(0.22 - spd * 0.06, 0.12, 0.22) * (d > 0.35 * s ? 0.75 : 1), Math.max(0.018 * s, D.swing * clamp(d / (0.15 * s), 0.6, 1.3)));
-        else lift(F[h], null, 0.12, 0.004);
-      }
+    if (R.follow && !F[R.follow].sw) {
+      const h = R.follow; R.follow = null;
+      if (err(h) > 0.03 * s) lift(F[h], null, 0.12, Math.max(0.012 * s, D.swing * 0.5));
     }
+    if (F.lead.sw || F.rear.sw || R.follow) return;
+    const thr = 0.15 * s;
+    const cand = ['lead', 'rear'].filter((h) => err(h) > thr || yerr(h) > 0.44);
+    if (!cand.length) return;
+    // The foot nearest the way he's going goes first.
+    const ahead = (h) => (F[h].x - m.x) * m.vx + (F[h].z - m.z) * m.vz;
+    const h = ['lead', 'rear'].sort((x, y) => ahead(y) - ahead(x))[0], d = err(h);
+    if (d > 0.025 * s) {
+      lift(F[h], null, clamp(0.17 - spd * 0.03, 0.12, 0.17), Math.max(0.018 * s, D.swing * clamp(d / (0.15 * s), 0.6, 1.3)));
+      F[h].sw.pair = h === 'lead' ? 'rear' : 'lead';
+    } else lift(F[h], null, 0.12, 0.004); // turning in place: a pivot, the foot barely leaves the canvas
   }
 
   function update(raw, dt = 1 / 60) {
