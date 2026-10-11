@@ -102,7 +102,7 @@ function makeProfile(o) {
 
 /* ---------- tunables (the brain's knobs, one place) ---------- */
 const BR = {
-  spread: 1,              // squeezes how much a skill point is worth (1 = as is; lower = closer tiers, more upsets)
+  spread: .6,             // squeezes how much a skill point is worth (1 = as is; lower = closer tiers, more upsets)
   react: [.34, .14],      // reaction time to a punch, novice .. world class (s)
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
   antic: .6,              // a read punch is seen this much sooner
