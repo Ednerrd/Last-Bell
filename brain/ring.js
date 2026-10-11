@@ -16,6 +16,9 @@ const RS = {
   dmg: .5, chin: .6, stun: 6.2, flash: .05,
   ctrK: 1.3,          // caught while punching
   ctrLand: 1.25,      // a counter fired off a defense that worked lands more (he's open, mid-punch)
+  cutBack: .35,       // how much cutting the ring off slows the other man's backpedal
+  smother: .75,       // straights jammed in close (inside 46)
+  tight: 54,          // inside this, counters get half their bonus
   circ: .5,           // how much ground a circling man costs the man chasing him (cutting the ring off cancels it)
   gasCost: 1.05, regen: [.5, 1.1],
   getUp: .55, ref: 6,
@@ -83,7 +86,7 @@ class Ring {
     a.hit = true;
     const out = res => { A.lastRes = res; };
     if (d > P.max + 6) { this.ev(A, D, 'missed', { p: a.type, short: true }); return out('missed'); }
-    const fit = d < P.min - 8 ? .6 : 1;
+    const fit = d < P.min - 8 ? .6 : (P.kind === 'straight' && d < 46 ? this.o.smother : 1);
     let thru = 1, defK = null, res = null;
     const df = D.def, dt = df ? this.t - df.at : 99;
     if (df && dt >= this.o.defWin[0] && dt < this.o.defWin[1] && !D.down && D.stunT <= 0) {
@@ -93,13 +96,14 @@ class Ring {
     }
     if (!res && !defK && this.R() < (this.o.guard[0] + (this.o.guard[1] - this.o.guard[0]) * D.guard) * (P.zone === 'body' ? .75 : P.kind === 'upper' ? .6 : 1)) res = 'blocked';
     let landP = this.o.land * (1 - this.o.techL + this.o.techL * a.tech) * fit * (defK && !res ? Math.min(1.3, thru + .15) : 1);
-    if (a.counter && this.t - A.lastDefOk < .8) landP *= this.o.ctrLand;
+    const tight = d < this.o.tight; // in close there's no room to set up a counter
+    if (a.counter && this.t - A.lastDefOk < .8) landP *= tight ? (1 + this.o.ctrLand) / 2 : this.o.ctrLand;
     if (D.stunT > 0) landP = Math.min(.95, landP * 1.5);
     if (!res) res = this.R() < landP ? 'landed' : 'missed';
     if (res === 'missed') { this.ev(A, D, 'missed', { p: a.type, def: defK }); return out('missed'); }
     // damage
     const caught = D.act && !D.act.feint && !D.act.hit, ctr = caught || this.t - A.lastDefOk < .7 || (this.t - D.lastPEnd < .4 && D.lastRes !== 'landed');
-    let dmg = P.dmg * this.o.dmg * (.55 + .9 * A.s.power / 100) * (1 - this.o.techD + this.o.techD * a.tech) * (1 + .35 * a.commit) * (caught ? this.o.ctrK : 1) * (thru > 1 ? thru : 1);
+    let dmg = P.dmg * this.o.dmg * (.55 + .9 * A.s.power / 100) * (1 - this.o.techD + this.o.techD * a.tech) * (1 + .35 * a.commit) * (caught ? (tight ? (1 + this.o.ctrK) / 2 : this.o.ctrK) : 1) * (thru > 1 ? thru : 1);
     if (res === 'blocked') { dmg *= .2; this.ev(A, D, 'blocked', { p: a.type, def: defK || 'block' }); D.stam -= dmg * .3; return out('blocked'); }
     if (res === 'evaded') { this.ev(A, D, 'evaded', { p: a.type, def: defK }); return out('evaded'); }
     A.T.landed[P.cat]++; A.lastRes = 'landed';
@@ -162,6 +166,8 @@ class Ring {
         // circling: a man who moves off the line costs the other man ground (unless he cuts the ring off)
         const lat = Math.abs(m.lateral), O = F.op;
         if (lat > 0 && O.out && v[O.side] > 0) v[O.side] *= 1 - this.o.circ * lat * (1 - O.out.move.cut);
+        // a man who cuts the ring off takes the room behind the other man away: backing up straight doesn't buy as much
+        if (v[F.side] < 0 && O.out && O.out.move.cut) v[F.side] *= 1 - this.o.cutBack * O.out.move.cut;
       }
       A.x += v[0] * dt; B.x -= v[1] * dt;
       if (this.dist() < MIN_D) { const c = (A.x + B.x) / 2; A.x = c - MIN_D / 2; B.x = c + MIN_D / 2; }

@@ -2,6 +2,8 @@
 
 Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~3,400 lines) boots straight into a fight (random or picked fighters). Career, saves, hub, camp and gym mode were cut (Oct 2026); the old full game lives in git history on `claude/epic-goldberg-ps6ip4` before that cut. Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
+**The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Not wired into `index.html` yet.
+
 **What to do next: `ROADMAP.md`** (the only to-do list). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
