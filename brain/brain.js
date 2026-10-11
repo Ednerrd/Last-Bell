@@ -105,6 +105,8 @@ const BR = {
   react: [.34, .14],      // reaction time to a punch, novice .. world class (s)
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
   antic: .6,              // a read punch is seen this much sooner
+  antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
+
   tellSee: .07,           // a big tell is seen this much sooner (s per unit tell)
   moveT: .05,             // the least time a defense needs before the punch lands
   tryDef: [.5, .93],      // chance he tries to defend at all once he sees it
@@ -195,7 +197,7 @@ class Brain {
     const M = this.mem, recent = this.lastHisP && this.t - this.lastHisT < 1.2; let tot = 0, hit = 0;
     if (recent) { for (const key in M.after) if (key.startsWith(this.lastHisP + '>')) { const e = this.mpeek(M.after, key); tot += e.n; if (key === this.lastHisP + '>' + type) hit = e.n; } }
     else for (const p in M.lead) { const e = this.mpeek(M.lead, p); tot += e.n; if (p === type) hit = e.n; }
-    const base = 1 / PTYPES.length, q = (hit + 3 * base) / (tot + 3);
+    const pr = lerp(BR.antPrior[0], BR.antPrior[1], this.k.read), base = 1 / PTYPES.length, q = (hit + pr * base) / (tot + pr);
     return clamp((q - base) / .45, 0, 1) * this.k.read * (PUNCHES[type].cat === 'jab' || type === 'bodyJab' ? .5 : 1);
   }
   // his best guess at what comes next (for misreads: a man who reads you hard gets fooled when you change it)

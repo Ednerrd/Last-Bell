@@ -1,27 +1,28 @@
 // Is he human? node brain/tests/human.js [fights]
-// 1. Adaptation: a man who slips everything. A smart opponent should learn to hook him (hook/upper share climbs by round); a novice stays flat.
-// 2. Variety: the same two fighters, many fights. No two fights the same; outcomes spread.
+// 1. Adaptation: a man who always throws the 1-2. A smart opponent should start calling the right hand: defend it more, counter it more, round by round. A novice stays flat.
+// 2. Variety: the same two men, many fights. No two fights the same; outcomes spread.
 const { BB, N, fight, line, pct, f1 } = require('./lib.js');
+const { Ring } = require('../ring.js');
 const n = N(2, 120);
-function hookShare(tier) {
-  const by = Array.from({ length: 10 }, () => ({ h: 0, t: 0 })); let w = 0;
+function habit(tier, on) {
+  const by = Array.from({ length: 10 }, () => ({ seen: 0, ok: 0, ctr: 0 })); let w = 0;
   for (let k = 0; k < n; k++) {
-    const slipper = BB.makeProfile({ style: 'outboxer', tier: 'pro', seed: 1e6 + k, traits: { slip: 1, shell: 0, legs: 0, circle: .3 } });
-    const me = BB.makeProfile({ style: 'boxerpuncher', tier, seed: 2e6 + k });
-    const { res, r } = fight(me, slipper, 31000 + k), F = r.f[0];
-    if (res.winner === 0) w++;
-    // count my punches per round by kind, from the brain's history isn't per round: use the ring's thrown log via events instead
-    for (const e of F.hookLog || []) { by[e.r].t++; if (e.h) by[e.r].h++; }
+    const hab = BB.makeProfile({ style: 'boxerpuncher', tier: 'pro', seed: 1e6 + k }), me = BB.makeProfile({ style: 'boxerpuncher', tier, seed: 2e6 + k });
+    const r = new Ring(me, hab, { seed: 31000 + k }), H = r.f[1].brain;
+    if (on) { H.pickCombo = () => ({ ps: ['jab', 'cross'], why: 'habit', id: '1-2' }); H.startSetup = () => null; H.feint = () => null; }
+    // log every right hand: did my man get out of the way, and did he counter?
+    const rs = r.resolve;
+    r.resolve = function (A, D) { const a = A.act; const ok0 = D.T.defOk, c0 = D.T.ctrLanded; rs.call(this, A, D); if (A.side === 1 && a.type === 'cross') { const b = by[this.round - 1]; b.seen++; if (D.T.defOk > ok0) b.ok++; } };
+    const ctrBy = []; const rc = r.ev; r.ev = function (A, D, type, x) { if (type === 'landed' && A.side === 0 && x.counter) by[this.round - 1].ctr++; return rc.call(this, A, D, type, x); };
+    const res = r.run(); if (res.winner === 0) w++;
   }
   return { by, w: w / n };
 }
-// hook the ring so we know what kind each thrown punch was, per round
-const { Ring } = require('../ring.js'), sp = Ring.prototype.startPunch;
-Ring.prototype.startPunch = function (F, type, info, i) { if (!info.feint) { (F.hookLog = F.hookLog || []).push({ r: this.round - 1, h: ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook'].includes(type) }); } return sp.call(this, F, type, info, i); };
-console.log(`1. vs a man who slips everything (${n} fights each): my hook + uppercut share, rounds 1-2 / 4-6 / 8-10`);
-for (const t of ['novice', 'intermediate', 'pro', 'world']) {
-  const { by, w } = hookShare(t), sh = (a, b) => { let h = 0, x = 0; for (let i = a; i <= b; i++) { h += by[i].h; x += by[i].t; } return x ? pct(h / x) : '-'; };
-  console.log(`  ${t.padEnd(13)} ${sh(0, 1)} -> ${sh(3, 5)} -> ${sh(7, 9)}   wins ${pct(w)}`);
+console.log(`1. vs a man who always throws the 1-2 (${n} fights each): right hands defended, counters landed per fight-round; rounds 1-2 / 4-6 / 8-10`);
+for (const t of ['novice', 'intermediate', 'pro', 'world']) for (const on of [0, 1]) {
+  const { by, w } = habit(t, on), sh = (a, b) => { let o = 0, x = 0; for (let i = a; i <= b; i++) { o += by[i].ok; x += by[i].seen; } return x ? pct(o / x) : '-'; };
+  const cr = (a, b) => { let c = 0; for (let i = a; i <= b; i++) c += by[i].ctr; return f1(c / n / (b - a + 1)); };
+  console.log(`  ${(on ? t : '  (no habit)').padEnd(13)} right hands defended ${sh(0, 1)} -> ${sh(3, 5)} -> ${sh(7, 9)}   counters ${cr(0, 1)} -> ${cr(3, 5)}   beats him ${pct(w)}`);
 }
 console.log(`\n2. the same two men, ${n} fights (pro counter-puncher vs pro swarmer)`);
 const a = BB.makeProfile({ style: 'counter', tier: 'pro', seed: 77 }), b = BB.makeProfile({ style: 'swarmer', tier: 'pro', seed: 78 });
