@@ -19,6 +19,10 @@ const RS = {
   cutBack: .35,       // how much cutting the ring off slows the other man's backpedal
   smother: .75,       // straights jammed in close (inside 46)
   tight: 54,          // inside this, counters get half their bonus
+  pivot: 1.2,         // per second: how fast a man on the ropes with his feet working pivots back to open ring
+  pushK: 1.5,         // how much the brain's push (fighting for his distance) wins the tug of war
+  circBack: 1.2,       // how much of a circling man's retreat goes around the ring instead of toward the ropes
+  jabStop: 4,         // a landed jab knocks a man coming forward back this far
   circ: .5,           // how much ground a circling man costs the man chasing him (cutting the ring off cancels it)
   gasCost: 1.05, regen: [.5, 1.1],
   getUp: .55, ref: 6,
@@ -114,6 +118,7 @@ class Ring {
     A.R.dmg += dmg; A.T.dmg += dmg;
     // a clean power shot breaks his combo
     if (P.cat !== 'jab' && D.act && dmg > 2.5) { D.act = null; D.queue = []; }
+    if (P.cat === 'jab' && D.out && D.out.move.range < this.dist()) { const kb = this.o.jabStop; D.x += D.side ? kb : -kb; } // a jab on the way in stops his feet
     let stun = false;
     if (P.zone === 'head' && dmg > this.o.stun * .6 && this.R() < (dmg - this.o.stun * .6) / 10 * (1.3 - D.head / D.headMax)) { D.stunT = Math.max(D.stunT, .5 + this.R() * .8); stun = true; D.act = null; D.queue = []; D.def = null; }
     const wasHurt = this.hurt(D);
@@ -162,7 +167,7 @@ class Ring {
         if (F.down || F.stunT > 0) continue;
         const m = F.out.move, sf = .6 + .4 * F.stam / F.stamMax, spd = (28 + F.s.legs * .5) * sf * (this.hurt(F) ? .8 : 1) * (m.feet || 1);
         const err = this.dist() - m.range;
-        v[F.side] = Math.max(-spd, Math.min(spd, err * 3)) * (F.act ? .35 : 1);
+        v[F.side] = Math.max(-spd, Math.min(spd, err * 3 * Math.pow(m.push || 1, this.o.pushK))) * (F.act ? .35 : 1);
         // circling: a man who moves off the line costs the other man ground (unless he cuts the ring off)
         const lat = Math.abs(m.lateral), O = F.op;
         if (lat > 0 && O.out && v[O.side] > 0) v[O.side] *= 1 - this.o.circ * lat * (1 - O.out.move.cut);
@@ -170,14 +175,21 @@ class Ring {
         if (v[F.side] < 0 && O.out && O.out.move.cut) v[F.side] *= 1 - this.o.cutBack * O.out.move.cut;
       }
       A.x += v[0] * dt; B.x -= v[1] * dt;
+      // a man who circles while he backs up keeps the ring: part of his retreat goes around, not toward the ropes (cutting the ring off takes that away)
+      for (const F of this.f) {
+        if (v[F.side] >= 0 || !F.out) continue;
+        const sh = -v[F.side] * dt * this.o.circBack * Math.abs(F.out.move.lateral) * (F.out.move.feet || 1) * (1 - (F.op.out.move.cut || 0) * .8);
+        const toC = F.side ? -sh : sh; A.x += toC; B.x += toC;
+      }
       if (this.dist() < MIN_D) { const c = (A.x + B.x) / 2; A.x = c - MIN_D / 2; B.x = c + MIN_D / 2; }
       for (const F of this.f) {
         // ropes: a man pinned there circles out along them, unless the other man cuts him off
         if (F.side ? F.x > RING : F.x < -RING) { const o = F.side ? F.x - RING : F.x + RING; A.x -= o; B.x -= o; }
+        // pinned: he pivots off along the ropes and he's back in open ring (unless the other man cut that off)
         const lat = Math.abs(F.out.move.lateral);
-        if (this.ropes(F) > .3 && lat > 0 && !F.down && F.stunT <= 0) {
-          const esc = lat * (.25 + F.s.legs / 250) * (F.out.move.feet || 1) * (1 - .75 * (F.op.out.move.cut || 0)) * 40 * dt;
-          const toC = F.side ? -esc : esc; A.x += toC; B.x += toC;
+        if (this.ropes(F) > .3 && lat > 0 && !F.down && F.stunT <= 0 && !F.act && this.R() < this.o.pivot * lat * (F.out.move.feet || 1) * (.5 + F.s.legs / 200) * (1 - .75 * (F.op.out.move.cut || 0)) * dt) {
+          const room = F.side ? RING - F.x : F.x + RING, need = 70 - room; if (need > 0) { const toC = F.side ? -need : need; A.x += toC; B.x += toC; }
+          F.T.pivots = (F.T.pivots || 0) + 1;
         }
       }
     }

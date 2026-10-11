@@ -516,7 +516,9 @@ class Brain {
       else if (P.ropes.me > .6 && P.dist < 40 && this.R() < .02 * tr.clinch * k.clinch) clinch = true; // smother the man who has him pinned
       else if (tr.range > .7 && P.dist < 40 && this.R() < .015 * tr.clinch) clinch = true;      // an out-boxer doesn't want it in there
     }
-    return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch, feet: lerp(.75, 1.1, k.footwork) }; // feet: how well he moves (no crossed feet, small steps)
+    // push: how hard he fights for that distance. A mover who lives outside fights for room; a pressure man fights to close it. Footwork and range skill win the tug of war
+    const out = range > P.dist, push = (out ? lerp(.4, 2, tr.legs) * lerp(.6, 1.3, k.footwork) : lerp(.4, 2, tr.initiative * (1 - tr.range)) * lerp(.6, 1.3, k.cutoff)) * lerp(.7, 1.2, k.range) * (this.mode === 'survive' ? 1.3 : 1);
+    return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch, feet: lerp(.75, 1.1, k.footwork), push }; // feet: how well he moves (no crossed feet, small steps)
   }
 
   /* ---------- the one call: perception in, action out ---------- */
