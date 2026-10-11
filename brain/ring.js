@@ -9,12 +9,15 @@ const RING = 146, MIN_D = 30;
 // the ring's knobs: land chance, damage, gas, knockdowns
 const RS = {
   dt: 1 / 30, roundLen: 180, rounds: 10,
-  land: .66,          // clean-hit chance for a perfect punch with no defense in the way
+  land: .7,           // clean-hit chance for a perfect punch with no defense in the way
+  techL: .3, techD: .3, // how much the brain's technique moves land chance and damage (a novice arm punch vs a world-class one)
   guard: [.1, .36],   // passive block chance, hands low .. high
   defWin: [.02, .45], // a defense counts if it started this long before the punch lands
-  dmg: .42, chin: .6, stun: 6.2, flash: .05,
+  dmg: .5, chin: .6, stun: 6.2, flash: .05,
   ctrK: 1.3,          // caught while punching
-  gasCost: 1.05, regen: [1.5, 2.9],
+  ctrLand: 1.25,      // a counter fired off a defense that worked lands more (he's open, mid-punch)
+  circ: .5,           // how much ground a circling man costs the man chasing him (cutting the ring off cancels it)
+  gasCost: 1.05, regen: [.5, 1.1],
   getUp: .55, ref: 6,
   heal: .06          // head recovery per second in the round (times recovery / 100)
 };
@@ -89,13 +92,14 @@ class Ring {
       if (thru < 1 && this.R() < df.quality * (1 - thru) * 1.15) { res = defK === 'block' || defK === 'roll' && thru > .25 ? 'blocked' : 'evaded'; D.T.defOk++; D.lastDefOk = this.t; }
     }
     if (!res && !defK && this.R() < (this.o.guard[0] + (this.o.guard[1] - this.o.guard[0]) * D.guard) * (P.zone === 'body' ? .75 : P.kind === 'upper' ? .6 : 1)) res = 'blocked';
-    let landP = this.o.land * (.5 + .55 * a.tech) * fit * (defK && !res ? Math.min(1.3, thru + .15) : 1);
+    let landP = this.o.land * (1 - this.o.techL + this.o.techL * a.tech) * fit * (defK && !res ? Math.min(1.3, thru + .15) : 1);
+    if (a.counter && this.t - A.lastDefOk < .8) landP *= this.o.ctrLand;
     if (D.stunT > 0) landP = Math.min(.95, landP * 1.5);
     if (!res) res = this.R() < landP ? 'landed' : 'missed';
     if (res === 'missed') { this.ev(A, D, 'missed', { p: a.type, def: defK }); return out('missed'); }
     // damage
     const caught = D.act && !D.act.feint && !D.act.hit, ctr = caught || this.t - A.lastDefOk < .7 || (this.t - D.lastPEnd < .4 && D.lastRes !== 'landed');
-    let dmg = P.dmg * this.o.dmg * (.55 + .9 * A.s.power / 100) * (.6 + .5 * a.tech) * (1 + .35 * a.commit) * (caught ? this.o.ctrK : 1) * (thru > 1 ? thru : 1);
+    let dmg = P.dmg * this.o.dmg * (.55 + .9 * A.s.power / 100) * (1 - this.o.techD + this.o.techD * a.tech) * (1 + .35 * a.commit) * (caught ? this.o.ctrK : 1) * (thru > 1 ? thru : 1);
     if (res === 'blocked') { dmg *= .2; this.ev(A, D, 'blocked', { p: a.type, def: defK || 'block' }); D.stam -= dmg * .3; return out('blocked'); }
     if (res === 'evaded') { this.ev(A, D, 'evaded', { p: a.type, def: defK }); return out('evaded'); }
     A.T.landed[P.cat]++; A.lastRes = 'landed';
@@ -152,12 +156,12 @@ class Ring {
       const v = [0, 0];
       for (const F of this.f) {
         if (F.down || F.stunT > 0) continue;
-        const m = F.out.move, sf = .6 + .4 * F.stam / F.stamMax, spd = (28 + F.s.legs * .5) * sf * (this.hurt(F) ? .8 : 1);
+        const m = F.out.move, sf = .6 + .4 * F.stam / F.stamMax, spd = (28 + F.s.legs * .5) * sf * (this.hurt(F) ? .8 : 1) * (m.feet || 1);
         const err = this.dist() - m.range;
         v[F.side] = Math.max(-spd, Math.min(spd, err * 3)) * (F.act ? .35 : 1);
         // circling: a man who moves off the line costs the other man ground (unless he cuts the ring off)
         const lat = Math.abs(m.lateral), O = F.op;
-        if (lat > 0 && O.out && v[O.side] > 0) v[O.side] *= 1 - .3 * lat * (1 - O.out.move.cut);
+        if (lat > 0 && O.out && v[O.side] > 0) v[O.side] *= 1 - this.o.circ * lat * (1 - O.out.move.cut);
       }
       A.x += v[0] * dt; B.x -= v[1] * dt;
       if (this.dist() < MIN_D) { const c = (A.x + B.x) / 2; A.x = c - MIN_D / 2; B.x = c + MIN_D / 2; }
@@ -166,7 +170,7 @@ class Ring {
         if (F.side ? F.x > RING : F.x < -RING) { const o = F.side ? F.x - RING : F.x + RING; A.x -= o; B.x -= o; }
         const lat = Math.abs(F.out.move.lateral);
         if (this.ropes(F) > .3 && lat > 0 && !F.down && F.stunT <= 0) {
-          const esc = lat * (.25 + F.s.legs / 250) * (1 - .75 * (F.op.out.move.cut || 0)) * 40 * dt;
+          const esc = lat * (.25 + F.s.legs / 250) * (F.out.move.feet || 1) * (1 - .75 * (F.op.out.move.cut || 0)) * 40 * dt;
           const toC = F.side ? -esc : esc; A.x += toC; B.x += toC;
         }
       }

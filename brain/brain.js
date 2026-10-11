@@ -109,12 +109,13 @@ const BR = {
   moveT: .05,             // the least time a defense needs before the punch lands
   tryDef: [.5, .93],      // chance he tries to defend at all once he sees it
   misread: .4,            // misread chance at zero read skill
+  defQ: .3,              // defense quality floor: even a novice's slip works sometimes
   biteRead: .55,          // how well a reader spots a feint
   decT: [.55, .24],       // time between offense decisions, novice .. world class
-  throwP: .05,            // base chance per decision to let his hands go (times output)
+  throwP: .058,           // base chance per decision to let his hands go (times output)
   feintP: .05,            // base chance per decision to feint
   setupP: .16,            // chance a smart man picks a planned sequence instead of a single combo
-  ctrP: [.06, .62],       // chance to counter after a defense works, by counter skill
+  ctrP: [.06, .75],       // chance to counter after a defense works, by counter skill
   memTau: [25, 120], memNotice: [.35, 1], memPrior: 4,
   outShort: 14,           // novice distance misjudgment (units)
   stealT: 30              // the last 30 s, where rounds get stolen
@@ -126,7 +127,7 @@ const MODES = {
   press:   { aggr: 1.25, range: -10, guard: .65, lat: .2, cut: 1 },
   burst:   { aggr: 4.2, range: -9, guard: .4, lat: .2 },
   reset:   { aggr: .12, range: 16, guard: .7, lat: 1 },
-  counter: { aggr: .35, range: 2, guard: .75, lat: .5, ctr: 1.6 },
+  counter: { aggr: .35, range: 2, guard: .75, lat: .5, ctr: 2 },
   hunt:    { aggr: 3, range: -14, guard: .45, lat: .1, cut: 1 },
   survive: { aggr: .25, range: 20, guard: 1, lat: .9 }
 };
@@ -239,7 +240,7 @@ class Brain {
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
     const k = this.k, m = MODES[this.mode];
-    let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.25 - .55 * this.tr.initiative) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
+    let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * clamp(this.tr.initiative + this.plan.initiative, 0, 1)) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
     if (this.mode === 'survive') ch *= this.hurtResp === 'fire' ? 1.5 : .3;
     if (this.R() > ch) return;
@@ -307,7 +308,7 @@ class Brain {
     if (this.mode === 'survive' && this.hurtResp === 'shell') w.block *= 3;
     if (this.mode === 'survive' && this.hurtResp === 'run') w.pull *= 3;
     const def = wpickR(this.R, Object.keys(w), x => w[x] * (x === best ? 1 + 2 * rd + k.read * .5 : 1)) || 'block';
-    const q = clamp(k[DEF_SKILL[def]] * (1 - .35 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + .3 * rd) * (1 - .15 * E.frus), .05, 1);
+    const q = clamp(lerp(BR.defQ, 1, k[DEF_SKILL[def]]) * (1 - .35 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + .3 * rd) * (1 - .15 * E.frus), .05, 1);
     this.out.defend = { kind: def, zone: PUNCHES[seenAs].zone, vs: seenAs, quality: q };
     this.note('defends ' + def + ' vs ' + seenAs + (seenAs !== T.type ? ' (it was a ' + T.type + ')' : '') + (T.feint ? ' (bit on a feint)' : ''));
   }
@@ -380,7 +381,8 @@ class Brain {
     if (this.setup) { const s = this.stepSetup(P, dSeen); if (s) return s; }
     if (dSeen > 92) return null;
     const open = this.opening(P);
-    let p = BR.throwP * (.35 + 1.3 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0)));
+    // a quick thinker decides more often, not more: the work rate is his nature, the timing is his skill
+    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4;
     // when NOT to: he keeps getting countered, he's gassed (a smart man paces it), he's scared, the other man is loaded and waiting
     let ctr = 0, n = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctr += e.c || 0; n += e.n || 0; }
     p *= 1 - clamp(ctr / Math.max(4, n) * 2.5, 0, .6) * k.read * (1 - tr.risk * .5);
@@ -408,7 +410,7 @@ class Brain {
       // range: the first punch has to reach (as far as he can tell)
       if (dSeen > c.max + 4 || dSeen < c.min - 12) { if (this.R() > .12 * (1 - k.range)) continue; }
       let w = 1;
-      w *= lerp(1, c.jab > 0 ? 3 * c.jab : .5, clamp(tr.jab + pl.jab, 0, 1)) * (c.jab ? 1 : 1.2 - .4 * tr.jab);
+      { const jt = clamp(tr.jab + pl.jab, 0, 1); w *= c.jab ? lerp(.5, 4, jt) * (.5 + c.jab) : lerp(1.6, .3, jt); }
       w *= 1 + c.power * (clamp(tr.power + pl.power, 0, 1) * 2 - .6);
       w *= 1 + c.body * (clamp(tr.body + pl.body, 0, 1) * 2.4 - .7);
       w *= c.n === 1 ? 1.5 - tr.combo : c.n === 2 ? 1 : (.2 + tr.combo * 1.3) * (c.n > 3 ? .6 : 1);
@@ -508,7 +510,7 @@ class Brain {
       else if (P.ropes.me > .6 && P.dist < 40 && this.R() < .02 * tr.clinch * k.clinch) clinch = true; // smother the man who has him pinned
       else if (tr.range > .7 && P.dist < 40 && this.R() < .015 * tr.clinch) clinch = true;      // an out-boxer doesn't want it in there
     }
-    return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch };
+    return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch, feet: lerp(.75, 1.1, k.footwork) }; // feet: how well he moves (no crossed feet, small steps)
   }
 
   /* ---------- the one call: perception in, action out ---------- */
@@ -526,7 +528,8 @@ class Brain {
       this.tel.decisions++;
       this.nd = this.need(P);
       // fatigue makes him decide faster and worse
-      this.decT = lerp(BR.decT[0], BR.decT[1], (this.k.read + this.k.combos + this.k.counter) / 3) * (1 - .3 * this.fat) * Math.exp(this.g() * .25);
+      this.decBase = lerp(BR.decT[0], BR.decT[1], (this.k.read + this.k.combos + this.k.counter) / 3);
+      this.decT = this.decBase * (1 - .3 * this.fat) * Math.exp(this.g() * .25);
       if (this.R() < .1) this.rangeJit = this.g() * lerp(5, 2, this.k.range);
       if (this.R() < .08 + (P.ropes.me > .5 ? .15 : 0)) this.lat *= -1;
       this.out.move = this.move(P);
