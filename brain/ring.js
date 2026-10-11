@@ -2,7 +2,7 @@
    The smallest fight that can test the brain: two dummies on a line between the ropes, real punch timing, simple hit math, 10-point must.
    It knows nothing about how a boxer thinks. It builds perception (what's true), calls brain.think(), and applies what comes back.
    Stats here are the body (power, speed, chin, body, stamina, recovery, heart, legs). Skills live in the brain. */
-const BB = require('./brain.js');
+const BB = typeof require === 'function' ? require('./brain.js') : self.BoxerBrain; // Node or the browser
 const { PUNCHES, DEF_THRU, kindOf } = BB;
 
 const RING = 146, MIN_D = 30;
@@ -220,23 +220,26 @@ class Ring {
     this.roundLog = this.roundLog || []; this.roundLog.push([sa, sb]);
   }
 
-  run() {
-    for (this.round = 1; this.round <= this.o.rounds && !this.over; this.round++) {
-      this.clock = 0;
-      for (const F of this.f) { F.R = { thrown: 0, lp: 0, lj: 0, lb: 0, dmg: 0, kd: 0 }; F.kdR = 0; F.brain.roundStart(this.round); }
-      this.f[0].x = -60; this.f[1].x = 60;
-      while (this.clock < this.o.roundLen && !this.over) this.tick();
-      for (const F of this.f) F.T.perRound.push(F.R.thrown);
-      if (this.over) break;
-      this.scoreRound();
-      for (const F of this.f) {
-        F.note = F.brain.rest({ round: this.round });
-        F.stam = Math.min(F.stamMax, F.stam + 30 + F.s.recovery * .3);
-        F.head = Math.min(F.headMax, F.head + 6 + F.s.recovery * .12);
-        F.act = null; F.queue = []; F.def = null; F.stunT = 0; F.clinchT = 0; F.down = false;
-        if (F.note.change) this.notes.push({ round: this.round, side: F.side, change: F.note.change });
-      }
+  // the rounds in steps, so a live viewer can drive them frame by frame (run() does the same in one go)
+  startRound() {
+    this.clock = 0;
+    for (const F of this.f) { F.R = { thrown: 0, lp: 0, lj: 0, lb: 0, dmg: 0, kd: 0 }; F.kdR = 0; F.brain.roundStart(this.round); }
+    this.f[0].x = -60; this.f[1].x = 60;
+  }
+  roundDone() { return this.clock >= this.o.roundLen || !!this.over; }
+  endRound() {
+    for (const F of this.f) F.T.perRound.push(F.R.thrown);
+    if (this.over) return;
+    this.scoreRound();
+    for (const F of this.f) {
+      F.note = F.brain.rest({ round: this.round });
+      F.stam = Math.min(F.stamMax, F.stam + 30 + F.s.recovery * .3);
+      F.head = Math.min(F.headMax, F.head + 6 + F.s.recovery * .12);
+      F.act = null; F.queue = []; F.def = null; F.stunT = 0; F.clinchT = 0; F.down = false;
+      if (F.note.change) this.notes.push({ round: this.round, side: F.side, change: F.note.change });
     }
+  }
+  finish() {
     if (!this.over) {
       const w = this.cards.map(c => c[0] > c[1] ? 0 : c[1] > c[0] ? 1 : -1), a = w.filter(x => x === 0).length, b = w.filter(x => x === 1).length;
       const winner = a > b ? 0 : b > a ? 1 : null;
@@ -246,8 +249,18 @@ class Ring {
     this.over.cards = this.cards;
     return this.over;
   }
+  run() {
+    for (this.round = 1; this.round <= this.o.rounds && !this.over; this.round++) {
+      this.startRound();
+      while (!this.roundDone()) this.tick();
+      this.endRound();
+      if (this.over) break;
+    }
+    return this.finish();
+  }
 }
 function gauss(R) { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 
 function fight(pa, pb, opts) { const r = new Ring(pa, pb, opts); const res = r.run(); return { res, ring: r }; }
-module.exports = { Ring, fight, RS, STAT0 };
+if (typeof module === 'object' && module.exports) module.exports = { Ring, fight, RS, STAT0 };
+else self.BoxerRing = { Ring, fight, RS, STAT0 };

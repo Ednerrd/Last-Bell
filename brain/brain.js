@@ -102,6 +102,7 @@ function makeProfile(o) {
 
 /* ---------- tunables (the brain's knobs, one place) ---------- */
 const BR = {
+  spreadOwn: 1,           // how much his own strengths and holes count (1 = full size)
   spread: .6,             // squeezes how much a skill point is worth (1 = as is; lower = closer tiers, more upsets)
   react: [.34, .14],      // reaction time to a punch, novice .. world class (s)
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
@@ -159,7 +160,9 @@ class Brain {
   constructor(profile, opts) {
     opts = opts || {};
     this.p = profile; this.R = opts.rng || Math.random; this.debug = !!opts.debug;
-    this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(.5 + ((profile.skills[s] == null ? 50 : profile.skills[s]) / 100 - .5) * BR.spread, 0, 1); // spread: how far apart the tiers play
+    // spread squeezes his overall level (how far apart the tiers play) but keeps his own strengths full size: a counter-puncher's counter stays his edge
+    const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl = .5 + (avg - .5) * BR.spread;
+    this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(lvl + (raw(s) - avg) * BR.spreadOwn, 0, 1);
     this.tr = Object.assign({}, STYLES.boxerpuncher.t, profile.traits);
     const k = this.k;
     this.iq = (k.read + k.counter + k.pacing + k.adjust) / 4;
