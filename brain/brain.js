@@ -102,6 +102,7 @@ function makeProfile(o) {
 
 /* ---------- tunables (the brain's knobs, one place) ---------- */
 const BR = {
+  spread: 1,              // squeezes how much a skill point is worth (1 = as is; lower = closer tiers, more upsets)
   react: [.34, .14],      // reaction time to a punch, novice .. world class (s)
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
   antic: .6,              // a read punch is seen this much sooner
@@ -158,7 +159,7 @@ class Brain {
   constructor(profile, opts) {
     opts = opts || {};
     this.p = profile; this.R = opts.rng || Math.random; this.debug = !!opts.debug;
-    this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp((profile.skills[s] == null ? 50 : profile.skills[s]) / 100, 0, 1);
+    this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(.5 + ((profile.skills[s] == null ? 50 : profile.skills[s]) / 100 - .5) * BR.spread, 0, 1); // spread: how far apart the tiers play
     this.tr = Object.assign({}, STYLES.boxerpuncher.t, profile.traits);
     const k = this.k;
     this.iq = (k.read + k.counter + k.pacing + k.adjust) / 4;
