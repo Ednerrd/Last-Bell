@@ -178,3 +178,19 @@ Hash 84ba46a3 -> **9fe862cf**. For B6: swarmer 47.4 sits just under the 48 floor
     - After: switch 55.0 (untouched, noise), awkward 53.1, pboxer 52.2, jabgrab 51.8, body 50.2, spoiler 50.1, angle 49.0, volume 48.9, feinter 45.7. Audit 54.5 / 15.4 / 28.3%, stops 30.3%. Hash holds (8a08e67b: same.js runs base styles only).
     - Still open for B6: feinter ~47, swarmer vs base styles (47.4 in the last round robin).
 - Lab republished after each engine step so Ed can watch the brain work.
+
+## The standalone brain, v1 (Oct 11 2026, `brain/`, branch `claude/boxer-brain`)
+Ed: the brain comes first, then plug it into any renderer. Answers (Oct 11): tiers Novice / Intermediate / Pro / World class; all four trait groups; v1 = brain + dummy ring (no learning across fights, no corner); stats are the body, skills are what he knows. API and internals: `brain/README.md`.
+
+Measured on the dummy ring (identical stats, spread .6):
+| Measure | Result | Target |
+|---|---|---|
+| Audit (pro, 150) thrown / landed / connect, stops | 50.4 / 16.5 / 32.6%, 22% | ~53 / 15 / 29%, 25-30% |
+| Round 1 vs rounds 3-4 output | 0.89 | ~0.85-0.9 |
+| Int vs Novice / Pro vs Int / World vs Pro (100 each) | 68 / 81 / 82% (upsets 22 / 14 / 15%) | ~80-85, upsets 15-20 |
+| Reaction time Novice -> World | 0.206 -> 0.164 s | |
+| Defense success Novice -> World | 41.5 -> 63.7% | |
+| 1-2 habit man: right hands defended, habit vs control (30) | Pro 30-40% vs 17-19%; World 48-57% vs 31-36%; Novice ~3% vs 3% | smart man reads it, novice doesn't |
+| Same two men, 30 fights | 30 distinct fights, results spread | |
+
+**Open: style balance (next).** With spread 1 the five styles sat at 37-57%; squeezing skills (spread .6) shrank the counter-puncher's and out-boxer's skill edge: swarmer 66, boxer-puncher 58, slugger 56, out-boxer 31, counter 27 (80/pair). Pool 100+/pair. Levers tried so far: ring cutting takes backpedal room (`RS.cutBack`), straights jam inside 46 (`smother`), counters soften inside 54 (`tight`), head movement mid-combo (slip trait). Next: give style DNA its own weight next to the squeezed skills (e.g. style skill leans skip the spread), then rerun styles + tiers.
