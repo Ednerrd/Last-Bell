@@ -246,11 +246,20 @@ const PTYPES = Object.keys(PUNCHES);
 const NUM = {}; for (const k of PTYPES) NUM[PUNCHES[k].num] = k;
 const kindOf = p => PUNCHES[p].zone === 'body' ? 'body' : PUNCHES[p].kind; // straight / hook / upper / body
 // the combo book, in trainers' numbers
+// the combo book, in trainers' numbers (research/mind_combos.md). Hands alternate (each punch cocks the next), levels and lines change;
+// same-hand doubles (1-1, 3b-3, 3-3b) are on purpose. Atlas' 1b-2-3 ("knock knock"), Canelo/Inoue's 1-2-3b-3, Inoue's 5-3b (lift the guard, then the liver),
+// Crawford's 2-1, Loma's 1-3b-6, the inside rips 6-3-6 / 3b-6-3, Tyson's 6-3
 const BOOK = ['1', '1-1', '1-2', '1-1-2', '1-2-3', '1-2-3-2', '1-2-3b', '1-1-1', '2', '3', '2-3', '3-2', '1-2b', '1b-2', '3b', '3b-3',
-  '2-3-2', '1-6-3', '5-2', '3-6', '6-3', '2b-3', '3b-2', '1-2-5-2', '1-3b-6', '4', '2-3b', '1-2-1', '3-3b', '1b', '2b', '2-4', '3-4-3b'];
+  '2-3-2', '1-6-3', '5-2', '3-6', '6-3', '2b-3', '3b-2', '1-2-5-2', '1-3b-6', '4', '2-3b', '1-2-1', '3-3b', '1b', '2b', '3-4-3b',
+  '1b-2-3', '1-2-3b-3', '5-3b', '2-1', '6-3-6', '3b-6-3'];
 const COMBOS = BOOK.map(s => {
   const ps = s.split('-').map(n => NUM[n]), n = ps.length, cnt = c => ps.filter(p => PUNCHES[p].cat === c).length / n;
-  return { id: s, ps, n, jab: cnt('jab'), power: cnt('power'), body: cnt('body'), min: PUNCHES[ps[0]].min, max: PUNCHES[ps[0]].max };
+  const head = p => PUNCHES[p].zone === 'head', last = ps[n - 1];
+  return { id: s, ps, n, jab: cnt('jab'), power: cnt('power'), body: cnt('body'), min: PUNCHES[ps[0]].min, max: PUNCHES[ps[0]].max,
+    endLead: PUNCHES[last].arm === 'lead' && last !== 'jab',                                         // ends on the lead hook: he's back in his stance first
+    endRear: PUNCHES[last].arm === 'rear',                                                           // ends square, in range
+    lowHigh: ps.some((p, i) => i < n - 1 && (!head(p) || PUNCHES[p].kind === 'upper')) && head(last), // lift or dig first, then upstairs
+    inside: PUNCHES[ps[0]].max <= 60 };
 });
 
 /* ---------- skills: what he knows how to do (0..100). The tier is read off them ---------- */
@@ -436,6 +445,7 @@ class Brain {
       this.madd(this.mem.mine, p, { n: 1, l: ev.type === 'landed' ? 1 : 0, b: ev.type === 'blocked' ? 1 : 0, e: ev.type === 'evaded' ? 1 : 0 });
       if (ev.def) this.madd(this.mem.def, kd, { n: 1, [ev.def]: 1 }); else if (ev.type === 'landed') this.madd(this.mem.def, kd, { n: 1, none: 1 });
       this.lastMine = { p, t: this.t };
+      if (ev.type === 'landed' && PUNCHES[p].zone === 'body') this.bodyL = (this.bodyL || 0) + 1; // body work in the bank
       if (ev.type === 'landed') { E.conf = clamp(E.conf + .05 * (ev.dmg || 2) / 3, -1, 1); E.frus = Math.max(0, E.frus - .04); this.sc.me += guess(pts(p)); if (ev.hurt) this.oppHurtT = this.t; }
       else E.frus = clamp(E.frus + .022 * (1 - comp * .6), 0, 1);
       if (ev.type === 'blocked' && this.setup && this.setup.onBlock) this.setup.blocked = true;
@@ -620,6 +630,8 @@ class Brain {
     const maxLen = 1 + Math.round(1 + 3 * k.combos * (.6 + .5 * tr.combo));
     const last = this.hist[this.hist.length - 1], noise = lerp(.75, .3, (k.read + k.combos) / 2) * (1 + .8 * fat) * (1 + .6 * E.frus);
     const nd = this.nd;
+    let ctrN = 0, mN = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctrN += e.c || 0; mN += e.n || 0; }
+    const ctrRate = ctrN / Math.max(4, mN);
     let best = null, bw = 0, tot = 0; const ws = [];
     for (const c of COMBOS) {
       // range: the first punch has to reach (as far as he can tell)
@@ -643,6 +655,14 @@ class Brain {
       if (nd > 0) w *= 1 + c.power * nd; else w *= 1 + (c.jab - c.power) * -nd * .6; // behind: sit down on it. ahead: jab and stay safe
       if (H.guard < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
       if (H.guard > .8) w *= 1 + c.body * k.read;               // shell up high: go to the body
+      // the situation (a smart man sees it, a novice throws his favourites)
+      let sit = 1;
+      if (H.guard > .7 && c.lowHigh) sit *= 1.3;                          // lift then dig, or dig then lift: a high guard can't cover both
+      if (c.lowHigh && this.bodyL) sit *= 1 + Math.min(.4, .08 * this.bodyL / Math.max(1, P.round)); // the body work pays upstairs later
+      if (P.ropes.him > .6 && c.inside) sit *= 1.3;                        // he's on the ropes: rip inside
+      if (P.round <= 3 && c.n === 1 && c.jab) sit *= 1.15;                 // early: probe with the jab
+      if (ctrRate > .15) sit *= c.endLead ? 1.15 : c.endRear ? .85 : 1;    // he counters: finish on the lead hook, back in your stance
+      w *= lerp(1, sit, k.read);
       // variety: a smart man doesn't show the same thing over and over; a novice falls in love with one
       if (last && last === c.id) w *= lerp(1.4, .3, k.read);
       w *= Math.exp(this.g() * noise);
