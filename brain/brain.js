@@ -134,6 +134,8 @@ const BR = {
   reachStep: 6, reachLo: .08,
   workS: 8, workH: 16, workW: 13, workLo: .25, // a combo's working range: how far inside its reach a straight / a hook lands best, how wide, the floor outside it
  // a combo punch that can't reach from here (with the step he gets on the first one): weight left for a man with a perfect eye
+  rushV: 48, rushP: 1,  // a man coming in faster than this (units/s) can be met with a check hook: chance per second at full counter skill
+  shortCtr: .5,           // a punch that fell short is a counter chance this often (the pull counter)
   stealT: 30              // the last 30 s, where rounds get stolen
 };
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
@@ -158,13 +160,27 @@ const DEF_THRU = {
 };
 // which defense fits which punch (for a man who called it)
 const DEF_BEST = { straight: 'slip', hook: 'duck', upper: 'pull', body: 'block' };
-// the counter that fits the defense: slip the straight, right hand over it; duck the hook, come up with one; pull back, step in behind a straight
-const COUNTER_FOR = {
-  slip: [['cross'], ['cross', 'hook'], ['hook', 'cross']],
-  duck: [['hook'], ['uppercut', 'hook'], ['rhook']],
-  pull: [['cross'], ['jab', 'cross']],
-  block: [['hook'], ['cross'], ['uppercut']],
-  roll: [['cross'], ['cross', 'hook']]
+// the counter book: WHAT he threw x HOW I got out of it -> the answer (research/mind_combos.md §3). [combo, weight, what it is]
+// straights: slip outside the jab and come over it with the 2; catch it and shoot the 2; pull back and fire the 2 (Mayweather). Slip the 2: hook off the slip.
+// hooks: a straight down the middle beats a wide one; duck it and come up the middle (6-3) or back with your own hook. Uppercuts drop his guard on that side: hook over the top.
+// body shots: he dipped to reach, so the uppercut (or a stiff jab then the 6) when close, the 2 from range. He fell short: pull counter, or chase him with 2-1 (Crawford)
+const CB = (s, w, why) => [s.split('-').map(n => NUM[n]), w, why];
+const COUNTER_BOOK = {
+  jab:      { slip: [CB('2', 3, 'right hand over the jab'), CB('2-3', 1.5, 'slip the jab, 2-3'), CB('3', .8, 'slip inside, hook')],
+              block: [CB('2', 3, 'catch and shoot'), CB('1-2', 1, 'catch it, 1-2 back')], roll: [CB('2', 3, 'roll the jab, fire the right'), CB('2-3', 1, 'roll and 2-3')],
+              pull: [CB('2', 3, 'pull counter'), CB('2-3', 1, 'pull counter, 2-3')], duck: [CB('2b', 1.5, 'under the jab, right to the body'), CB('2b-3', 1, 'under it, 2b-3')] },
+  straight: { slip: [CB('3', 3, 'slip the right hand, hook'), CB('3-2', 2, 'slip, 3-2'), CB('3b', 1, 'slip, hook to the body')],
+              block: [CB('3', 2, 'block the right, hook back'), CB('3-2', 1, 'block, 3-2')], roll: [CB('2', 3, 'shoulder roll, right hand back'), CB('2-3', 1.5, 'roll, 2-3')],
+              pull: [CB('2', 2.5, 'pull counter'), CB('1-2', 1, 'pull, 1-2')], duck: [CB('3b', 1.5, 'duck, hook to the body'), CB('6-3', 1.5, 'duck, come up the middle')],
+              jab: [CB('1-2', 1, 'counter jab, then the 2')] },
+  hook:     { duck: [CB('6-3', 2.5, 'duck the hook, up the middle'), CB('3', 1.5, 'duck, hook back'), CB('2', 1, 'duck, right hand')],
+              roll: [CB('3-2', 2, 'roll under, 3-2'), CB('2', 1, 'roll under, right hand')], block: [CB('2', 3, 'straight inside the hook'), CB('2-3', 1.5, 'block, 2-3')],
+              pull: [CB('2', 3, 'he missed wide, right down the middle'), CB('1-2', 1, 'pull, 1-2')], slip: [CB('2', 2, 'straight inside the hook')] },
+  upper:    { any: [CB('3', 3, 'hook over the uppercut'), CB('3-2', 1.5, 'over the top, 3-2'), CB('2', 1, 'right over the uppercut')] },
+  body:     { close: [CB('6-3', 2.5, 'he dipped: uppercut'), CB('6', 1.5, 'he bent to reach: uppercut'), CB('3', 1, 'hook to the head')],
+              far: [CB('1-6', 1.5, 'stiff jab, then the uppercut'), CB('2', 2, 'right hand while he digs'), CB('1-2', 1, '1-2 while he digs')] },
+  short:    { any: [CB('2', 3, 'pull counter: he fell short'), CB('2-1', 1.2, 'chase him back, 2-1'), CB('1-2', 1, 'he fell short, 1-2')] },
+  rush:     { any: [CB('3', 3, 'check hook'), CB('1', 1.5, 'jab him on the way in')] }   // he runs in head first: hook and pivot off the line
 };
 const DEF_SKILL = { block: 'block', slip: 'slip', duck: 'slip', pull: 'footwork', roll: 'block' };
 
@@ -255,6 +271,7 @@ class Brain {
         if (ev.counter && this.lastMine && this.t - this.lastMine.t < 1.5) { this.madd(this.mem.mine, this.lastMine.p, { c: 1 }); E.frus = clamp(E.frus + .04 * (1 - comp * .5), 0, 1); }
       }
       if (ev.type === 'evaded' || ev.type === 'blocked') { if (ev.def) this.lastDef = { def: ev.def, p, t: this.t }; this.tryCounter(ev.def, p); }
+      else if (ev.type === 'missed' && ev.short && this.R() < BR.shortCtr) this.tryCounter('short', p); // he fell short: he's reaching, and coming back slow
     }
   }
   // a defense worked: does he make him pay?
@@ -264,11 +281,24 @@ class Brain {
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
     if (this.mode === 'survive') ch *= this.hurtResp === 'fire' ? 1.5 : .3;
     if (this.R() > ch) return;
-    let c;
-    if (this.R() < .25 + .7 * k.counter) { const opts = COUNTER_FOR[def] || COUNTER_FOR.block; c = opts[Math.floor(this.R() * opts.length)].slice(); if (c.length > 1 && this.R() > .3 + .6 * k.combos) c = c.slice(0, 1); }
-    else c = [PTYPES[Math.floor(this.R() * PTYPES.length)]]; // he knows he should fire back, not with what
-    this.queue = { ps: c, why: 'counter after ' + def, ctr: 1, at: this.t + lerp(.18, .02, k.counter) };
+    let c, why = 'counter';
+    if (this.R() < .25 + .7 * k.counter) { const o = this.counterFor(def, p); if (o) { c = o[0].slice(); why = 'counter: ' + o[2]; if (c.length > 1 && this.R() > .3 + .6 * k.combos) c = c.slice(0, 1); } }
+    if (!c) { const d = this.dNow == null ? 60 : this.dNow, ok = PTYPES.filter(x => PUNCHES[x].max + BR.reachStep >= d); c = [ok.length ? ok[Math.floor(this.R() * ok.length)] : 'jab']; } // he knows he should fire back, not with what (but he can see what reaches)
+    this.queue = { ps: c, why, ctr: 1, at: this.t + lerp(.18, .02, k.counter) };
     this.tel.counters++;
+  }
+
+  // the textbook answer to what he threw and how I got out of it; a better counterpuncher picks it more surely, and only what reaches from here
+  counterFor(def, p) {
+    const P = PUNCHES[p], d = this.dNow == null ? 60 : this.dNow, k = this.k, B = COUNTER_BOOK;
+    let row;
+    if (def === 'short') row = B.short.any;
+    else if (def === 'rush') row = B.rush.any;
+    else if (P.zone === 'body') row = d < 54 ? B.body.close : B.body.far;
+    else if (P.kind === 'upper') row = B.upper.any;
+    else if (P.kind === 'hook') row = B.hook[def] || B.hook.block;
+    else { const t = p === 'jab' ? B.jab : B.straight; row = (t[def] || t.block).concat(p !== 'jab' && k.counter > .6 ? B.straight.jab : []); }
+    return wpickR(this.R, row, o => Math.pow(o[1], .5 + 1.5 * k.counter) * (d > PUNCHES[o[0][0]].max + BR.reachStep ? .1 : 1));
   }
 
   /* ---------- the eyes: a punch is coming ---------- */
@@ -396,7 +426,7 @@ class Brain {
     const fat = 1 - P.me.stam / (P.me.stamMax || 100);
     // his eye for distance: a novice misjudges and throws from where nothing reaches
     const dSeen = P.dist + this.g() * BR.outShort * (1 - k.range) * .6 + (1 - k.range) * -6;
-    if (this.queue && this.t >= this.queue.at) { const q = this.queue; this.queue = null; const ps = this.fitReach(q.ps, dSeen); return ps ? this.fire(ps, q.why, dSeen, q.ctr) : null; }
+    if (this.queue && this.t >= this.queue.at) { const q = this.queue; this.queue = null; const ps = this.fitReach(q.ps, dSeen); const a = ps ? this.fire(ps, q.why, dSeen, q.ctr) : null; if (a && q.pivot) a.pivot = true; return a; }
     // a planned sequence in progress
     if (this.setup) { const s = this.stepSetup(P, dSeen); if (s) return s; }
     if (dSeen > 92) return null;
@@ -559,7 +589,7 @@ class Brain {
 
   /* ---------- the one call: perception in, action out ---------- */
   think(P, dt) {
-    this.t = P.t; this.out.punch = null; this.out.defend = null;
+    this.t = P.t; this.out.punch = null; this.out.defend = null; this.dNow = P.dist;
     if (P.events) for (const ev of P.events) this.hear(ev);
     const E = this.emo, comp = this.tr.composure;
     const sdt = dt * this.pace; // slow time: moods and intent
@@ -568,6 +598,11 @@ class Brain {
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
     this.updMode(P, sdt);
     this.see(P);
+    // he's rushing in head first: a counterpuncher meets him with the check hook and pivots off the line (Mayweather vs Hatton)
+    if (P.him.closing > BR.rushV && P.dist < 66 && P.dist > 40 && !this.queue && !P.me.busy && !P.him.punch && this.mode !== 'survive'
+      && this.R() < BR.rushP * this.k.counter * (1.3 - clamp(this.tr.initiative, 0, 1)) * dt) {
+      const o = this.counterFor('rush', 'jab'); this.queue = { ps: o[0].slice(), why: 'counter: ' + o[2], ctr: 1, at: this.t, pivot: o[2] === 'check hook' };
+    }
     this.decT -= dt;
     if (this.decT <= 0) {
       this.tel.decisions++;
