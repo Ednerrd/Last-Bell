@@ -160,6 +160,7 @@ class Brain {
   constructor(profile, opts) {
     opts = opts || {};
     this.p = profile; this.R = opts.rng || Math.random; this.debug = !!opts.debug;
+    this.pace = opts.pace || 1; // a game whose rounds run faster than the clock (the Last Bell engine: 3) squeezes the slow things (moods, memory, intent modes) and keeps the work rate per round; reactions stay human
     // spread squeezes his overall level (how far apart the tiers play) but keeps his own strengths full size: a counter-puncher's counter stays his edge
     const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl = .5 + (avg - .5) * BR.spread;
     this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(lvl + (raw(s) - avg) * BR.spreadOwn, 0, 1);
@@ -183,7 +184,7 @@ class Brain {
   note(s) { if (this.debug) this.log.push(this.t.toFixed(1) + ' ' + s); }
 
   /* ---------- memory: what he has seen of the other man. Everything fades; read skill sets how much he notices and how long it sticks ---------- */
-  tau() { return lerp(BR.memTau[0], BR.memTau[1], this.k.read); }
+  tau() { return lerp(BR.memTau[0], BR.memTau[1], this.k.read) / this.pace; }
   mget(tbl, key) { const e = tbl[key] || (tbl[key] = { t: this.t }), f = Math.exp(-(this.t - e.t) / this.tau()); if (f < 1) for (const x in e) if (x !== 't') e[x] *= f; e.t = this.t; return e; }
   madd(tbl, key, fields) { const e = this.mget(tbl, key), w = lerp(BR.memNotice[0], BR.memNotice[1], this.k.read); for (const x in fields) e[x] = (e[x] || 0) + fields[x] * w; return e; }
   mpeek(tbl, key) { const e = tbl[key]; if (!e) return null; const f = Math.exp(-(this.t - e.t) / this.tau()), o = {}; for (const x in e) if (x !== 't') o[x] = e[x] * f; return o; }
@@ -388,7 +389,7 @@ class Brain {
     if (dSeen > 92) return null;
     const open = this.opening(P);
     // a quick thinker decides more often, not more: the work rate is his nature, the timing is his skill
-    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4;
+    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace;
     // when NOT to: he keeps getting countered, he's gassed (a smart man paces it), he's scared, the other man is loaded and waiting
     let ctr = 0, n = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctr += e.c || 0; n += e.n || 0; }
     p *= 1 - clamp(ctr / Math.max(4, n) * 2.5, 0, .6) * k.read * (1 - tr.risk * .5);
@@ -526,10 +527,11 @@ class Brain {
     this.t = P.t; this.out.punch = null; this.out.defend = null;
     if (P.events) for (const ev of P.events) this.hear(ev);
     const E = this.emo, comp = this.tr.composure;
-    E.conf *= 1 - .02 * dt; E.frus *= 1 - (.03 + .05 * comp) * dt; E.fear *= 1 - (.02 + .08 * comp) * dt * (P.me.hurt ? .2 : 1);
+    const sdt = dt * this.pace; // slow time: moods and intent
+    E.conf *= 1 - .02 * sdt; E.frus *= 1 - (.03 + .05 * comp) * sdt; E.fear *= 1 - (.02 + .08 * comp) * sdt * (P.me.hurt ? .2 : 1);
     this.fat = 1 - P.me.stam / (P.me.stamMax || 100);
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
-    this.updMode(P, dt);
+    this.updMode(P, sdt);
     this.see(P);
     this.decT -= dt;
     if (this.decT <= 0) {
