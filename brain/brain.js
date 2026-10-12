@@ -80,7 +80,7 @@ const STYLES = {
                   sk: { combos: 10, body: 10, cutoff: 10, pacing: 4, range: -4, footwork: -4, jab: -4 } },
   counter:      { label: 'Counter-puncher', t: { output: .35, jab: .5, power: .55, body: .3, combo: .4, initiative: .15, patience: .9, shell: .45, slip: .8, legs: .55, clinch: .4, composure: .8, risk: .35, killer: .5, range: .65, circle: .55 },
                   sk: { counter: 16, read: 10, slip: 8, block: 2, combos: -6, cutoff: -8, body: -4 } },
-  boxerpuncher: { label: 'Boxer-puncher',   t: { output: .6, jab: .6, power: .6, body: .45, combo: .55, initiative: .6, patience: .55, shell: .5, slip: .5, legs: .5, clinch: .4, composure: .65, risk: .5, killer: .7, range: .55, circle: .5 },
+  boxerpuncher: { label: 'Boxer-puncher',   t: { output: .66, jab: .6, power: .66, body: .45, combo: .55, initiative: .6, patience: .55, shell: .5, slip: .5, legs: .5, clinch: .4, composure: .65, risk: .5, killer: .7, range: .55, circle: .5 },
                   sk: { power: 6, jab: 6, combos: 5, adjust: 6, read: 4 } }
 };
 const STYLE_KEYS = Object.keys(STYLES);
