@@ -196,3 +196,29 @@ Measured on the dummy ring (identical stats, spread .6):
 **Oct 11, later: final v1 numbers** (after `spread` keeps a fighter's own strengths, rope pivots, circling, `move.push`). Audit (300): 47.2 / 15.2 / 32.1%, stops 23.3%, round 1 at 0.88x. Tiers (100/pair): 70 / 83 / 79%, upsets 22 / 13 / 16% (on target). Brain lab published (private): https://claude.ai/artifact/5UhTsjMSCTqhtRnCfdZBSV.
 
 **Open: style balance (next).** Styles (100/pair, pro): swarmer 65.8, boxer-puncher 53.8, slugger 46.5, out-boxer 39.0, counter 27.0. The dummy ring favours volume and pressure. Found: distance used to settle halfway between both men's wishes, and the out-boxer sat on the ropes 86% of the time (now ~50% with rope pivots). Tried with little effect: cutting the ring takes backpedal room (`RS.cutBack`), straights jam inside 46 (`smother`), counters soften inside 54 (`tight`), circling keeps the ring (`circBack`), a landed jab stops a man coming in (`jabStop`), `move.push` (how hard he fights for his distance). Next ideas: counter-puncher counters land harder by counter skill; swarmer pays more gas for volume; or balance on the real engine instead of the 1D dummy ring.
+
+## The brain on the engine (Oct 12 2026, branch `claude/brain-wire`)
+Ed's calls (Oct 12): toggle first (old AI stays for A/B), specials think like the nearest base style, skills come from stats + ring IQ, coach shouts later.
+
+**Wiring** (`index.html`, engine section, `AI` knobs + `brainProfile` + `Fight.brainInit/perceive/brainTick`). `brain/brain.js` is inlined between brain markers by `node brain/inline.js` (`--check` to verify); edit `brain/brain.js`, never the copy. `AI.brain = 1` (or `opts.brain = [a, b]` per side, the lab's AI row) hands over:
+- Brain: when and what to punch, feints, setups, defense (kind + quality; botched with chance 1 − quality × `AI.defQ`), counters (its own, off evades and blocks), clinches, wanted range, circling direction, cutting the ring, push (how hard he fights for his distance), hands high/low (`AI.guardK` on passive block/evasion), technique/commit/tell (`AI.tech/commit/tell`).
+- Engine keeps: footwork physics (`footwork()` reads `want/circ/circDir/cutting/inMul/legs`), hit math, rope pivots (`AI.esc` per second, by lateral and ropes skill), the in-combo adjustments in `nextInCombo`, special-style tricks (angle step-off, switch, spoiler, grab, bite, eco...), and the out-boxer's reflexes (stick jab, step out: `AI.out`).
+- Off in brain mode: `decide()`, `react()`, the miss/tap-block counter rolls, `beat()` resets, coach shouts (`sgOf`).
+- Time: the engine's rounds are 60 sim-s (clock ×3), so the brain runs with `pace: 3` (moods, memory, intent modes and the work rate squeezed to match; reactions stay human).
+- Profiles: skills from stats + ring IQ + the brain style's lean ×`AI.lean`, `AI.skill` −8 (rating 82 lands in Pro). Specials map to base styles plus a trait nudge (`AI_MAP`). Guards nudge the defense habits (`AI_GUARD`: shell/slip/legs).
+- The brain's own knobs for this engine: `AI.br` (react .2/.07, ctrP .04/.4, throwP .12, feintP .1). The engine's jab lands ~.15 s after it starts, faster than the dummy ring's eye.
+- Brain fixes found on the engine (kept in `brain.js`, dummy ring still on target): every punch in a combo has to reach (`reachStep/reachLo`), combos have a working range (`workS/workH/workW/workLo`), counters and setups fit the distance (`fitReach`), boxer-puncher and counter-puncher leans.
+
+**Numbers (brain on, @82):**
+| Measure | Brain | Old AI | Target |
+|---|---|---|---|
+| Audit 500: thrown / landed / connect | 51.7–53.7 / 14.8–15.4 / 28.5–28.7% | 52.9 / 14.8 / 27.9% | ~53 / 15 / 29% |
+| Stoppages | 19.6–23.2% | 24.2% | 25–30% |
+| Body KDs (bodykd 300) | 3.2% | 5.4% | 5–8% |
+| Styles 300/pair (br5 + boxer-puncher fix) | counter 52.0, slugger 51.6, swarmer 49.9, outboxer 49.5, boxer-puncher 48.4 (n1109) | 48.6–53.2 | 48–53 |
+| Guards vs standard (300) | high 50.2 (n600), cross 49.4, handslow 51.9, peekaboo 50.4, philly 48.7 | | ~48–58, handslow highest |
+| Brain vs old AI head to head (`tests/bvo.js`) | brain wins 35% | | |
+
+The 1D dummy ring's style spread (swarmer 66 / counter 27) was the ring, not the brain: on the 2D engine the first run already read 55 / 50 / 49 / 48 / 47.
+
+**Open:** stoppages a touch low and body KDs low (the brain throws more straight body shots, fewer liver hooks); out-boxer still on the ropes ~13 s/round (old AI 7); brain loses 65% head to head to the old AI at equal stats (the old AI's men slide out of punches more: 7% of its punches miss short vs 13% of the brain's); coach shouts not wired; specials only spot-checked. Probes: `tests/bprobe.js` (how punches end, defense, counters, distance), `tests/bvo.js`.
