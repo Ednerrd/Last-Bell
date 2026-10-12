@@ -4003,7 +4003,7 @@ ACT.nextRound = () => {
 };
 
 /* ---------- the fight: straight in, random or picked fighters ---------- */
-const LAB = { div: 'r', a: 'r', b: 'r', ga: 'auto', gb: 'auto', rounds: 6, last: null, open: false };
+const LAB = { div: 'r', a: 'r', b: 'r', ga: 'auto', gb: 'auto', rounds: 6, last: null, open: false, ba: AI.brain, bb: AI.brain }; // ba/bb: the boxer brain (1) or the old engine AI (0) per side
 const LAB_STYLE_KEYS = Object.keys(STYLES);
 function labPickOpts(sel) {
   return `<option value="r"${sel === 'r' ? ' selected' : ''}>Random</option>
@@ -4039,7 +4039,7 @@ function labFight(L) {
   if (rafId) cancelAnimationFrame(rafId);
   Comm.stop && Comm.stop();
   const A = labSheet(L.A), B = labSheet(L.B), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
-  F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6 });
+  F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6, brain: [LAB.ba, LAB.bb] });
   FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null };
   const ta = gearItem('trunks', A.look.trunks).c;
   if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
@@ -4075,6 +4075,7 @@ function labBar(L) {
       <div class="labf"><b>Rounds</b><select onchange="LAB.rounds=+this.value">${[4, 6, 8, 10, 12].map(n => `<option${LAB.rounds === n ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
       <div class="labf"><b>Left</b><select onchange="LAB.a=this.value">${labPickOpts(LAB.a)}</select><select onchange="LAB.ga=this.value">${labGuardOpts(LAB.ga)}</select></div>
       <div class="labf"><b>Right</b><select onchange="LAB.b=this.value">${labPickOpts(LAB.b)}</select><select onchange="LAB.gb=this.value">${labGuardOpts(LAB.gb)}</select></div>
+      <div class="labf"><b>AI</b>${['ba', 'bb'].map(k => `<select onchange="LAB.${k}=+this.value"><option value="0"${LAB[k] ? '' : ' selected'}>Old AI</option><option value="1"${LAB[k] ? ' selected' : ''}>Brain</option></select>`).join('')}</div>
       <p class="mute small">Pick, then New fight. Random keeps rolling new men; a P4P star brings his own weight class.</p>
     </div></div>`;
 }
