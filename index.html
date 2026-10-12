@@ -1199,6 +1199,37 @@ function laneOf(A, P) {
   const hand = (P.arm === 'lead') !== (A.stance === 'southpaw') ? 'L' : 'R';
   return { hand, side: hand === 'L' ? 'R' : 'L', lane: P.kind === 'hook' ? 'outside' : P.kind === 'upper' ? 'under' : 'center' };
 }
+/* ---------- the boxer brain (brain/brain.js, inlined above): AI.brain = 1 hands decide(), react() and the counter rolls to BoxerBrain ----------
+   The engine keeps the body: footwork physics, hit math, rope escapes, the special styles' tricks. 0 = the old engine AI (same.js hash). */
+const AI = {
+  brain: 0,        // 1 = both men think with the brain (opts.brain = [a, b] per side wins)
+  pace: CLOCK,     // the engine's rounds run 3x the sim clock: the brain squeezes moods, memory and intent modes to match
+  defQ: 1.1,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
+  guardK: .3,      // how much the brain's hands (high/low) move passive block and evasion
+  tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
+  esc: 1.1,        // per second: how often a man on the ropes with his feet working pivots out (times lateral and ropes skill)
+  lean: .8         // how much of the brain style's skill lean goes on top of the stats
+};
+// special styles think like the nearest base style, with their own taste on top (the engine keeps their tricks)
+const AI_MAP = { volume: ['swarmer', { output: .1, power: -.2, combo: .1 }], angle: ['outboxer', { circle: .12, range: -.1 }], awkward: ['counter', { patience: -.1 }],
+  switch: ['boxerpuncher', {}], body: ['swarmer', { body: .25, output: -.1 }], pboxer: ['slugger', { jab: .3, output: .1, range: .1 }],
+  spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1 }], feinter: ['boxerpuncher', { patience: .15 }] };
+// a fighter's stats and ring IQ become the brain's skills (the tier falls out of them); the style gives the traits
+function brainProfile(F) {
+  const s = F.s, iq = F.iq, sty = F.sk, m = AI_MAP[sty], base = m ? m[0] : BoxerBrain.STYLES[sty] ? sty : 'boxerpuncher', S = BoxerBrain.STYLES[base];
+  const raw = {
+    jab: s.accuracy * .6 + s.speed * .4, power: s.power * .5 + s.accuracy * .5, combos: s.speed * .6 + s.accuracy * .2 + iq * .2, body: s.accuracy * .4 + s.power * .3 + iq * .3, feints: iq * .6 + s.speed * .4,
+    block: s.defense * .7 + iq * .3, slip: s.defense * .7 + s.speed * .3, footwork: s.footwork, clinch: iq * .5 + s.heart * .3 + s.defense * .2,
+    cutoff: s.footwork * .5 + iq * .5, ropes: s.footwork * .5 + iq * .5, range: iq * .6 + s.footwork * .4, angles: s.footwork * .7 + iq * .3,
+    counter: s.defense * .3 + s.accuracy * .3 + iq * .4, read: iq, pacing: iq * .8 + s.heart * .2, adjust: iq
+  };
+  const skills = {}; for (const k in raw) skills[k] = Math.round(clamp(raw[k] + (S.sk[k] || 0) * AI.lean, 5, 99));
+  const traits = {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + gauss() * .09, 0, 1);
+  return BoxerBrain.makeProfile({ style: base, skills, traits, name: F.sheet.name, uniq: 0 });
+}
+const hurtNow = F => F.state === 'stun' || F.head < F.headMax * .3;
+function ropesK(F) { const v = vec(F, F.op); return clamp(1 - (freeRun(F.x, F.z, -v.ux, -v.uz) - 6) / 30, 0, 1); }
+
 class Fight {
   constructor(A, B, opts) {
     opts = opts || {};
@@ -1217,6 +1248,69 @@ class Fight {
     this.kdState = null; this.clinchT = 0; this.rec = []; this.replay = null; this.recAfter = 0;
     this.roundLog = []; this.stepEv = [];
     this.exP = 0; this.f.forEach(F => this.tempoStart(F, true));
+    { const on = opts.brain || [AI.brain, AI.brain]; this.f.forEach((F, i) => { if (on[i]) this.brainInit(F); }); }
+  }
+  /* ---------- the brain's side of the fight (AI.brain): what he sees, what he does with it ---------- */
+  brainInit(F) {
+    F.prof = brainProfile(F); F.brain = BoxerBrain.create(F.prof, { rng: R, pace: AI.pace }); F.bev = []; F.bg = .6; F.pEnd = -9; F.bLat = 0;
+    F.brain.roundStart(this.round);
+  }
+  // what happened, for both brains (the one who did it and the one it happened to)
+  bev(A, D, type, x) { if (A.brain) A.bev.push(Object.assign({ type, by: 'me' }, x)); if (D.brain) D.bev.push(Object.assign({ type, by: 'him' }, x)); }
+  perceive(F) {
+    const O = F.op, a = O.act, live = O.state === 'punch' && a && (a.feint ? a.t < a.dur : !a.done);
+    const busy = F.state === 'punch' || F.state === 'stun' || F.queue.length > 0 || F.beatT > 0 || !!F.pendingDef || (F.def && F.defD - F.defT < .3);
+    return {
+      t: this.t, clock: this.clock, roundLen: ROUND_LEN, round: this.round, rounds: this.rounds, dist: dist(F, O), ropes: { me: ropesK(F), him: ropesK(O) },
+      me: { head: F.head, headMax: F.headMax, stam: F.stam, stamMax: F.stamMax, hurt: hurtNow(F), down: F.state === 'down', clinch: F.state === 'clinch', punching: F.state === 'punch', busy },
+      him: { punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, tell: a.tell || 0 } : null,
+        recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
+        guard: (O.brain ? O.bg : .6) * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100 },
+      events: F.bev
+    };
+  }
+  // every frame he is on his feet and not tied up: think, then hands, feet, defense
+  brainTick(F, dt) {
+    const O = F.op;
+    for (const X of this.f) { if (X.state === 'punch') X.pOn = 1; else if (X.pOn) { X.pOn = 0; X.pEnd = this.t; } }
+    const o = F.brain.think(this.perceive(F), dt); F.bev = []; F.bg = o.guard;
+    if (F.state === 'stun' || F.state === 'down' || F.state === 'clinch') return;
+    // defense: committed past a third of his own punch, he can't
+    if (o.defend && !(F.state === 'punch' && F.act && F.act.t / F.act.dur > .3)) {
+      if (F.state === 'punch') { F.act = null; F.queue = []; F.state = 'idle'; }
+      const kd = o.defend.kind; F.pendingDef = { kind: kd, at: .02, dur: .34 }; F.defZ = o.defend.zone; F.defQ = o.defend.quality; F.defAt = this.t;
+      if (kd === 'pull') { const v = vec(F, O); F.vx = -v.ux * 55; F.vz = -v.uz * 55; F.pullX = -v.ux; F.pullZ = -v.uz; F.pullT = .22; }
+    }
+    // feet
+    const m = o.move, k = F.brain.k, sf = stamFac(F), d = dist(F, O), hurt = hurtNow(F);
+    F.want = clamp(m.range, 32, 88);
+    F.spd = (34 + F.s.footwork * 0.6) * (0.7 + 0.3 * sf) * (hurt ? .85 : 1) * (1 - BODY.legs * (1 - clamp(F.body, 0, 100) / 100)) * (m.feet || 1);
+    const push = Math.sqrt(m.push || 1); F.inMul = clamp(push, .6, 1.5); F.legs = (F.st.legs || 1) * clamp(push, .7, 1.4);
+    F.circ = Math.abs(m.lateral);
+    { const sg = Math.sign(m.lateral); if (sg && sg !== F.bLat) { F.bLat = sg; F.circDir = sg; } } // he changed his mind: the engine's own steering (ropes, camera) keeps it otherwise
+    F.cutK = .3 + .9 * (m.cut || 0); F.cutting = !hurt && m.cut > .25 && (O.circ > .3 || O.slideT > 0 || this.trapped(O));
+    if (F.state !== 'idle' && F.state !== 'move') return;
+    if (m.clinch && d < 50) { this.startClinch(F); return; }
+    // on the ropes: pivot out (ring craft and the feet decide how often)
+    if (F.slideT <= 0 && d < 84 && this.trapped(F) && R() < AI.esc * F.circ * (.3 + k.ropes) * (m.feet || 1) * (1 - .6 * (O.cutting ? O.cutK / 1.2 : 0)) * dt) {
+      const e = this.escDir(F, false); if (e) { F.esc = e; F.circDir = F.bLat = e.s; F.spin = false; F.slideT = .45 + F.s.footwork / 300; this.emit('escape', { a: F.side, how: 'pivot' }); return; }
+    }
+    // hands
+    const P = o.punch; if (!P || F.act) return;
+    if (P.feint) { this.brainFeint(F, P); return; }
+    F.queue = P.combo.slice(1); F.binfo = P; F.bi = 0; this.startPunch(F, P.type);
+    if (P.counter) { F.counterWin = .5; this.emit('counterTry', { a: F.side }); }
+  }
+  brainFeint(F, P) {
+    const v = vec(F, F.op); F.act = { id: this.pid = (this.pid || 0) + 1, type: P.type, t: 0, dur: .24, done: true, feint: true, sell: P.sell, step: 4, ux: v.ux, uz: v.uz, start: this.t };
+    F.state = 'punch'; F.def = null; F.queue = [];
+    this.emit('feint', { a: F.side });
+  }
+  // the feint is over: did he buy it?
+  feintDone(F, a) {
+    const D = F.op, bit = (D.defAt || -9) >= a.start;
+    if (bit) { D.read.feints++; if (F.st.bite) F.biteT = STYLE_BITE.t; }
+    this.bev(F, D, 'feinted', { p: a.type, bit, def: bit ? D.pendingDef && D.pendingDef.kind || D.def : null });
   }
   emit(type, data) { const e = Object.assign({ type, t: this.t, round: this.round, clock: this.clock }, data || {}); this.events.push(e); this.stepEv.push(e); }
   clockStr() { const s = Math.max(0, Math.floor(this.clock)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
@@ -1439,6 +1533,7 @@ class Fight {
       if (F.pendingDef.at <= 0) { F.def = F.pendingDef.kind; F.defT = F.pendingDef.dur; F.defD = F.defT; F.defP = 0; F.pendingDef = null; }
     }
     if (F.def) { F.defT -= dt; F.defP = Math.min(1, F.defP + dt * 10); if (F.defT <= 0) F.def = null; }
+    if (F.brain) this.brainTick(F, dt);
     if (F.state === 'punch' && F.act) {
       const a = F.act; a.t += dt; const p = a.t / a.dur;
       if (!a.done && !a.feint && p >= 0.6) { a.done = true; this.resolve(F, O, a); if (this.phase !== 'fight') return; }
@@ -1447,18 +1542,21 @@ class Fight {
         const ret = (F.st.ret || .7) * (F.strategy === 'pressure' || F.strategy === 'ko' ? .6 : 1);
         const sp_ = p < 0.6 ? a.step / (a.dur * 0.6) * 1.5708 * Math.sin(Math.PI * p / .6) : -a.step * ret / (a.dur * 0.4) * 1.5708 * Math.sin(Math.PI * Math.min(1, (p - .6) / .4));
         F.vx = a.ux * sp_; F.vz = a.uz * sp_;
-        if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.queue.length) this.nextInCombo(F); }
+        if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.brain) this.feintDone(F, a); if (F.queue.length) this.nextInCombo(F); }
         else if (p >= 1) { F.state = 'idle'; F.act = null; F.vx = F.vz = 0; if (F.queue.length && F.stam > 2) this.nextInCombo(F); else this.comboDone(F); }
         else if (a.done && F.queue.length && F.stam > 2 && F.queue[0] !== '~' && p >= .82) { F.act = null; F.state = 'idle'; this.nextInCombo(F); }
       }
     }
     if (F.beatT > 0 && (F.beatT -= dt) <= 0) { F.beatT = 0; if (F.state === 'idle' || F.state === 'move') { if (F.queue.length && F.stam > 2) { this.nextInCombo(F); if (F.state === 'punch') return; } else this.comboDone(F); } }
     if (F.state === 'idle' || F.state === 'move') {
-      if (F.stickT > 0) F.stickT -= dt;
-      else if (this.stickJab(F, dt)) return;
-      this.footwork(F, dt);
-      F.decT -= dt;
-      if (F.decT <= 0) this.decide(F);
+      if (F.brain) this.footwork(F, dt); // the brain already decided this frame
+      else {
+        if (F.stickT > 0) F.stickT -= dt;
+        else if (this.stickJab(F, dt)) return;
+        this.footwork(F, dt);
+        F.decT -= dt;
+        if (F.decT <= 0) this.decide(F);
+      }
     }
     F.x += F.vx * dt; F.z += F.vz * dt;
     F.mv = Math.hypot(F.vx, F.vz); if (F.state === 'move' || F.state === 'idle') F.gait = (F.gait || 0) + F.mv * dt; // idle too: the feet keep stepping while he slows to a stop
@@ -1558,7 +1656,7 @@ class Fight {
   // an exchange ended: both back off and reset (the hungrier man decides if it happens and comes again sooner)
   beat() {
     const [A, B] = this.f, pA = this.rstP(A), pB = this.rstP(B), pm = Math.max(pA, pB);
-    if (R() < Math.min(pA, pB) * 1.2) for (const [F, p] of [[A, pA], [B, pB]]) { F.beatR = rnd(TEMPO.reset[0], TEMPO.reset[1]) * clamp(p / pm, .7, 1); if (F.state !== 'punch') { F.queue = []; F.beatT = 0; } }
+    if (R() < Math.min(pA, pB) * 1.2) for (const [F, p] of [[A, pA], [B, pB]]) if (!F.brain) { F.beatR = rnd(TEMPO.reset[0], TEMPO.reset[1]) * clamp(p / pm, .7, 1); if (F.state !== 'punch') { F.queue = []; F.beatT = 0; } }
   }
   // switch-hitter: flips stance; everything the other man had figured out is half wrong now
   swapStance(F) {
@@ -1737,7 +1835,8 @@ class Fight {
   startPunch(F, type) {
     const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
     const v = vec(F, F.op);
-    F.act = { type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf) * (1.5 - .5 * tankF(F)), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
+    F.act = { id: this.pid = (this.pid || 0) + 1, type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf) * (1.5 - .5 * tankF(F)), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
+    if (F.brain) { const b = F.binfo, i = F.bi++, a = F.act; a.tech = !b ? .75 : Array.isArray(b.tech) ? b.tech[Math.min(i, b.tech.length - 1)] : b.tech; a.commit = b ? b.commit || 0 : 0; a.tell = b && !i ? b.tell || 0 : 0; a.dur += a.tell * AI.tell; F.stam = Math.max(0, F.stam - P.cost * AI.commit * a.commit * .5); }
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
@@ -1774,6 +1873,7 @@ class Fight {
     if (D.lostT > 0) ch *= STYLE_ANGLE.react;
     if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
     if (D.st.spoil && A.queue.length && D.state !== 'punch' && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) { this.startClinch(D); return; } // sees the combo coming, ties him up
+    if (D.brain) return; // the brain sees punches itself
     const rd = antRead(D, A, A.act ? A.act.type : 'jab', this.t); D.antic = rd > 0 ? { p: A.act ? A.act.type : 'jab', rd, t: this.t } : null;
     ch *= 1 + ANT.react * rd;
     if (R() > ch) return;
@@ -1814,7 +1914,8 @@ class Fight {
       a.load = wild;
     }
     let mult = 1, evaded = false, blocked = false, rolled = false;
-    const def = D.def;
+    let def = D.def;
+    if (def && D.brain && D.state !== 'stun' && R() > D.defQ * AI.defQ) def = null; // late or sloppy: the brain's defense didn't come off
     memAdd(A, A.mem.def, defKind(P), this.t, { n: 1, [D.state === 'stun' ? 'stun' : def || 'none']: 1 });
     if (def && D.state !== 'stun') {
       if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25) * (1 - ANT.catch * antOn(D, a.type, this.t)); blocked = true; } // saw it coming: caught it clean
@@ -1839,8 +1940,9 @@ class Fight {
       if (D.lostT > 0) ev *= STYLE_ANGLE.ev;
       if (P.cat !== 'jab') ev = Math.min(.7, ev + TUNE.reach * clamp((d - P.max + TUNE.reachIn) / TUNE.reachIn, 0, 1) * gf(D, 'ev')); // reaching for a power shot from the outside: he sees it coming
       ev *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
+      if (D.brain) ev *= 1 - AI.guardK * (D.bg - .6); // hands high: harder to slip, easier to catch
       if (R() < ev) evaded = true;
-      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)))) {
+      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (D.brain ? 1 + AI.guardK * (D.bg - .6) : 1))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
         D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; // show the guard catching it
       }
@@ -1858,6 +1960,7 @@ class Fight {
     } else { A.read.land[a.type] = (A.read.land[a.type] || 0) + 1; if (A.order && orderOn(A, P)) this.teach(A); }
     let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A)) * lerp(1, tankF(A), STAM.tankDmg);
     if (P.cat !== 'jab') dmg *= A.st.hit || 1;
+    if (A.brain) dmg *= (1 + AI.tech * ((a.tech == null ? .75 : a.tech) - .75)) * (1 + AI.commit * ((a.commit || 0) - .4)); // an arm punch vs one he sat down on
     if (P.zone === 'body' && A.st.bodyX) dmg *= 1 + .25 * A.st.bodyX;
     if (a.stick && !blocked && D.state !== 'stun') { D.stopT = .45; D.decT = Math.max(D.decT, .2); }
     const caught = D.state === 'punch' && !blocked;
@@ -1893,6 +1996,7 @@ class Fight {
       this.emit('hit', { a: A.side, d: D.side, zone: P.zone, dmg, blocked, crit, kind: P.kind, p: a.type, caught, counter: A.counterWin > 0, x: D.x, cut: D.cut, hand: ln.hand, side: ln.side, lane: ln.lane, q, glove });
       D.hitQ = q; D.hitGlove = glove; a.q = q; // for the render: how it landed
     }
+    this.bev(A, D, blocked ? 'blocked' : 'landed', { p: a.type, dmg, def: blocked ? (def === 'roll' ? 'roll' : 'block') : def || null, counter: caught || A.counterWin > 0, hurt: hurtNow(D) });
     // cuts: shot size x accumulated damage. Fresh face + regular shot = very slim; beat-up face + big shot = real risk
     if (P.zone === 'head' && !blocked && dmg > 1.5 && R() < cutChance(D, dmg, crit)) {
       const was = D.cut; D.cut = Math.min(10, D.cut + 1 + R() * 2);
@@ -1935,7 +2039,7 @@ class Fight {
       return;
     }
     // fire back out of the guard (tap-block counter)
-    if (blocked && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
+    if (blocked && !D.brain && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
       const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D) * (1 + ANT.ctr * antOn(D, a.type, this.t));
       if (R() < p) { memAdd(A, A.mem.mine, a.type, this.t, { c: 1 }); const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
     }
@@ -1950,9 +2054,10 @@ class Fight {
       this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type, hand: ln.hand, side: ln.side, lane: ln.lane, mt });
     }
     A.lastRes = 'evaded'; A.lastDef = def || null;
+    this.bev(A, D, why === 'evade' ? 'evaded' : 'missed', { p: a.type, def: why !== 'evade' ? null : def || (P.zone === 'head' && P.kind === 'straight' ? 'slip' : P.zone === 'head' && P.kind === 'hook' ? 'duck' : 'pull') });
     if (why === 'evade') { A.read.av[kindOf(a.type)]++; memAdd(A, A.mem.mine, a.type, this.t, { e: 1 }); if (D.order && D.order.k === 'move') this.teach(D); }
     if (why === 'evade') A.rs.made[a.type] = (A.rs.made[a.type] || 0) + 1;
-    if (why === 'evade' && D.state !== 'stun' && D.state !== 'down') {
+    if (why === 'evade' && !D.brain && D.state !== 'stun' && D.state !== 'down') {
       const st = D.st, sg = sgOf(D);
       const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1) * ctrEdge(D)
         * (P.cat === 'jab' ? TUNE.jabCtr : 1) // a jab snaps back: much harder to counter than a missed hook
@@ -2008,7 +2113,7 @@ class Fight {
   knockdown(D, A, zone, liver) {
     D.state = 'down'; D.downP = 0; D.act = null; D.queue = []; D.def = null; D.pendingDef = null; D.vx = D.vz = 0; D.stunT = 0; D.slideT = 0; D.esc = null; D.spin = false;
     A.act = null; A.queue = []; A.state = 'idle'; A.vx = A.vz = 0; A.def = null; A.slideT = 0; A.esc = null; A.spin = false;
-    D.kdR++; D.kd++; D.rs.kd++; this.clinchT = 0;
+    D.kdR++; D.kd++; D.rs.kd++; this.clinchT = 0; this.bev(A, D, 'kd', {});
     if (TUNE.kdHurt) { D.head = Math.min(D.head, D.headMax * (TUNE.kdHurt + D.s.heart / 500)); D.headMax = Math.max(10, D.headMax - 3); } // even a flash knockdown scrambles him
     this.phase = 'kd'; this.phaseT = 0;
     const K = this.kdState = { who: D.side, count: 0, tick: -0.5, getUp: null, rising: false, zone, standing: false };
@@ -2109,6 +2214,7 @@ class Fight {
     A.strategy = stratA || 'auto'; B.strategy = stratB || 'auto'; A.order = B.order = null;
     for (const F of this.f) for (const k in F.used) F.used[k] *= .6; // the other corner adjusts, but he forgets some of it over the break
     this.round++; this.clock = 0; this.phase = 'intro2'; this.phaseT = 0;
+    for (const F of this.f) if (F.brain) { F.brain.rest({ round: this.round - 1 }); F.brain.roundStart(this.round); F.bev = []; F.binfo = null; }
     this.emit('nextRound');
     return true;
   }
