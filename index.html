@@ -1204,11 +1204,15 @@ function laneOf(A, P) {
 const AI = {
   brain: 0,        // 1 = both men think with the brain (opts.brain = [a, b] per side wins)
   pace: CLOCK,     // the engine's rounds run 3x the sim clock: the brain squeezes moods, memory and intent modes to match
-  defQ: 1.1,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
+  defQ: 1.3,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
   guardK: .3,      // how much the brain's hands (high/low) move passive block and evasion
   tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
   esc: 1.1,        // per second: how often a man on the ropes with his feet working pivots out (times lateral and ropes skill)
-  lean: .8         // how much of the brain style's skill lean goes on top of the stats
+  lean: .8,        // how much of the brain style's skill lean goes on top of the stats
+  skill: -8,       // added to every skill (rating 82 lands in Pro, not World class)
+  // the brain's own knobs for this engine (BoxerBrain.BR), set when a fight starts. The engine's punches land faster than the dummy ring's
+  // (a jab lands ~.15 s after it starts), so the eyes are quicker; the rounds are denser, so the hands go more
+  br: { react: [.2, .07], ctrP: [.04, .4], throwP: .12, feintP: .1 }
 };
 // special styles think like the nearest base style, with their own taste on top (the engine keeps their tricks)
 const AI_MAP = { volume: ['swarmer', { output: .1, power: -.2, combo: .1 }], angle: ['outboxer', { circle: .12, range: -.1 }], awkward: ['counter', { patience: -.1 }],
@@ -1223,7 +1227,7 @@ function brainProfile(F) {
     cutoff: s.footwork * .5 + iq * .5, ropes: s.footwork * .5 + iq * .5, range: iq * .6 + s.footwork * .4, angles: s.footwork * .7 + iq * .3,
     counter: s.defense * .3 + s.accuracy * .3 + iq * .4, read: iq, pacing: iq * .8 + s.heart * .2, adjust: iq
   };
-  const skills = {}; for (const k in raw) skills[k] = Math.round(clamp(raw[k] + (S.sk[k] || 0) * AI.lean, 5, 99));
+  const skills = {}; for (const k in raw) skills[k] = Math.round(clamp(raw[k] + (S.sk[k] || 0) * AI.lean + AI.skill, 5, 99));
   const traits = {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + gauss() * .09, 0, 1);
   return BoxerBrain.makeProfile({ style: base, skills, traits, name: F.sheet.name, uniq: 0 });
 }
@@ -1252,6 +1256,7 @@ class Fight {
   }
   /* ---------- the brain's side of the fight (AI.brain): what he sees, what he does with it ---------- */
   brainInit(F) {
+    Object.assign(BoxerBrain.BR, AI.br);
     F.prof = brainProfile(F); F.brain = BoxerBrain.create(F.prof, { rng: R, pace: AI.pace }); F.bev = []; F.bg = .6; F.pEnd = -9; F.bLat = 0;
     F.brain.roundStart(this.round);
   }
