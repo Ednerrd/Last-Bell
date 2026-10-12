@@ -122,6 +122,9 @@ const BR = {
   ctrP: [.06, .75],       // chance to counter after a defense works, by counter skill
   memTau: [25, 120], memNotice: [.35, 1], memPrior: 4,
   outShort: 14,           // novice distance misjudgment (units)
+  reachStep: 6, reachLo: .08,
+  workS: 8, workH: 16, workW: 13, workLo: .25, // a combo's working range: how far inside its reach a straight / a hook lands best, how wide, the floor outside it
+ // a combo punch that can't reach from here (with the step he gets on the first one): weight left for a man with a perfect eye
   stealT: 30              // the last 30 s, where rounds get stolen
 };
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
@@ -383,7 +386,7 @@ class Brain {
     const fat = 1 - P.me.stam / (P.me.stamMax || 100);
     // his eye for distance: a novice misjudges and throws from where nothing reaches
     const dSeen = P.dist + this.g() * BR.outShort * (1 - k.range) * .6 + (1 - k.range) * -6;
-    if (this.queue && this.t >= this.queue.at) { const q = this.queue; this.queue = null; return this.fire(q.ps, q.why, dSeen, q.ctr); }
+    if (this.queue && this.t >= this.queue.at) { const q = this.queue; this.queue = null; const ps = this.fitReach(q.ps, dSeen); return ps ? this.fire(ps, q.why, dSeen, q.ctr) : null; }
     // a planned sequence in progress
     if (this.setup) { const s = this.stepSetup(P, dSeen); if (s) return s; }
     if (dSeen > 92) return null;
@@ -417,6 +420,11 @@ class Brain {
       // range: the first punch has to reach (as far as he can tell)
       if (dSeen > c.max + 4 || dSeen < c.min - 12) { if (this.R() > .12 * (1 - k.range)) continue; }
       let w = 1;
+      // the rest of it has to reach too: a hook from where only the jab lands is wasted (a man with a good eye for range knows it)
+      for (let i = 1; i < c.n; i++) if (dSeen > PUNCHES[c.ps[i]].max + BR.reachStep) w *= lerp(.6, BR.reachLo, k.range);
+      { // every combo has a working range: a hook wants to be well inside its reach (he only has to lean back from one at the end of it), a straight at the end of the arm
+        const P0 = PUNCHES[c.ps[0]], ideal = P0.max - (P0.kind === 'straight' ? BR.workS : BR.workH);
+        w *= lerp(1, BR.workLo + Math.exp(-Math.pow((dSeen - ideal) / BR.workW, 2)), k.range); }
       { const jt = clamp(tr.jab + pl.jab, 0, 1); w *= c.jab ? lerp(.5, 4, jt) * (.5 + c.jab) : lerp(1.6, .3, jt); }
       w *= 1 + c.power * (clamp(tr.power + pl.power, 0, 1) * 2 - .6);
       w *= 1 + c.body * (clamp(tr.body + pl.body, 0, 1) * 2.4 - .7);
@@ -439,6 +447,13 @@ class Brain {
     let r = this.R() * tot; for (const [c, w] of ws) { r -= w; if (r <= 0) { best = c; bw = w; break; } }
     if (!best) best = ws[ws.length - 1][0];
     return { ps: best.ps.slice(), why: (this.opening(P) > .5 ? 'opening' : md) + ': ' + best.id, id: best.id };
+  }
+  // a counter or a planned shot from where it can't reach: a man with an eye for range turns the hook into a straight, or lets it go
+  fitReach(ps, dSeen) {
+    const k = this.k, P0 = PUNCHES[ps[0]];
+    if (dSeen <= P0.max + BR.reachStep || this.R() > k.range) return ps;
+    if (P0.kind === 'straight' || dSeen > PUNCHES.cross.max + BR.reachStep) return null;
+    return [P0.zone === 'body' ? 'bodyCross' : 'cross'].concat(ps.slice(1).filter(p => PUNCHES[p].max + BR.reachStep >= dSeen));
   }
   // planned sequences: the smart man's tricks
   startSetup(P, dSeen) {
@@ -472,7 +487,7 @@ class Brain {
     if (S.name === 'body then head' && S.i === 2 && P.him.guard > .5 && !S.blocked) { S.steps[2] = ['bodyHook']; } // the hands haven't dropped yet: one more downstairs
     S.i++; S.next = this.t + S.gap;
     if (S.i >= S.steps.length) this.setup = null;
-    return this.fire(st.slice(), 'setup: ' + S.name, dSeen);
+    const ps = this.fitReach(st.slice(), dSeen); return ps ? this.fire(ps, 'setup: ' + S.name, dSeen) : 'wait';
   }
   feint(dSeen, why) {
     const k = this.k, fat = this.fat || 0;
