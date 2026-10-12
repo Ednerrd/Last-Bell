@@ -1233,6 +1233,8 @@ const AI = {
 const AI_MAP = { volume: ['swarmer', { output: .1, power: -.2, combo: .1 }], angle: ['outboxer', { circle: .12, range: -.1 }], awkward: ['counter', { patience: -.1 }],
   switch: ['boxerpuncher', {}], body: ['swarmer', { body: .25, output: -.1 }], pboxer: ['slugger', { jab: .3, output: .1, range: .1 }],
   spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1 }], feinter: ['boxerpuncher', { patience: .15 }] };
+// the guard is a defense habit: what he reaches for when one comes (shell: gloves and arms, slip: head movement, legs: gets out of range)
+const AI_GUARD = { high: { shell: .12, slip: -.05 }, cross: { shell: .3, slip: -.2, legs: -.05 }, peekaboo: { slip: .25, shell: .1, legs: -.1 }, philly: { shell: .15, slip: .2 }, handslow: { shell: -.3, slip: .15, legs: .2 } };
 // a fighter's stats and ring IQ become the brain's skills (the tier falls out of them); the style gives the traits
 function brainProfile(F) {
   const s = F.s, iq = F.iq, sty = F.sk, m = AI_MAP[sty], base = m ? m[0] : BoxerBrain.STYLES[sty] ? sty : 'boxerpuncher', S = BoxerBrain.STYLES[base];
@@ -1243,7 +1245,7 @@ function brainProfile(F) {
     counter: s.defense * .3 + s.accuracy * .3 + iq * .4, read: iq, pacing: iq * .8 + s.heart * .2, adjust: iq
   };
   const skills = {}; for (const k in raw) skills[k] = Math.round(clamp(raw[k] + (S.sk[k] || 0) * AI.lean + AI.skill, 5, 99));
-  const traits = {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + gauss() * .09, 0, 1);
+  const traits = {}, gt = AI_GUARD[F.guard] || {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + (gt[k] || 0) + gauss() * .09, 0, 1);
   return BoxerBrain.makeProfile({ style: base, skills, traits, name: F.sheet.name, uniq: 0 });
 }
 const hurtNow = F => F.state === 'stun' || F.head < F.headMax * .3;
