@@ -230,4 +230,4 @@ Ed asked: are the combos real, is the counter logic refined? Built from `researc
 - Balance after: swarmer slip +6 / block +4 (bob and weave), counter-puncher back to counter +12 / read +8, `AI.out` 1.1.
 - **Styles (300/pair, br9):** boxer-puncher 51.6, outboxer 51.3, counter 50.9, slugger 48.4, swarmer 47.9. Audit (500): 53.7 / 15.1 / 28.1%, stops 20.8%.
 - Counter mix per man per round ~10: textbook answers ~75%, low-skill "fire back with anything that reaches" ~23%, check hook ~3%.
-- Specials vs base (100/pair, ±2.4): spoiler 50, angle 49, jabgrab 49, pboxer 48, switch 48, feinter 48, body 43, volume 42, awkward 41. Next: volume (light hands, needs its eco/volume edge in the brain's work rate), body snatcher, awkward (odd timing should slow the brain's eye, not only `react()`).
+- Specials vs base (100/pair, ±2.4): spoiler 50, angle 49, jabgrab 49, pboxer 48, switch 48, feinter 48, body 43, volume 42, awkward 41 -> 48.5 (n877) after `AI.odd` .5: an awkward man's punches reach the brain's eye later (negative tell). Next: volume (light hands, needs its edge in the brain's work rate), body snatcher.

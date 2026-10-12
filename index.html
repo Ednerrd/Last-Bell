@@ -1280,6 +1280,7 @@ const AI = {
   guardK: .3,      // how much the brain's hands (high/low) move passive block and evasion
   tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
   out: 1.1,        // per second, times the style's out: an out-boxer crowded inside slides out
+  odd: .5,         // how much later the brain sees an awkward man's punches (negative tell: odd .6 = ~.05 s)
   esc: 1.1,        // per second: how often a man on the ropes with his feet working pivots out (times lateral and ropes skill)
   lean: .8,        // how much of the brain style's skill lean goes on top of the stats
   skill: -8,       // added to every skill (rating 82 lands in Pro, not World class)
@@ -1343,7 +1344,7 @@ class Fight {
     return {
       t: this.t, clock: this.clock, roundLen: ROUND_LEN, round: this.round, rounds: this.rounds, dist: dist(F, O), ropes: { me: ropesK(F), him: ropesK(O) },
       me: { head: F.head, headMax: F.headMax, stam: F.stam, stamMax: F.stamMax, hurt: hurtNow(F), down: F.state === 'down', clinch: F.state === 'clinch', punching: F.state === 'punch', busy },
-      him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, tell: a.tell || 0 } : null,
+      him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0) } : null, // an awkward man's punches come from where you don't look: seen later
         recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
         guard: (O.brain ? O.bg : .6) * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100 },
       events: F.bev
