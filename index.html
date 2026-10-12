@@ -1222,6 +1222,7 @@ const AI = {
   defQ: 1.3,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
   guardK: .3,      // how much the brain's hands (high/low) move passive block and evasion
   tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
+  out: 1.6,        // per second, times the style's out: an out-boxer crowded inside slides out
   esc: 1.1,        // per second: how often a man on the ropes with his feet working pivots out (times lateral and ropes skill)
   lean: .8,        // how much of the brain style's skill lean goes on top of the stats
   skill: -8,       // added to every skill (rating 82 lands in Pro, not World class)
@@ -1317,6 +1318,8 @@ class Fight {
     if (F.slideT <= 0 && d < 84 && this.trapped(F) && R() < AI.esc * F.circ * (.3 + k.ropes) * (m.feet || 1) * (1 - .6 * (O.cutting ? O.cutK / 1.2 : 0)) * dt) {
       const e = this.escDir(F, false); if (e) { F.esc = e; F.circDir = F.bLat = e.s; F.spin = false; F.slideT = .45 + F.s.footwork / 300; this.emit('escape', { a: F.side, how: 'pivot' }); return; }
     }
+    // an outside man who got crowded slides out on an angle (his style's reflex, as fast as his eye for range)
+    if (F.st.out && F.slideT <= 0 && !hurtNow(O) && d < F.want - STYLE_OUT.gap && !this.trapped(F) && R() < F.st.out * STYLE_OUT.p * AI.out * (.4 + .6 * k.range) * (.5 + F.s.footwork / 200) * dt && this.stepOut(F, vec(F, O))) return;
     // hands
     const P = o.punch; if (!P || F.act) return;
     if (P.feint) { this.brainFeint(F, P); return; }
@@ -1571,7 +1574,11 @@ class Fight {
     }
     if (F.beatT > 0 && (F.beatT -= dt) <= 0) { F.beatT = 0; if (F.state === 'idle' || F.state === 'move') { if (F.queue.length && F.stam > 2) { this.nextInCombo(F); if (F.state === 'punch') return; } else this.comboDone(F); } }
     if (F.state === 'idle' || F.state === 'move') {
-      if (F.brain) this.footwork(F, dt); // the brain already decided this frame
+      if (F.brain) { // the brain already decided this frame; the style's reflexes are the body's
+        if (F.stickT > 0) F.stickT -= dt;
+        else if (!F.queue.length && (F.binfo = null, this.stickJab(F, dt))) return;
+        this.footwork(F, dt);
+      }
       else {
         if (F.stickT > 0) F.stickT -= dt;
         else if (this.stickJab(F, dt)) return;
