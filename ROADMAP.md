@@ -11,16 +11,17 @@ The only to-do list. When something is done, delete its line here and put the nu
 0. **Boxer brain on the engine (branch `claude/brain-wire`, reviewed Oct 13).** Wired behind `AI.brain` (default 0 = old AI, same.js 7f58e976), lab has an AI row. Audit and styles on target (`docs/BRAIN.md` "The brain on the engine" + "Review and handoff").
    - **Next:** Ed watches brain vs brain on the private brain test page (https://claude.ai/artifact/HQopfRTmoBmSZLbEfDa94P, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
    - **After that:**
+     - **finishing and the hurt brain first** (stoppages 19.6, want 25+): `research/mind_finish.md` section 4 (check-then-commit hunt, safe finishing, finisher gets caught, survive re-picks, hurt timer);
      - weak specials: volume 42, body 43;
-     - stoppages up (19.6, want 25+), body KDs up (4.2, want 5+);
+     - body KDs up (4.2, want 5+);
      - out-boxer off the ropes;
      - fix the brain's thrown overcount;
      - specials at 300/pair;
      - then retire `decide()`/`react()`.
 1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.
-2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Needs Ed's answer to item 3 above before L1.
+2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.
 3. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):
-   - Setups and traps: jab-jab-right, body then head, feint to draw the slip, "show it twice, change it" (`research/mind_combos.md`).
+   - Setups and traps: "show it twice, change it" gated on HIS answer, armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
    - Hurt brain: shell / run / fire back / clinch / freeze by composure; finisher weighs the risk (`research/mind_vision.md` 8d).
    - AI between-round adjustment: change one thing when losing exchanges; low adjusters wait too long.
    - Clarity: fatigue, damage and knockdowns blur the read.
