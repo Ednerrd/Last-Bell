@@ -238,6 +238,7 @@ A code review of the whole branch found no change with the brain off (same.js 7f
 - A passive block no longer reuses a stale defense-quality roll (`defQ` set to 1).
 - `pEnd` is set for both men.
 - `AI.br` is applied once, so a PATCH on `BoxerBrain.BR` still wins.
+- The passive-block fix first made a brain fighter's guard hold every time on the next shot inside .16 s (styles: outboxer 55.2, swarmer 45.7). New knob `AI.reflexQ` .5: that guard holds with chance reflexQ × `AI.defQ`. Styles 300/pair after: outboxer 53.3, counter 50.4, boxer-puncher 49.9, swarmer 49.2, slugger 47.4.
 
 After the fixes (brain on, @82):
 
