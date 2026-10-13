@@ -10,6 +10,7 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_finish.md` | Finishing a hurt man, surviving hurt, ref stoppages, recovery times, FINISH/SURVIVE knobs for the brain |
 | `mind_learn.md` | Novice vs pro tells, punch force by level, teaching order, learning from losses, rematches, scouting; tier tables and growth rules for skill levels |
 | `mind_traps.md` | Traps across rounds (bait, answer, payoff), body banking, adjust timing by tier, rematch changes, corner talk, Plan B menus |
+| `fighters_c.md` … `fighters_g.md` | Exciting fighters (Reddit r/Boxing list, Oct 2026): 60 DNA cards with style, why they're exciting, mind, best bouts, brain knobs. c 140-160 punchers, d feather-light, e 105-122, f heavyweights, g mixed + Pacquiao |
 | `mind_vision.md` | Where boxers look, anticipation vs reaction, tells, feints vs the read, fear/composure, fatigue |
 | `mind_p4p_a.md` | Mind profiles: Shakur, Loma, Inoue, Usyk, Crawford, Bivol, Canelo, Mayweather |
 | `mind_p4p_b.md` | Ring + ESPN P4P (Sep 2026) vs `P4P_2026`, 17-division kings, 13 more mind profiles |
