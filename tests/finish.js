@@ -42,7 +42,7 @@ console.log(`after the first KD: stopped that round ${p(A.firstStop, A.firstKd)}
 console.log('how: ' + Object.keys(A).filter(k => /^(m|why):/.test(k)).map(k => k + ' ' + A[k]).join(' '));
 if (T.hunts != null) {
   const pf = A.fights * 2;
-  console.log(`brain per man per fight: hunts ${(T.hunts / pf).toFixed(2)} (confirm ${p(T.confirm || 0, T.hunts)}, safe ${p(T.huntSafe || 0, T.hunts)}, reckless ${p(T.reckless || 0, T.hunts)}), finisher caught ${p(T.caught || 0, T.hunts)}, capped ${p(T.huntCap || 0, T.hunts)}`);
+  console.log(`brain per man per fight: hunts ${(T.hunts / pf).toFixed(2)} (confirm ${p(T.confirm || 0, T.hunts)}, safe ${p(T.huntSafe || 0, T.hunts)}, reckless ${p(T.reckless || 0, T.hunts)}), finisher caught (hurt) ${p(T.caught || 0, T.hunts)}, stung (ate a clean counter) ${p(T.stung || 0, T.hunts)}, capped ${p(T.huntCap || 0, T.hunts)}`);
   console.log(`hurt spells ${(T.hurts / pf).toFixed(2)} | answers ` + Object.keys(T).filter(k => k.startsWith('hurt:')).map(k => k.slice(5) + ' ' + p(T[k], T.hurts)).join(' ') + ` | second picks ${p(T.second || 0, T.hurts)}, shell flips ${T.flip || 0}, desperate rounds ${T.desp || 0}`);
 }
 }
