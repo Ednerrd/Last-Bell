@@ -231,6 +231,7 @@ class Brain {
   constructor(profile, opts) {
     opts = opts || {};
     this.p = profile; this.R = opts.rng || Math.random; this.debug = !!opts.debug;
+    this.thrownEv = !!opts.thrownEv; // the game tells him which punches really started ('thrown' / 'pulled' events): telemetry counts those, not what he decided
     this.pace = opts.pace || 1; // a game whose rounds run faster than the clock (the Last Bell engine: 3) squeezes the slow things (moods, memory, intent modes) and keeps the work rate per round; reactions stay human
     // spread squeezes his overall level (how far apart the tiers play) but keeps his own strengths full size: a counter-puncher's counter stays his edge
     const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl = .5 + (avg - .5) * BR.spread;
@@ -298,6 +299,7 @@ class Brain {
     if (!PUNCHES[ev.p]) return;
     if (ev.by === 'me') {
       const p = ev.p, kd = kindOf(p);
+      if (ev.type === 'thrown' || ev.type === 'pulled') { const n = ev.type === 'thrown' ? 1 : -1; if (ev.first) this.tel.throws += n; this.tmode(n); return; } // the engine started it (or he pulled it back before it was a punch)
       if (ev.type === 'feinted') { if (ev.bit) this.madd(this.mem.def, 'feint', { n: 1, bit: 1 }); else this.madd(this.mem.def, 'feint', { n: 1 }); if (ev.bit && this.setup && this.setup.onBite) this.setup.bit = ev.def || 'block'; return; }
       this.madd(this.mem.mine, p, { n: 1, l: ev.type === 'landed' ? 1 : 0, b: ev.type === 'blocked' ? 1 : 0, e: ev.type === 'evaded' ? 1 : 0 });
       if (ev.def) this.madd(this.mem.def, kd, { n: 1, [ev.def]: 1 }); else if (ev.type === 'landed') this.madd(this.mem.def, kd, { n: 1, none: 1 });
@@ -678,6 +680,7 @@ class Brain {
     this.tel.feints++;
     return { type, combo: [type], feint: true, sell, tech: sell, tell: 0, commit: 0, why: why || (sell < .35 ? 'feint (nobody is buying it)' : 'feint') };
   }
+  tmode(n) { const mk = this.mode === 'survive' ? 's:' + this.hurtResp : this.mode; this.tel.mThr[mk] = (this.tel.mThr[mk] || 0) + n; } // throws by mode
   // technique: how well he throws it. A skill he doesn't own still gets tried, badly: telegraphed, arm punches, off balance
   fire(ps, why, dSeen, ctr) {
     const k = this.k, tr = this.tr, E = this.emo, fat = this.fat || 0;
@@ -688,8 +691,8 @@ class Brain {
     if (ctr && this.mode === 'survive' && (this.hurtResp === 'fire' || this.hurtResp === 'bait')) commit = Math.min(1, commit + BR.fin.ctrCommit); // nothing to lose: he sits down on it
     if (this.mode === 'hunt' || this.mode === 'huntSafe') { const H = this.h; H.n += ps.length; if (H.n >= H.goal) { H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = this.t + this.rnd(BR.fin.look[0], BR.fin.look[1]); } } // the flurry, then a look
     const tell = clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1); // loading up shows it
-    this.tel.throws++; this.tel.techSum += tech[0]; this.tel.techN++;
-    { const mk = this.mode === 'survive' ? 's:' + this.hurtResp : this.mode; this.tel.mThr[mk] = (this.tel.mThr[mk] || 0) + ps.length; }
+    this.tel.techSum += tech[0]; this.tel.techN++;
+    if (!this.thrownEv) { this.tel.throws++; this.tmode(ps.length); } // no word from the game: count what he decided
     const id = ps.map(p => PUNCHES[p].num).join('-');
     this.hist.push(id); if (this.hist.length > 6) this.hist.shift();
     this.note('throws ' + id + ' (' + why + ')');
