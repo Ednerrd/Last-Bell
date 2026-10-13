@@ -107,7 +107,7 @@ Rough curve multipliers (est., for a "normal" fighter): R1 0.85, R2-4 1.0, R5-8 
 - **Move and cover.** Back up behind a high guard, turn off the ropes, keep the feet moving, throw a single shot back to show the referee you are still in it.
 - **Fire back.** Some fighters punch their way out (Gatti R9). High risk, big crowd reaction.
 - **The referee.** A hurt fighter who stops punching back and cannot defend gets stopped, even late (Taylor with 2 seconds left).
-- **The bell is the best friend.** One minute in the corner gives a big recovery (Gatti came back the same round, Fury got up and finished vs Usyk 1).
+- **The bell is the best friend.** One minute in the corner gives a big recovery (Gatti came back the same round, Fury, hurt and given a count in R9 vs Usyk 1, was saved by the bell and finished on his feet, losing a split decision).
 
 ---
 
