@@ -346,7 +346,7 @@ const BR = {
   stealT: 30,             // the last 30 s, where rounds get stolen
   hurtQ: .25,             // a hurt man's defense works this much worse
   // clarity: damage taken (this round's and the wear), and knockdowns, blur the eye. blur 0..1 -> reaction x(1 + react), misreads x(1 + mis), defense quality x(1 - q)
-  blur: { cur: .7, wear: 1.4, kd: .2, react: .45, mis: 1.8, q: .3, at: 0 }, // at: damage below this share of his head doesn't count
+  blur: { cur: .5, wear: 2.5, late: 0, kd: .25, react: .5, mis: 2, q: .35, at: .5 }, // at: damage below this share of his head doesn't count. late: by the last round (the championship rounds)
   tunnel: { hunt: .5, huntSafe: .12, check: .1 }, // going for the finish, he sees the counter late
   // finishing (research/mind_finish.md 4a). Spell times in clock seconds (moods' time), looks in real seconds
   fin: { confirm: [2.4, .6],  // check-then-commit: a short look with straight shots first (clock s, slow read .. fast read)
@@ -368,7 +368,7 @@ const BR = {
     steady: .7, clinchNear: .5, flipAt: 3, shellFlip: .4,
     late: 20, lateRun: 1.5, lateFire: .6, despFire: 1.8,
     kdFire: 2, kdShell: 1.5,  // after a knockdown: composure decides, fire back harder or shell
-    after: 8, rally: .2 },    // after a big hurt: more range rest of the round and the next, or (composed) more initiative next round
+    after: 8, rally: .2 },    // after a knockdown: more range rest of the round (and the next, unless he's composed: then more initiative)
   desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 } // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
 };
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
@@ -379,8 +379,8 @@ const MODES = {
   burst:   { aggr: 4.2, range: -9, guard: .4, lat: .2 },
   reset:   { aggr: .12, range: 16, guard: .7, lat: 1 },
   counter: { aggr: .35, range: 2, guard: .75, lat: .5, ctr: 2 },
-  hunt:    { aggr: 4.5, range: -14, guard: .45, lat: .1, cut: 1 },        // all-out
-  huntSafe:{ aggr: 2.6, range: -8, guard: .7, lat: .15, cut: 1 },       // finish behind a guard, short straight shots
+  hunt:    { aggr: 3, range: -14, guard: .45, lat: .1, cut: 1 },        // all-out
+  huntSafe:{ aggr: 1.8, range: -8, guard: .7, lat: .15, cut: 1 },       // finish behind a guard, short straight shots
   check:   { aggr: 1.5, range: -6, guard: .65, lat: .2, cut: 1 },       // is he really hurt? one or two straight ones first
   survive: { aggr: .25, range: 20, guard: 1, lat: .9 }
 };
@@ -725,7 +725,7 @@ class Brain {
     this.tel.hurts++; this.tel.hurtR[this.hurtResp] = (this.tel.hurtR[this.hurtResp] || 0) + 1;
     H.unans = 0; H.flip = 0; H.second = this.ct + this.rnd(SV.second[0], SV.second[1]); H.freezeEnd = this.ct + this.rnd(SV.freeze[0], SV.freeze[1]);
     this.queue = null; this.setup = null;
-    if (comp < .7) this.wary = { v: SV.after, until: P.round + 1 };
+    if (this.ct - H.kdMe < 1 && comp < .7) this.wary = { v: SV.after, until: P.round }; // off the floor: box long the rest of the round
     this.setMode('survive', lerp(SV.hurtT[0], SV.hurtT[1], comp) * this.rnd(.8, 1.2), 'hurt: ' + this.hurtResp);
   }
   survUpd(P) {
@@ -935,13 +935,13 @@ class Brain {
     this.fat = 1 - P.me.stam / (P.me.stamMax || 100);
     this.ct += sdt; this.hisG = P.him.guard;
     { const B = BR.blur, cur = Math.max(0, 1 - P.me.head / Math.max(1, P.me.headMax) - B.at) / (1 - B.at); // only real damage counts: a jab here and there doesn't blur anything
-      this.blur = clamp((cur * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + this.kds * B.kd) * (1.3 - .6 * this.tr.composure), 0, 1); }
+      this.blur = clamp((cur * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + (P.round - 1) / Math.max(1, P.rounds - 1) * B.late + this.kds * B.kd) * (1.3 - .6 * this.tr.composure), 0, 1); }
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
     this.updMode(P, sdt);
     this.see(P);
     // he's rushing in head first: a counterpuncher meets him with the check hook and pivots off the line (Mayweather vs Hatton)
     if (P.him.closing > BR.rushV && P.dist < 66 && P.dist > 40 && !this.queue && !P.me.busy && !P.him.punch && this.mode !== 'survive'
-      && this.R() < BR.rushP * this.k.counter * (1.3 - clamp(this.tr.initiative, 0, 1)) * (.7 + .6 * this.tr.killer) * dt) { // a killer waits for exactly this one
+      && this.R() < BR.rushP * this.k.counter * (1.3 - clamp(this.tr.initiative, 0, 1)) * dt) {
       const o = this.counterFor('rush', 'jab'); this.queue = { ps: o[0].slice(), why: 'counter: ' + o[2], ctr: 1, at: this.t, pivot: o[2] === 'check hook' };
     }
     this.decT -= dt;
@@ -1013,7 +1013,7 @@ class Brain {
 }
 
 function create(profile, opts) { return new Brain(profile, opts); }
-return { create, makeProfile, tierOf, mulberry32, PUNCHES, COMBOS, SKILLS, SKILL_KEYS, TRAIT_KEYS, TIERS, STYLES, MODES, BR, DEF_THRU, kindOf };
+return { create, makeProfile, tierOf, mulberry32, PUNCHES, COMBOS, SKILLS, SKILL_KEYS, TRAIT_KEYS, TIERS, STYLES, MODES, SURV, BR, DEF_THRU, kindOf };
 });
 return module.exports; })();
 /* ----- end brain.js ----- */
