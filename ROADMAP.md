@@ -17,6 +17,7 @@ The only to-do list. When something is done, delete its line here and put the nu
        - finisher caught (hurt) 0.7% of hunts, wanted 5–10 (stung 12%); same-round stop after a KD ~25%, research guess 35–45;
        - brain vs old AI fell 38 → ~27% (the old AI doesn't blur);
        - Ed: watch it on the private brain test page.
+     - **Next, in this order (recommended):** fix the brain's thrown overcount (correctness, cheap, and it shifts connect %); then a balance pass at 300/pair on boxer-puncher / out-boxer and the stop/connect trade (`BR.blur`, `AI.out`); then the items below.
      - weak specials: volume 42, body 43;
      - body KDs up (still 4.1%, 30 of 723; the slow fuse didn't move it);
      - out-boxer off the ropes;

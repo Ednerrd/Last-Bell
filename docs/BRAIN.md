@@ -278,3 +278,14 @@ Built in `brain/brain.js` from `research/mind_finish.md` §4 and the "Patterns" 
 | Dummy ring audit 300 | stops 23.3%, connect 32.1% | stops 28.3%, connect 34.1% |
 
 Open: stops a hair under 25 (a weaker blur gets connect back to 29% but stops fall to ~22.6%: it's a straight trade); boxer-puncher 46.8 / outboxer 54.1 just out of band; finisher caught (hurt) only 0.7% of hunts (5–10% wanted; a fresh hunter almost never gets stunned in this engine, "stung" = ate a clean counter is 12%); same-round stop after a KD below the research guess; body KDs didn't move (the slow fuse digs more but the liver needs worn bodies); bvo down (blur and the long post-KD survive cost the brain against the old AI).
+
+### Handoff (Oct 13, after finishing)
+State: `claude/brain-wire` @ finishing + balance + slow fuse, brain off unchanged (same.js 7f58e976), private brain test page republished (v3). Not merged into the main line.
+
+Lessons for the next session:
+- **Noise is the enemy.** Styles at 150/pair swing ±3–4 per style between identical runs; trust only 300/pair (`/tmp` helpers aren't in the repo: copy the 4-process split from the task prompt). Stoppages need 1000+ fights pooled (audit and `finish.js` disagreed by up to 6 points on the same build).
+- **Any drop in defense favours the out-boxer** (he lives out of range). Blur, hurt-man defense, tunnel vision: each costs swarmer/slugger first. Pair any defense nerf with a balance check.
+- **Hunt output is capped by the engine**: decision timer + punch length, ~0.6 throws per clock-second at most. Raising `MODES.hunt.aggr` past 3 only burned swarmers' gas.
+- **Hurt is rare** (0.65% of frames). Stoppages come from KDs, and KDs from flush shots (wrong-defense `mult > 1`, counters, crits). The brain picks the right defense more than the old AI, so it needs the blur to get KDs.
+- **Finisher caught** can't reach 5–10% "hurt" in this engine (a fresh man is almost never stunned); "stung" (ate a clean counter while hunting) is the honest measure, 12%.
+- Probes worth reusing: `tests/finish.js`; per-mode time/throws/lands come from `tel.mThr`/`tel.mLand`/`tel.modeT`.
