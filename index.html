@@ -1502,7 +1502,10 @@ class Fight {
     if (F.state === 'stun' || F.state === 'down' || F.state === 'clinch') return;
     // defense: committed past a third of his own punch, he can't
     if (o.defend && !(F.state === 'punch' && F.act && F.act.t / F.act.dur > .3)) {
-      if (F.state === 'punch') { F.act = null; F.queue = []; F.state = 'idle'; }
+      if (F.state === 'punch') { // he pulls it back before it's a punch: CompuBox never saw it (the gas is spent)
+        const a = F.act; if (a && !a.feint && !a.done) { const P = PUNCH[a.type]; F.tot.thrown[P.cat]--; F.rs.thrown--; if (P.cat !== 'jab') F.rs.thrownPow--; F.tot.un = (F.tot.un || 0) + 1; }
+        F.act = null; F.queue = []; F.state = 'idle';
+      }
       const kd = o.defend.kind; F.pendingDef = { kind: kd, at: .02, dur: .34 }; F.defZ = o.defend.zone; F.defQ = o.defend.quality; F.defAt = this.t;
       if (kd === 'pull') { const v = vec(F, O); F.vx = -v.ux * 55; F.vz = -v.uz * 55; F.pullX = -v.ux; F.pullZ = -v.uz; F.pullT = .22; }
     }

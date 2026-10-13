@@ -7,13 +7,14 @@ for(let i=0;i<N;i++){const base=60+Math.random()*30|0;const gap=[0,3,6,10][i%4];
  const f=S.run(fav,dog,{rounds}); A.fights++;
  const r=f.result; const rr=r.round; A.rounds+=r.decision?rounds:rr-.5;
  for(const F of f.f){A.thr+=F.tot.thrown.jab+F.tot.thrown.power+F.tot.thrown.body;A.ld+=F.tot.landed.jab+F.tot.landed.power+F.tot.landed.body;
-  A.jT+=F.tot.thrown.jab;A.jL+=F.tot.landed.jab;A.pT+=F.tot.thrown.power;A.pL+=F.tot.landed.power;A.bT+=F.tot.thrown.body;A.bL+=F.tot.landed.body;A.kd+=F.kd;}
+  A.jT+=F.tot.thrown.jab;A.jL+=F.tot.landed.jab;A.pT+=F.tot.thrown.power;A.pL+=F.tot.landed.power;A.bT+=F.tot.thrown.body;A.bL+=F.tot.landed.body;A.kd+=F.kd;A.un=(A.un||0)+(F.tot.un||0);}
  if(r.decision){A.dec++;const m=r.method;if(m==='UD')A.ud++;else if(m==='SD')A.sd++;else if(m==='MD')A.md++;else A.draw++; A.dm=A.dm||{}; A.dm[m]=(A.dm[m]||0)+1;}
  else{A.stop++;const m=r.method;if(m==='KO')A.ko++;else if(/cut/.test(m))A.cut++;else if(m==='RTD')A.rtd++;else A.tko++;const b=Math.min(rounds,rr)/rounds;const k=b<=.34?'early':b<=.67?'mid':'late';A.koRound[k]=(A.koRound[k]||0)+1;}
  const g=gapB[gap]=gapB[gap]||{w:0,l:0,d:0};if(r.winner===0)g.w++;else if(r.winner===1)g.l++;else g.d++;
 }
 const pr=(x)=>x.toFixed(1);const fr=A.rounds*2;
 console.log(`per fighter per round: thrown ${pr(A.thr/fr)} landed ${pr(A.ld/fr)} conn ${pr(100*A.ld/A.thr)}%`);
+if(A.un)console.log(`unthrown (pulled back by his own defense, not counted) ${(A.un/fr).toFixed(2)}/rd`);
 console.log(`jab ${pr(A.jT/fr)}/rd conn ${pr(100*A.jL/A.jT)}% | power(head) ${pr(A.pT/fr)}/rd conn ${pr(100*A.pL/A.pT)}% | body ${pr(A.bT/fr)}/rd conn ${pr(100*A.bL/A.bT)}%`);
 console.log(`KDs per fight ${pr(A.kd/A.fights)} | stoppages ${pr(100*A.stop/A.fights)}% (KO ${A.ko} TKO ${A.tko} cut ${A.cut} RTD ${A.rtd}) | stop timing ${JSON.stringify(A.koRound)}`);
 console.log(`decisions: UD ${A.ud} SD ${A.sd} MD ${A.md} draw ${A.draw} of ${A.dec} ${JSON.stringify(A.dm)}`);
