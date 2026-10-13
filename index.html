@@ -245,7 +245,6 @@ const PUNCHES = {
 const PTYPES = Object.keys(PUNCHES);
 const NUM = {}; for (const k of PTYPES) NUM[PUNCHES[k].num] = k;
 const kindOf = p => PUNCHES[p].zone === 'body' ? 'body' : PUNCHES[p].kind; // straight / hook / upper / body
-// the combo book, in trainers' numbers
 // the combo book, in trainers' numbers (research/mind_combos.md). Hands alternate (each punch cocks the next), levels and lines change;
 // same-hand doubles (1-1, 3b-3, 3-3b) are on purpose. Atlas' 1b-2-3 ("knock knock"), Canelo/Inoue's 1-2-3b-3, Inoue's 5-3b (lift the guard, then the liver),
 // Crawford's 2-1, Loma's 1-3b-6, the inside rips 6-3-6 / 3b-6-3, Tyson's 6-3
@@ -1328,11 +1327,11 @@ class Fight {
     this.kdState = null; this.clinchT = 0; this.rec = []; this.replay = null; this.recAfter = 0;
     this.roundLog = []; this.stepEv = [];
     this.exP = 0; this.f.forEach(F => this.tempoStart(F, true));
-    { const on = opts.brain || [AI.brain, AI.brain]; this.f.forEach((F, i) => { if (on[i]) this.brainInit(F); }); }
+    { const on = opts.brain || [AI.brain, AI.brain]; this.f.forEach((F, i) => { F.pEnd = -9; if (on[i]) this.brainInit(F); }); }
   }
   /* ---------- the brain's side of the fight (AI.brain): what he sees, what he does with it ---------- */
   brainInit(F) {
-    Object.assign(BoxerBrain.BR, AI.br);
+    if (!BoxerBrain.tuned) { Object.assign(BoxerBrain.BR, AI.br); BoxerBrain.tuned = 1; } // once: a PATCH on BoxerBrain.BR still wins
     F.prof = brainProfile(F); F.brain = BoxerBrain.create(F.prof, { rng: R, pace: AI.pace }); F.bev = []; F.bg = .6; F.pEnd = -9; F.bLat = 0;
     F.brain.roundStart(this.round);
   }
@@ -1388,11 +1387,12 @@ class Fight {
   brainFeint(F, P) {
     const v = vec(F, F.op); F.act = { id: this.pid = (this.pid || 0) + 1, type: P.type, t: 0, dur: .24, done: true, feint: true, sell: P.sell, step: 4, ux: v.ux, uz: v.uz, start: this.t };
     F.state = 'punch'; F.def = null; F.queue = [];
+    if (!F.op.brain) { const was = F.op.pendingDef; this.react(F.op, F, PUNCH.jab, true); F.act.bit = !!F.op.pendingDef && F.op.pendingDef !== was; } // an old-AI man can buy it too
     this.emit('feint', { a: F.side });
   }
   // the feint is over: did he buy it?
   feintDone(F, a) {
-    const D = F.op, bit = (D.defAt || -9) >= a.start;
+    const D = F.op, bit = D.brain ? (D.defAt || -9) >= a.start : !!a.bit;
     if (bit) { D.read.feints++; if (F.st.bite) F.biteT = STYLE_BITE.t; }
     this.bev(F, D, 'feinted', { p: a.type, bit, def: bit ? D.pendingDef && D.pendingDef.kind || D.def : null });
   }
@@ -1626,7 +1626,7 @@ class Fight {
         const ret = (F.st.ret || .7) * (F.strategy === 'pressure' || F.strategy === 'ko' ? .6 : 1);
         const sp_ = p < 0.6 ? a.step / (a.dur * 0.6) * 1.5708 * Math.sin(Math.PI * p / .6) : -a.step * ret / (a.dur * 0.4) * 1.5708 * Math.sin(Math.PI * Math.min(1, (p - .6) / .4));
         F.vx = a.ux * sp_; F.vz = a.uz * sp_;
-        if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.brain) this.feintDone(F, a); if (F.queue.length) this.nextInCombo(F); }
+        if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.brain || F.op.brain) this.feintDone(F, a); if (F.queue.length) this.nextInCombo(F); }
         else if (p >= 1) { F.state = 'idle'; F.act = null; F.vx = F.vz = 0; if (F.queue.length && F.stam > 2) this.nextInCombo(F); else this.comboDone(F); }
         else if (a.done && F.queue.length && F.stam > 2 && F.queue[0] !== '~' && p >= .82) { F.act = null; F.state = 'idle'; this.nextInCombo(F); }
       }
@@ -1939,7 +1939,7 @@ class Fight {
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
   }
   startFeint(F) { // resetting, a feint is mostly just a look (no real one behind it)
-    { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz }; }
+    { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz, start: this.t }; }
     F.state = 'punch'; F.def = null;
     const was = F.op.pendingDef; this.react(F.op, F, PUNCH.jab, true);
     const bit = F.op.pendingDef && F.op.pendingDef !== was;
@@ -2033,7 +2033,7 @@ class Fight {
       if (R() < ev) evaded = true;
       else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (D.brain ? 1 + AI.guardK * (D.bg - .6) : 1))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
-        D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; // show the guard catching it
+        D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; if (D.brain) D.defQ = 1; // show the guard catching it (a reflex: no botch roll on the next shot)
       }
     }
     if (evaded) { this.miss(A, D, a, 'evade', rolled ? 'roll' : def); return; }

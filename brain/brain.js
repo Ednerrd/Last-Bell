@@ -40,7 +40,6 @@ const PUNCHES = {
 const PTYPES = Object.keys(PUNCHES);
 const NUM = {}; for (const k of PTYPES) NUM[PUNCHES[k].num] = k;
 const kindOf = p => PUNCHES[p].zone === 'body' ? 'body' : PUNCHES[p].kind; // straight / hook / upper / body
-// the combo book, in trainers' numbers
 // the combo book, in trainers' numbers (research/mind_combos.md). Hands alternate (each punch cocks the next), levels and lines change;
 // same-hand doubles (1-1, 3b-3, 3-3b) are on purpose. Atlas' 1b-2-3 ("knock knock"), Canelo/Inoue's 1-2-3b-3, Inoue's 5-3b (lift the guard, then the liver),
 // Crawford's 2-1, Loma's 1-3b-6, the inside rips 6-3-6 / 3b-6-3, Tyson's 6-3
