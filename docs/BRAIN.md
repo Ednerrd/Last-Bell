@@ -231,3 +231,25 @@ Ed asked: are the combos real, is the counter logic refined? Built from `researc
 - **Styles (300/pair, br9):** boxer-puncher 51.6, outboxer 51.3, counter 50.9, slugger 48.4, swarmer 47.9. Audit (500): 53.7 / 15.1 / 28.1%, stops 20.8%.
 - Counter mix per man per round ~10: textbook answers ~75%, low-skill "fire back with anything that reaches" ~23%, check hook ~3%.
 - Specials vs base (100/pair, ±2.4): spoiler 50, angle 49, jabgrab 49, pboxer 48, switch 48, feinter 48, body 43, volume 42, awkward 41 -> 48.5 (n877) after `AI.odd` .5: an awkward man's punches reach the brain's eye later (negative tell). Next: volume (light hands, needs its edge in the brain's work rate), body snatcher.
+
+### Review and handoff (Oct 13)
+A code review of the whole branch found no change with the brain off (same.js 7f58e976 holds, no NaN, no exceptions). Fixed:
+- Feints now cross between the brain and the old AI both ways. Before, a mixed fight never bit on a feint.
+- A passive block no longer reuses a stale defense-quality roll (`defQ` set to 1).
+- `pEnd` is set for both men.
+- `AI.br` is applied once, so a PATCH on `BoxerBrain.BR` still wins.
+
+After the fixes (brain on, @82):
+
+| Measure | Result |
+|---|---|
+| Audit 500 | 53.7 thrown / 15.2 landed / 28.2% connect |
+| Stoppages | 19.6% |
+| Draws | 9% |
+| Body KDs | 4.2% (10 liver of 239) |
+| Brain vs old AI | 38.4% |
+
+Known, not fixed:
+- **Telemetry overcount.** A brain throw the engine drops (smother, pivot/step-out return, not idle) still counts in the brain's `tel.throws`. A punch his own defense cancels before 30% has already counted as "thrown" (CompuBox overcounts brain output a little).
+- **Passive evades.** These reach the brain as slip/duck/pull by punch type, so he counters from that row of the book (on purpose).
+- **Corner orders.** `F.strategy` and `F.order` don't reach the brain yet, so corner orders don't change his plan (the coach shouts item).
