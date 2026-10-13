@@ -351,7 +351,8 @@ const BR = {
   // finishing (research/mind_finish.md 4a). Spell times in clock seconds (moods' time), looks in real seconds
   fin: { confirm: [2.4, .6],  // check-then-commit: a short look with straight shots first (clock s, slow read .. fast read)
     reckless: .5,             // x killer x (1 - composure): skips the check and goes all-out
-    burst: [3, 6], look: [.3, .6], // flurry length (punches), then a reset look (s)
+    burst: [3, 6], look: [.15, .3], // flurry length (punches), then a reset look (s)
+    commit: { hunt: .6, huntSafe: .3 }, // how much harder he sits down on it finishing (commit can go past 1 here: more damage, more gas)
     cap: 11, gasSafe: .35, gasOut: .2, // all-out cap per hurt spell (clock s); under this much gas the all-out hunt turns safe, then stops
     late: 20, lateX: 2,       // round time left (clock s) where he goes now, chance x
     shellBody: 2, shellUpper: 1.6, runHook: 1.3, // into a shell: dig and come up the middle; hooks catch a runner
@@ -886,7 +887,7 @@ class Brain {
     if (!ps || !ps.length) return null;
     const skillOf = p => PUNCHES[p].cat === 'jab' ? k.jab : PUNCHES[p].cat === 'body' ? k.body : k.power;
     const tech = ps.map((p, i) => clamp(skillOf(p) * (i ? lerp(.7, 1, k.combos) : 1) * (1 - .25 * fat) * (1 - .15 * E.frus * (1 - tr.composure)) + this.g() * .06, .1, 1));
-    let commit = clamp(tr.power * .5 + tr.risk * .3 + ({ hunt: .3, huntSafe: .1 }[this.mode] || 0) + BR.desp.commit * this.desp + E.frus * .2 - (ps.length > 2 ? .2 : 0), 0, 1);
+    let commit = clamp(tr.power * .5 + tr.risk * .3 + BR.desp.commit * this.desp + E.frus * .2 - (ps.length > 2 ? .2 : 0), 0, 1) + (BR.fin.commit[this.mode] || 0); // finishing: he sits down on everything (past his usual)
     if (ctr && this.mode === 'survive' && (this.hurtResp === 'fire' || this.hurtResp === 'bait')) commit = Math.min(1, commit + BR.fin.ctrCommit); // nothing to lose: he sits down on it
     if (this.mode === 'hunt' || this.mode === 'huntSafe') { const H = this.h; H.n += ps.length; if (H.n >= H.goal) { H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = this.t + this.rnd(BR.fin.look[0], BR.fin.look[1]); } } // the flurry, then a look
     const tell = clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1); // loading up shows it
