@@ -47,7 +47,8 @@ Passing the truth is on purpose: reaction time, misreads and feint bites live in
 ### Action (what comes back)
 ```js
 {
-  intent: 'feelout'|'work'|'press'|'burst'|'reset'|'counter'|'hunt'|'survive'|'down',
+  intent: 'feelout'|'work'|'press'|'burst'|'reset'|'counter'|'check'|'hunt'|'huntSafe'|'survive'|'down',
+  hurt:   null | 'shell'|'run'|'fire'|'clinch'|'freeze'|'steady'|'bait',   // what he's doing with it, while in survive
   move:   { range, lateral, cut, clinch, feet },     // wanted distance, circling (-1..1), cutting the ring off (0..1), wants to tie up, footwork quality
   guard:  0..1,                                      // how high and tight the hands are right now
   punch:  null | { type, combo: ['jab','cross'], num: '1-2', feint, sell, tech: [..], tell, commit, counter, why },
@@ -69,7 +70,10 @@ Passing the truth is on purpose: reaction time, misreads and feint bites live in
 - **Counters** keyed to the defense that worked (slip the straight, right hand over it; duck the hook, come up with one).
 - **Memory** of the other man that fades: what he throws, what he leads with, what follows what, how he defends each punch, what hurt me.
 - **Emotion:** confidence, frustration (wild, worse picks), fear (less output, more defense). Composure decides how much they move him.
-- **Hurt brain:** clinch, shell, run, fire back, or freeze, by composure and habits.
+- **Finishing (hunt):** he checks first (one or two straight shots) unless he's reckless or the bell is close, then finishes all-out or behind a guard (he still throws back, he's countered me, I'm low on gas). Flurries of 3–6 with a look in between, sits down on it, capped at ~11 s per spell. Into a shell: body and uppercuts; a runner: hooks and cut the ring. He remembers the wobble after the tell goes, chases a man off the floor, sometimes thinks a man is hurt when he isn't. Tunnel vision: he sees the counter late.
+- **Hurt brain (survive):** first answer (clinch, shell, run, fire back, freeze, steady, bait) by composure and habits, then a second pick 1–2 s later (composed men move to clinch or steady). Freeze is capped, shell flips to fire or clinch after 3 unanswered, ride it to the bell late, fire more when desperate. Off the floor he always survives first; composure decides fire back harder vs cover up, and the next round (rally vs box long).
+- **Late desperation:** behind on his own cards in the last 3 rounds: more output, more commit, the right hand, hunts sooner.
+- **Clarity:** real damage (head under half), the wear of the fight and knockdowns blur the eye: later reactions, more misreads, worse defense. A hurt man's defense is worse still.
 - **Round awareness:** his own guess at the cards (fuzzy for a low pacing skill), steal the last 30 s, protect a lead, a first-round feel-out.
 - **Between rounds:** a good adjuster changes one thing when he thinks he lost (more of what works, less of what gets countered, stop leading, change range). A poor one waits too long.
 

@@ -140,6 +140,7 @@ const BR = {
   shortCtr: .5,           // a punch that fell short is a counter chance this often (the pull counter)
   stealT: 30,             // the last 30 s, where rounds get stolen
   hurtQ: .25,             // a hurt man's defense works this much worse
+  fuse: { gas: .5, w: 1.5, liver: .5 }, // under this much gas he digs: body weight up to x(1 + w), the 3b on top
   // clarity: damage taken (this round's and the wear), and knockdowns, blur the eye. blur 0..1 -> reaction x(1 + react), misreads x(1 + mis), defense quality x(1 - q)
   blur: { cur: .5, wear: 2.5, late: 0, kd: .25, react: .5, mis: 2, q: .35, at: .5 }, // at: damage below this share of his head doesn't count. late: by the last round (the championship rounds)
   tunnel: { hunt: .5, huntSafe: .12, check: .1 }, // going for the finish, he sees the counter late
@@ -610,6 +611,7 @@ class Brain {
       if (nd > 0) w *= 1 + c.power * nd; else w *= 1 + (c.jab - c.power) * -nd * .6; // behind: sit down on it. ahead: jab and stay safe
       if (H.guard < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
       if (H.guard > .8) w *= 1 + c.body * k.read;               // shell up high: go to the body
+      if (H.gas < BR.fuse.gas && !HUNTS[md]) w *= 1 + (c.body + (c.ps.includes('bodyHook') ? BR.fuse.liver : 0)) * (BR.fuse.gas - H.gas) / BR.fuse.gas * BR.fuse.w * k.read; // he's tired: the body is the slow fuse, dig to the liver
       // the situation (a smart man sees it, a novice throws his favourites)
       let sit = 1;
       if (H.guard > .7 && c.lowHigh) sit *= 1.3;                          // lift then dig, or dig then lift: a high guard can't cover both

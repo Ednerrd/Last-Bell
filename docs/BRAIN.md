@@ -254,3 +254,27 @@ Known, not fixed:
 - **Telemetry overcount.** A brain throw the engine drops (smother, pivot/step-out return, not idle) still counts in the brain's `tel.throws`. A punch his own defense cancels before 30% has already counted as "thrown" (CompuBox overcounts brain output a little).
 - **Passive evades.** These reach the brain as slip/duck/pull by punch type, so he counters from that row of the book (on purpose).
 - **Corner orders.** `F.strategy` and `F.order` don't reach the brain, so corner orders don't change his plan. Ed's call: leave it that way.
+
+### Finishing and the hurt brain (Oct 13, later)
+Built in `brain/brain.js` from `research/mind_finish.md` §4 and the "Patterns" in `research/fighters_c.md`–`g.md`. Knobs: `BR.fin`, `BR.surv`, `BR.desp`, `BR.blur`, `BR.tunnel`, `BR.hurtQ`, `BR.fuse`; modes `check` / `hunt` / `huntSafe`; `SURV` (survive's numbers by answer). Probe: `tests/finish.js`.
+- **Hunt:** check-then-commit (1–2 straight shots, `fin.confirm`), skipped by a reckless man (killer x (1 − composure)) or when the bell is near; then all-out `hunt` or `huntSafe` (short, straight, behind a guard) when he still throws back, has countered me, or I'm low on gas. Flurries of 3–6 with a short look, sits down on it (commit past 1 = more damage, more gas), 11 s cap, gas outs. Body and uppercuts into a shell, hooks and cut-off on a runner. He remembers the wobble after the engine's tell goes (`fin.wob`), chases a man off the floor (`fin.kdChase`, `kdWob`), sometimes sees a hurt that isn't there (`falseAlarm`). Tunnel vision: hunters see counters late.
+- **Survive:** first answer (shell, run, fire, clinch, freeze, plus `steady` for composed men and `bait` for patient counterpunchers), each with its own numbers (`SURV`: fire really fires now), then a second pick at 1–2 s. Freeze capped, shell flips after 3 unanswered, ride it to the bell late, fire x1.8 when desperate, clinch inside harder. Off the floor he always survives first; composure decides fire back vs cover up, then next round rally (composed) or box long. A hurt man's defense works 25% worse.
+- **Late desperation:** behind on his own cards in the last 3 rounds: output, commit, the right hand, hunts sooner.
+- **Clarity (blur):** real damage (head under half), the fight's wear and knockdowns slow the eye, add misreads, worsen defense. This is the main stoppage lever: the brain's defenders rarely picked the wrong defense, so fewer flush shots than the old AI (56 vs 65%), fewer stuns (2.4 vs 3.5/fight), fewer KDs.
+- **Slow fuse:** a man under half gas gets dug to the body, the 3b on top.
+- Found on the way: the hunt was already on 73% of the time the other man was hurt; hurt is just rare (0.65% of frames). A man getting up was "hurt" by the engine only 35% of the time and went straight back to work. Any drop in defense favours the out-boxer (he lives out of range); a hunt output bump (aggr 4.5) punched swarmers out (styles 44).
+- **Balance (own commit):** `AI.out` 1.1 → .8, swarmer slip +12 / block +10 / composure .78.
+
+| Measure (brain on, @82) | Before | After |
+|---|---|---|
+| Audit 500: thrown / landed / connect | 53.7 / 15.2 / 28.2% | 53.7 / 16.5 / 30.6% |
+| Stoppages (audit 500 + finish 600) | 19.6% | 24.6% + 23.7% (pooled ~24%) |
+| Same-round stop after a first KD | ~19% | ~23–27% (est. real 35–45) |
+| KDs both ways | ~6% | ~6.5–8% |
+| Body KDs (liver share) | 4.2% | 4.1% (30 of 723 over 900 fights, fuse on) |
+| Styles 300/pair | 47.4–53.3 | outboxer 54.1, counter 53.0, swarmer 48.4, slugger 48.1, boxer-puncher 46.8 |
+| Brain vs old AI (bvo) | 38.4% | 27.4% (pooled 540; the old AI doesn't blur) |
+| Hunts per man per fight | ~2 (no check) | 2.3 (check 66%, safe 44%, reckless 15%), stung 12%, hurt 0.7% |
+| Dummy ring audit 300 | stops 23.3%, connect 32.1% | stops 28.3%, connect 34.1% |
+
+Open: stops a hair under 25 (a weaker blur gets connect back to 29% but stops fall to ~22.6%: it's a straight trade); boxer-puncher 46.8 / outboxer 54.1 just out of band; finisher caught (hurt) only 0.7% of hunts (5–10% wanted; a fresh hunter almost never gets stunned in this engine, "stung" = ate a clean counter is 12%); same-round stop after a KD below the research guess; body KDs didn't move (the slow fuse digs more but the liver needs worn bodies); bvo down (blur and the long post-KD survive cost the brain against the old AI).

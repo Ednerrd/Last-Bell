@@ -11,25 +11,14 @@ The only to-do list. When something is done, delete its line here and put the nu
 0. **Boxer brain on the engine (branch `claude/brain-wire`, reviewed Oct 13).** Wired behind `AI.brain` (default 0 = old AI, same.js 7f58e976), lab has an AI row. Audit and styles on target (`docs/BRAIN.md` "The brain on the engine" + "Review and handoff").
    - **Ed:** watches brain vs brain on the private brain test page (https://claude.ai/artifact/HQopfRTmoBmSZLbEfDa94P, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
    - **After that:**
-     - **NOW (Ed said go, Oct 13): finishing and the hurt brain**, in `brain/brain.js`.
-       - Target: stoppages 19.6 → 25–30%, body KDs 4.2 → 5%+, styles stay 48–53, `same.js` 7f58e976 with the brain off.
-       - Spec: `research/mind_finish.md` section 4:
-         - check-then-commit hunt; `huntSafe` short punches;
-         - body and uppercuts into a shell;
-         - burst-and-reset flurries, about 11 s all-out cap with stamina drain;
-         - the finisher gets caught (5–10% of hunt spells);
-         - survive re-picks after 1–2 s; a calm `steady` response; freeze capped at .8 s;
-         - shell → fire/clinch after 3+ unanswered;
-         - hurt timer 5–15 s; range +8 after a hurt.
-       - From the exciting-fighter cards (`research/fighters_c.md`–`g.md` "Patterns"):
-         - late desperation: behind on the cards in rounds 10–12 → risk, killer and output up (Walker, Wardley, Ford, Magsayo);
-         - knockdowns both ways;
-         - composure decides the answer to a knockdown: fire back harder vs shell;
-         - the pressure man walking straight in eats the step-back left hook.
-       - Measure: audit 500, `bodykd.js` 300, styles 300/pair (split the pairs over 4 processes, `PATCH="AI.brain=1"`), `bvo.js` 300.
-       - Then republish the private brain test page.
+     - **Finishing and the hurt brain: built (Oct 13, `docs/BRAIN.md` "Finishing and the hurt brain").** Stops 19.6 → ~24%, styles 46.8–54.1. Left from it:
+       - stops a hair under 25 and connect 30.6% (the blur is a straight trade between the two);
+       - boxer-puncher 46.8 / outboxer 54.1 at 300/pair (balance pass);
+       - finisher caught (hurt) 0.7% of hunts, wanted 5–10 (stung 12%); same-round stop after a KD ~25%, research guess 35–45;
+       - brain vs old AI fell 38 → ~27% (the old AI doesn't blur);
+       - Ed: watch it on the private brain test page.
      - weak specials: volume 42, body 43;
-     - body KDs up (4.2, want 5+);
+     - body KDs up (still 4.1%, 30 of 723; the slow fuse didn't move it);
      - out-boxer off the ropes;
      - fix the brain's thrown overcount;
      - specials at 300/pair;
@@ -38,9 +27,8 @@ The only to-do list. When something is done, delete its line here and put the nu
 2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.
 3. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):
    - Setups and traps: "show it twice, change it" gated on HIS answer, armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
-   - Hurt brain: shell / run / fire back / clinch / freeze by composure; finisher weighs the risk (`research/mind_vision.md` 8d).
+   - Hurt brain by tier (the base is built: hunt / survive / blur); finisher weighs the risk (`research/mind_vision.md` 8d).
    - AI between-round adjustment: change one thing when losing exchanges; low adjusters wait too long.
-   - Clarity: fatigue, damage and knockdowns blur the read.
    - Gassers save it for later (stamina pacing).
    - Check first, maybe not needed: within-round read decay (B1 already fades), defensive read inside `react()` capped ±25% per guard (B3 covers part).
 4. **Balance pass** (L6). Upsets one level down 15–20%, then the CLAUDE.md targets. Known weak: feinter ~46–47, swarmer ~47.4, high/cross guards swing between runs (pool 600+ per guard).
