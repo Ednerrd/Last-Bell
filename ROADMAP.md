@@ -9,9 +9,25 @@ The only to-do list. When something is done, delete its line here and put the nu
 
 ## Claude, in this order
 0. **Boxer brain on the engine (branch `claude/brain-wire`, reviewed Oct 13).** Wired behind `AI.brain` (default 0 = old AI, same.js 7f58e976), lab has an AI row. Audit and styles on target (`docs/BRAIN.md` "The brain on the engine" + "Review and handoff").
-   - **Next:** Ed watches brain vs brain on the private brain test page (https://claude.ai/artifact/HQopfRTmoBmSZLbEfDa94P, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
+   - **Ed:** watches brain vs brain on the private brain test page (https://claude.ai/artifact/HQopfRTmoBmSZLbEfDa94P, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
    - **After that:**
-     - **finishing and the hurt brain first** (stoppages 19.6, want 25+): `research/mind_finish.md` section 4 (check-then-commit hunt, safe finishing, finisher gets caught, survive re-picks, hurt timer);
+     - **NOW (Ed said go, Oct 13): finishing and the hurt brain**, in `brain/brain.js`.
+       - Target: stoppages 19.6 → 25–30%, body KDs 4.2 → 5%+, styles stay 48–53, `same.js` 7f58e976 with the brain off.
+       - Spec: `research/mind_finish.md` section 4:
+         - check-then-commit hunt; `huntSafe` short punches;
+         - body and uppercuts into a shell;
+         - burst-and-reset flurries, about 11 s all-out cap with stamina drain;
+         - the finisher gets caught (5–10% of hunt spells);
+         - survive re-picks after 1–2 s; a calm `steady` response; freeze capped at .8 s;
+         - shell → fire/clinch after 3+ unanswered;
+         - hurt timer 5–15 s; range +8 after a hurt.
+       - From the exciting-fighter cards (`research/fighters_c.md`–`g.md` "Patterns"):
+         - late desperation: behind on the cards in rounds 10–12 → risk, killer and output up (Walker, Wardley, Ford, Magsayo);
+         - knockdowns both ways;
+         - composure decides the answer to a knockdown: fire back harder vs shell;
+         - the pressure man walking straight in eats the step-back left hook.
+       - Measure: audit 500, `bodykd.js` 300, styles 300/pair (split the pairs over 4 processes, `PATCH="AI.brain=1"`), `bvo.js` 300.
+       - Then republish the private brain test page.
      - weak specials: volume 42, body 43;
      - body KDs up (4.2, want 5+);
      - out-boxer off the ropes;
