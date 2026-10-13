@@ -1275,6 +1275,7 @@ function laneOf(A, P) {
 const AI = {
   brain: 0,        // 1 = both men think with the brain (opts.brain = [a, b] per side wins)
   pace: CLOCK,     // the engine's rounds run 3x the sim clock: the brain squeezes moods, memory and intent modes to match
+  reflexQ: .5,     // a passive block's guard, if the next shot comes inside .16 s
   defQ: 1.3,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
   guardK: .3,      // how much the brain's hands (high/low) move passive block and evasion
   tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
@@ -2033,7 +2034,7 @@ class Fight {
       if (R() < ev) evaded = true;
       else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (D.brain ? 1 + AI.guardK * (D.bg - .6) : 1))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
-        D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; if (D.brain) D.defQ = 1; // show the guard catching it (a reflex: no botch roll on the next shot)
+        D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; if (D.brain) D.defQ = AI.reflexQ; // show the guard catching it (a reflex guard on the next shot holds with chance reflexQ x defQ)
       }
     }
     if (evaded) { this.miss(A, D, a, 'evade', rolled ? 'roll' : def); return; }
