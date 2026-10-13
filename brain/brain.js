@@ -53,7 +53,9 @@ const COMBOS = BOOK.map(s => {
     endLead: PUNCHES[last].arm === 'lead' && last !== 'jab',                                         // ends on the lead hook: he's back in his stance first
     endRear: PUNCHES[last].arm === 'rear',                                                           // ends square, in range
     lowHigh: ps.some((p, i) => i < n - 1 && (!head(p) || PUNCHES[p].kind === 'upper')) && head(last), // lift or dig first, then upstairs
-    inside: PUNCHES[ps[0]].max <= 60 };
+    inside: PUNCHES[ps[0]].max <= 60,
+    str: ps.filter(p => PUNCHES[p].kind === 'straight').length / n, up: ps.filter(p => PUNCHES[p].kind === 'upper').length / n, // straight down the pipe vs the uppercut through a shell
+    wide: ps.filter(p => p === 'rhook').length / n, hook: ps.filter(p => p === 'hook' || p === 'rhook').length / n };
 });
 
 /* ---------- skills: what he knows how to do (0..100). The tier is read off them ---------- */
@@ -136,7 +138,33 @@ const BR = {
   rushV: 48, rushP: 1,  // a man coming in faster than this (units/s) can be met with a check hook: chance per second at full counter skill
   jabCtr: .5,             // counter chance off a jab (it's back before you are)
   shortCtr: .5,           // a punch that fell short is a counter chance this often (the pull counter)
-  stealT: 30              // the last 30 s, where rounds get stolen
+  stealT: 30,             // the last 30 s, where rounds get stolen
+  hurtQ: .25,             // a hurt man's defense works this much worse
+  // clarity: damage taken (this round's and the wear), and knockdowns, blur the eye. blur 0..1 -> reaction x(1 + react), misreads x(1 + mis), defense quality x(1 - q)
+  blur: { cur: 1, wear: 2, kd: .2, react: .6, mis: 2.5, q: .4 },
+  tunnel: { hunt: .5, huntSafe: .12, check: .1 }, // going for the finish, he sees the counter late
+  // finishing (research/mind_finish.md 4a). Spell times in clock seconds (moods' time), looks in real seconds
+  fin: { confirm: [2.4, .6],  // check-then-commit: a short look with straight shots first (clock s, slow read .. fast read)
+    reckless: .5,             // x killer x (1 - composure): skips the check and goes all-out
+    burst: [3, 6], look: [.3, .6], // flurry length (punches), then a reset look (s)
+    cap: 11, gasSafe: .35, gasOut: .2, // all-out cap per hurt spell (clock s); under this much gas the all-out hunt turns safe, then stops
+    late: 20, lateX: 2,       // round time left (clock s) where he goes now, chance x
+    shellBody: 2, shellUpper: 1.6, runHook: 1.3, // into a shell: dig and come up the middle; hooks catch a runner
+    safePow: .5, safeStr: 1.5, safeWide: .6,     // the safe hunt: short and straight, no wide ones
+    falseAlarm: .15,          // x (1 - read): a big shot lands and he thinks the man is hurt when he isn't
+    baitCtr: 1.5, fireCtr: 1.2, ctrCommit: .4, // the hurt man's counter vs a hunter who dropped his hands, and how hard he sits down on it
+    kdChase: 2,               // the man who scored the knockdown goes after him on the resume
+    wob: 6, wobHead: .55,     // he saw him hurt this recently (clock s) and the man's still beat up: he's still hurt, keep going
+    kdWob: 10 },              // he just got up off the floor: he's hurt, whatever he shows (clock s after the resume)
+  // surviving (4b)
+  surv: { hurtT: [12, 5],     // how long the hurt lasts in his head (clock s, composure 0 .. 1)
+    hitAdd: 1, hurtMax: 15,   // each clean shot while hurt adds to it
+    second: [1, 2], freeze: [.3, .8], // the second pick, freeze cap (clock s)
+    steady: .7, clinchNear: .5, flipAt: 3, shellFlip: .4,
+    late: 20, lateRun: 1.5, lateFire: .6, despFire: 1.8,
+    kdFire: 2, kdShell: 1.5,  // after a knockdown: composure decides, fire back harder or shell
+    after: 8, rally: .2 },    // after a big hurt: more range rest of the round and the next, or (composed) more initiative next round
+  desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 } // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
 };
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
 const MODES = {
@@ -146,9 +174,22 @@ const MODES = {
   burst:   { aggr: 4.2, range: -9, guard: .4, lat: .2 },
   reset:   { aggr: .12, range: 16, guard: .7, lat: 1 },
   counter: { aggr: .35, range: 2, guard: .75, lat: .5, ctr: 2 },
-  hunt:    { aggr: 3, range: -14, guard: .45, lat: .1, cut: 1 },
+  hunt:    { aggr: 4.5, range: -14, guard: .45, lat: .1, cut: 1 },        // all-out
+  huntSafe:{ aggr: 2.6, range: -8, guard: .7, lat: .15, cut: 1 },       // finish behind a guard, short straight shots
+  check:   { aggr: 1.5, range: -6, guard: .65, lat: .2, cut: 1 },       // is he really hurt? one or two straight ones first
   survive: { aggr: .25, range: 20, guard: 1, lat: .9 }
 };
+// hurt: what he does with it (survive's own numbers by answer)
+const SURV = {
+  shell:  { aggr: .15, range: 12, guard: 1, lat: .4 },
+  run:    { aggr: .2, range: 24, guard: .85, lat: 1 },
+  fire:   { aggr: 1.5, range: 0, guard: .5, lat: .3, ctr: 1.5 },
+  clinch: { aggr: .15, range: 0, guard: .95, lat: .4 },
+  freeze: { aggr: .03, range: 0, guard: .45, lat: 0 },
+  steady: { aggr: .6, range: 4, guard: .85, lat: .7 },                   // bites down, keeps the jab going
+  bait:   { aggr: .3, range: 0, guard: .8, lat: .2, ctr: 2 }               // a counterpuncher plays possum for the overcommit
+};
+const HUNTS = { hunt: 1, huntSafe: 1, check: 1 };
 // how much of a punch gets through each defense: a man who slips everything is open for hooks, a ducker eats uppercuts
 const DEF_THRU = {
   none:  { straight: 1, hook: 1, upper: 1, body: 1 },
@@ -196,6 +237,8 @@ class Brain {
     const k = this.k;
     this.iq = (k.read + k.counter + k.pacing + k.adjust) / 4;
     this.t = 0; this.mode = 'feelout'; this.modeT = 0; this.decT = .3; this.hurtResp = null;
+    this.ct = 0; this.desp = 0; this.wary = null; this.blur = 0; this.kds = 0; // clock time (s), late desperation, range kept after a hurt
+    this.h = { t0: -99, end: -99, n: 0, goal: 4, look: -9, kdBy: -99, kdMe: -99, ctrd: -99, chk: 0, falseA: 0, unans: 0, flip: 0, second: 0, freezeEnd: 0, kdR: 0 }; // the hunt and the hurt
     this.mem = { mine: {}, his: {}, lead: {}, after: {}, def: {}, hurt: {}, feints: 0 };
     this.emo = { conf: 0, frus: 0, fear: 0 };
     this.plan = { jab: 0, power: 0, body: 0, range: 0, initiative: 0 }; // between-round changes
@@ -203,11 +246,12 @@ class Brain {
     this.threat = null; this.lastHisP = null; this.lastHisT = -9; this.lastMine = null; this.lastDef = null;
     this.rangeJit = 0; this.nd = 0; this.fat = 0; this.lat = (this.R() < .5 ? 1 : -1);
     this.sc = { me: 0, him: 0, lead: 0, rounds: [] }; // his own guess at the cards
-    this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {} };
+    this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {}, mThr: {}, mLand: {} };
     this.log = [];
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
   rnd(a, b) { return a + this.R() * (b - a); }
+  mm() { return this.mode === 'survive' ? SURV[this.hurtResp] || MODES.survive : MODES[this.mode]; } // the numbers of what he's doing now
   g() { return gaussR(this.R); }
   note(s) { if (this.debug) this.log.push(this.t.toFixed(1) + ' ' + s); }
 
@@ -245,8 +289,8 @@ class Brain {
     const E = this.emo, comp = this.tr.composure, pts = p => PUNCHES[p].cat === 'jab' ? .45 : PUNCHES[p].cat === 'body' ? .75 : 1;
     const guess = x => x * Math.max(0, 1 + this.g() * (1 - this.k.pacing) * .5); // his eye for the score
     if (ev.type === 'kd') {
-      if (ev.by === 'me') { this.sc.me += 3; E.conf = clamp(E.conf + .3, -1, 1); }
-      else { this.sc.him += 3; E.fear = clamp(E.fear + .4 * (1.25 - comp), 0, 1); E.conf = clamp(E.conf - .3, -1, 1); }
+      if (ev.by === 'me') { this.sc.me += 3; E.conf = clamp(E.conf + .3, -1, 1); this.h.kdBy = this.ct; }
+      else { this.sc.him += 3; E.fear = clamp(E.fear + .4 * (1.25 - comp), 0, 1); E.conf = clamp(E.conf - .3, -1, 1); this.h.kdMe = this.ct; this.h.kdR = 1; this.kds++; if (this.mode === 'survive') this.mode = 'feelout'; } // he gets up and picks again
       return;
     }
     if (!PUNCHES[ev.p]) return;
@@ -257,7 +301,12 @@ class Brain {
       if (ev.def) this.madd(this.mem.def, kd, { n: 1, [ev.def]: 1 }); else if (ev.type === 'landed') this.madd(this.mem.def, kd, { n: 1, none: 1 });
       this.lastMine = { p, t: this.t };
       if (ev.type === 'landed' && PUNCHES[p].zone === 'body') this.bodyL = (this.bodyL || 0) + 1; // body work in the bank
-      if (ev.type === 'landed') { E.conf = clamp(E.conf + .05 * (ev.dmg || 2) / 3, -1, 1); E.frus = Math.max(0, E.frus - .04); this.sc.me += guess(pts(p)); if (ev.hurt) this.oppHurtT = this.t; }
+      if (ev.type === 'landed') {
+        E.conf = clamp(E.conf + .05 * (ev.dmg || 2) / 3, -1, 1); E.frus = Math.max(0, E.frus - .04); this.sc.me += guess(pts(p)); if (ev.hurt) this.oppHurtT = this.t;
+        this.h.unans = 0; if (this.mode === 'check') this.h.chk = 1;
+        { const mk = this.mode === 'survive' ? 's:' + this.hurtResp : this.mode; this.tel.mLand[mk] = (this.tel.mLand[mk] || 0) + 1; }                              // the check shot landed
+        if (!ev.hurt && (ev.dmg || 0) > 4 && this.R() < BR.fin.falseAlarm * (1 - this.k.read)) this.h.falseA = 1; // he thinks that one hurt him
+      }
       else E.frus = clamp(E.frus + .022 * (1 - comp * .6), 0, 1);
       if (ev.type === 'blocked' && this.setup && this.setup.onBlock) this.setup.blocked = true;
     } else {
@@ -268,6 +317,8 @@ class Brain {
         this.madd(this.mem.hurt, p, { d: dmg });
         E.conf = clamp(E.conf - .035 * dmg / 3, -1, 1); E.fear = clamp(E.fear + dmg / 90 * (1.25 - comp), 0, 1);
         this.sc.him += guess(pts(p));
+        if (this.mode === 'survive') { if (PUNCHES[p].cat !== 'jab') this.h.unans++; this.modeT = Math.min(BR.surv.hurtMax, this.modeT + BR.surv.hitAdd); }
+        if (ev.counter) this.h.ctrd = this.ct;
         if (ev.counter && this.lastMine && this.t - this.lastMine.t < 1.5) { this.madd(this.mem.mine, this.lastMine.p, { c: 1 }); E.frus = clamp(E.frus + .04 * (1 - comp * .5), 0, 1); }
       }
       if (ev.type === 'evaded' || ev.type === 'blocked') { if (ev.def) this.lastDef = { def: ev.def, p, t: this.t }; this.tryCounter(ev.def, p); }
@@ -276,11 +327,14 @@ class Brain {
   }
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
-    const k = this.k, m = MODES[this.mode];
+    const k = this.k, m = this.mm();
     let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * clamp(this.tr.initiative + this.plan.initiative, 0, 1)) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
     if (p && PUNCHES[p].cat === 'jab' || p === 'bodyJab') ch *= BR.jabCtr; // a jab snaps back: much harder to counter than a missed hook
-    if (this.mode === 'survive') ch *= this.hurtResp === 'fire' ? 1.5 : .3;
+    if (this.mode === 'survive') {
+      const r = this.hurtResp; ch *= { shell: .3, run: .4, clinch: .3, freeze: .1 }[r] || 1;
+      if ((r === 'fire' || r === 'bait') && this.hisG < .55) ch *= r === 'bait' ? BR.fin.baitCtr : BR.fin.fireCtr; // he came in with his hands down: the finisher gets caught
+    }
     if (this.R() > ch) return;
     let c, why = 'counter';
     if (this.R() < .25 + .7 * k.counter) { const o = this.counterFor(def, p); if (o) { c = o[0].slice(); why = 'counter: ' + o[2]; if (c.length > 1 && this.R() > .3 + .6 * k.combos) c = c.slice(0, 1); } }
@@ -310,7 +364,7 @@ class Brain {
       // a new punch: when will he see it?
       const fat = 1 - P.me.stam / (P.me.stamMax || 100), hurt = P.me.hurt ? 1 : 0;
       let d = lerp(BR.react[0], BR.react[1], k.read * .5 + (k.slip + k.block) * .25);
-      d *= (1 + BR.reactFat * fat) * (1 + BR.reactFear * E.fear) * (1 + BR.reactHurt * hurt) * Math.exp(this.g() * BR.jitter);
+      d *= (1 + BR.reactFat * fat) * (1 + BR.reactFear * E.fear) * (1 + BR.reactHurt * hurt) * (1 + BR.blur.react * this.blur) * (1 + (BR.tunnel[this.mode] || 0)) * Math.exp(this.g() * BR.jitter);
       const rd = H.feint ? this.predict(H.type) * .5 : this.predict(H.type);
       d *= 1 - BR.antic * rd;
       d -= BR.tellSee * (H.tell || 0);
@@ -327,7 +381,7 @@ class Brain {
       this.tel.seen++;
       if (rd > .3) this.tel.antic++;
     }
-    const T = this.threat;
+    const T = this.threat, hurt = P.me.hurt ? 1 : 0;
     if (T.done || this.t < T.at) return;
     T.done = true;
     if (T.at > T.deadline - BR.moveT) { this.tel.late++; return; } // never saw it
@@ -339,6 +393,7 @@ class Brain {
     }
     let tryP = lerp(BR.tryDef[0], BR.tryDef[1], (k.block + k.slip + k.footwork) / 3) * (1 - .25 * E.frus);
     if (this.mode === 'burst' || this.mode === 'hunt') tryP *= .7; // busy punching
+    else if (this.mode === 'huntSafe') tryP *= .9;
     if (this.mode === 'survive' && this.hurtResp === 'freeze') tryP *= .4;
     if (P.me.punching) tryP *= .3 + .45 * this.tr.slip; // a head-mover still moves his head mid-combo
     if (this.R() > tryP) { this.tel.noTry++; return; }
@@ -346,7 +401,7 @@ class Brain {
     let seenAs = T.type;
     const exp = this.expected();
     if (exp && exp !== T.type && this.R() < this.predict(exp) * .6) seenAs = exp; // he was sure it was the other one
-    else if (this.R() < BR.misread * (1 - k.read) * (1 + .5 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 - T.rd)) seenAs = PTYPES[Math.floor(this.R() * PTYPES.length)];
+    else if (this.R() < BR.misread * (1 - k.read) * (1 + .5 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + BR.blur.mis * this.blur) * (1 - T.rd)) seenAs = PTYPES[Math.floor(this.R() * PTYPES.length)];
     if (seenAs !== T.type) this.tel.misreads++;
     const kd = kindOf(seenAs), tr = this.tr, best = DEF_BEST[kd], rd = seenAs === T.type ? T.rd : 0;
     const w = {
@@ -356,10 +411,10 @@ class Brain {
       pull: (tr.legs * 1.1 + .1) * (.3 + k.footwork),
       roll: kd === 'body' ? 0 : tr.shell * tr.slip * .8 * (.3 + k.block)
     };
-    if (this.mode === 'survive' && this.hurtResp === 'shell') w.block *= 3;
+    if (this.mode === 'survive' && (this.hurtResp === 'shell' || this.hurtResp === 'steady')) w.block *= this.hurtResp === 'shell' ? 3 : 1.6;
     if (this.mode === 'survive' && this.hurtResp === 'run') w.pull *= 3;
     const def = wpickR(this.R, Object.keys(w), x => w[x] * (x === best ? 1 + 2 * rd + k.read * .5 : 1)) || 'block';
-    const q = clamp(lerp(BR.defQ, 1, k[DEF_SKILL[def]]) * (1 - .35 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + .3 * rd) * (1 - .15 * E.frus), .05, 1);
+    const q = clamp(lerp(BR.defQ, 1, k[DEF_SKILL[def]]) * (1 - .35 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + .3 * rd) * (1 - .15 * E.frus) * (1 - BR.hurtQ * hurt) * (1 - BR.blur.q * this.blur), .05, 1); // hurt or beat up: the legs and the hands are slow
     this.out.defend = { kind: def, zone: PUNCHES[seenAs].zone, vs: seenAs, quality: q };
     this.note('defends ' + def + ' vs ' + seenAs + (seenAs !== T.type ? ' (it was a ' + T.type + ')' : '') + (T.feint ? ' (bit on a feint)' : ''));
   }
@@ -385,6 +440,7 @@ class Brain {
       counter: (1 - ini) * 1.5 + E.fear * .5 - Math.max(0, nd) * .4,
       reset: (1 - tr.output) * .35 + fat * .8 + tr.patience * .2 + E.fear * .3
     };
+    if (this.desp) { w.press += this.desp * .8; w.burst += inRange ? this.desp * .6 : 0; w.counter *= 1 - .5 * this.desp; } // behind late: go get it
     if (this.mode === 'burst') { w.reset += tr.patience * 1.2 + (1 - tr.output); w.burst *= .3; }
     const m = wpickR(this.R, Object.keys(w), x => w[x]) || 'work';
     const dur = { work: this.rnd(4, 10), press: this.rnd(3, 8), burst: this.rnd(1.2, 2.5 + 2.5 * tr.output) * lerp(.7, 1.2, this.k.pacing * (1 - fat)), counter: this.rnd(3, 9), reset: this.rnd(1.5, 4) * (.6 + tr.patience) }[m];
@@ -401,30 +457,92 @@ class Brain {
     return o;
   }
   updMode(P, dt) {
-    const tr = this.tr, comp = tr.composure;
+    const tr = this.tr, H = this.h, hunting = HUNTS[this.mode];
+    if (P.him.hurt) H.seen = this.ct;
     this.modeT -= dt; this.tel.modeT[this.mode] = (this.tel.modeT[this.mode] || 0) + dt;
     if (P.me.hurt && this.mode !== 'survive') {
-      // hurt changes the mind: composure decides what he does with it
-      const w = { clinch: tr.clinch * (.3 + this.k.clinch) * comp * 1.5, shell: tr.shell * (1.2 - comp * .5), run: tr.legs * (.3 + this.k.footwork) * comp, fire: tr.risk * (1 - comp) * 1.4, freeze: (1 - comp) * (1 - this.k.read) * .6 };
-      this.hurtResp = wpickR(this.R, Object.keys(w), x => w[x]) || 'shell';
-      this.tel.hurts++; this.tel.hurtR[this.hurtResp] = (this.tel.hurtR[this.hurtResp] || 0) + 1; if (this.mode === 'hunt') this.tel.caught++;
-      this.setMode('survive', this.rnd(2.5, 5), 'hurt: ' + this.hurtResp);
+      if (hunting || this.ct - H.end < 2) this.tel.caught++; // walked onto one going for the finish
+      if (hunting) H.end = this.ct;
+      this.survStart(P); return;
+    }
+    if (this.mode === 'survive') { this.survUpd(P); return; }
+    const offFloor = this.ct - H.kdBy < BR.fin.kdWob;
+    if ((P.him.hurt || H.falseA || offFloor) && !hunting && P.me.stam / (P.me.stamMax || 100) > BR.fin.gasOut && this.ct - H.end > .5) {
+      // he smells it. A killer goes; a careful man checks the other man can still punch
+      const late = P.roundLen - P.clock < BR.fin.late;
+      let go = tr.killer * lerp(.5, 1, this.k.read) * (1 - .4 * this.emo.fear) * (late ? BR.fin.lateX : 1) * (1 + BR.desp.hunt * this.desp);
+      if (offFloor) go *= BR.fin.kdChase; // he just got up: go get him
+      if (this.R() < go * dt * 4) { H.falseA = 0; this.huntStart(P, late || offFloor && this.R() < tr.killer); return; }
+    }
+    if (hunting) { this.huntUpd(P); return; }
+    if (this.modeT <= 0) this.pickMode(P);
+  }
+  // is he still hurt? The engine's tells come and go; the man who saw it knows the legs aren't back yet
+  wobbly(P) { if (P.him.hurt) this.h.seen = this.ct; return P.him.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
+  // the hunt: check, then commit (all-out or behind a guard); flurries with a look in between; capped, and it costs gas
+  huntStart(P, late) {
+    const tr = this.tr, H = this.h;
+    this.tel.hunts++; H.t0 = this.ct; H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = -9; H.chk = 0;
+    const reckless = this.R() < BR.fin.reckless * tr.killer * (1 - tr.composure) + .3 * this.desp;
+    if (reckless || late) { if (reckless) this.tel.reckless = (this.tel.reckless || 0) + 1; this.setMode('hunt', this.rnd(4, 8), late ? 'he is hurt, the bell is coming' : 'he is hurt: all in'); return; }
+    this.tel.confirm = (this.tel.confirm || 0) + 1;
+    this.setMode('check', lerp(BR.fin.confirm[0], BR.fin.confirm[1], this.k.read) * this.rnd(.8, 1.2), 'is he hurt?');
+  }
+  huntUpd(P) {
+    const H = this.h, gas = P.me.stam / (P.me.stamMax || 100), F = BR.fin, hurt = this.wobbly(P);
+    const stop = why => { H.end = this.ct; this.setMode('press', this.rnd(2, 4), why); };
+    if (this.mode === 'check') {
+      if (this.modeT > 0 && !H.chk) return;
+      H.chk = 0;
+      if (!hurt) { stop('he is fine'); return; }
+      // he still throws back, or he's countered me, or I'm low: finish behind the guard
+      const safe = this.t - this.lastHisT < 1 || this.ct - H.ctrd < 5 || gas < F.gasSafe;
+      if (safe) this.tel.huntSafe = (this.tel.huntSafe || 0) + 1;
+      this.setMode(safe ? 'huntSafe' : 'hunt', this.rnd(4, 8), safe ? 'he is hurt, careful' : 'he is hurt');
       return;
     }
-    if (this.mode === 'survive') { if (!P.me.hurt && this.modeT <= 0) { this.hurtResp = null; this.pickMode(P); } return; }
-    if (P.him.hurt && this.mode !== 'hunt') {
-      // he smells it. A killer goes; a careful man checks the other man can still punch
-      const go = tr.killer * lerp(.5, 1, this.k.read) * (1 - .4 * this.emo.fear);
-      if (this.R() < go * dt * 4) { this.tel.hunts++; this.setMode('hunt', this.rnd(4, 8), 'he is hurt'); return; }
+    if (this.ct - H.t0 > F.cap) { this.tel.huntCap = (this.tel.huntCap || 0) + 1; stop('punched out'); return; }
+    if (gas < F.gasOut) { stop('nothing left'); return; }
+    if (this.mode === 'hunt' && gas < F.gasSafe) this.mode = 'huntSafe';
+    if (!hurt && this.modeT > 1.5) this.modeT = Math.min(this.modeT, this.rnd(.5, 1.5)); // he got away
+    if (this.modeT <= 0) { if (hurt) this.modeT = this.rnd(2, 4); else { H.end = this.ct; this.pickMode(P); } }
+  }
+  // hurt: the first reaction, then a second pick a second or two later. Composure decides both
+  survStart(P) {
+    const tr = this.tr, comp = tr.composure, k = this.k, SV = BR.surv, H = this.h;
+    const w = { clinch: tr.clinch * (.3 + k.clinch) * comp * 1.5, shell: tr.shell * (1.2 - comp * .5), run: tr.legs * (.3 + k.footwork) * comp, fire: tr.risk * (1 - comp) * 1.4, freeze: (1 - comp) * (1 - k.read) * .6,
+      bait: comp > .6 ? (tr.patience - .4) * k.counter * 1.2 : 0 };
+    if (this.ct - H.kdMe < 8) { w.fire += comp * tr.risk * SV.kdFire; w.shell *= lerp(SV.kdShell, 1, comp); } // off the floor: fire back harder, or cover up
+    if (P.roundLen - P.clock < SV.late) { w.run *= SV.lateRun; w.clinch *= SV.lateRun; w.fire *= SV.lateFire; } // ride it to the bell
+    if (this.desp) w.fire *= SV.despFire;
+    this.hurtResp = wpickR(this.R, Object.keys(w), x => w[x]) || 'shell';
+    this.tel.hurts++; this.tel.hurtR[this.hurtResp] = (this.tel.hurtR[this.hurtResp] || 0) + 1;
+    H.unans = 0; H.flip = 0; H.second = this.ct + this.rnd(SV.second[0], SV.second[1]); H.freezeEnd = this.ct + this.rnd(SV.freeze[0], SV.freeze[1]);
+    this.queue = null; this.setup = null;
+    if (comp < .7) this.wary = { v: SV.after, until: P.round + 1 };
+    this.setMode('survive', lerp(SV.hurtT[0], SV.hurtT[1], comp) * this.rnd(.8, 1.2), 'hurt: ' + this.hurtResp);
+  }
+  survUpd(P) {
+    const tr = this.tr, comp = tr.composure, k = this.k, SV = BR.surv, H = this.h, was = this.hurtResp;
+    if (was === 'freeze' && this.ct > H.freezeEnd) this.hurtResp = 'shell';
+    if (H.second && this.ct > H.second) {
+      H.second = 0;
+      const w = { keep: .6 + (1 - comp) * .6, clinch: tr.clinch * (.3 + k.clinch) * comp * 1.2, steady: comp > SV.steady ? comp * comp * k.read * 1.2 * 2 : 0, shell: (1 - comp) * .4 };
+      const o = wpickR(this.R, Object.keys(w), x => w[x]);
+      if (o && o !== 'keep' && o !== this.hurtResp) { this.tel.second = (this.tel.second || 0) + 1; this.hurtResp = o; }
     }
-    if (this.mode === 'hunt' && !P.him.hurt && this.modeT > 1.5) this.modeT = Math.min(this.modeT, this.rnd(.5, 1.5)); // he got away
-    if (this.mode === 'feelout' && this.modeT <= 0) { this.pickMode(P); return; }
-    if (this.modeT <= 0) this.pickMode(P);
+    // shell is what gets you stopped: after a few unanswered he has to fire or hold
+    if (this.hurtResp === 'shell' && H.unans >= SV.flipAt && !H.flip) {
+      H.flip = 1;
+      if (this.R() < SV.shellFlip) { this.hurtResp = this.R() < tr.risk / (tr.risk + tr.clinch + .01) ? 'fire' : 'clinch'; this.tel.flip = (this.tel.flip || 0) + 1; }
+    }
+    if (this.hurtResp !== was) this.note('hurt: ' + was + ' -> ' + this.hurtResp);
+    if (this.modeT <= 0 && !P.me.hurt) { this.hurtResp = null; this.pickMode(P); }
   }
 
   /* ---------- the hands: when to throw, when not to, and what ---------- */
   offense(P) {
-    const k = this.k, tr = this.tr, E = this.emo, m = MODES[this.mode], H = P.him;
+    const k = this.k, tr = this.tr, E = this.emo, m = this.mm(), H = P.him;
     const fat = 1 - P.me.stam / (P.me.stamMax || 100);
     // his eye for distance: a novice misjudges and throws from where nothing reaches
     const dSeen = P.dist + this.g() * BR.outShort * (1 - k.range) * .6 + (1 - k.range) * -6;
@@ -432,6 +550,7 @@ class Brain {
     // a planned sequence in progress
     if (this.setup) { const s = this.stepSetup(P, dSeen); if (s) return s; }
     if (dSeen > 92) return null;
+    if (this.t < this.h.look) return null; // between flurries: a look (is he still there?)
     const open = this.opening(P);
     // a quick thinker decides more often, not more: the work rate is his nature, the timing is his skill
     let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace;
@@ -441,13 +560,13 @@ class Brain {
     p *= lerp(1, clamp(1.25 - fat, .35, 1), k.pacing);
     p *= 1 - .5 * E.fear * (1 - tr.risk * .5);
     p *= 1 + .3 * E.conf + .4 * E.frus * (1 - tr.composure);
-    p *= 1 + .45 * this.nd;
+    p *= 1 + .45 * this.nd + BR.desp.out * this.desp;
     if (P.round === 1) p *= lerp(.55 + .35 * tr.initiative, 1, P.clock / P.roundLen); // the first round: he's still finding out what the other man has
-    if (H.punch && !H.punch.feint && (this.mode !== 'counter')) p *= .6 + .6 * (1 - k.read) * tr.risk; // he's punching: most men cover, the reckless trade
+    if (H.punch && !H.punch.feint && this.mode !== 'counter' && !(this.mode === 'survive' && this.hurtResp === 'bait')) p *= .6 + .6 * (1 - k.read) * tr.risk; // he's punching: most men cover, the reckless trade
     if (this.R() > p) { if (dSeen < 80) this.tel.holds++; return null; }
     // feint, a planned sequence, or a combo
     if (this.R() < BR.feintP * (.4 + k.feints * 1.5) * (.5 + tr.patience) / Math.max(.3, m.aggr) * (this.mode === 'feelout' || this.mode === 'reset' ? 2 : 1)) return this.feint(dSeen);
-    if (this.mode !== 'survive' && this.mode !== 'hunt' && this.R() < BR.setupP * k.read * (.5 + k.feints * .5 + k.combos * .5) * (this.mode === 'burst' ? .4 : 1)) { const s = this.startSetup(P, dSeen); if (s) return s; }
+    if (this.mode !== 'survive' && !HUNTS[this.mode] && this.R() < BR.setupP * k.read * (.5 + k.feints * .5 + k.combos * .5) * (this.mode === 'burst' ? .4 : 1)) { const s = this.startSetup(P, dSeen); if (s) return s; }
     const c = this.pickCombo(P, dSeen);
     if (!c) return null;
     return this.fire(c.ps, c.why, dSeen);
@@ -478,7 +597,14 @@ class Brain {
       let v = 0; for (const p of c.ps) v += this.punchVal(p); w *= Math.pow(v / c.n, 1.5);
       if (md === 'feelout' || md === 'reset') w *= c.n === 1 && c.jab ? 4 : c.jab ? 1 : .25;
       if (md === 'hunt') w *= 1 + c.power * 2.5 * tr.killer;
-      if (md === 'survive') w *= c.n === 1 ? 2 : .3;
+      else if (md === 'huntSafe') w *= (1 + c.power * 2.5 * BR.fin.safePow * tr.killer) * lerp(1, BR.fin.safeStr, c.str) * lerp(1, BR.fin.safeWide, c.wide) * (c.n > 3 ? .6 : 1);
+      else if (md === 'check') w *= lerp(.4, 1.6, c.str) * (c.n <= 2 ? 1.3 : .3);
+      if (HUNTS[md]) {
+        if (H.guard > .75) w *= lerp(1, BR.fin.shellBody, c.body) * lerp(1, BR.fin.shellUpper, c.up * 2);  // he's in a shell: dig, and come up the middle
+        if (H.closing < -25) w *= lerp(1, BR.fin.runHook, c.hook * 2);                                    // he's running: hooks cut him off
+      }
+      if (md === 'survive') { const r = this.hurtResp; w *= r === 'fire' ? 1 + c.power : r === 'steady' ? (c.jab && c.n <= 2 ? 3 : .4) : c.n === 1 ? 2 : .3; }
+      if (this.desp) w *= (1 + c.power * BR.desp.power * this.desp * tr.power) * (1 + c.wide * BR.desp.wide * this.desp) * (c.jab && c.n === 1 ? 1 - .5 * this.desp : 1); // the late equaliser: sit down on the right hand
       if (nd > 0) w *= 1 + c.power * nd; else w *= 1 + (c.jab - c.power) * -nd * .6; // behind: sit down on it. ahead: jab and stay safe
       if (H.guard < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
       if (H.guard > .8) w *= 1 + c.body * k.read;               // shell up high: go to the body
@@ -554,9 +680,12 @@ class Brain {
     if (!ps || !ps.length) return null;
     const skillOf = p => PUNCHES[p].cat === 'jab' ? k.jab : PUNCHES[p].cat === 'body' ? k.body : k.power;
     const tech = ps.map((p, i) => clamp(skillOf(p) * (i ? lerp(.7, 1, k.combos) : 1) * (1 - .25 * fat) * (1 - .15 * E.frus * (1 - tr.composure)) + this.g() * .06, .1, 1));
-    const commit = clamp(tr.power * .5 + tr.risk * .3 + (this.mode === 'hunt' ? .3 : 0) + E.frus * .2 - (ps.length > 2 ? .2 : 0), 0, 1);
+    let commit = clamp(tr.power * .5 + tr.risk * .3 + ({ hunt: .3, huntSafe: .1 }[this.mode] || 0) + BR.desp.commit * this.desp + E.frus * .2 - (ps.length > 2 ? .2 : 0), 0, 1);
+    if (ctr && this.mode === 'survive' && (this.hurtResp === 'fire' || this.hurtResp === 'bait')) commit = Math.min(1, commit + BR.fin.ctrCommit); // nothing to lose: he sits down on it
+    if (this.mode === 'hunt' || this.mode === 'huntSafe') { const H = this.h; H.n += ps.length; if (H.n >= H.goal) { H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = this.t + this.rnd(BR.fin.look[0], BR.fin.look[1]); } } // the flurry, then a look
     const tell = clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1); // loading up shows it
     this.tel.throws++; this.tel.techSum += tech[0]; this.tel.techN++;
+    { const mk = this.mode === 'survive' ? 's:' + this.hurtResp : this.mode; this.tel.mThr[mk] = (this.tel.mThr[mk] || 0) + ps.length; }
     const id = ps.map(p => PUNCHES[p].num).join('-');
     this.hist.push(id); if (this.hist.length > 6) this.hist.shift();
     this.note('throws ' + id + ' (' + why + ')');
@@ -565,21 +694,22 @@ class Brain {
 
   /* ---------- the feet ---------- */
   move(P) {
-    const k = this.k, tr = this.tr, md = MODES[this.mode], E = this.emo, fat = this.fat;
+    const k = this.k, tr = this.tr, md = this.mm(), E = this.emo, fat = this.fat, sv = this.mode === 'survive' ? this.hurtResp : null;
     let pv = 0, n = 0; for (const p of ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook']) { pv += this.punchVal(p); n++; }
     let po = 0; for (const p of ['jab', 'cross', 'bodyJab']) po += this.punchVal(p);
     const shift = clamp(pv / n - po / 3, -1, 1) * 10 * k.range * (tr.range > .7 ? .4 : 1); // what's working decides where he wants to be, inside his style
-    let range = lerp(50, 76, tr.range) + md.range + this.plan.range - shift + fat * 5 + E.fear * 10 + this.rangeJit;
-    if (this.mode === 'survive' && this.hurtResp === 'clinch') range = 30;
-    if (this.mode === 'survive' && this.hurtResp === 'fire') range = 50;
-    if (this.mode === 'survive' && this.hurtResp === 'freeze') range = P.dist;
+    let range = lerp(50, 76, tr.range) + md.range + this.plan.range - shift + fat * 5 + E.fear * 10 + this.rangeJit + (this.wary && P.round <= this.wary.until ? this.wary.v : 0);
+    if (sv === 'clinch') range = 30;
+    if (sv === 'fire') range = 50;
+    if (sv === 'freeze' || sv === 'bait') range = P.dist;
     let lateral = tr.circle * lerp(.4, 1, k.angles) * (md.lat || .5);
-    // on the ropes: get off them (a man without ring craft stays there and covers up)
-    if (P.ropes.me > .4) lateral = Math.max(lateral, P.ropes.me * lerp(.15, 1, k.ropes) * (this.mode === 'survive' && this.hurtResp === 'shell' ? .3 : 1));
-    const cut = (md.cut || (tr.initiative > .6 && tr.range < .5) || P.ropes.him > .4) ? lerp(.2, 1, k.cutoff) * (md.cut ? 1 : .6) : 0;
+    // on the ropes: get off them (a man without ring craft stays there and covers up; hurt, the runner and the steady man push off first)
+    if (P.ropes.me > .4) lateral = Math.max(lateral, P.ropes.me * lerp(.15, 1, k.ropes) * (sv === 'shell' ? .3 : sv === 'run' || sv === 'steady' ? 1.5 : 1));
+    let cut = (md.cut || (tr.initiative > .6 && tr.range < .5) || P.ropes.him > .4) ? lerp(.2, 1, k.cutoff) * (md.cut ? 1 : .6) : 0;
+    if (HUNTS[this.mode] && P.him.closing < -25) cut = Math.min(1, cut * 1.5); // he's running: cut the ring, trap him on the ropes
     let clinch = false;
     if (P.dist < 46) {
-      if (this.mode === 'survive' && this.R() < (this.hurtResp === 'clinch' ? .5 : .1) * (.4 + k.clinch)) clinch = true;
+      if (this.mode === 'survive' && this.R() < (sv === 'clinch' ? BR.surv.clinchNear + .4 * k.clinch : sv === 'steady' || sv === 'run' ? .15 * (.4 + k.clinch) : .1 * (.4 + k.clinch))) clinch = true;
       else if (fat > .55 && this.R() < .04 * tr.clinch * (.4 + k.clinch)) clinch = true;
       else if (P.ropes.me > .6 && P.dist < 40 && this.R() < .02 * tr.clinch * k.clinch) clinch = true; // smother the man who has him pinned
       else if (tr.range > .7 && P.dist < 40 && this.R() < .015 * tr.clinch) clinch = true;      // an out-boxer doesn't want it in there
@@ -597,6 +727,8 @@ class Brain {
     const sdt = dt * this.pace; // slow time: moods and intent
     E.conf *= 1 - .02 * sdt; E.frus *= 1 - (.03 + .05 * comp) * sdt; E.fear *= 1 - (.02 + .08 * comp) * sdt * (P.me.hurt ? .2 : 1);
     this.fat = 1 - P.me.stam / (P.me.stamMax || 100);
+    this.ct += sdt; this.hisG = P.him.guard;
+    { const B = BR.blur; this.blur = clamp((1 - P.me.head / Math.max(1, P.me.headMax)) * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + this.kds * B.kd, 0, 1); }
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
     this.updMode(P, sdt);
     this.see(P);
@@ -609,6 +741,9 @@ class Brain {
     if (this.decT <= 0) {
       this.tel.decisions++;
       this.nd = this.need(P);
+      { const D = BR.desp, late = P.rounds >= 6 && P.round > P.rounds - D.last, b = -this.sc.lead; // behind on his own cards, late: the equaliser
+        this.desp = late && b > 0 ? clamp(b / 2, .4, 1) * (.4 + .6 * this.tr.killer) * (.5 + .5 * this.tr.power) : 0;
+        if (this.desp && !this.despR) { this.despR = 1; this.tel.desp = (this.tel.desp || 0) + 1; } }
       // fatigue makes him decide faster and worse
       this.decBase = lerp(BR.decT[0], BR.decT[1], (this.k.read + this.k.combos + this.k.counter) / 3);
       this.decT = this.decBase * (1 - .3 * this.fat) * Math.exp(this.g() * .25);
@@ -622,8 +757,8 @@ class Brain {
     } else if (this.queue && this.t >= this.queue.at && !P.me.busy && !P.me.clinch) {
       const a = this.offense(P); if (a && a !== 'wait') { this.out.punch = a; this.out.why = a.why; }
     }
-    const md = MODES[this.mode];
-    this.out.intent = this.mode;
+    const md = this.mm();
+    this.out.intent = this.mode; this.out.hurt = this.mode === 'survive' ? this.hurtResp : null;
     this.out.guard = clamp(md.guard * lerp(.7, 1.2, this.tr.shell) * (1 - .35 * this.fat) * (this.mode === 'survive' && this.hurtResp === 'shell' ? 1.3 : 1), .1, 1);
     return this.out;
   }
@@ -659,6 +794,9 @@ class Brain {
     }
     // plans fade back toward his nature
     if (!change) for (const x in this.plan) this.plan[x] *= .8;
+    // dropped this round: a composed man comes out firing (the rally), the rest box careful and long
+    if (this.h.kdR) { if (tr.composure >= .65) { this.plan.initiative = clamp(this.plan.initiative + BR.surv.rally, -.4, .4); this.plan.power = clamp(this.plan.power + .1, -.4, .4); } else this.plan.range = clamp(this.plan.range + BR.surv.after, -16, 16); }
+    this.h.kdR = 0; this.despR = 0; this.mode = 'feelout';
     this.mode = 'feelout'; this.modeT = this.rnd(2, 6) * (1.3 - tr.initiative);
     this.note('round ' + (info.round || '?') + ' ' + (r > 0 ? 'won' : r < 0 ? 'lost' : 'even') + ' (he thinks)' + (change ? ', change: ' + change : ''));
     return { thinks: r, lead: this.sc.lead, change };
