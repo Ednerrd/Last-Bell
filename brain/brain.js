@@ -203,7 +203,7 @@ class Brain {
     this.threat = null; this.lastHisP = null; this.lastHisT = -9; this.lastMine = null; this.lastDef = null;
     this.rangeJit = 0; this.nd = 0; this.fat = 0; this.lat = (this.R() < .5 ? 1 : -1);
     this.sc = { me: 0, him: 0, lead: 0, rounds: [] }; // his own guess at the cards
-    this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0 };
+    this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {} };
     this.log = [];
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
@@ -407,6 +407,7 @@ class Brain {
       // hurt changes the mind: composure decides what he does with it
       const w = { clinch: tr.clinch * (.3 + this.k.clinch) * comp * 1.5, shell: tr.shell * (1.2 - comp * .5), run: tr.legs * (.3 + this.k.footwork) * comp, fire: tr.risk * (1 - comp) * 1.4, freeze: (1 - comp) * (1 - this.k.read) * .6 };
       this.hurtResp = wpickR(this.R, Object.keys(w), x => w[x]) || 'shell';
+      this.tel.hurts++; this.tel.hurtR[this.hurtResp] = (this.tel.hurtR[this.hurtResp] || 0) + 1; if (this.mode === 'hunt') this.tel.caught++;
       this.setMode('survive', this.rnd(2.5, 5), 'hurt: ' + this.hurtResp);
       return;
     }
@@ -414,7 +415,7 @@ class Brain {
     if (P.him.hurt && this.mode !== 'hunt') {
       // he smells it. A killer goes; a careful man checks the other man can still punch
       const go = tr.killer * lerp(.5, 1, this.k.read) * (1 - .4 * this.emo.fear);
-      if (this.R() < go * dt * 4) { this.setMode('hunt', this.rnd(4, 8), 'he is hurt'); return; }
+      if (this.R() < go * dt * 4) { this.tel.hunts++; this.setMode('hunt', this.rnd(4, 8), 'he is hurt'); return; }
     }
     if (this.mode === 'hunt' && !P.him.hurt && this.modeT > 1.5) this.modeT = Math.min(this.modeT, this.rnd(.5, 1.5)); // he got away
     if (this.mode === 'feelout' && this.modeT <= 0) { this.pickMode(P); return; }
