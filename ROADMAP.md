@@ -21,7 +21,6 @@ The only to-do list. When something is done, delete its line here and put the nu
      - weak specials: volume 42, body 43;
      - body KDs up (still 4.1%, 30 of 723; the slow fuse didn't move it);
      - out-boxer off the ropes;
-     - fix the brain's thrown overcount;
      - specials at 300/pair;
      - then retire `decide()`/`react()`.
 1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.

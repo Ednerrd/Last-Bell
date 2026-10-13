@@ -251,7 +251,7 @@ After the fixes (brain on, @82):
 | Brain vs old AI | 38.4% |
 
 Known, not fixed:
-- **Telemetry overcount.** A brain throw the engine drops (smother, pivot/step-out return, not idle) still counts in the brain's `tel.throws`. A punch his own defense cancels before 30% has already counted as "thrown" (CompuBox overcounts brain output a little).
+- ~~Telemetry overcount~~: fixed Oct 13, see "Thrown overcount fixed" below.
 - **Passive evades.** These reach the brain as slip/duck/pull by punch type, so he counters from that row of the book (on purpose).
 - **Corner orders.** `F.strategy` and `F.order` don't reach the brain, so corner orders don't change his plan. Ed's call: leave it that way.
 
@@ -289,3 +289,19 @@ Lessons for the next session:
 - **Hurt is rare** (0.65% of frames). Stoppages come from KDs, and KDs from flush shots (wrong-defense `mult > 1`, counters, crits). The brain picks the right defense more than the old AI, so it needs the blur to get KDs.
 - **Finisher caught** can't reach 5–10% "hurt" in this engine (a fresh man is almost never stunned); "stung" (ate a clean counter while hunting) is the honest measure, 12%.
 - Probes worth reusing: `tests/finish.js`; per-mode time/throws/lands come from `tel.mThr`/`tel.mLand`/`tel.modeT`.
+
+### Thrown overcount fixed (Oct 13, after the handoff)
+- **Engine** (`brainTick`): when the brain's own defense pulls back a punch before 30%, it's un-counted from `F.tot.thrown`, `rs.thrown`, `rs.thrownPow` (stamina still spent; feints and finished punches untouched). `F.tot.un` counts them; `tests/audit.js` prints "unthrown /rd" when it's non-zero. Brain-gated: same.js stays 7f58e976.
+- **Brain** (`opts.thrownEv`, set by the engine): `tel.throws` / `tel.mThr` count from engine events, `thrown` when `startPunch` really starts a brain punch (`first` = the combo's lead) and `pulled` when he pulls it back. Smothered counters, pivot/step-out returns and busy frames no longer count. The dummy ring sends no events, so it still counts decisions. Behaviour-neutral: brain-on same.js hash is identical with the events on or off (b67920f2).
+- Still not in `mThr`: punches the engine starts on its own (stick jabs, the smothered inside hook, follow-ups `nextInCombo` adds when he's hurt), ~4% of a brain man's output.
+
+| Measure (brain on, @82) | Before | After |
+|---|---|---|
+| Unthrown (pulled back) per man per round | counted as thrown | 1.68 |
+| Audit 1000 (4x250): thrown / landed / connect | 53.1 / 16.2 / 30.6% | 51.4 / 16.3 / 31.6% |
+| Stoppages (same 1000) | 23.0% (16.8–25.6 per 250) | 24.8% (19.6–29.6 per 250) |
+| Draws | 5.2% | 4.4% |
+| Styles 300/pair (4 processes) | outboxer 54.6, counter 53.7, boxer-puncher 48.1, swarmer 47.4, slugger 46.5 | counter 53.4, outboxer 51.5, boxer-puncher 48.9, swarmer 48.9, slugger 47.6 |
+
+Only the judges read `rs.thrown` (`rdScore`, .025 a punch, ~.04/round); the brain never sees the cards, so the stoppage swing is noise (a single 250 run ranged 16.8–29.6). Thrown now sits ~1.6 under the 53 target with connect ~31.6%: the brain's real output, not a bug. The styles moved toward the middle (outboxer −3, slugger and swarmer +1), within ~1.5σ.
+
