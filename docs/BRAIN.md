@@ -252,4 +252,4 @@ After the fixes (brain on, @82):
 Known, not fixed:
 - **Telemetry overcount.** A brain throw the engine drops (smother, pivot/step-out return, not idle) still counts in the brain's `tel.throws`. A punch his own defense cancels before 30% has already counted as "thrown" (CompuBox overcounts brain output a little).
 - **Passive evades.** These reach the brain as slip/duck/pull by punch type, so he counters from that row of the book (on purpose).
-- **Corner orders.** `F.strategy` and `F.order` don't reach the brain yet, so corner orders don't change his plan (the coach shouts item).
+- **Corner orders.** `F.strategy` and `F.order` don't reach the brain, so corner orders don't change his plan. Ed's call: leave it that way.

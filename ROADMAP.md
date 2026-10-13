@@ -9,10 +9,9 @@ The only to-do list. When something is done, delete its line here and put the nu
 
 ## Claude, in this order
 0. **Boxer brain on the engine (branch `claude/brain-wire`, reviewed Oct 13).** Wired behind `AI.brain` (default 0 = old AI, same.js 7f58e976), lab has an AI row. Audit and styles on target (`docs/BRAIN.md` "The brain on the engine" + "Review and handoff").
-   - **Next:** Ed watches brain vs brain in the lab and says go/no-go on the default.
+   - **Next:** Ed watches brain vs brain on the private brain test page (https://claude.ai/artifact/HQopfRTmoBmSZLbEfDa94P, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
    - **After that:**
      - weak specials: volume 42, body 43;
-     - coach shouts / `F.strategy` into the brain's plan;
      - stoppages up (19.6, want 25+), body KDs up (4.2, want 5+);
      - out-boxer off the ropes;
      - fix the brain's thrown overcount;
@@ -37,6 +36,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 - Lab B rhythm (`ccr-026fa9ad-j4d8rw`) is dead; Ed picked Lab A. The parallel step 6 (`ccr-b57f3498-nk3hk1`) is superseded.
 - Ring IQ when hurt or tired as its own step: parked; it lives in the hurt brain now.
 - Corner lesson size: medium (`TEACH` .18 / .7 / .7).
+- Coach shouts / corner orders do NOT get wired into the brain (Ed, Oct 13).
 - No sparring in the skill system for now. No bond/trust system yet.
 
 ## Parking lot (ideas, not scheduled)
