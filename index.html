@@ -372,7 +372,8 @@ const BR = {
   desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 }, // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
   // skill levels L2: what mastery does (research/mind_learn.md 4a). Each table is [Novice, Intermediate, Pro, World class] at the tier centers,
   // read on his raw mastery (not squeezed by spread), 1 at Pro so a Pro-level field plays as before. on: how much of each applies (0 = off)
-  lv: { on: { force: 0, gas: 0, off: 0, late: 0, flinch: 0, tell: 0, feint: 0, len: 0, adjust: 0, freeze: 0 },
+  lv: { on: { kLvl: 0, force: 0, gas: 0, off: 0, late: 0, flinch: 0, tell: 0, feint: 0, len: 0, adjust: 0, freeze: 0 },
+    kLvl:   [.404, .536, .644, .80], // his overall level as the brain plays it (= spread .6 up to Pro; World class pulls further away)
     force:  [.62, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
     gas:    [1.3, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
     off:    [.5, .3, .15, .08],      // off balance after a miss (s): crossed feet, overreaching
@@ -455,7 +456,7 @@ class Brain {
     this.thrownEv = !!opts.thrownEv; // the game tells him which punches really started ('thrown' / 'pulled' events): telemetry counts those, not what he decided
     this.pace = opts.pace || 1; // a game whose rounds run faster than the clock (the Last Bell engine: 3) squeezes the slow things (moods, memory, intent modes) and keeps the work rate per round; reactions stay human
     // spread squeezes his overall level (how far apart the tiers play) but keeps his own strengths full size: a counter-puncher's counter stays his edge
-    const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl = .5 + (avg - .5) * BR.spread;
+    const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl0 = .5 + (avg - .5) * BR.spread, lvl = BR.lv.on.kLvl ? lerp(lvl0, tierV(avg, BR.lv.kLvl), BR.lv.on.kLvl) : lvl0;
     this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(lvl + (raw(s) - avg) * BR.spreadOwn, 0, 1);
     this.m = {}; for (const s of SKILL_KEYS) this.m[s] = raw(s); // raw mastery: the level tables (BR.lv) read this
     this.lvUpd();
