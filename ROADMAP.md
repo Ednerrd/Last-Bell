@@ -2,39 +2,31 @@
 
 The only to-do list. When something is done, delete its line here and put the numbers in `docs/NOTES.md`.
 
-## Ed (only he can do these)
-1. **Publish the live game.** Make a backup code of his careers first, then upload `index.html` in a claude.ai chat and publish to the live URL with `{db:{},user:{},sample:{}}`. Live is weeks behind (styles, legends, corner talk, combos, all the combat and brain work).
-2. **3D phone test on the S25 Ultra** (https://claude.ai/artifact/5kVb4PyywgDcPBHSVSc3cu): "Run test (3 min)", then 10 min on one setting. Send fps per setting, heat, battery drop. Sets the 3D quality defaults (`proto/PLAN.md` phase 0).
+## Ed: decide these (they block or reshape the list below)
+1. **v1 or v2?** Branch `claude/brave-einstein-ojkyzm` (Oct 9–10) is a ground-zero 3D restart in `v2/` (M0–M2 done plus the FNC brief: fight cam, stagger, ~65 thrown/rd; next was M3). Its CLAUDE.md calls v1 "frozen", but all the work since (brain, finishing, balance, skill levels) went into v1 on `claude/brain-wire`. Pick one: keep v1 and park v2, or port the brain into v2.
+2. **Career and gym: coming back?** They were cut from `index.html` (Oct 10). Skill levels L4 (learning from fights and camp) and the gym steps need a career to live in.
+3. **Live game:** `index.html` has no career or saves now. Publishing it to the live URL would swap players' careers for the bare fight screen. Keep live as is until the career question is settled, or publish the fight screen somewhere else.
+4. **Brain as default:** watch brain vs brain (https://claude.ai/artifact/UHAiLaZMKM7CPMfbsyaYzA), say go/no-go on `AI.brain` = 1.
+5. **Brain output:** 51.6 thrown/rd vs the 53 target. Move the target to ~51–52, or bump output? (v2 moved its own target to ~60: "more action than real".)
+6. **Skill sheet defaults** (`docs/BRAIN.md` "Skill levels L1"): journeyman / veteran / ranked starting skills are a first guess.
 
 ## Claude, in this order
-0. **Boxer brain on the engine (branch `claude/brain-wire`, reviewed Oct 13).** Wired behind `AI.brain` (default 0 = old AI, same.js 7f58e976), lab has an AI row. Audit and styles on target (`docs/BRAIN.md` "The brain on the engine" + "Review and handoff").
-   - **Ed:** watches brain vs brain on the private brain test page (https://claude.ai/artifact/UHAiLaZMKM7CPMfbsyaYzA, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
-   - **After that:**
-     - **Finishing and the hurt brain: built (Oct 13, `docs/BRAIN.md` "Finishing and the hurt brain").** Stops 19.6 → ~24%, styles 46.8–54.1. Left from it:
-       - finisher caught (hurt) 0.7% of hunts, wanted 5–10 (stung 12%); same-round stop after a KD ~25%, research guess 35–45;
-       - brain vs old AI fell 38 → ~27% (the old AI doesn't blur);
-       - Ed: watch it on the private brain test page.
-     - **Balance pass: done (Oct 14, `docs/BRAIN.md` "Balance pass (Oct 14)").** Connect 31.6 → 30.4%, stops 25.8% (pooled 2000), styles 48.2–52.5 (600/pair). **Ed:** thrown 51.6 vs the 53 target: move the brain's target to ~51–52, or try an output bump? Left: connect into 29–30 (defQ ~1.6).
-     - **Re-check on the balance numbers: done (Oct 14, `docs/BRAIN.md` "Re-check on the balance-pass numbers").** Guards 49–58 (high 57.9 on top this run, handslow 55.1), bvo 35.4%, dummy ring stops 28.0 / connect 34.3.
-     - **Weak specials volume and body: done (Oct 14, `docs/BRAIN.md` "Weak specials").** Volume 46 → 52.8, body 44 → 50.3 (600/pair); base styles 48.7–51.3.
-     - **Angle fighter: done (Oct 14, `docs/BRAIN.md` "Angle fighter").** 44.6 → 51.5 (900/pair): boxer-puncher brain base.
-     - **Body KDs: on target, no change (Oct 14, `docs/BRAIN.md` "Body KDs re-measured").** 5.7% of KDs (1800 fights); the old 4.1% was a small, older sample.
-     - **Out-boxer off the ropes: done (Oct 14, `docs/BRAIN.md` "Out-boxer off the ropes").** 12.6 → 6.7 s/rd (old AI 7.7); styles 47.6–53.7 (out-boxer and swarmer on the band edges); bvo 30.3%.
-     - **All specials at 300/pair: done (Oct 14, `docs/BRAIN.md` "All specials vs base styles").** 47.4–52.1, none under 47 (pboxer 47.7, switch 47.4 a hair under 48).
-     - **Next, in this order (recommended):**
-       - then retire `decide()`/`react()`.
-1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.
-2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. L0 done (Oct 14, `docs/BRAIN.md` "Skill levels L0"): one level down wins 1–3% (target 15–20%); the body decides it (skills-only gap 32%, body-only 2.7%). L1 done (Oct 14, `docs/BRAIN.md` "Skill levels L1"): `sheet.sk` / `sheet.know` / `levelOf`, defaults per walk-in type and record; the brain reads `sheet.sk` when set. Same body, one skill level down wins ~31% (two down 17.7%): a level needs to hit about 2x harder. Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Next: L2 (the engine reads mastery: how often and how well a skill is tried, bad-technique outcomes), tuned on `levels.js sk`.
-3. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):
-   - Setups and traps: "show it twice, change it" gated on HIS answer, armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
-   - Hurt brain by tier (the base is built: hunt / survive / blur); finisher weighs the risk (`research/mind_vision.md` 8d).
-   - AI between-round adjustment: change one thing when losing exchanges; low adjusters wait too long.
+1. **Skill levels L2: the engine reads mastery** (`docs/BRAIN.md` "Skill levels"). How often and how well a skill is tried; a skill he doesn't own gets tried badly (telegraphed, off balance, arm punches, commentary). Tune on `levels.js sk`: one level down wins ~31% today, target 15–20%. Fix the flat ones from L0: feints, between-round adjusts, freezing when hurt.
+2. **L3:** style and stance familiarity in the fight (`sheet.know`: slow reads early vs the unfamiliar).
+3. **Brain pieces that hang off the levels** (fold into L2–L4):
+   - Setups and traps: "show it twice, change it", armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
+   - Hurt brain by tier; the finisher weighs the risk (`research/mind_vision.md` 8d). Finisher caught 0.7% of hunts (want 5–10); same-round stop after a KD ~25% (research 35–45).
    - Gassers save it for later (stamina pacing).
-   - Check first, maybe not needed: within-round read decay (B1 already fades), defensive read inside `react()` capped ±25% per guard (B3 covers part).
-4. **Balance pass** (L6). Upsets one level down 15–20%, then the CLAUDE.md targets. Known weak: feinter ~46–47, swarmer ~47.4, high/cross guards swing between runs (pool 600+ per guard).
-5. **Gym mode steps 3–6** (`docs/GYM.md`): mitts + combo book, training sessions, sparring, signature moves and habits, in-round talk.
-6. **3D phase 1** once Ed's phone numbers are in (`proto/PLAN.md`). Recommended start: the engine drives the 3D and draws punch lanes, why a shot lands or misses.
-7. **Footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet. Do it in 3D, not 2D.
+4. **L4–L6** (after Ed's call on career): learning from fights and camp, the skill sheet UI, then the L6 balance pass (upsets one level down 15–20%, then the CLAUDE.md targets; known weak: feinter ~46–47, swarmer ~47.4).
+5. **Retire `decide()`/`react()`** once the brain is the default (needs Ed's go, item 4).
+6. **Merge `claude/brain-wire` into the main line and republish the fight lab** (with Ed's OK; the lab still shows the Oct 6 build).
+7. **Later:** gym mode steps 3–6 (`docs/GYM.md`, needs the career back), 3D phase 1 (`proto/PLAN.md`; the phone numbers are in, see below), footwork during punches (do it in 3D).
+
+## Done lately (numbers in `docs/BRAIN.md`)
+- Oct 11–14: the brain on the engine (behind `AI.brain`), finishing and the hurt brain, balance pass, weak specials, angle fighter, out-boxer off the ropes, all specials 47.4–52.1, body KDs on target.
+- Oct 14: skill levels L0 (baseline) and L1 (skill sheet: `sheet.sk`, `sheet.know`, `levelOf`, walk-in and record defaults; the brain reads `sheet.sk`).
+- Oct 14: project review, dead code from the career cut removed.
+- Oct 9 (on the v2 branch): Ed's S25 Ultra phone test, 60 fps on every quality setting with shadows on. Defaults res 2 / shadows on / cap 60.
 
 ## Decided (don't reopen)
 - No 2D-only render polish (uppercut curve, close-range spacing): 3D redoes the animation.

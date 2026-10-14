@@ -1,6 +1,6 @@
 # Last Bell
 
-Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~3,400 lines) boots straight into a fight (random or picked fighters). Career, saves, hub, camp and gym mode were cut (Oct 2026); the old full game lives in git history on `claude/epic-goldberg-ps6ip4` before that cut. Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
+Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 lines) boots straight into a fight (random or picked fighters). Career, saves, hub, camp and gym mode were cut (Oct 2026); the old full game lives in git history on `claude/epic-goldberg-ps6ip4` before that cut. Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
 **The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` behind `AI.brain` (0 = old AI; `PATCH="AI.brain=1"` for sims). `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
@@ -8,7 +8,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~3,400 
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
-- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch).
+- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (83 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: see ROADMAP Ed item 1.
 - Never publish to the live game without Ed's explicit OK.
 - Models (Ed, Oct 14): Opus for everything (tuning, code, docs); Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write).
 - Effort (Ed, Oct 14): before starting a task that needs high effort, stop and ask Ed to switch to high, then wait for his OK. High = engine/balance tuning (sim-driven tries), retiring or refactoring engine code that must keep the same.js hash, debugging odd sim results, design plans (skill levels). Docs, roadmap edits, overviews, running set-up sims and reading numbers stay at his current setting: just do them.
@@ -31,7 +31,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~3,400 
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
 
 ## Code map (markers `/* ===== LAST BELL : ... ===== */`)
-engine (~203) → career (~1584: just fighter gen, divisions, gear, P4P stars) → render → audio → ui part 1 (helpers) → ui part 3 (fight loop, corner, replay) → the fight screen (`LAB`, `labNew`, `labFight`, `resultScreen`).
+engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, divisions, gear, P4P stars) → render → audio → ui part 1 (helpers) → ui part 3 (fight loop, corner, replay) → the fight screen (`LAB`, `labNew`, `labFight`, `resultScreen`).
 - Ring: x ±146 (RING), z ±115 (ZR), MIN_D 30. `P3()` projection.
 - Fight loop: `footwork()` every frame, `decide()` on a timer, `react()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'.
 - Knobs: `TUNE` (combat), `DMG` (damage), `CUT` (cuts/doctor), `GUARDS`, `STYLES` / `STYLE_*`, `SHOUTS` / `SHOUT_EDGE`, `COMBOS` / `PNUM` / `OPEN_W`, `TEMPO` (rhythm), `NEED` (round awareness), `TEACH` (corner lessons), `ANT` / `MEMV` / `FEINT_READ` (brain).
