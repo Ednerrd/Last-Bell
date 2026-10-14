@@ -367,3 +367,17 @@ Brain on, @82, code at 599098d (nothing changed for these).
 - Brain-off same.js 7f58e976 (brainProfile only runs with the brain on).
 - Lessons: both were losing by walking chest to chest into counters. Pressure and output knobs made it worse every time; patience fixed the body snatcher; volume needed range (his engine range is 62, the swarmer brain parked him at 54, where his light hands lose the trades). Volume still throws the most (68/rd) from 58.
 - Next for specials: angle 46.4 (the other one under 48).
+
+### Angle fighter (Oct 14, later; commit 98d4aaf)
+Brain on, @82, `styles.js 75 x4 vs:angle` (300/pair per run). Control = same-day run at 9be2940.
+
+| Try | Angle | Rope s/rd | What |
+|---|---|---|---|
+| Control | 44.6 | 6.6 | `['outboxer', { circle .12, range -.1 }]` |
+| 1: ring craft on the out-boxer | 46.2 | 6.1 | + circle .2, skill lean ropes 12, angles 8 |
+| **Kept, 2: boxer-puncher base (3 runs pooled, 900/pair)** | **51.5** (52.9, 52.5, 49.2) | 2.8 | `['boxerpuncher', { circle .3, legs .2, combo .1 }, { angles 8, ropes 8 }]` |
+
+- Kept, pooled rows (angle's win % vs each): slugger ~54, bp ~54, swarmer ~53, counter ~51, outboxer ~45 (the out-boxer is the one that beats him).
+- How he fights now: 55 thrown/rd, 68% power (was 57%), distance 61 (was 64), ropes 2.8 s/rd (was 6.6). Stops by him up from ~3% to ~6% of his fights.
+- Brain-off same.js 7f58e976.
+- Lesson: the out-boxer brain at the angle man's short engine range (64 vs the out-boxer's 72) gets walked to the ropes and stays there (the out-boxer brain's rope problem, same hole as in bvo). His engine combos already come from the boxer-puncher; the brain now matches, and the engine's angle-offs do the rest.
