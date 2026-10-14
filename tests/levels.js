@@ -2,6 +2,7 @@
 //   TAG=x node tests/levels.js 100            each pair 100 fights (mirrors N-N .. W-W, one level down, two down)
 //   TAG=x node tests/levels.js 100 curve      a Pro (78) vs men 0/4/8/12/17 rating points under him
 //   TAG=x node tests/levels.js 100 split      one level down (17 points) as skills only (same body), body only (same skills), or both
+//   TAG=x node tests/levels.js 100 sk         skill sheets (L1, sheet.sk): same body (rating SKR, default 78), levels set by mastery only. SKC=34,56,74,90 moves the level centers
 //   node tests/levels.js agg x                pool every run with that TAG
 // Brain on by default (PATCH="AI.brain=0" for the old AI). Random styles (specials too) and rolled guards, 10 rounds, sides alternate.
 // Levels come from the brain's skill sheet (BoxerBrain.tierOf). With AI.skill -8 the level centers sit at ratings ~40 / 60 / 78 / 93 (LV overrides: LV=40,60,78,93).
@@ -61,7 +62,7 @@ if (process.argv[2] === 'agg') { report(fs.readFileSync(OUT(process.argv[3]), 'u
 
 if (process.env.PATCH == null) process.env.PATCH = 'AI.brain=1';
 // sheet.skillOff moves only the brain's skills (the body stays): the split test
-process.env.PATCH += ';globalThis.__BB=BoxerBrain;{ const bp = brainProfile; brainProfile = F => { const p = bp(F), o = F.sheet.skillOff; if (o) { for (const k in p.skills) p.skills[k] = Math.round(clamp(p.skills[k] + o, 5, 99)); p.tier = BoxerBrain.tierOf(p.skills); } return p; }; }';
+process.env.PATCH += ';globalThis.__BB=BoxerBrain;globalThis.__SKM=skMake;{ const bp = brainProfile; brainProfile = F => { const p = bp(F), o = F.sheet.skillOff; if (o) { for (const k in p.skills) p.skills[k] = Math.round(clamp(p.skills[k] + o, 5, 99)); p.tier = BoxerBrain.tierOf(p.skills); } return p; }; }';
 const S = require('./sim.js');
 const BB = globalThis.__BB;
 const N = +process.argv[2] || 100, MODE = process.argv[3] || 'levels';
@@ -77,13 +78,15 @@ function hook(brain) {
   P.feint = function (...a) { const o = feint.apply(this, a); const L = this.lv || (this.lv = {}); if (o.sell < .35) L.feintBad = (L.feintBad || 0) + 1; return o; };
   P.rest = function (...a) { const o = rest.apply(this, a); if (o && o.change) { const L = this.lv || (this.lv = {}); L.adj = (L.adj || 0) + 1; } return o; };
 }
-const G = RT.P - RT.I;
-const PAIRS = MODE === 'split' ? [{ pair: 'full: P v I', r: [RT.P, RT.I], off: 0 }, { pair: 'skills only', r: [RT.P, RT.P], off: -G }, { pair: 'body only', r: [RT.P, RT.I], off: G }].map(x => Object.assign(x, { lv: ['P', 'I'], gap: 's' }))
+const G = RT.P - RT.I, SKR = +(process.env.SKR || 78), SKC = (process.env.SKC || BB.TIERS.map(t => t.center).join(',')).split(',').map(Number), CT = { N: SKC[0], I: SKC[1], P: SKC[2], W: SKC[3] };
+const PAIRS = MODE === 'sk' ? [['P', 'P'], ['I', 'N'], ['P', 'I'], ['W', 'P'], ['P', 'N']].map(([a, b]) => ({ pair: a === b ? a + ' mirror' : a + 'v' + b, r: [SKR, SKR], lv: [a, b], gap: TIERS.indexOf(a) - TIERS.indexOf(b), sk: [CT[a], CT[b]] }))
+  : MODE === 'split' ? [{ pair: 'full: P v I', r: [RT.P, RT.I], off: 0 }, { pair: 'skills only', r: [RT.P, RT.P], off: -G }, { pair: 'body only', r: [RT.P, RT.I], off: G }].map(x => Object.assign(x, { lv: ['P', 'I'], gap: 's' }))
   : MODE === 'curve' ? [0, 4, 8, 12, 17].map(g => ({ pair: 'P78 v ' + (RT.P - g), r: [RT.P, RT.P - g], lv: ['P', 'P-' + g], gap: g ? 'c' : 0 }))
   : [['N', 'N'], ['I', 'I'], ['P', 'P'], ['W', 'W'], ['I', 'N'], ['P', 'I'], ['W', 'P'], ['P', 'N'], ['W', 'I']].map(([a, b]) => ({ pair: a === b ? a + ' mirror' : a + 'v' + b, r: [RT[a], RT[b]], lv: [a, b], gap: TIERS.indexOf(a) - TIERS.indexOf(b) }));
 for (const PR of PAIRS) for (let i = 0; i < N; i++) {
   const sh = PR.r.map(r => { const st = pick(ALL), s = S.sheet(Math.round(r + (Math.random() * 4 - 2)), st, S.rollGuard(st)); return s; });
   if (PR.off) sh[1].skillOff = PR.off;
+  if (PR.sk) sh.forEach((x, j) => { x.sk = globalThis.__SKM(PR.sk[j], x.style); });
   const side = i % 2, f = new S.Fight(side ? sh[1] : sh[0], side ? sh[0] : sh[1], { rounds: 10 });
   const F = [f.f[side], f.f[1 - side]]; // F[0] = the favourite (or side A of a mirror)
   if (F[0].brain) hook(F[0].brain);
