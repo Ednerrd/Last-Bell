@@ -172,7 +172,7 @@ const BR = {
   // read on his raw mastery (not squeezed by spread), 1 at Pro so a Pro-level field plays as before. on: how much of each applies (0 = off)
   lv: { on: { kLvl: 1, force: 1, gas: 1, off: 1, late: 1, flinch: 1, tell: 1, feint: 1, len: 1, adjust: 1, freeze: 1 },
     own: .3,                         // how much of one skill's own gap from his level the tables see (1 = all of it)
-    kLvl:   [.404, .536, .644, .86], // his overall level as the brain plays it (= spread .6 up to Pro; World class pulls further away)
+    kLvl:   [[.34, .43], [.56, .55], [.74, .644], [.82, .692], [.90, .86]], // [mastery, level as the brain plays it]: spread .6 through a rating-82 field (~.79), then World class pulls away. Novice and Intermediate sit a little closer
     force:  [.62, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
     gas:    [1.3, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
     off:    [.5, .3, .15, .08],      // off balance after a miss (s): crossed feet, overreaching
@@ -187,6 +187,8 @@ const BR = {
 const TIER_C = [.34, .56, .74, .90];
 // a level table read at mastery m (0..1): straight lines between the tier centers, flat past the ends
 function tierV(m, t) { if (m <= TIER_C[0]) return t[0]; for (let i = 1; i < 4; i++) if (m <= TIER_C[i]) return lerp(t[i - 1], t[i], (m - TIER_C[i - 1]) / (TIER_C[i] - TIER_C[i - 1])); return t[3]; }
+// a curve through [x, y] points, flat past the ends
+function ptsV(x, P) { if (x <= P[0][0]) return P[0][1]; for (let i = 1; i < P.length; i++) if (x <= P[i][0]) return lerp(P[i - 1][1], P[i][1], (x - P[i - 1][0]) / (P[i][0] - P[i - 1][0])); return P[P.length - 1][1]; }
 // the same, eased toward 1 (Pro) by how much of it is switched on
 function lvV(key, m) { const on = BR.lv.on[key] || 0, v = tierV(m, BR.lv[key]); return on === 1 ? v : lerp(key === 'off' || key === 'late' || key === 'flinch' || key === 'tell' || key === 'freeze' ? 0 : key === 'len' ? 4.5 : 1, v, on); }
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
@@ -255,7 +257,7 @@ class Brain {
     this.thrownEv = !!opts.thrownEv; // the game tells him which punches really started ('thrown' / 'pulled' events): telemetry counts those, not what he decided
     this.pace = opts.pace || 1; // a game whose rounds run faster than the clock (the Last Bell engine: 3) squeezes the slow things (moods, memory, intent modes) and keeps the work rate per round; reactions stay human
     // spread squeezes his overall level (how far apart the tiers play) but keeps his own strengths full size: a counter-puncher's counter stays his edge
-    const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl0 = .5 + (avg - .5) * BR.spread, lvl = BR.lv.on.kLvl ? lerp(lvl0, tierV(avg, BR.lv.kLvl), BR.lv.on.kLvl) : lvl0;
+    const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl0 = .5 + (avg - .5) * BR.spread, lvl = BR.lv.on.kLvl ? lerp(lvl0, ptsV(avg, BR.lv.kLvl), BR.lv.on.kLvl) : lvl0;
     this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(lvl + (raw(s) - avg) * BR.spreadOwn, 0, 1);
     this.m = {}; for (const s of SKILL_KEYS) this.m[s] = avg + (raw(s) - avg) * BR.lv.own; // mastery as the level tables (BR.lv) read it: his level, plus a slice of his own strengths and holes (a style's holes already cost him in the brain)
     this.lvUpd();
