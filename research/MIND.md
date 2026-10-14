@@ -9,6 +9,7 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_pace.md` | CompuBox numbers, round shapes, round clock, gas, finishing/surviving, 15 corner calls, judging |
 | `mind_finish.md` | Finishing a hurt man, surviving hurt, ref stoppages, recovery times, FINISH/SURVIVE knobs for the brain |
 | `mind_learn.md` | Novice vs pro tells, punch force by level, teaching order, learning from losses, rematches, scouting; tier tables and growth rules for skill levels |
+| `mind_southpaw.md` | Southpaw edge by the numbers (boxing, MMA, fencing, tennis), the experience effect, targets for the L3 familiarity knob |
 | `mind_between.md` | Between fights: rest and medical suspensions, gaps between fights, what wins teach, matchmaking, confidence and complacency, gun-shy after a KO, ring rust (UFC data), chin wear, age curves by attribute, habits coming back; game rules with numbers |
 | `mind_traps.md` | Traps across rounds (bait, answer, payoff), body banking, adjust timing by tier, rematch changes, corner talk, Plan B menus |
 | `fighters_c.md` … `fighters_g.md` | Exciting fighters (Reddit r/Boxing list, Oct 2026): 60 DNA cards with style, why they're exciting, mind, best bouts, brain knobs. c 140-160 punchers, d feather-light, e 105-122, f heavyweights, g mixed + Pacquiao |
