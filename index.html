@@ -131,9 +131,6 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .opt.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.opt span{color:var(--good);font-weight:600}.opt small{color:var(--mute);font-size:14px}
 .opt:disabled{opacity:.4}
 .sumbar{display:flex;justify-content:space-between;margin-top:18px;padding:12px 0;border-top:1.5px solid var(--line)}.neg{color:var(--red)}
-.modal{position:fixed;inset:0;background:rgba(10,7,5,.6);display:flex;align-items:flex-end;justify-content:center;z-index:50;padding:0 0 env(safe-area-inset-bottom,0px)}
-.sheet{background:var(--bg);width:100%;max-width:560px;max-height:85vh;overflow:auto;border-radius:12px 12px 0 0;padding:20px 16px 24px}
-.sheet h3{font-size:28px;margin-bottom:6px}.sheet .stats{margin:12px 0 16px}
 /* fight */
 #app.fightmode{padding:6px 8px 20px;max-width:640px}
 .fight{display:flex;flex-direction:column;gap:6px}
@@ -1040,7 +1037,6 @@ function wpick(items, wfn) {
 }
 
 const STATS = ['power', 'speed', 'accuracy', 'defense', 'footwork', 'chin', 'body', 'stamina', 'recovery', 'heart'];
-const STAT_LABEL = { power: 'Power', speed: 'Hand speed', accuracy: 'Accuracy', defense: 'Head movement', footwork: 'Footwork', chin: 'Chin', body: 'Body toughness', stamina: 'Stamina', recovery: 'Recovery', heart: 'Heart' };
 const OVR_W = { power: .12, speed: .12, accuracy: .11, defense: .12, footwork: .09, chin: .11, body: .07, stamina: .10, recovery: .06, heart: .10 };
 function ovr(s) { let t = 0; for (const k of STATS) t += s[k] * OVR_W[k]; return Math.round(t); }
 
@@ -3862,7 +3858,6 @@ const Comm = (() => {
 /* ===== LAST BELL : ui part 1 ===== */
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const money = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
 const rec = r => `${r.w}-${r.l}-${r.d}`;
 const app = $('#app');
 const ACT = {};
@@ -3871,11 +3866,6 @@ app.addEventListener('click', e => {
   Sfx.click(); const fn = ACT[b.dataset.act]; if (fn) fn(b.dataset, b, e);
 });
 function show(html, cls) { app.className = cls || ''; app.innerHTML = html; window.scrollTo(0, 0); }
-function modal(html) {
-  const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="sheet">${html}</div>`;
-  document.body.appendChild(m); return m;
-}
-function closeModal() { document.querySelectorAll('.modal').forEach(m => m.remove()); }
 
 function gLabel(g) { return (GUARDS[g] || GUARDS.standard).label; }
 function soundBtns() {
