@@ -1468,6 +1468,53 @@ function brainProfile(F) {
   const traits = {}, gt = AI_GUARD[F.guard] || {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + (gt[k] || 0) + gauss() * .09, 0, 1);
   return BoxerBrain.makeProfile({ style: base, skills, traits, name: F.sheet.name, uniq: 0 });
 }
+/* ---------- skill sheet (skill levels L1, data only). Stats are the body; skills are what he knows how to do with it ----------
+   sheet.sk:   mastery per brain skill, 0..100 on the brain's scale (BoxerBrain.TIERS: Novice under 46, Intermediate 46+, Pro 66+, World class 84+)
+   sheet.know: familiarity 0..1, { style: {outboxer: .6, ...every STYLES key}, stance: {orthodox, southpaw} }. Nothing reads it yet (L3)
+   The level is read off sheet.sk (levelOf). A sheet without sk fights as before: the brain reads his skills off the body */
+const SKL = {
+  noise: 6,                                   // how uneven one man's skills are around his level
+  walkIn: {                                   // c: level center; lean: skills he's better or worse at; know: how much he has seen
+    beginner:   { c: 34, know: .12 },                                                                                  // raw: Novice everywhere
+    journeyman: { c: 56, lean: { clinch: 14, ropes: 12, pacing: 12, block: 6, power: -4, cutoff: -4 }, know: .6 },      // Intermediate, Pro at surviving
+    veteran:    { c: 74, lean: { read: 8, adjust: 8, clinch: 8, pacing: 6, counter: 4, footwork: -8, angles: -4, slip: -4 }, know: .8 }, // Pro, the legs fading
+    ranked:     { c: 82, lean: { adjust: -10, read: -2 }, know: .65 }                                                  // Pro/World class, set in his ways
+  },
+  // from a record: fights teach (saturates), winning says he learned it, the body/rating a little (level comes from skills, not the body)
+  rec: { base: 30, exp: 34, expK: 15, win: 36, rating: .5, rMid: 78, lo: 20, hi: 92 },
+  knowK: 12, rare: .6, south: .55             // fights to see most styles; specials and southpaws are seen less (scarcity is the edge)
+};
+const gaussW = rng => { const u = Math.max(1e-9, rng()), v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * v); };
+// mastery per skill around a level center: his style's strengths and holes, a walk-in type's leans, a little noise
+function skMake(c, style, rng, lean) {
+  rng = rng || R; const [, S, m] = brainStyle(style), sk = {};
+  for (const k of BoxerBrain.SKILL_KEYS) sk[k] = Math.round(clamp(c + ((S.sk[k] || 0) + (m && m[2] && m[2][k] || 0)) * (c / 74) + (lean && lean[k] || 0) + gaussW(rng) * SKL.noise, 5, 99));
+  return sk;
+}
+// familiarity: g = how much he has seen overall (0..1); the common stuff more, specials and southpaws less
+function knowMake(g, rng) {
+  rng = rng || R; const n = () => clamp(g + gaussW(rng) * .08, 0, 1), style = {};
+  for (const k in STYLES) style[k] = +(n() * (STYLES[k].special ? SKL.rare : 1)).toFixed(2);
+  return { style, stance: { orthodox: +clamp(g + .3, 0, 1).toFixed(2), southpaw: +(n() * SKL.south).toFixed(2) } };
+}
+// a walk-in type (beginner, journeyman, veteran, ranked): sets sheet.sk + sheet.know and returns the sheet
+function skillSheet(sheet, type, rng) {
+  const W = SKL.walkIn[type] || SKL.walkIn.beginner;
+  sheet.sk = skMake(W.c, domStyle(sheet), rng, W.lean); sheet.know = knowMake(W.know, rng);
+  return sheet;
+}
+// a generated opponent: level center from his record ({w, l, d}) and rating
+function skCenter(rec, rating) {
+  const Q = SKL.rec, n = (rec.w || 0) + (rec.l || 0) + (rec.d || 0), wp = n ? ((rec.w || 0) + (rec.d || 0) * .5) / n : .5;
+  return clamp(Q.base + Q.exp * (1 - Math.exp(-n / Q.expK)) + (wp - .5) * Q.win * Math.min(1, n / 5) + ((rating || Q.rMid) - Q.rMid) * Q.rating, Q.lo, Q.hi);
+}
+function skFromRecord(sheet, rec, rating, rng) {
+  const n = (rec.w || 0) + (rec.l || 0) + (rec.d || 0);
+  sheet.sk = skMake(skCenter(rec, rating), domStyle(sheet), rng); sheet.know = knowMake(clamp(.12 + .78 * (1 - Math.exp(-n / SKL.knowK)), 0, 1), rng);
+  return sheet;
+}
+// his level: off the skill sheet, or (no sheet) off the skills the brain reads from his body
+function levelOf(sheet) { return BoxerBrain.tierOf(sheet.sk || brainSkills(sheet.stats, ringIQ(sheet), domStyle(sheet))); }
 const hurtNow = F => F.state === 'stun' || F.head < F.headMax * .3;
 function ropesK(F) { const v = vec(F, F.op); return clamp(1 - (freeRun(F.x, F.z, -v.ux, -v.uz) - 6) / 30, 0, 1); }
 
