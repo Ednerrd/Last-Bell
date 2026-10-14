@@ -1437,8 +1437,9 @@ const AI = {
 };
 // special styles think like the nearest base style, with their own taste on top (the engine keeps their tricks)
 // [base, trait lean, skill lean]. Volume works in bunches from mid range (chest to chest his light hands lose the trades);
-// the body snatcher waits for the dig instead of walking onto counters (both Oct 14: volume 46 -> 53.5, body 44 -> ~50)
-const AI_MAP = { volume: ['swarmer', { combo: .1, patience: .15, range: .25, legs: .15 }, { pacing: 8 }], angle: ['outboxer', { circle: .12, range: -.1 }], awkward: ['counter', { patience: -.1 }],
+// the body snatcher waits for the dig instead of walking onto counters (both Oct 14: volume 46 -> 53.5, body 44 -> ~50).
+// The angle man thinks like a boxer-puncher who keeps turning (as an out-boxer at his short range he lived on the ropes: 44.6 -> 52.7)
+const AI_MAP = { volume: ['swarmer', { combo: .1, patience: .15, range: .25, legs: .15 }, { pacing: 8 }], angle: ['boxerpuncher', { circle: .3, legs: .2, combo: .1 }, { angles: 8, ropes: 8 }], awkward: ['counter', { patience: -.1 }],
   switch: ['boxerpuncher', {}], body: ['swarmer', { body: .25, output: -.2, patience: .15 }, { body: 10 }], pboxer: ['slugger', { jab: .3, output: .1, range: .1 }],
   spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1 }], feinter: ['boxerpuncher', { patience: .15 }] };
 // the guard is a defense habit: what he reaches for when one comes (shell: gloves and arms, slip: head movement, legs: gets out of range)
