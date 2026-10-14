@@ -174,12 +174,12 @@ const BR = {
   lv: { on: { kLvl: 1, force: 1, gas: 1, off: 1, late: 1, flinch: 1, tell: 1, feint: 1, len: 1, adjust: 1, freeze: 1 },
     own: .3,                         // how much of one skill's own gap from his level the tables see (1 = all of it)
     kLvl:   [[.34, .43], [.56, .55], [.74, .644], [.82, .692], [.90, .86]], // [mastery, level as the brain plays it]: spread .6 through a rating-82 field (~.79), then World class pulls away. Novice and Intermediate sit a little closer
-    force:  [.62, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
-    gas:    [1.3, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
-    off:    [.35, .15, 0, 0],        // extra off balance after a miss (s), on top of a Pro's: crossed feet, overreaching
-    late:   [.35, .15, 0, 0],        // hands come back late: extra damage if he's caught on the way back
-    flinch: [.22, .07, 0, 0],        // eyes shut on a hard shot: no defense for the next one
-    tell:   [.83, .33, 0, -.1],      // extra wind-up he shows, 0 at Pro (x AI.tell in the game: a Novice ~+70 ms on top of his bad technique)
+    force:  [.7, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
+    gas:    [1.22, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
+    off:    [.28, .15, 0, 0],        // extra off balance after a miss (s), on top of a Pro's: crossed feet, overreaching
+    late:   [.28, .15, 0, 0],        // hands come back late: extra damage if he's caught on the way back
+    flinch: [.17, .07, 0, 0],        // eyes shut on a hard shot: no defense for the next one
+    tell:   [.65, .33, 0, -.1],      // extra wind-up he shows, 0 at Pro (x AI.tell in the game: a Novice ~+70 ms on top of his bad technique)
     feint:  [.15, .4, 1, 1.4],       // feints per round x (a novice barely feints; the ones he does, nobody buys)
     len:    [2, 3, 9, 9],            // longest combo he really owns (a Pro's own taste decides past that)
     adjust: [.05, .25, .55, .8],     // chance to change one thing between rounds when losing
