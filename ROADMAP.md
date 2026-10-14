@@ -15,12 +15,14 @@ The only to-do list. When something is done, delete its line here and put the nu
        - finisher caught (hurt) 0.7% of hunts, wanted 5–10 (stung 12%); same-round stop after a KD ~25%, research guess 35–45;
        - brain vs old AI fell 38 → ~27% (the old AI doesn't blur);
        - Ed: watch it on the private brain test page.
-     - **Balance pass: done (Oct 14, `docs/BRAIN.md` "Balance pass (Oct 14)").** Connect 31.6 → 30.4%, stops 25.8% (pooled 2000), styles 48.2–52.5 (600/pair). **Ed:** thrown 51.6 vs the 53 target: move the brain's target to ~51–52, or try an output bump? Left: connect into 29–30 (defQ ~1.6), re-check guards / specials / bvo / dummy ring on the new numbers.
+     - **Balance pass: done (Oct 14, `docs/BRAIN.md` "Balance pass (Oct 14)").** Connect 31.6 → 30.4%, stops 25.8% (pooled 2000), styles 48.2–52.5 (600/pair). **Ed:** thrown 51.6 vs the 53 target: move the brain's target to ~51–52, or try an output bump? Left: connect into 29–30 (defQ ~1.6).
+     - **Re-check on the balance numbers: done (Oct 14, `docs/BRAIN.md` "Re-check on the balance-pass numbers").** Guards 49–58 (high 57.9 on top this run, handslow 55.1), bvo 35.4%, dummy ring stops 28.0 / connect 34.3.
+     - **Weak specials volume and body: done (Oct 14, `docs/BRAIN.md` "Weak specials").** Volume 46 → 52.8, body 44 → 50.3 (600/pair); base styles 48.7–51.3.
      - **Next, in this order (recommended):**
-       - weak specials: volume 42, body 43;
+       - angle 46.4 (last special under 48; same trick: its edge into `AI_MAP`);
        - body KDs up (still 4.1%, 30 of 723; the slow fuse didn't move it);
        - out-boxer off the ropes;
-       - specials at 300/pair;
+       - all specials at 300/pair after angle (run in halves: 9 specials x4 takes >30 min);
        - then retire `decide()`/`react()`.
 1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.
 2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.

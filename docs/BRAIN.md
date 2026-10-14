@@ -348,3 +348,22 @@ Brain on, @82, code at 599098d (nothing changed for these).
 - **Brain vs old AI** (`bvo.js` 3x100 pooled): 35.4% (93-170, 37 draws), back up from ~27. The brain's out-boxer is the hole (7–19% by run); slugger ~56, counter ~41.
 - **Dummy ring audit 300** (pro): 47.9 thrown / 16.4 landed / 34.3% connect, stops 28.0%, KDs 0.8/fight. Same as Oct 13 (28.3 / 34.1).
 - Lesson: the full 9-special run at 75 x4 takes >30 min: run it in halves, or with a long background timeout.
+
+### Weak specials: volume and body (Oct 14, later; commit c1f1c73)
+`AI_MAP` takes a third slot, a skill lean (on top of the base brain style's `sk`, x `AI.lean`). Brain on, @82, `styles.js 75 x4 vs:volume,body` (300/pair, ±1.3 for the special, ±2.1 for each base row). Control = same-day run at 44a59fd.
+
+| Try | Volume | Body | What |
+|---|---|---|---|
+| Control (2 runs: sp1 + c0) | 46.1 | 44.0 | volume `{output .1, power -.2, combo .1}`, body `{body .25, output -.1}` |
+| 1: lighter, busier volume; body digs more | 42.2 | 41.0 | volume power -.35, jab +.15; body output 0, killer +.1 |
+| 2: control traits + skill lean only | 43.2 | 45.4 | volume combos/pacing +8; body skill +10, power +4 |
+| 3: volume output past 1 (1.25 cap), body cuts off | 40.5 | 39.0 | more pressure = walks onto counters (outboxer/counter 61–69 vs them) |
+| 4: patience | 47.2 | 49.3 | volume `{combo .1, patience .1}` + pacing 8; body `{body .25, output -.2, patience .15}` + body 10 |
+| 5: volume more patient (output -.1, patience .2) | 47.0 | 48.8 | |
+| **Kept, 6: volume works from mid range (2 runs pooled, 600/pair)** | **52.8** (53.5, 52.0) | **50.3** (51.2, 49.4) | volume `{combo .1, patience .15, range .25, legs .15}` + pacing 8; body as 4 |
+
+- Base styles round robin after it (unchanged code for them, 300/pair): bp 51.3, outboxer 50.5, swarmer 50.3, slugger 49.1, counter 48.7.
+- Base rows vs the two specials (600/pair): counter 51.7, outboxer 51.3, slugger 47.3, bp 47.0, swarmer 45.3 (the swarmer is the one they beat).
+- Brain-off same.js 7f58e976 (brainProfile only runs with the brain on).
+- Lessons: both were losing by walking chest to chest into counters. Pressure and output knobs made it worse every time; patience fixed the body snatcher; volume needed range (his engine range is 62, the swarmer brain parked him at 54, where his light hands lose the trades). Volume still throws the most (68/rd) from 58.
+- Next for specials: angle 46.4 (the other one under 48).
