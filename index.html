@@ -1447,9 +1447,11 @@ const AI_MAP = { volume: ['swarmer', { combo: .1, patience: .15, range: .25, leg
   spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1 }], feinter: ['boxerpuncher', { patience: .15 }] };
 // the guard is a defense habit: what he reaches for when one comes (shell: gloves and arms, slip: head movement, legs: gets out of range)
 const AI_GUARD = { high: { shell: .12, slip: -.05 }, cross: { shell: .3, slip: -.2, legs: -.05 }, peekaboo: { slip: .25, shell: .1, legs: -.1 }, philly: { shell: .15, slip: .2 }, handslow: { shell: -.3, slip: .15, legs: .2 } };
-// a fighter's stats and ring IQ become the brain's skills (the tier falls out of them); the style gives the traits
-function brainProfile(F) {
-  const s = F.s, iq = F.iq, sty = F.sk, m = AI_MAP[sty], base = m ? m[0] : BoxerBrain.STYLES[sty] ? sty : 'boxerpuncher', S = BoxerBrain.STYLES[base];
+// a special style thinks like its base style: [base key, its brain style, its AI_MAP entry]
+function brainStyle(sty) { const m = AI_MAP[sty], base = m ? m[0] : BoxerBrain.STYLES[sty] ? sty : 'boxerpuncher'; return [base, BoxerBrain.STYLES[base], m]; }
+// no skill sheet: his stats and ring IQ become the brain's skills (the old way, and today's default)
+function brainSkills(s, iq, sty) {
+  const [, S, m] = brainStyle(sty);
   const raw = {
     jab: s.accuracy * .6 + s.speed * .4, power: s.power * .5 + s.accuracy * .5, combos: s.speed * .6 + s.accuracy * .2 + iq * .2, body: s.accuracy * .4 + s.power * .3 + iq * .3, feints: iq * .6 + s.speed * .4,
     block: s.defense * .7 + iq * .3, slip: s.defense * .7 + s.speed * .3, footwork: s.footwork, clinch: iq * .5 + s.heart * .3 + s.defense * .2,
@@ -1457,6 +1459,12 @@ function brainProfile(F) {
     counter: s.defense * .3 + s.accuracy * .3 + iq * .4, read: iq, pacing: iq * .8 + s.heart * .2, adjust: iq
   };
   const skills = {}; for (const k in raw) skills[k] = Math.round(clamp(raw[k] + ((S.sk[k] || 0) + (m && m[2] && m[2][k] || 0)) * AI.lean + AI.skill, 5, 99));
+  return skills;
+}
+// the brain's skills: his skill sheet (sheet.sk, what he knows) when he has one, else read off the body; the style gives the traits
+function brainProfile(F) {
+  const sty = F.sk, [base, S, m] = brainStyle(sty), sk = F.sheet.sk, skills = brainSkills(F.s, F.iq, sty);
+  if (sk) for (const k in skills) if (sk[k] != null) skills[k] = Math.round(clamp(sk[k], 5, 99));
   const traits = {}, gt = AI_GUARD[F.guard] || {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + (gt[k] || 0) + gauss() * .09, 0, 1);
   return BoxerBrain.makeProfile({ style: base, skills, traits, name: F.sheet.name, uniq: 0 });
 }
