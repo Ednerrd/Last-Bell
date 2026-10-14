@@ -19,8 +19,8 @@ The only to-do list. When something is done, delete its line here and put the nu
      - **Re-check on the balance numbers: done (Oct 14, `docs/BRAIN.md` "Re-check on the balance-pass numbers").** Guards 49–58 (high 57.9 on top this run, handslow 55.1), bvo 35.4%, dummy ring stops 28.0 / connect 34.3.
      - **Weak specials volume and body: done (Oct 14, `docs/BRAIN.md` "Weak specials").** Volume 46 → 52.8, body 44 → 50.3 (600/pair); base styles 48.7–51.3.
      - **Angle fighter: done (Oct 14, `docs/BRAIN.md` "Angle fighter").** 44.6 → 51.5 (900/pair): boxer-puncher brain base.
+     - **Body KDs: on target, no change (Oct 14, `docs/BRAIN.md` "Body KDs re-measured").** 5.7% of KDs (1800 fights); the old 4.1% was a small, older sample.
      - **Next, in this order (recommended):**
-       - body KDs up (still 4.1%, 30 of 723; the slow fuse didn't move it);
        - out-boxer off the ropes;
        - all specials at 300/pair (run in halves: 9 specials x4 takes >30 min);
        - then retire `decide()`/`react()`.

@@ -381,3 +381,9 @@ Brain on, @82, `styles.js 75 x4 vs:angle` (300/pair per run). Control = same-day
 - How he fights now: 55 thrown/rd, 68% power (was 57%), distance 61 (was 64), ropes 2.8 s/rd (was 6.6). Stops by him up from ~3% to ~6% of his fights.
 - Brain-off same.js 7f58e976.
 - Lesson: the out-boxer brain at the angle man's short engine range (64 vs the out-boxer's 72) gets walked to the ropes and stays there (the out-boxer brain's rope problem, same hole as in bvo). His engine combos already come from the boxer-puncher; the brain now matches, and the engine's angle-offs do the rest.
+
+### Body KDs re-measured (Oct 14, later; no code change)
+Brain on, @82, `finish.js` 4x150 three times (1800 fights, code at eea1102): body share of KDs **5.7% ±0.6** (90 of 1579; runs 5.9, 5.6, 5.6). Inside the 5–8% target, so nothing tuned. Stops 24.1%, KDs 0.88/fight in the same pool.
+- The Oct 13 4.1% (30 of 723) was before the balance pass (`hurtQ` .6, `defQ` 1.5) and the body snatcher fix; small samples swing ±1.5 (30 body KDs).
+- `bodykd.js` 3x200 (rating 75, base styles): brain 26 liver KDs of 493 (5.3%), body landed ~67/fight; old AI 8 of 182 (4.4%), ~59/fight.
+- Every liver event became a KD in these runs; wind (straight to the gut) stuns ~0.3/fight and drops nobody (by design: gas hit, no KD).
