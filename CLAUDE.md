@@ -11,6 +11,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~3,400 
 - Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch).
 - Never publish to the live game without Ed's explicit OK.
 - Models (Ed, Oct 14): Opus for everything (tuning, code, docs); Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write).
+- Effort (Ed, Oct 14): before starting a task that needs high effort, stop and ask Ed to switch to high, then wait for his OK. High = engine/balance tuning (sim-driven tries), retiring or refactoring engine code that must keep the same.js hash, debugging odd sim results, design plans (skill levels). Docs, roadmap edits, overviews, running set-up sims and reading numbers stay at his current setting: just do them.
 
 ## Links
 - **Live game** (Claude Code can NOT publish): https://claude.ai/artifact/KYmQg6PQo4qE4qoyDDDt7k. Ed uploads `index.html` in a claude.ai chat with `{db:{},user:{},sample:{}}` (sample powers corner talk; without it a keyword matcher runs). Save sync uses data/users/<id>/slot0..2.
