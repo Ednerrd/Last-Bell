@@ -183,8 +183,18 @@ const BR = {
     feint:  [.15, .4, 1, 1.4],       // feints per round x (a novice barely feints; the ones he does, nobody buys)
     len:    [2, 3, 9, 9],            // longest combo he really owns (a Pro's own taste decides past that)
     adjust: [.05, .25, .55, .8],     // chance to change one thing between rounds when losing
-    freeze: [.75, .25, 0, 0] }       // extra weight on freezing when hurt (novice ~40% of his answers)
+    freeze: [.75, .25, 0, 0] },      // extra weight on freezing when hurt (novice ~40% of his answers)
+  // skill levels L3: style and stance familiarity (research/mind_learn.md 4b). opts.fam = { style, stance }: how well he knows THIS man's style and stance (0..1, sheet.know).
+  // No fam = neutral. Unfamiliar = under `at`, all the way at 0. It fades over the first rounds (`full` rounds at full size, gone by `gone`, a reader adapts sooner)
+  fam: { on: 0, at: .45, full: 1, gone: [4.5, 3],
+    react: .35,             // he sees everything later (x(1 + react) at full unfamiliarity)
+    weapon: .6,             // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top
+    pred: .5,               // the predicted-punch bonus, cut by this much
+    mem: .5,                // reads his habits this much slower (memory notice)
+    mis: .5 }               // misreads up this much
 };
+// the opposite stance's main weapons: the rear straight down the middle, the lead hook from outside
+const FAM_WPN = { cross: 1, bodyCross: .7, hook: .5 };
 const TIER_C = [.34, .56, .74, .90];
 // a level table read at mastery m (0..1): straight lines between the tier centers, flat past the ends
 function tierV(m, t) { if (m <= TIER_C[0]) return t[0]; for (let i = 1; i < 4; i++) if (m <= TIER_C[i]) return lerp(t[i - 1], t[i], (m - TIER_C[i - 1]) / (TIER_C[i] - TIER_C[i - 1])); return t[3]; }
@@ -262,6 +272,7 @@ class Brain {
     this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(lvl + (raw(s) - avg) * BR.spreadOwn, 0, 1);
     this.m = {}; for (const s of SKILL_KEYS) this.m[s] = avg + (raw(s) - avg) * BR.lv.own; // mastery as the level tables (BR.lv) read it: his level, plus a slice of his own strengths and holes (a style's holes already cost him in the brain)
     this.lvUpd();
+    this.famSet(opts.fam); this.fx = { u: 0, s: 0 };
     this.tr = Object.assign({}, STYLES.boxerpuncher.t, profile.traits);
     const k = this.k;
     this.iq = (k.read + k.counter + k.pacing + k.adjust) / 4;
@@ -285,6 +296,14 @@ class Brain {
     for (const c in sk) { L.force[c] = lvV('force', sk[c]); L.gas[c] = lvV('gas', (sk[c] + m.pacing) / 2); L.off[c] = lvV('off', (sk[c] + m.footwork) / 2); L.late[c] = lvV('late', (sk[c] + m.block) / 2); }
     L.flinch = lvV('flinch', (m.block + m.slip) / 2);
   }
+  // L3: how new this man is to him (0 = seen plenty, 1 = never), by style and by stance. null = neutral. The game calls it again when he switches stance
+  famSet(f) { const a = BR.fam.at, u = k => k == null ? 0 : clamp((a - k) / a, 0, 1); this.fam = f ? { style: u(f.style), stance: u(f.stance) } : null; }
+  // ... and now: it fades as the rounds go (a reader adapts sooner). fx.u = his reads, fx.s = the stance (the main weapon)
+  famUpd(P) {
+    const F = BR.fam, x = this.fx; if (!this.fam || !F.on) { x.u = x.s = 0; return; }
+    const rf = (P.round || 1) - 1 + (P.clock || 0) / (P.roundLen || 180), gone = lerp(F.gone[0], F.gone[1], this.k.read), fade = clamp((gone - rf) / Math.max(.1, gone - F.full), 0, 1) * F.on;
+    x.s = this.fam.stance * fade; x.u = Math.max(this.fam.style * fade, x.s);
+  }
   rnd(a, b) { return a + this.R() * (b - a); }
   mm() { return this.mode === 'survive' ? SURV[this.hurtResp] || MODES.survive : MODES[this.mode]; } // the numbers of what he's doing now
   g() { return gaussR(this.R); }
@@ -293,7 +312,7 @@ class Brain {
   /* ---------- memory: what he has seen of the other man. Everything fades; read skill sets how much he notices and how long it sticks ---------- */
   tau() { return lerp(BR.memTau[0], BR.memTau[1], this.k.read) / this.pace; }
   mget(tbl, key) { const e = tbl[key] || (tbl[key] = { t: this.t }), f = Math.exp(-(this.t - e.t) / this.tau()); if (f < 1) for (const x in e) if (x !== 't') e[x] *= f; e.t = this.t; return e; }
-  madd(tbl, key, fields) { const e = this.mget(tbl, key), w = lerp(BR.memNotice[0], BR.memNotice[1], this.k.read); for (const x in fields) e[x] = (e[x] || 0) + fields[x] * w; return e; }
+  madd(tbl, key, fields) { const e = this.mget(tbl, key), w = lerp(BR.memNotice[0], BR.memNotice[1], this.k.read) * (1 - BR.fam.mem * this.fx.u); for (const x in fields) e[x] = (e[x] || 0) + fields[x] * w; return e; }
   mpeek(tbl, key) { const e = tbl[key]; if (!e) return null; const f = Math.exp(-(this.t - e.t) / this.tau()), o = {}; for (const x in e) if (x !== 't') o[x] = e[x] * f; return o; }
   // how good my punch p has been against this man: what lands, what gets countered, and what his defense habits leave open
   punchVal(p) {
@@ -310,7 +329,7 @@ class Brain {
     if (recent) { for (const key in M.after) if (key.startsWith(this.lastHisP + '>')) { const e = this.mpeek(M.after, key); tot += e.n; if (key === this.lastHisP + '>' + type) hit = e.n; } }
     else for (const p in M.lead) { const e = this.mpeek(M.lead, p); tot += e.n; if (p === type) hit = e.n; }
     const pr = lerp(BR.antPrior[0], BR.antPrior[1], this.k.read), base = 1 / PTYPES.length, q = (hit + pr * base) / (tot + pr);
-    return clamp((q - base) / .45, 0, 1) * this.k.read * (PUNCHES[type].cat === 'jab' || type === 'bodyJab' ? .5 : 1);
+    return clamp((q - base) / .45, 0, 1) * this.k.read * (PUNCHES[type].cat === 'jab' || type === 'bodyJab' ? .5 : 1) * (1 - BR.fam.pred * this.fx.u);
   }
   // his best guess at what comes next (for misreads: a man who reads you hard gets fooled when you change it)
   expected() {
@@ -401,6 +420,7 @@ class Brain {
       const fat = 1 - P.me.stam / (P.me.stamMax || 100), hurt = P.me.hurt ? 1 : 0;
       let d = lerp(BR.react[0], BR.react[1], k.read * .5 + (k.slip + k.block) * .25);
       d *= (1 + BR.reactFat * fat) * (1 + BR.reactFear * E.fear) * (1 + BR.reactHurt * hurt) * (1 + BR.blur.react * this.blur) * (1 + (BR.tunnel[this.mode] || 0)) * Math.exp(this.g() * BR.jitter);
+      d *= (1 + BR.fam.react * this.fx.u) * (1 + BR.fam.weapon * this.fx.s * (FAM_WPN[H.type] || 0)); // L3: a style he hasn't seen, a stance he hasn't seen
       const rd = H.feint ? this.predict(H.type) * .5 : this.predict(H.type);
       d *= 1 - BR.antic * rd;
       d -= BR.tellSee * (H.tell || 0);
@@ -437,7 +457,7 @@ class Brain {
     let seenAs = T.type;
     const exp = this.expected();
     if (exp && exp !== T.type && this.R() < this.predict(exp) * .6) seenAs = exp; // he was sure it was the other one
-    else if (this.R() < BR.misread * (1 - k.read) * (1 + .5 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + BR.blur.mis * this.blur) * (1 - T.rd)) seenAs = PTYPES[Math.floor(this.R() * PTYPES.length)];
+    else if (this.R() < BR.misread * (1 - k.read) * (1 + .5 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + BR.blur.mis * this.blur) * (1 + BR.fam.mis * this.fx.u) * (1 - T.rd)) seenAs = PTYPES[Math.floor(this.R() * PTYPES.length)];
     if (seenAs !== T.type) this.tel.misreads++;
     const kd = kindOf(seenAs), tr = this.tr, best = DEF_BEST[kd], rd = seenAs === T.type ? T.rd : 0;
     const w = {
@@ -769,6 +789,7 @@ class Brain {
     this.ct += sdt; this.hisG = P.him.guard;
     { const B = BR.blur, cur = Math.max(0, 1 - P.me.head / Math.max(1, P.me.headMax) - B.at) / (1 - B.at); // only real damage counts: a jab here and there doesn't blur anything
       this.blur = clamp((cur * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + (P.round - 1) / Math.max(1, P.rounds - 1) * B.late + this.kds * B.kd) * (1.3 - .6 * this.tr.composure), 0, 1); }
+    this.famUpd(P);
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
     this.updMode(P, sdt);
     this.see(P);
