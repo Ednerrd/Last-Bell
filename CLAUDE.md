@@ -49,7 +49,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
 - `node tests/brain.js [tempo|iq|adapt|pace|styles] N`: brain report. Baselines in `docs/BRAIN.md`.
 - `QUIET=3 node tests/teach.js 300 82 body 20`: corner-as-teacher log (control `PATCH="TEACH.max=0"`).
-- Brain: `PATCH="AI.brain=1"` on any test; `node tests/bvo.js 300` brain vs old AI; `node tests/bprobe.js 150` how punches end, defense, counters, distance.
+- Brain: `PATCH="AI.brain=1"` on any test; `node tests/bvo.js 300` brain vs old AI; `node tests/bprobe.js 150` how punches end, defense, counters, distance. `node tests/ropes.js 40 [style]` time on the ropes and how he gets off.
 - Finishing: `PATCH="AI.brain=1" TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
@@ -57,7 +57,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain on (`PATCH="AI.brain=1"`, Oct 14 balance pass): 51.6 thrown / 15.7 landed / 30.4% connect, stops ~25.8%, styles 48.2–52.5 (600/pair). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown vs 53 for the brain: Ed's call. Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
+- Brain on (`PATCH="AI.brain=1"`, Oct 14 balance pass): 51.6 thrown / 15.7 landed / 30.4% connect, stops ~25.8%, styles 47.6–53.7 (600/pair, after the out-boxer rope fix). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown vs 53 for the brain: Ed's call. Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.

@@ -387,3 +387,34 @@ Brain on, @82, `finish.js` 4x150 three times (1800 fights, code at eea1102): bod
 - The Oct 13 4.1% (30 of 723) was before the balance pass (`hurtQ` .6, `defQ` 1.5) and the body snatcher fix; small samples swing ±1.5 (30 body KDs).
 - `bodykd.js` 3x200 (rating 75, base styles): brain 26 liver KDs of 493 (5.3%), body landed ~67/fight; old AI 8 of 182 (4.4%), ~59/fight.
 - Every liver event became a KD in these runs; wind (straight to the gut) stuns ~0.3/fight and drops nobody (by design: gas hit, no KD).
+
+### Out-boxer off the ropes (Oct 14, later; commit 591fa2b)
+Real out-boxers stay off the ropes, and when they get there they pivot out first and punch second (Usyk circles right and takes the center; Mayweather locks and pivots off Maidana; `research/mind_engage.md`, `fighters_a.md`). Fighting on the ropes is for a hurt man (shell, clinch) or a rope fighter by choice (shoulder roll, counter), not a place a mover lives. Probe: `tests/ropes.js N [style]` (trapped s/rd, spells, how they end, hurt/cut-off share, his mode).
+
+What the probe found (brain on, @82, out-boxer vs the other base styles, 160 fights): he reached the ropes as often as the old AI (~16 spells/rd) but stayed twice as long (12.6 vs 7.7 s/rd; p90 spell 2.4 vs 1.3 s), hurt only 0–1% of that time. His lateral on the ropes was .64 (old AI 1.05) and he pivoted out of 21% of spells (old AI 30%).
+
+| Try (probe, out-boxer trapped s/rd) | s/rd |
+|---|---|
+| Control | 12.6 |
+| Movers slide harder (`BR.ropes.legs` [.7, 1.6]) | 10.4 |
+| Ropes skill counts more (`BR.ropes` lo .5, hi 1.3) | 11.1 |
+| Keep the pivot's direction (`AI.escSync` 1, `BR.ropes.flip` 0) | 12.6 |
+| All three | 10.2 |
+| **All three + pivot rate `AI.esc` 1.1 → 2.2 (kept)** | **7.1** (6.7 from the committed code) |
+| ... `AI.esc` 3.3 | 5.9 |
+
+Getting off the ropes made him strong: out-boxer 58.1 in the round robin. Offsets, out-boxer vs the other four (300/pair): `AI.out` .8 → .5: 54.5; sk range 10 → 4 and footwork 10 → 6: 55.0; both: 53.8 (kept); + jab 6: 53.6; + angles 2: 60.7 (less circling made him stronger, not weaker). A stronger cut-off (`AI.escCut` .6 → .8, 600/pair) left him at 53.7 and dropped the boxer-puncher to 46.8: not kept (knob stays at .6).
+
+Kept, brain on, @82:
+| Measure | Before | After |
+|---|---|---|
+| Out-boxer on the ropes (probe) | 12.6 s/rd, pivots 21% of spells | 6.7 s/rd, pivots 36% |
+| Counter-puncher on the ropes (probe, with the pivot rate) | 4.9 s/rd | 3.1 s/rd |
+| Styles 600/pair (2 runs pooled) | outboxer 52.5, swarmer 50.3, counter 50.0, slugger 49.1, bp 48.2 | outboxer 53.7, counter 51.4, slugger 48.9, bp 48.7, swarmer 47.6 |
+| Audit 4x250 | 51.6 / 15.7 / 30.4%, stops 25.8% | 51.3 / 15.6 / 30.4%, stops 27.2% |
+| Brain vs old AI (bvo 3x100) | 35.4% (out-boxer 7–19) | 30.3% (out-boxer 19–40); ±2.7, noisy |
+| Dummy ring audit 300 | 47.9 / 16.4 / 34.3%, stops 28.0 | 47.2 / 16.1 / 34.2%, stops 24.7 |
+
+- Brain-off same.js 7f58e976 (`AI.esc`, `AI.out`, `AI.escSync`, `AI.escCut` are read only in `brainTick`).
+- Out-boxer 53.7 and swarmer 47.6 sit just outside the 48–53 band (±1.1). The out-boxer beats the boxer-puncher ~57–43, the main gap.
+- Jab-and-grab maps to the out-boxer brain, so it moved too: check it in the specials run.

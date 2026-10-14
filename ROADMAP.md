@@ -20,9 +20,9 @@ The only to-do list. When something is done, delete its line here and put the nu
      - **Weak specials volume and body: done (Oct 14, `docs/BRAIN.md` "Weak specials").** Volume 46 → 52.8, body 44 → 50.3 (600/pair); base styles 48.7–51.3.
      - **Angle fighter: done (Oct 14, `docs/BRAIN.md` "Angle fighter").** 44.6 → 51.5 (900/pair): boxer-puncher brain base.
      - **Body KDs: on target, no change (Oct 14, `docs/BRAIN.md` "Body KDs re-measured").** 5.7% of KDs (1800 fights); the old 4.1% was a small, older sample.
+     - **Out-boxer off the ropes: done (Oct 14, `docs/BRAIN.md` "Out-boxer off the ropes").** 12.6 → 6.7 s/rd (old AI 7.7); styles 47.6–53.7 (out-boxer and swarmer on the band edges); bvo 30.3%.
      - **Next, in this order (recommended):**
-       - out-boxer off the ropes;
-       - all specials at 300/pair (run in halves: 9 specials x4 takes >30 min);
+       - all specials at 300/pair (run in halves: 9 specials x4 takes >30 min; jab-and-grab moved with the out-boxer);
        - then retire `decide()`/`react()`.
 1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.
 2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.
