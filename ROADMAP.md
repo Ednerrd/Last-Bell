@@ -6,7 +6,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 1. **Delete the old branches on GitHub** (this session can't: 403). Safe to delete: `ccr-026fa9ad-j4d8rw`, `ccr-88f84d50-12dv5y`, `ccr-9a5a152f-n8ld1d`, `ccr-b57f3498-nk3hk1`, `claude/boxer-brain`, `claude/festive-thompson-e2ch70`, `claude/handoff-review-32nske`, `claude/new-session-ne6ynn`, `claude/step9-contact`. Keep `claude/determined-feynman-6z4lju` (the only copy of the Oct 2–6 history: the main line was re-rooted Oct 8) and `claude/brave-einstein-ojkyzm` (v2, parked).
 
 ## Claude, in this order
-1. **L3:** style and stance familiarity in the fight (`sheet.know`: slow reads early vs the unfamiliar, caught more by the southpaw's left). Tune on a new `levels.js` mode (same level, familiar vs not).
+1. **L3 targets with Ed:** L3 is built and on (`BR.fam`, `levels.js know`): never seen the style/stance = ~44% of decided fights, southpaw edge at default know ~4–5 points. Ed picks: keep, stronger, or softer.
 2. **Brain pieces that hang off the levels** (fold into L3–L4):
    - Setups and traps: "show it twice, change it", armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
    - Hurt brain by tier; the finisher weighs the risk (`research/mind_vision.md` 8d). Finisher caught 0.7% of hunts (want 5–10); same-round stop after a KD ~25% (research 35–45).
@@ -18,6 +18,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 
 ## Done lately (numbers in `docs/BRAIN.md`)
 - Oct 11–14: the brain on the engine (behind `AI.brain`), finishing and the hurt brain, balance pass, weak specials, angle fighter, out-boxer off the ropes, all specials 47.4–52.1, body KDs on target.
+- Oct 14: skill levels L3 (style and stance familiarity, `sheet.know` read by the brain; numbers in `docs/BRAIN.md`).
 - Oct 14: skill levels L0 (baseline), L1 (skill sheet: `sheet.sk`, `sheet.know`, `levelOf`, walk-in and record defaults) and L2 (what a level does: force, gas, off balance, flinch, tells, feints, combo length, adjusts, freezing; one level down wins 15–20%, was ~31%).
 - Oct 14: project review, dead code from the career cut removed. The brain is the default AI (same.js ac686464).
 - Oct 9 (on the v2 branch): Ed's S25 Ultra phone test, 60 fps on every quality setting with shadows on. Defaults res 2 / shadows on / cap 60.

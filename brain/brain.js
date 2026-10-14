@@ -186,7 +186,7 @@ const BR = {
     freeze: [.75, .25, 0, 0] },      // extra weight on freezing when hurt (novice ~40% of his answers)
   // skill levels L3: style and stance familiarity (research/mind_learn.md 4b). opts.fam = { style, stance }: how well he knows THIS man's style and stance (0..1, sheet.know).
   // No fam = neutral. Unfamiliar = under `at`, all the way at 0. It fades over the first rounds (`full` rounds at full size, gone by `gone`, a reader adapts sooner)
-  fam: { on: 0, at: .45, full: 1, gone: [4.5, 3],
+  fam: { on: 1, at: .45, full: 1, gone: [4.5, 3],
     react: .35,             // he sees everything later (x(1 + react) at full unfamiliarity)
     weapon: .6,             // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top
     pred: .5,               // the predicted-punch bonus, cut by this much

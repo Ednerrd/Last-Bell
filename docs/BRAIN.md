@@ -553,3 +553,27 @@ Left for L6: counter-puncher 47.2 and swarmer 53.9 at the band edges. Fighters w
 - `styles.js` gives both men the same body; style leans alone set the skill average there.
 - Placing a line between an `if` and its `else` silently re-binds the else (it moved the old AI's hash). Bisect with `LB=` copies when a hash moves unexpectedly.
 - Monitor for sims: `until grep -q DONE <out>` loops; foreground sleep is blocked.
+
+### Skill levels L3: style and stance familiarity (Oct 14, later)
+
+Built (brain/brain.js `BR.fam`, `famSet`/`famUpd`; engine `famOf`): at the bell each brain gets **how well he knows THIS man's style and stance** (`sheet.know.style[his style]`, `sheet.know.stance[his stance]`), again when a switch-hitter flips. No `know` = neutral (so the default field, audit, styles: same.js **45127603** with it on). Unfamiliar = `(at − know) / at`, at .45 (know .1 → .78, .3 → .33, .45+ → 0). Fades: full size round 1, gone by round 4.5 (a slow reader) to 3 (a fast one).
+
+| Knob | Value | What |
+|---|---|---|
+| react | .35 | sees everything later, x(1 + .35·u) |
+| weapon | .6 | stance only: the opposite stance's main weapons seen later on top (cross 1, bodyCross .7, lead hook .5) |
+| pred | .5 | predicted-punch bonus cut |
+| mem | .5 | reads his habits slower (memory notice); this part lingers after the fade |
+| mis | .5 | misreads up |
+
+**`levels.js know`** (two Pros, sk 74, rating 78, random styles/guards, no switch-hitters; A unfamiliar at know .1, B .8; 300/pair). A's share of decided fights (wins / (wins + losses)), and A's share of landed punches by rounds:
+
+| Pair | Off: A share | On: A wins / loses | On: A share | Landed R1-2 / 3-4 / 5-7 / 8-10 |
+|---|---|---|---|---|
+| ctrl (both .8, orth v south) | 49.8% | 50.7 / 43.7 | 53.7% | 50.3 / 50.0 / 50.3 / 49.4 |
+| style (A knows no styles) | 51.3% | 41.0 / 51.7 | **44.2%** | 47.2 / 48.2 / 49.0 / 48.2 |
+| stance (A never saw a southpaw) | 52.1% | 39.7 / 52.0 | **43.3%** | 45.1 / 48.2 / 49.1 / 48.6 |
+| both | 49.3% | 42.0 / 54.3 | **43.6%** | 44.9 / 47.1 / 47.6 / 47.0 |
+| south (orth v south, default know .6) | 50.2% | 43.0 / 51.7 | **45.4%** | 48.2 / 49.4 / 49.5 / 49.6 |
+
+Off = 50 ± 3 everywhere (noise at 300/pair). On: a Pro who has never seen the style or the stance wins ~44% of decided fights, the hole is clearest in rounds 1–2 and mostly closes by mid-fight (the slow habit read lingers a little). The southpaw's scarcity edge at default know: ~4–5 points. "Both" barely stacks (the read takes the larger of the two; only the weapon is stance-only).
