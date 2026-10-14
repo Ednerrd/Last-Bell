@@ -533,3 +533,23 @@ Commentary hooks (UI): `offBalance` ("misses and stumbles") and a feint sold und
 | Audit 600 | 51.7 / 15.5 / 30.0%, stops 21.0%, fav @ gap 10 88.5% | 51.4 / 15.5 / 30.3%, stops 25.5%, fav @ gap 10 89.9% |
 
 Left for L6: counter-puncher 47.2 and swarmer 53.9 at the band edges. Fighters without a skill sheet get their skills from their body, so a rating gap counts body and skills both (audit favourite at a 10-point gap 88.5 → 89.9%, inside noise); that goes away once fighters carry `sheet.sk` with close bodies.
+
+### Handoff (Oct 14, after L2)
+
+**State:** branch `claude/brain-wire`, last commit 01402c0. Brain is the default AI. `same.js 200` = **45127603** (brain + L2); old AI `PATCH="AI.brain=0"` = 7f58e976. Skill levels L0–L2 done; one level down wins 15–20% on `levels.js sk`. Audit 51.4 / 15.5 / 30.3%, stops 25.5%; styles 47.2–53.9 (300/pair).
+
+**Ed's calls (Oct 14, ROADMAP "Decided"):** v1 is the game, v2 parked. Focus = AI, brain, fight sim; career/camp after. Live game untouched. Brain default. Thrown target ~52. Walk-in skill defaults OK. Ed still has to delete 9 old branches on GitHub (list at the top of ROADMAP; sessions get 403).
+
+**Next: L3, style and stance familiarity in the fight** (`sheet.know`, built in L1 but read by nothing yet). Spec: `research/mind_learn.md` 4b "Style/stance familiarity": `know < .3` = reads at half speed for the first 3–4 rounds, the predicted-punch bonus halved, caught more by the main weapon (the southpaw's left). Scarcity is the edge (pros of both stances win less vs southpaws).
+- Plan first, small chunks, a commit per working step, sims before and after.
+- Same pattern as L2: knobs with an `on` switch at 0 first (hashes hold), then the engine/brain reads them, then switch on and tune.
+- Where it plugs in (brain/brain.js, edit the source, `node brain/inline.js`): read speed = `see()` reaction and `predict()`/`antPrior` (memory download), plus `BR.antic`. The engine knows both men's style (`F.sk`, specials) and stance (`F.stance`); pass the opponent's style/stance familiarity into the brain at `brainInit` (sheet.know of THIS man about the OTHER man's style and stance), e.g. a multiplier that fades with rounds.
+- A man with no `sheet.know` must fight as today (neutral), same rule as `sheet.sk`.
+- Measure: add a `levels.js` mode (same level, same body; one man `know` low vs the other's style/stance, the other familiar). Targets to set with Ed; research hint: unfamiliar = clearly worse early, fades by mid-fight. Also report southpaw vs orthodox win % with default know.
+
+**Lessons from L2 (don't relearn them):**
+- Every effect neutral at Pro, or the whole rating-82 field changes and the styles swing (counter-puncher fell 54 → 44 from small Pro-level penalties).
+- Styles at 150/pair are noise (±4 real, the printed ± undersells it). Use 300/pair (4 procs × 75) and an L2-off style control on the same code before blaming a change.
+- `styles.js` gives both men the same body; style leans alone set the skill average there.
+- Placing a line between an `if` and its `else` silently re-binds the else (it moved the old AI's hash). Bisect with `LB=` copies when a hash moves unexpectedly.
+- Monitor for sims: `until grep -q DONE <out>` loops; foreground sleep is blocked.
