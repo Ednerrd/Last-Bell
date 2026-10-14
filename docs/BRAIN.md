@@ -424,3 +424,40 @@ Brain on, @82, `styles.js 75 x4` in two halves (`vs:volume,angle,awkward,switch,
 - Specials vs the five base styles: spoiler 52.1, volume 52.1, awkward 51.8, angle 50.5, jabgrab 49.9, feinter 49.6, body 48.8, pboxer 47.7, switch 47.4. All nine in 47.4–52.1 (target 48–54; pboxer and switch a hair under, inside the noise). Was 44.3–53.1 with body, volume, angle under 48 (Oct 14 re-check).
 - Jab-and-grab (out-boxer brain) 50.9 → 49.9 after the rope fix: fine.
 - Base styles vs the specials in the same run: outboxer 54.6, boxer-puncher 50.1, counter 49.3, swarmer 48.6, slugger 47.8. The out-boxer beats body (61), switch (59), angle (57), spoiler (56), pboxer (55).
+
+### Skill levels L0: the baseline (Oct 14, later; `tests/levels.js`)
+
+Brain on, random styles (specials too), rolled guards, 10 rounds, 300 fights per pair. A level today is just a rating: the brain's skills come from the stats, so with `AI.skill` -8 the level centers sit at ratings ~40 / 60 / 78 / 93 (Novice / Intermediate / Pro / World class).
+
+**Across a level gap** (underdog wins; target one level down 15–20%):
+
+| Pair | Dog wins | Stoppages |
+|---|---|---|
+| I v N | 1.7% | 75% |
+| P v I | 1.0% | 53% |
+| W v P | 3.0% | 21% |
+| P v N, W v I (two down) | 0% | 87–99% |
+| Mirrors N / I / P / W | ~50% (draws 4–9%) | 31 / 25 / 15 / 7% |
+
+Pro rating curve (a 78 vs men under him): -4 wins 27.3%, -8 11.7%, -12 5.7%, -17 1.3%. **The 15–20% band is a 5–7 point gap. A level is 18 points**, so the gap is about 3x too steep.
+
+**Skills vs body** (`split`: one level down, P 78 vs I 60):
+
+| What the underdog is short of | Dog wins | Stoppages |
+|---|---|---|
+| Both (today's level) | 1.0% | 56% |
+| Body only (stats of a 60, skills of a Pro) | 2.7% | 49% |
+| Skills only (stats of a 78, skills of an Intermediate) | **31.7%** | 17% |
+
+The body decides it. An 18-point stat gap alone is almost as decisive as the full level. A skill level alone is a real edge (68/32), but a little short of the 15–20% target. For the stats vs skills split (ROADMAP Ed item 3), this says: if levels come from skills, keep the bodies inside a division close (a few rating points), and a skill level needs to be worth a bit more (`BR.spread` .6 is the obvious knob).
+
+**Skill use by level** (per man, mirror fights; N → I → P → W):
+- Telegraphed first punches (tech < .5): 93 → 54 → 16 → 2.5%. Feints nobody buys (sell < .35): 39 → 11 → 2 → .5%.
+- Reaction 151 → 133 → 117 → 107 ms. Misreads 11 → 10 → 8 → 6.5%. Feints read 14 → 18 → 20 → 20%.
+- Counters landed .5 → 1.4 → 2.4 → 2.8 /rd. Punches evaded 7 → 12 → 18 → 20%, blocked 13 → 19 → 25 → 27%.
+- Thrown 44 → 50 → 55 → 58 /rd, connect 24 → 28 → 28 → 26% (mirror; both men get better).
+- Flat where `research/mind_learn.md` 4a says steep:
+  - Feints: 3.3 → 4.5 → 5.1 → 5.5 /rd. Research: ~.6 → 1.5 → 4.5 → 6–9 per 3-min round.
+  - Adjusts between rounds: 2.2 → 3.2 → 4.0 → 4.4 per fight. Research: 5 / 25 / 55 / 80% chance when losing.
+  - Froze when hurt: 6 → 5 → 5 → 2%. Research: Novice 40%.
+- Stoppages fall with level (31 → 7% in mirrors). Real life doesn't: world-class rates are high. Check in L6. The mirror pool (specials in, rating 78) also stops less than the audit (82, base styles): 15 vs ~26%.

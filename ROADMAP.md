@@ -25,7 +25,7 @@ The only to-do list. When something is done, delete its line here and put the nu
      - **Next, in this order (recommended):**
        - then retire `decide()`/`react()`.
 1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.
-2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.
+2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. L0 done (Oct 14, `docs/BRAIN.md` "Skill levels L0"): one level down wins 1–3% (target 15–20%); the body decides it (skills-only gap 32%, body-only 2.7%). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.
 3. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):
    - Setups and traps: "show it twice, change it" gated on HIS answer, armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
    - Hurt brain by tier (the base is built: hunt / survive / blur); finisher weighs the risk (`research/mind_vision.md` 8d).
