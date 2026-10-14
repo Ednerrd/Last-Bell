@@ -305,3 +305,12 @@ Lessons for the next session:
 
 Only the judges read `rs.thrown` (`rdScore`, .025 a punch, ~.04/round); the brain never sees the cards, so the stoppage swing is noise (a single 250 run ranged 16.8–29.6). Thrown now sits ~1.6 under the 53 target with connect ~31.6%: the brain's real output, not a bug. The styles moved toward the middle (outboxer −3, slugger and swarmer +1), within ~1.5σ.
 
+
+### Handoff (Oct 14, after the overcount fix)
+State: `claude/brain-wire` @ overcount fix, brain off unchanged (same.js 7f58e976), nothing published, not merged into the main line. CLAUDE.md "Targets" now has the brain-on numbers and what "thrown" means.
+
+Next session: the balance pass (ROADMAP item 0, "Next").
+- **Where it stands** (brain on, @82): audit 1000 = 51.4 thrown / 16.3 landed / 31.6% connect, stops 24.8%, draws 4.4%. Styles 300/pair: counter 53.4, outboxer 51.5, boxer-puncher 48.9, swarmer 48.9, slugger 47.6.
+- **Goals:** connect back toward 29–30% without stops dropping under ~24; slugger into 48–53 without pushing counter over 53.5; decide whether thrown 51.4 needs a bump to ~53 (output knob) or the target moves for the brain (Ed's call if it's the target).
+- **Levers:** `BR.blur` (connect vs stops trade), `AI.defQ` / `AI.reflexQ` (defense quality: any nerf favours the out-boxer), `AI.out`, per-style profile numbers in `brain/brain.js` (rerun `node brain/inline.js`).
+- **Measure like last time:** audit 4x250 in parallel (pool 1000), styles 300 82 over 4 processes (TAG, then agg), same.js 200 must stay 7f58e976. Balance numbers and visuals never in one commit.
