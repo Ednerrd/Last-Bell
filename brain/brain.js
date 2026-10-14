@@ -170,8 +170,8 @@ const BR = {
   desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 }, // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
   // skill levels L2: what mastery does (research/mind_learn.md 4a). Each table is [Novice, Intermediate, Pro, World class] at the tier centers,
   // read on his raw mastery (not squeezed by spread), 1 at Pro so a Pro-level field plays as before. on: how much of each applies (0 = off)
-  lv: { on: { kLvl: 0, force: 0, gas: 0, off: 0, late: 0, flinch: 0, tell: 0, feint: 0, len: 0, adjust: 0, freeze: 0 },
-    kLvl:   [.404, .536, .644, .80], // his overall level as the brain plays it (= spread .6 up to Pro; World class pulls further away)
+  lv: { on: { kLvl: 1, force: 1, gas: 1, off: 1, late: 1, flinch: 1, tell: 1, feint: 1, len: 1, adjust: 1, freeze: 1 },
+    kLvl:   [.404, .536, .644, .86], // his overall level as the brain plays it (= spread .6 up to Pro; World class pulls further away)
     force:  [.62, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
     gas:    [1.3, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
     off:    [.5, .3, .15, .08],      // off balance after a miss (s): crossed feet, overreaching
