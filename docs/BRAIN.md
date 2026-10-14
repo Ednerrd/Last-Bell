@@ -418,3 +418,9 @@ Kept, brain on, @82:
 - Brain-off same.js 7f58e976 (`AI.esc`, `AI.out`, `AI.escSync`, `AI.escCut` are read only in `brainTick`).
 - Out-boxer 53.7 and swarmer 47.6 sit just outside the 48–53 band (±1.1). The out-boxer beats the boxer-puncher ~57–43, the main gap.
 - Jab-and-grab maps to the out-boxer brain, so it moved too: check it in the specials run.
+
+### All specials vs base styles (Oct 14, later; code at a310a61)
+Brain on, @82, `styles.js 75 x4` in two halves (`vs:volume,angle,awkward,switch,body` then `vs:pboxer,spoiler,jabgrab,feinter`), 300/pair, ±1.3–1.4 per special.
+- Specials vs the five base styles: spoiler 52.1, volume 52.1, awkward 51.8, angle 50.5, jabgrab 49.9, feinter 49.6, body 48.8, pboxer 47.7, switch 47.4. All nine in 47.4–52.1 (target 48–54; pboxer and switch a hair under, inside the noise). Was 44.3–53.1 with body, volume, angle under 48 (Oct 14 re-check).
+- Jab-and-grab (out-boxer brain) 50.9 → 49.9 after the rope fix: fine.
+- Base styles vs the specials in the same run: outboxer 54.6, boxer-puncher 50.1, counter 49.3, swarmer 48.6, slugger 47.8. The out-boxer beats body (61), switch (59), angle (57), spoiler (56), pboxer (55).
