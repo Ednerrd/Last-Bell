@@ -169,20 +169,21 @@ const BR = {
     after: 8, rally: .2 },    // after a knockdown: more range rest of the round (and the next, unless he's composed: then more initiative)
   desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 }, // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
   // skill levels L2: what mastery does (research/mind_learn.md 4a). Each table is [Novice, Intermediate, Pro, World class] at the tier centers,
-  // read on his raw mastery (not squeezed by spread), 1 at Pro so a Pro-level field plays as before. on: how much of each applies (0 = off)
+  // read on his mastery (not squeezed by spread). Neutral at Pro (1, or 0 for the penalties) so a Pro-level field plays as before:
+  // the effects sit on the Novice and Intermediate rungs (and a small World class edge). on: how much of each applies (0 = off)
   lv: { on: { kLvl: 1, force: 1, gas: 1, off: 1, late: 1, flinch: 1, tell: 1, feint: 1, len: 1, adjust: 1, freeze: 1 },
     own: .3,                         // how much of one skill's own gap from his level the tables see (1 = all of it)
     kLvl:   [[.34, .43], [.56, .55], [.74, .644], [.82, .692], [.90, .86]], // [mastery, level as the brain plays it]: spread .6 through a rating-82 field (~.79), then World class pulls away. Novice and Intermediate sit a little closer
     force:  [.62, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
     gas:    [1.3, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
-    off:    [.5, .3, .15, .08],      // off balance after a miss (s): crossed feet, overreaching
-    late:   [.4, .2, .05, 0],        // hands come back late: extra damage if he's caught on the way back
-    flinch: [.25, .1, .03, .01],     // eyes shut on a hard shot: no defense for the next one
+    off:    [.35, .15, 0, 0],        // extra off balance after a miss (s), on top of a Pro's: crossed feet, overreaching
+    late:   [.35, .15, 0, 0],        // hands come back late: extra damage if he's caught on the way back
+    flinch: [.22, .07, 0, 0],        // eyes shut on a hard shot: no defense for the next one
     tell:   [.83, .33, 0, -.1],      // extra wind-up he shows, 0 at Pro (x AI.tell in the game: a Novice ~+70 ms on top of his bad technique)
     feint:  [.15, .4, 1, 1.4],       // feints per round x (a novice barely feints; the ones he does, nobody buys)
-    len:    [2, 3, 4.5, 5.5],        // longest combo he really owns
+    len:    [2, 3, 9, 9],            // longest combo he really owns (a Pro's own taste decides past that)
     adjust: [.05, .25, .55, .8],     // chance to change one thing between rounds when losing
-    freeze: [.8, .3, .05, 0] }       // extra weight on freezing when hurt (novice ~40% of his answers)
+    freeze: [.75, .25, 0, 0] }       // extra weight on freezing when hurt (novice ~40% of his answers)
 };
 const TIER_C = [.34, .56, .74, .90];
 // a level table read at mastery m (0..1): straight lines between the tier centers, flat past the ends
@@ -190,7 +191,7 @@ function tierV(m, t) { if (m <= TIER_C[0]) return t[0]; for (let i = 1; i < 4; i
 // a curve through [x, y] points, flat past the ends
 function ptsV(x, P) { if (x <= P[0][0]) return P[0][1]; for (let i = 1; i < P.length; i++) if (x <= P[i][0]) return lerp(P[i - 1][1], P[i][1], (x - P[i - 1][0]) / (P[i][0] - P[i - 1][0])); return P[P.length - 1][1]; }
 // the same, eased toward 1 (Pro) by how much of it is switched on
-function lvV(key, m) { const on = BR.lv.on[key] || 0, v = tierV(m, BR.lv[key]); return on === 1 ? v : lerp(key === 'off' || key === 'late' || key === 'flinch' || key === 'tell' || key === 'freeze' ? 0 : key === 'len' ? 4.5 : 1, v, on); }
+function lvV(key, m) { const on = BR.lv.on[key] || 0, v = tierV(m, BR.lv[key]); return on === 1 ? v : lerp(key === 'off' || key === 'late' || key === 'flinch' || key === 'tell' || key === 'freeze' ? 0 : key === 'len' ? 9 : 1, v, on); }
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
 const MODES = {
   feelout: { aggr: .35, range: 6, guard: .6, lat: .7 },
