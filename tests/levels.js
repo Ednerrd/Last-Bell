@@ -3,6 +3,9 @@
 //   TAG=x node tests/levels.js 100 curve      a Pro (78) vs men 0/4/8/12/17 rating points under him
 //   TAG=x node tests/levels.js 100 split      one level down (17 points) as skills only (same body), body only (same skills), or both
 //   TAG=x node tests/levels.js 100 sk         skill sheets (L1, sheet.sk): same body (rating SKR, default 78), levels set by mastery only. SKC=34,56,74,90 moves the level centers. PR=IvN,PvI runs only those pairs
+//   TAG=x node tests/levels.js 100 know       style/stance familiarity (L3, sheet.know): two Pros (sk 74, rating SKR), side A unfamiliar, B familiar (.8). Pairs: ctrl (both .8, A orth v B south),
+//                                             style (A knows no styles, both orthodox), stance (A orth never saw a southpaw, B south), both, south (orth v south, both default know: knowMake(KG, default .6))
+//                                             'fav' = side A. Also prints A's share of landed punches by rounds 1-2 / 3-4 / 5-7 / 8-10. KLO=.1 sets the low know
 //   node tests/levels.js agg x                pool every run with that TAG
 // Brain on by default (PATCH="AI.brain=0" for the old AI). Random styles (specials too) and rolled guards, 10 rounds, sides alternate.
 // Levels come from the brain's skill sheet (BoxerBrain.tierOf). With AI.skill -8 the level centers sit at ratings ~40 / 60 / 78 / 93 (LV overrides: LV=40,60,78,93).
@@ -54,6 +57,13 @@ function report(rows) {
     ['hurt: froze', t => pc(t.freeze, t.hurts)],
     ['dropped /fight', t => (t.kdT / t.fights).toFixed(2)]
   ];
+  // L3 (know mode): side A's share of the landed punches by round group, per pair
+  if (rows.some(r => r.rl)) {
+    const G = [[1, 2], [3, 4], [5, 7], [8, 10]], sh = {};
+    for (const r of rows) if (r.rl) { const o = sh[r.pair] = sh[r.pair] || G.map(() => [0, 0]); r.rl.forEach((x, i) => { if (!x) return; const g = G.findIndex(([a, b]) => i + 1 >= a && i + 1 <= b); o[g][0] += x[0]; o[g][1] += x[1]; }); }
+    console.log('\nSIDE A SHARE OF LANDED PUNCHES by rounds ' + G.map(g => g.join('-')).join(' / '));
+    for (const k of Object.keys(sh)) console.log(k.padEnd(14) + sh[k].map(([a, b]) => pc(a, a + b).padStart(9)).join(''));
+  }
   console.log('\nSKILL USE BY LEVEL (per man)');
   console.log(''.padEnd(22) + keys.map(k => k.padStart(15)).join(''));
   for (const [name, fn] of rowsOut) console.log(name.padEnd(22) + keys.map(k => fn(T[k]).padStart(15)).join(''));
@@ -62,7 +72,7 @@ if (process.argv[2] === 'agg') { report(fs.readFileSync(OUT(process.argv[3]), 'u
 
 if (process.env.PATCH == null) process.env.PATCH = 'AI.brain=1';
 // sheet.skillOff moves only the brain's skills (the body stays): the split test
-process.env.PATCH += ';globalThis.__BB=BoxerBrain;globalThis.__SKM=skMake;{ const bp = brainProfile; brainProfile = F => { const p = bp(F), o = F.sheet.skillOff; if (o) { for (const k in p.skills) p.skills[k] = Math.round(clamp(p.skills[k] + o, 5, 99)); p.tier = BoxerBrain.tierOf(p.skills); } return p; }; }';
+process.env.PATCH += ';globalThis.__BB=BoxerBrain;globalThis.__SKM=skMake;globalThis.__KM=knowMake;{ const bp = brainProfile; brainProfile = F => { const p = bp(F), o = F.sheet.skillOff; if (o) { for (const k in p.skills) p.skills[k] = Math.round(clamp(p.skills[k] + o, 5, 99)); p.tier = BoxerBrain.tierOf(p.skills); } return p; }; }';
 const S = require('./sim.js');
 const BB = globalThis.__BB;
 const N = +process.argv[2] || 100, MODE = process.argv[3] || 'levels';
@@ -81,22 +91,31 @@ function hook(brain) {
 const G = RT.P - RT.I, SKR = +(process.env.SKR || 78), SKC = (process.env.SKC || BB.TIERS.map(t => t.center).join(',')).split(',').map(Number), CT = { N: SKC[0], I: SKC[1], P: SKC[2], W: SKC[3] };
 const PAIRS = MODE === 'sk' ? [['P', 'P'], ['I', 'N'], ['P', 'I'], ['W', 'P'], ['P', 'N']].map(([a, b]) => ({ pair: a === b ? a + ' mirror' : a + 'v' + b, r: [SKR, SKR], lv: [a, b], gap: TIERS.indexOf(a) - TIERS.indexOf(b), sk: [CT[a], CT[b]] }))
   : MODE === 'split' ? [{ pair: 'full: P v I', r: [RT.P, RT.I], off: 0 }, { pair: 'skills only', r: [RT.P, RT.P], off: -G }, { pair: 'body only', r: [RT.P, RT.I], off: G }].map(x => Object.assign(x, { lv: ['P', 'I'], gap: 's' }))
+  : MODE === 'know' ? ['ctrl', 'style', 'stance', 'both', 'south'].map(k => ({ pair: k, r: [SKR, SKR], lv: ['P', 'P'], gap: 'k', sk: [CT.P, CT.P], know: k }))
   : MODE === 'curve' ? [0, 4, 8, 12, 17].map(g => ({ pair: 'P78 v ' + (RT.P - g), r: [RT.P, RT.P - g], lv: ['P', 'P-' + g], gap: g ? 'c' : 0 }))
   : [['N', 'N'], ['I', 'I'], ['P', 'P'], ['W', 'W'], ['I', 'N'], ['P', 'I'], ['W', 'P'], ['P', 'N'], ['W', 'I']].map(([a, b]) => ({ pair: a === b ? a + ' mirror' : a + 'v' + b, r: [RT[a], RT[b]], lv: [a, b], gap: TIERS.indexOf(a) - TIERS.indexOf(b) }));
 const ONLY = process.env.PR ? process.env.PR.split(',') : null; // PR=IvN,PvI runs just those pairs
 for (const PR of PAIRS.filter(x => !ONLY || ONLY.includes(x.pair))) for (let i = 0; i < N; i++) {
-  const sh = PR.r.map(r => { const st = pick(ALL), s = S.sheet(Math.round(r + (Math.random() * 4 - 2)), st, S.rollGuard(st)); return s; });
+  const sh = PR.r.map(r => { const st = pick(ALL), r0 = Math.round(r + (Math.random() * 4 - 2)), s = S.sheet(r0, st, S.rollGuard(st)); s.r0 = r0; return s; });
   if (PR.off) sh[1].skillOff = PR.off;
+  if (PR.know) { // A (sh[0]) the stranger, B (sh[1]) has seen it all. No switch-hitters: they change the stance under the test
+    const K = PR.know, lo = +(process.env.KLO || .1), all = v => { const st = {}; for (const k of ALL) st[k] = v; return { style: st, stance: { orthodox: v, southpaw: v } }; };
+    for (const x of sh) if (x.style === 'switch') { x.style = pick(ALL.filter(k => k !== 'switch')); x.guard = S.rollGuard(x.style); x.stats = S.genStats(x.r0, x.style); }
+    sh[1].stance = K === 'style' ? 'orthodox' : 'southpaw';
+    if (K === 'south') sh.forEach(x => { x.know = globalThis.__KM(+(process.env.KG || .6)); });
+    else { sh[1].know = all(.8); sh[0].know = all(.8); if (K === 'style' || K === 'both') for (const k of ALL) sh[0].know.style[k] = lo; if (K === 'stance' || K === 'both') sh[0].know.stance.southpaw = lo; }
+  }
   if (PR.sk) sh.forEach((x, j) => { x.sk = globalThis.__SKM(PR.sk[j], x.style); });
   const side = i % 2, f = new S.Fight(side ? sh[1] : sh[0], side ? sh[0] : sh[1], { rounds: 10 });
   const F = [f.f[side], f.f[1 - side]]; // F[0] = the favourite (or side A of a mirror)
   if (F[0].brain) hook(F[0].brain);
   const z = () => ({ fights: 1, rd: 0, thr: 0, land: 0, landP: 0, feint: 0, feintBit: 0, feintBad: 0, setup: 0, ctrTry: 0, ctrLand: 0, techSum: 0, techN: 0, techBad: 0, reactSum: 0, reactN: 0, late: 0, noTry: 0, misread: 0, seen: 0, feintRead: 0, feintsAtHim: 0, evAct: 0, blk: 0, oppThr: 0, trap: 0, esc: 0, adj: 0, hunt: 0, freeze: 0, hurts: 0, kdT: 0 });
   const tel = [z(), z()], idx = s => s === F[0].side ? 0 : 1;
-  let n = 0;
+  let n = 0; const rl = [];
   while (f.phase !== 'over' && n < 600000) {
     f.step(); n++;
     for (const e of f.stepEv) {
+      if (e.type === 'hit' && !e.blocked) { const r = rl[f.round - 1] = rl[f.round - 1] || [0, 0]; r[idx(e.a)]++; }
       if (e.type === 'throw') { tel[idx(e.a)].thr++; tel[1 - idx(e.a)].oppThr++; }
       else if (e.type === 'hit') { const t = tel[idx(e.a)]; if (e.blocked) tel[1 - idx(e.a)].blk++; else { t.land++; if (POW[e.p]) t.landP++; if (e.counter) t.ctrLand++; } }
       else if (e.type === 'miss' && e.def) tel[1 - idx(e.a)].evAct++;
@@ -120,6 +139,6 @@ for (const PR of PAIRS.filter(x => !ONLY || ONLY.includes(x.pair))) for (let i =
     }
     if (o) t.feintsAtHim = tel[1 - j].feint;
   }
-  const row = { pair: PR.pair, lv: PR.lv, gap: PR.gap, mirror: PR.lv[0] === PR.lv[1], win: f.result.winner === F[0].side ? 'fav' : f.result.winner === F[1].side ? 'dog' : 'd', stop: !f.result.decision, tel };
+  const row = { pair: PR.pair, lv: PR.lv, gap: PR.gap, mirror: PR.lv[0] === PR.lv[1], win: f.result.winner === F[0].side ? 'fav' : f.result.winner === F[1].side ? 'dog' : 'd', stop: !f.result.decision, tel, rl };
   fs.appendFileSync(OUT(process.env.TAG || 'x'), JSON.stringify(row) + '\n');
 }
