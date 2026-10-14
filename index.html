@@ -1436,8 +1436,10 @@ const AI = {
   br: { react: [.2, .07], ctrP: [.04, .4], throwP: .12, feintP: .1 }
 };
 // special styles think like the nearest base style, with their own taste on top (the engine keeps their tricks)
-const AI_MAP = { volume: ['swarmer', { output: .1, power: -.2, combo: .1 }], angle: ['outboxer', { circle: .12, range: -.1 }], awkward: ['counter', { patience: -.1 }],
-  switch: ['boxerpuncher', {}], body: ['swarmer', { body: .25, output: -.1 }], pboxer: ['slugger', { jab: .3, output: .1, range: .1 }],
+// [base, trait lean, skill lean]. Volume works in bunches from mid range (chest to chest his light hands lose the trades);
+// the body snatcher waits for the dig instead of walking onto counters (both Oct 14: volume 46 -> 53.5, body 44 -> ~50)
+const AI_MAP = { volume: ['swarmer', { combo: .1, patience: .15, range: .25, legs: .15 }, { pacing: 8 }], angle: ['outboxer', { circle: .12, range: -.1 }], awkward: ['counter', { patience: -.1 }],
+  switch: ['boxerpuncher', {}], body: ['swarmer', { body: .25, output: -.2, patience: .15 }, { body: 10 }], pboxer: ['slugger', { jab: .3, output: .1, range: .1 }],
   spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1 }], feinter: ['boxerpuncher', { patience: .15 }] };
 // the guard is a defense habit: what he reaches for when one comes (shell: gloves and arms, slip: head movement, legs: gets out of range)
 const AI_GUARD = { high: { shell: .12, slip: -.05 }, cross: { shell: .3, slip: -.2, legs: -.05 }, peekaboo: { slip: .25, shell: .1, legs: -.1 }, philly: { shell: .15, slip: .2 }, handslow: { shell: -.3, slip: .15, legs: .2 } };
@@ -1450,7 +1452,7 @@ function brainProfile(F) {
     cutoff: s.footwork * .5 + iq * .5, ropes: s.footwork * .5 + iq * .5, range: iq * .6 + s.footwork * .4, angles: s.footwork * .7 + iq * .3,
     counter: s.defense * .3 + s.accuracy * .3 + iq * .4, read: iq, pacing: iq * .8 + s.heart * .2, adjust: iq
   };
-  const skills = {}; for (const k in raw) skills[k] = Math.round(clamp(raw[k] + (S.sk[k] || 0) * AI.lean + AI.skill, 5, 99));
+  const skills = {}; for (const k in raw) skills[k] = Math.round(clamp(raw[k] + ((S.sk[k] || 0) + (m && m[2] && m[2][k] || 0)) * AI.lean + AI.skill, 5, 99));
   const traits = {}, gt = AI_GUARD[F.guard] || {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + (gt[k] || 0) + gauss() * .09, 0, 1);
   return BoxerBrain.makeProfile({ style: base, skills, traits, name: F.sheet.name, uniq: 0 });
 }
