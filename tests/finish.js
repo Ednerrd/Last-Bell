@@ -1,4 +1,4 @@
-// finishing and the hurt brain: node tests/finish.js N (use PATCH="AI.brain=1"). Audit-style matchups (ratings 60-90, gaps 0/3/6/10, styles and guards roll).
+// finishing and the hurt brain: node tests/finish.js N (brain is the default). Audit-style matchups (ratings 60-90, gaps 0/3/6/10, styles and guards roll).
 // Prints stoppages, KDs, knockdowns both ways, same-round stop after a first KD, late comebacks (stopped while ahead on the cards in the last 3 rounds),
 // and the brain's own log: hunt spells, how they end (finisher caught = the hunter got hurt), hurt spells and his answers.
 // TAG=x: append to /tmp/finish_x.txt; node tests/finish.js agg x pools every run with that TAG.

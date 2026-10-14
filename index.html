@@ -1417,7 +1417,7 @@ function laneOf(A, P) {
 /* ---------- the boxer brain (brain/brain.js, inlined above): AI.brain = 1 hands decide(), react() and the counter rolls to BoxerBrain ----------
    The engine keeps the body: footwork physics, hit math, rope escapes, the special styles' tricks. 0 = the old engine AI (same.js hash). */
 const AI = {
-  brain: 0,        // 1 = both men think with the brain (opts.brain = [a, b] per side wins)
+  brain: 1,        // 1 = both men think with the brain, 0 = the old engine AI (opts.brain = [a, b] per side wins). Default 1 since Oct 14 (Ed)
   pace: CLOCK,     // the engine's rounds run 3x the sim clock: the brain squeezes moods, memory and intent modes to match
   reflexQ: .5,     // a passive block's guard, if the next shot comes inside .16 s
   defQ: 1.5,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)

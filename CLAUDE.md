@@ -2,13 +2,13 @@
 
 Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 lines) boots straight into a fight (random or picked fighters). Career, saves, hub, camp and gym mode were cut (Oct 2026); the old full game lives in git history on `claude/epic-goldberg-ps6ip4` before that cut. Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
-**The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` behind `AI.brain` (0 = old AI; `PATCH="AI.brain=1"` for sims). `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
+**The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the default AI (`AI.brain` 1 since Oct 14; `PATCH="AI.brain=0"` runs the old engine AI). `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
 **What to do next: `ROADMAP.md`** (the only to-do list). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
-- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (83 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: see ROADMAP Ed item 1.
+- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (83 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
 - Never publish to the live game without Ed's explicit OK.
 - Models (Ed, Oct 14): Opus for everything (tuning, code, docs); Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write).
 - Effort (Ed, Oct 14): before starting a task that needs high effort, stop and ask Ed to switch to high, then wait for his OK. High = engine/balance tuning (sim-driven tries), retiring or refactoring engine code that must keep the same.js hash, debugging odd sim results, design plans (skill levels). Docs, roadmap edits, overviews, running set-up sims and reading numbers stay at his current setting: just do them.
@@ -25,7 +25,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **7f58e976**).
+- Render-only changes must keep the `same.js` hash (now **ac686464**, the brain; old AI `PATCH="AI.brain=0"` 7f58e976).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -50,15 +50,15 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
 - `node tests/brain.js [tempo|iq|adapt|pace|styles] N`: brain report. Baselines in `docs/BRAIN.md`.
 - `QUIET=3 node tests/teach.js 300 82 body 20`: corner-as-teacher log (control `PATCH="TEACH.max=0"`).
-- Brain: `PATCH="AI.brain=1"` on any test; `node tests/bvo.js 300` brain vs old AI; `node tests/bprobe.js 150` how punches end, defense, counters, distance. `node tests/ropes.js 40 [style]` time on the ropes and how he gets off. `SEED=7 node tests/scout.js 20 [style|random] [rating] [guard|roll]` scouting report: one new fighter, 20 fights vs a random field, record, strengths, weaknesses (no learning between fights yet). `TAG=x node tests/levels.js 75 [curve|split]` (x4) then `node tests/levels.js agg x`: skill levels, win % across a level gap and skill use by level; `sk` mode = same body, levels from `sheet.sk` (L1). `node tests/sheet.js` prints the skill-sheet defaults (walk-in types, records).
-- Finishing: `PATCH="AI.brain=1" TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
+- Brain (the default now; `PATCH="AI.brain=0"` for the old AI): `node tests/bvo.js 300` brain vs old AI; `node tests/bprobe.js 150` how punches end, defense, counters, distance. `node tests/ropes.js 40 [style]` time on the ropes and how he gets off. `SEED=7 node tests/scout.js 20 [style|random] [rating] [guard|roll]` scouting report: one new fighter, 20 fights vs a random field, record, strengths, weaknesses (no learning between fights yet). `TAG=x node tests/levels.js 75 [curve|split]` (x4) then `node tests/levels.js agg x`: skill levels, win % across a level gap and skill use by level; `sk` mode = same body, levels from `sheet.sk` (L1). `node tests/sheet.js` prints the skill-sheet defaults (walk-in types, records).
+- Finishing: `TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
 
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain on (`PATCH="AI.brain=1"`, Oct 14 balance pass): 51.6 thrown / 15.7 landed / 30.4% connect, stops ~25.8%, styles 47.6–53.7 (600/pair, after the out-boxer rope fix). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown vs 53 for the brain: Ed's call. Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
+- Brain (default, Oct 14 balance pass): 51.6 thrown / 15.7 landed / 30.4% connect, stops ~25.8%, styles 47.6–53.7 (600/pair, after the out-boxer rope fix). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.

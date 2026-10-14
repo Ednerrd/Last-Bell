@@ -1,4 +1,4 @@
-// ropes probe: how a style ends up on the ropes and how he gets off (brain on: PATCH="AI.brain=1").
+// ropes probe: how a style ends up on the ropes and how he gets off (brain is the default).
 //   node tests/ropes.js N [style] [rating]   style (default outboxer) vs each base style, N fights per pair, identical stats, standard guard
 // Prints per round: seconds trapped (same clock as styles.js rope/rd), spells, how spells end (pivot, slide, he walked off, the other man left),
 // what the trapped time looks like (hurt, the other man cutting him off, his brain mode, his feet: how much he circles vs pushes for range),
