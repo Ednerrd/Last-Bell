@@ -5,7 +5,6 @@ The only to-do list. When something is done, delete its line here and put the nu
 ## Ed (only he can do these)
 1. **Publish the live game.** Make a backup code of his careers first, then upload `index.html` in a claude.ai chat and publish to the live URL with `{db:{},user:{},sample:{}}`. Live is weeks behind (styles, legends, corner talk, combos, all the combat and brain work).
 2. **3D phone test on the S25 Ultra** (https://claude.ai/artifact/5kVb4PyywgDcPBHSVSc3cu): "Run test (3 min)", then 10 min on one setting. Send fps per setting, heat, battery drop. Sets the 3D quality defaults (`proto/PLAN.md` phase 0).
-3. **Answer:** how do skills overlap with the 10 `STATS`? Proposal: stats are the body (power, speed, chin, stamina), skills are what he knows how to do with them.
 
 ## Claude, in this order
 0. **Boxer brain on the engine (branch `claude/brain-wire`, reviewed Oct 13).** Wired behind `AI.brain` (default 0 = old AI, same.js 7f58e976), lab has an AI row. Audit and styles on target (`docs/BRAIN.md` "The brain on the engine" + "Review and handoff").
@@ -25,7 +24,7 @@ The only to-do list. When something is done, delete its line here and put the nu
      - **Next, in this order (recommended):**
        - then retire `decide()`/`react()`.
 1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.
-2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. L0 done (Oct 14, `docs/BRAIN.md` "Skill levels L0"): one level down wins 1–3% (target 15–20%); the body decides it (skills-only gap 32%, body-only 2.7%). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.
+2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. L0 done (Oct 14, `docs/BRAIN.md` "Skill levels L0"): one level down wins 1–3% (target 15–20%); the body decides it (skills-only gap 32%, body-only 2.7%). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Next: L1.
 3. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):
    - Setups and traps: "show it twice, change it" gated on HIS answer, armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
    - Hurt brain by tier (the base is built: hunt / survive / blur); finisher weighs the risk (`research/mind_vision.md` 8d).
@@ -43,6 +42,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 - Ring IQ when hurt or tired as its own step: parked; it lives in the hurt brain now.
 - Corner lesson size: medium (`TEACH` .18 / .7 / .7).
 - Coach shouts / corner orders do NOT get wired into the brain (Ed, Oct 13).
+- Stats vs skills (Ed, Oct 14, after L0: "start the next phase"): stats are the body (power, speed, chin, stamina...), skills are what he knows how to do with them and grow from fights and camp. Level comes from skills; bodies inside a division stay close; a skill level gets worth a bit more (L0: skills-only gap 32% upsets, target 15-20%).
 - No sparring in the skill system for now. No bond/trust system yet.
 
 ## Parking lot (ideas, not scheduled)
