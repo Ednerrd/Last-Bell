@@ -530,6 +530,6 @@ Commentary hooks (UI): `offBalance` ("misses and stumbles") and a feint sold und
 | Froze when hurt N → W | 9.5 → 2.6% | 36.7 → 0.7% |
 | Adjusts /fight N → W | 2.6 → 3.5 | 0.5 → 3.0 (P up to 4.7) |
 | Styles 300/pair @82 | 45.1–53.8 (L2 off, same code) | 47.2–53.9 (swarmer 53.9, outboxer 50.8, slugger 49.4, bp 48.5, counter 47.2) |
-| Audit 600 | 51.7 / 15.5 / 30.0%, stops 21.0%, fav @ gap 10 88.5% | AUDIT_AFTER |
+| Audit 600 | 51.7 / 15.5 / 30.0%, stops 21.0%, fav @ gap 10 88.5% | 51.4 / 15.5 / 30.3%, stops 25.5%, fav @ gap 10 89.9% |
 
-Left for L6: counter-puncher 47.2 and swarmer 53.9 at the band edges; thrown under the ~52 target. Fighters without a skill sheet get their skills from their body, so a rating gap now counts twice (body + skills): steeper upsets by rating in the audit, expected until fighters carry `sheet.sk` with close bodies.
+Left for L6: counter-puncher 47.2 and swarmer 53.9 at the band edges. Fighters without a skill sheet get their skills from their body, so a rating gap counts body and skills both (audit favourite at a 10-point gap 88.5 → 89.9%, inside noise); that goes away once fighters carry `sheet.sk` with close bodies.

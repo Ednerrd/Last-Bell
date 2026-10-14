@@ -25,7 +25,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **ac686464**, the brain; old AI `PATCH="AI.brain=0"` 7f58e976).
+- Render-only changes must keep the `same.js` hash (now **45127603**, the brain with skill levels L2; old AI `PATCH="AI.brain=0"` 7f58e976).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -35,7 +35,7 @@ engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, di
 - Ring: x ±146 (RING), z ±115 (ZR), MIN_D 30. `P3()` projection.
 - Fight loop: `footwork()` every frame, `decide()` on a timer, `react()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'.
 - Knobs: `TUNE` (combat), `DMG` (damage), `CUT` (cuts/doctor), `GUARDS`, `STYLES` / `STYLE_*`, `SHOUTS` / `SHOUT_EDGE`, `COMBOS` / `PNUM` / `OPEN_W`, `TEMPO` (rhythm), `NEED` (round awareness), `TEACH` (corner lessons), `ANT` / `MEMV` / `FEINT_READ` (brain).
-- Skill sheet (L1): `sheet.sk` (mastery, the brain reads it if set), `sheet.know`, `levelOf`, `skillSheet`, `skFromRecord`, knobs `SKL`.
+- Skill sheet (L1): `sheet.sk` (mastery, the brain reads it if set), `sheet.know`, `levelOf`, `skillSheet`, `skFromRecord`, knobs `SKL`. What a level does (L2): `BoxerBrain.BR.lv` (tables N/I/P/W, neutral at Pro, `on` switches), engine side `F.brain.mast`, `offT`, `flinchT`, `AI.offDmg`.
 - Brain: `F.mem` + `memAdd`/`memPeek` (opponent memory), `antRead` (anticipation), `pickCounter(…, def)`, `need()`, `teachK`/`planOf`. Ring IQ: `ringIQ(sheet)`, `iqK`.
 - Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career.
 - Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `carry()`, `blendSnap`, `spreadView()`.
@@ -58,7 +58,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain (default, Oct 14 balance pass): 51.6 thrown / 15.7 landed / 30.4% connect, stops ~25.8%, styles 47.6–53.7 (600/pair, after the out-boxer rope fix). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
+- Brain (default, with skill levels L2, Oct 14): 51.4 thrown / 15.5 landed / 30.3% connect, stops 25.5% (600), styles 47.2–53.9 (300/pair). Skill levels: one level down wins 15–20% (`levels.js sk`). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
