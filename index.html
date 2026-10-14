@@ -1623,7 +1623,7 @@ class Fight {
     const v = vec(F, F.op); F.act = { id: this.pid = (this.pid || 0) + 1, type: P.type, t: 0, dur: .24, done: true, feint: true, sell: P.sell, step: 4, ux: v.ux, uz: v.uz, start: this.t };
     F.state = 'punch'; F.def = null; F.queue = [];
     if (!F.op.brain) { const was = F.op.pendingDef; this.react(F.op, F, PUNCH.jab, true); F.act.bit = !!F.op.pendingDef && F.op.pendingDef !== was; } // an old-AI man can buy it too
-    this.emit('feint', { a: F.side });
+    this.emit('feint', { a: F.side, sell: P.sell });
   }
   // the feint is over: did he buy it?
   feintDone(F, a) {
@@ -3810,6 +3810,8 @@ const Comm = (() => {
     foul: ['The ref warns {a} for holding and hitting.', 'Warning for {a}. Watch the hands in the clinch.', '{a} is sneaking shots in the clinch. The ref has words with him.'],
     foulDed: ['The referee takes a point from {a}!', 'Point deduction! {a} has been warned enough.', 'That is a point off for {a}. The ref has had it.'],
     lean: ['{a} grabs and leans all his weight on him.', '{a} ties him up and makes him carry him.', '{a} smothers him and leans on the back of his neck.'],
+    offBalance: ['{a} misses and stumbles. He is all out of position.', 'Big miss from {a}, and his feet are crossed.', '{a} overreaches and nearly falls through.', '{a} loads up, misses, and the momentum takes him with it.'],
+    feintBad: ["{a} is trying to feint, nobody's buying it.", '{a} with a feint you could see from the cheap seats.', '{a} twitches at him. {d} does not even blink.', 'That feint from {a} fooled exactly nobody.'],
     wild: ['{a} winds up and hits nothing but air.', 'Wild {p} from {a}, way off the mark.', '{a} is swinging for the fences and missing.', 'Sloppy {p} from {a}, telegraphed it.']
   };
   const COLOR = ["He's gotta move his head.", "That body work is going to pay off late.", "You can hear that one in the cheap seats.", "He's fighting like his rent's due.", "The jab has been the story so far.", "His corner wants him off the ropes.", "That's a veteran move right there.", "He's breathing through his mouth now. Bad sign.", "Somebody's gonna feel this tomorrow.", "Look at the feet. Always in position.", "He's loading up on that right hand.", "This crowd is on its feet."];
@@ -3851,6 +3853,8 @@ const Comm = (() => {
         if (e.why === 'evade' && (e.def === 'slip' || e.def === 'duck') && ok('slip', t, 9)) { o.d = nm(e.d); L('slip', 0); } break;
       case 'escape': if (ok('escape', t, 12)) L(e.how === 'spin' ? 'spin' : e.how === 'punch' ? 'punchOut' : 'pivot', e.how === 'spin' ? 1 : 0); break;
       case 'bait': if (ok('bait', t, 25)) L('bait', 1); break;
+      case 'offBalance': if (ok('offBalance', t, 20)) L('offBalance', 1); break; // a novice's miss pulls him off his feet (L2)
+      case 'feint': if (e.sell != null && e.sell < .3 && ok('feintBad', t, 30)) L('feintBad', 0); break; // nobody's buying it (L2)
       case 'cutoff': if (ok('cutoff', t, 20)) L('cutoff', 1); break;
       case 'guardCrack': if (ok('guardCrack', t, 20)) L('guardCrack', 2); break;
       case 'home': if (ok('home' + e.a, t, 170) && ok('homeAny', t, 60)) { o.p = pn(e.p, fight.f[e.a]); L('home', 2); } break;
