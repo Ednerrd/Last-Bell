@@ -314,3 +314,29 @@ Next session: the balance pass (ROADMAP item 0, "Next").
 - **Goals:** connect back toward 29–30% without stops dropping under ~24; slugger into 48–53 without pushing counter over 53.5; decide whether thrown 51.4 needs a bump to ~53 (output knob) or the target moves for the brain (Ed's call if it's the target).
 - **Levers:** `BR.blur` (connect vs stops trade), `AI.defQ` / `AI.reflexQ` (defense quality: any nerf favours the out-boxer), `AI.out`, per-style profile numbers in `brain/brain.js` (rerun `node brain/inline.js`).
 - **Measure like last time:** audit 4x250 in parallel (pool 1000), styles 300 82 over 4 processes (TAG, then agg), same.js 200 must stay 7f58e976. Balance numbers and visuals never in one commit.
+
+### Balance pass (Oct 14)
+Knobs (commit 599098d): `AI.defQ` 1.3 → 1.5 (fewer botched defenses: connect down), `BR.hurtQ` .25 → .6 (a hurt man defends worse: buys the stops back where they come from), swarmer `sk` cutoff 10 → 14, slip 12 → 14 (defQ cost him ~1.5).
+Measured with audit 4x250 (pool 1000) and styles 75 x4 processes (300/pair), brain on, @82. Each row is one run unless noted.
+
+| Run | Thrown / landed / connect | Stops | Styles 300/pair |
+|---|---|---|---|
+| Base (doc, Oct 13) | 51.4 / 16.3 / 31.6% | 24.8% | counter 53.4, outboxer 51.5, bp 48.9, swarmer 48.9, slugger 47.6 |
+| Base (re-run) | 52.2 / 16.8 / 32.1% | 26.3% | outboxer ~52.7, counter 51.1, bp 50.2, swarmer 49.1, slugger 46.8 |
+| defQ 1.5 | 51.5 / 15.6 / 30.4% | 23.4% | outboxer 53.5, slugger 51.4, swarmer 49.5, counter 47.9, bp 47.6 |
+| defQ 1.5 + blur.q .55 | 51.2 / 15.6 / 30.6% | 23.5% | outboxer 53.8, counter 52.1, slugger 48.3, swarmer 48.2, bp 48.0 |
+| defQ 1.5 + blur.cur .9, kd .4 | 51.3 / 15.8 / 30.8% | 23.7% | slugger 51.9, outboxer 51.4, counter 50.6, bp 49.0, swarmer 47.2 |
+| defQ 1.5 + hurtQ .5 | 51.4 / 15.7 / 30.5% | 24.8% | slugger 52.0, bp 50.9, outboxer 50.5, counter 48.8, swarmer 47.7 |
+| + swarmer cutoff/slip 14 | 51.4 / 15.6 / 30.3% | 21.9% | slugger 51.7, outboxer 50.7, bp 50.7, counter 49.3, swarmer 47.5 |
+| **Kept: + hurtQ .6 (2 runs pooled: 2000 audit, 600/pair)** | **51.6 / 15.7 / 30.4%** | **25.8%** (25.2, 26.3) | **outboxer 52.5, swarmer 50.3, counter 50.0, slugger 49.1, bp 48.2** |
+
+Lessons:
+- **Stops noise is huge**: ±2 points between 1000-fight runs at near-identical settings (21.9 vs 24.8 vs 25.2). Pool 2000 before trusting a stops move.
+- `BR.blur` (q, cur, kd) barely moves stops once defQ is up: the blur is small most of the fight. `hurtQ` is the cleaner stops lever (it only bites on a hurt man, so connect stays put).
+- A defense buff (defQ) didn't hurt the out-boxer here (he stayed ~51–53); it cost the swarmer ~1.5 instead.
+- Styles at 300/pair still swing ±2 per style run to run (counter 47.9 → 52.1 between two defQ 1.5 runs).
+
+Open:
+- **Thrown 51.6 vs the 53 target: Ed's call.** The brain pulls back ~1.7 punches a round (un-counted, gas spent), and no balance knob here moved thrown. Either the brain's target becomes ~51–52, or an output bump (`BR.throwP`) gets tried; an output bump will push connect and stops around again.
+- Connect 30.4%: inside 29–30 would want defQ ~1.6 (expect stops −1, swarmer −1).
+- Not re-checked this pass: dummy ring audit, guards vs standard, specials, bvo, finish.js.

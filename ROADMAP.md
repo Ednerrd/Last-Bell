@@ -12,17 +12,16 @@ The only to-do list. When something is done, delete its line here and put the nu
    - **Ed:** watches brain vs brain on the private brain test page (https://claude.ai/artifact/HQopfRTmoBmSZLbEfDa94P, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
    - **After that:**
      - **Finishing and the hurt brain: built (Oct 13, `docs/BRAIN.md` "Finishing and the hurt brain").** Stops 19.6 → ~24%, styles 46.8–54.1. Left from it:
-       - stops 24.8 (a hair under 25) and connect 31.6% after the overcount fix (the blur is a straight trade between the two);
-       - styles 300/pair after the overcount fix: counter 53.4, outboxer 51.5, boxer-puncher 48.9, swarmer 48.9, slugger 47.6 (slugger just under the band);
        - finisher caught (hurt) 0.7% of hunts, wanted 5–10 (stung 12%); same-round stop after a KD ~25%, research guess 35–45;
        - brain vs old AI fell 38 → ~27% (the old AI doesn't blur);
        - Ed: watch it on the private brain test page.
-     - **Next, in this order (recommended):** the balance pass at 300/pair: connect 31.6 → ~29–30 without losing stops, slugger into the band, thrown 51.4 vs the 53 target (`BR.blur`, `AI.out`, `AI.defQ`); then the items below. (Thrown overcount: fixed Oct 13.)
-     - weak specials: volume 42, body 43;
-     - body KDs up (still 4.1%, 30 of 723; the slow fuse didn't move it);
-     - out-boxer off the ropes;
-     - specials at 300/pair;
-     - then retire `decide()`/`react()`.
+     - **Balance pass: done (Oct 14, `docs/BRAIN.md` "Balance pass (Oct 14)").** Connect 31.6 → 30.4%, stops 25.8% (pooled 2000), styles 48.2–52.5 (600/pair). **Ed:** thrown 51.6 vs the 53 target: move the brain's target to ~51–52, or try an output bump? Left: connect into 29–30 (defQ ~1.6), re-check guards / specials / bvo / dummy ring on the new numbers.
+     - **Next, in this order (recommended):**
+       - weak specials: volume 42, body 43;
+       - body KDs up (still 4.1%, 30 of 723; the slow fuse didn't move it);
+       - out-boxer off the ropes;
+       - specials at 300/pair;
+       - then retire `decide()`/`react()`.
 1. **Republish the fight lab** (with Ed's OK): `index.html` IS the lab now, publish it as-is to the fight lab URL, no capabilities. It still shows the Oct 6 build without the brain. Merge `claude/brain-wire` into the main line first.
 2. **Skill levels L0–L6** (`docs/BRAIN.md` "Skill levels"). Novice → Intermediate → Pro → Worldclass from per-skill mastery, style/stance familiarity, bad technique when he tries a skill he doesn't own, learning from fights and camp. Start with L0 (`tests/levels.js` baseline). Tier tables, growth, rematch memory and scouting: `research/mind_learn.md`. Needs Ed's answer to item 3 above before L1.
 3. **Brain pieces that hang off the levels** (fold into L2–L4 where they fit):

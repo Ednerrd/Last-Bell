@@ -56,7 +56,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain on (`PATCH="AI.brain=1"`, Oct 13): 51.4 thrown / 16.3 landed / 31.6% connect, stops ~24.8%, styles 47.6–53.4. History: `docs/BRAIN.md` "Thrown overcount fixed". Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
+- Brain on (`PATCH="AI.brain=1"`, Oct 14 balance pass): 51.6 thrown / 15.7 landed / 30.4% connect, stops ~25.8%, styles 48.2–52.5 (600/pair). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown vs 53 for the brain: Ed's call. Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
