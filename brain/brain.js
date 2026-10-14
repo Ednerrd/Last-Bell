@@ -186,7 +186,7 @@ const BR = {
     freeze: [.75, .25, 0, 0] },      // extra weight on freezing when hurt (novice ~40% of his answers)
   // skill levels L3: style and stance familiarity (research/mind_learn.md 4b). opts.fam = { style, stance }: how well he knows THIS man's style and stance (0..1, sheet.know).
   // No fam = neutral. Unfamiliar = under `at`, all the way at 0. It fades over the first rounds (`full` rounds at full size, gone by `gone`, a reader adapts sooner)
-  fam: { on: 1, at: .45, full: 1, gone: [4.5, 3],
+  fam: { on: 1, at: .45, full: 1, gone: [4.5, 3], keep: 0, // keep: the part that never fades in the fight (a southpaw stays awkward all night)
     react: .35,             // he sees everything later (x(1 + react) at full unfamiliarity)
     weapon: .6,             // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top
     pred: .5,               // the predicted-punch bonus, cut by this much
@@ -301,7 +301,7 @@ class Brain {
   // ... and now: it fades as the rounds go (a reader adapts sooner). fx.u = his reads, fx.s = the stance (the main weapon)
   famUpd(P) {
     const F = BR.fam, x = this.fx; if (!this.fam || !F.on) { x.u = x.s = 0; return; }
-    const rf = (P.round || 1) - 1 + (P.clock || 0) / (P.roundLen || 180), gone = lerp(F.gone[0], F.gone[1], this.k.read), fade = clamp((gone - rf) / Math.max(.1, gone - F.full), 0, 1) * F.on;
+    const rf = (P.round || 1) - 1 + (P.clock || 0) / (P.roundLen || 180), gone = lerp(F.gone[0], F.gone[1], this.k.read), fade = Math.max(F.keep, clamp((gone - rf) / Math.max(.1, gone - F.full), 0, 1)) * F.on;
     x.s = this.fam.stance * fade; x.u = Math.max(this.fam.style * fade, x.s);
   }
   rnd(a, b) { return a + this.R() * (b - a); }
