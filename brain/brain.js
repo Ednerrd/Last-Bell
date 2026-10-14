@@ -171,6 +171,7 @@ const BR = {
   // skill levels L2: what mastery does (research/mind_learn.md 4a). Each table is [Novice, Intermediate, Pro, World class] at the tier centers,
   // read on his raw mastery (not squeezed by spread), 1 at Pro so a Pro-level field plays as before. on: how much of each applies (0 = off)
   lv: { on: { kLvl: 1, force: 1, gas: 1, off: 1, late: 1, flinch: 1, tell: 1, feint: 1, len: 1, adjust: 1, freeze: 1 },
+    own: .3,                         // how much of one skill's own gap from his level the tables see (1 = all of it)
     kLvl:   [.404, .536, .644, .86], // his overall level as the brain plays it (= spread .6 up to Pro; World class pulls further away)
     force:  [.62, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
     gas:    [1.3, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
@@ -256,7 +257,7 @@ class Brain {
     // spread squeezes his overall level (how far apart the tiers play) but keeps his own strengths full size: a counter-puncher's counter stays his edge
     const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl0 = .5 + (avg - .5) * BR.spread, lvl = BR.lv.on.kLvl ? lerp(lvl0, tierV(avg, BR.lv.kLvl), BR.lv.on.kLvl) : lvl0;
     this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(lvl + (raw(s) - avg) * BR.spreadOwn, 0, 1);
-    this.m = {}; for (const s of SKILL_KEYS) this.m[s] = raw(s); // raw mastery: the level tables (BR.lv) read this
+    this.m = {}; for (const s of SKILL_KEYS) this.m[s] = avg + (raw(s) - avg) * BR.lv.own; // mastery as the level tables (BR.lv) read it: his level, plus a slice of his own strengths and holes (a style's holes already cost him in the brain)
     this.lvUpd();
     this.tr = Object.assign({}, STYLES.boxerpuncher.t, profile.traits);
     const k = this.k;
