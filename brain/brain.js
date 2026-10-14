@@ -167,8 +167,26 @@ const BR = {
     late: 20, lateRun: 1.5, lateFire: .6, despFire: 1.8,
     kdFire: 2, kdShell: 1.5,  // after a knockdown: composure decides, fire back harder or shell
     after: 8, rally: .2 },    // after a knockdown: more range rest of the round (and the next, unless he's composed: then more initiative)
-  desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 } // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
+  desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 }, // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
+  // skill levels L2: what mastery does (research/mind_learn.md 4a). Each table is [Novice, Intermediate, Pro, World class] at the tier centers,
+  // read on his raw mastery (not squeezed by spread), 1 at Pro so a Pro-level field plays as before. on: how much of each applies (0 = off)
+  lv: { on: { force: 0, gas: 0, off: 0, late: 0, flinch: 0, tell: 0, feint: 0, len: 0, adjust: 0, freeze: 0 },
+    force:  [.62, .85, 1, 1.06],     // punch force x (Smith 2000: novice ~.55 of an elite's)
+    gas:    [1.3, 1.12, 1, .92],     // gas per punch x (holds his breath, arm punches, tense)
+    off:    [.5, .3, .15, .08],      // off balance after a miss (s): crossed feet, overreaching
+    late:   [.4, .2, .05, 0],        // hands come back late: extra damage if he's caught on the way back
+    flinch: [.25, .1, .03, .01],     // eyes shut on a hard shot: no defense for the next one
+    tell:   [1, .5, .17, 0],         // wind-up he shows (x AI.tell in the game: +120 ms for a Novice)
+    feint:  [.15, .4, 1, 1.4],       // feints per round x (a novice barely feints; the ones he does, nobody buys)
+    len:    [2, 3, 4.5, 5.5],        // longest combo he really owns
+    adjust: [.05, .25, .55, .8],     // chance to change one thing between rounds when losing
+    freeze: [.8, .3, .05, 0] }       // extra weight on freezing when hurt (novice ~40% of his answers)
 };
+const TIER_C = [.34, .56, .74, .90];
+// a level table read at mastery m (0..1): straight lines between the tier centers, flat past the ends
+function tierV(m, t) { if (m <= TIER_C[0]) return t[0]; for (let i = 1; i < 4; i++) if (m <= TIER_C[i]) return lerp(t[i - 1], t[i], (m - TIER_C[i - 1]) / (TIER_C[i] - TIER_C[i - 1])); return t[3]; }
+// the same, eased toward 1 (Pro) by how much of it is switched on
+function lvV(key, m) { const on = BR.lv.on[key] || 0, v = tierV(m, BR.lv[key]); return on === 1 ? v : lerp(key === 'off' || key === 'late' || key === 'flinch' || key === 'tell' || key === 'freeze' ? 0 : key === 'len' ? 4.5 : 1, v, on); }
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
 const MODES = {
   feelout: { aggr: .35, range: 6, guard: .6, lat: .7 },
@@ -237,6 +255,8 @@ class Brain {
     // spread squeezes his overall level (how far apart the tiers play) but keeps his own strengths full size: a counter-puncher's counter stays his edge
     const raw = s => (profile.skills[s] == null ? 50 : profile.skills[s]) / 100, avg = SKILL_KEYS.reduce((t, s) => t + raw(s), 0) / SKILL_KEYS.length, lvl = .5 + (avg - .5) * BR.spread;
     this.k = {}; for (const s of SKILL_KEYS) this.k[s] = clamp(lvl + (raw(s) - avg) * BR.spreadOwn, 0, 1);
+    this.m = {}; for (const s of SKILL_KEYS) this.m[s] = raw(s); // raw mastery: the level tables (BR.lv) read this
+    this.lvUpd();
     this.tr = Object.assign({}, STYLES.boxerpuncher.t, profile.traits);
     const k = this.k;
     this.iq = (k.read + k.counter + k.pacing + k.adjust) / 4;
@@ -253,6 +273,12 @@ class Brain {
     this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {}, mThr: {}, mLand: {} };
     this.log = [];
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
+  }
+  // what his mastery does to the body of his punches, for the game to read (BR.lv): per punch skill, and his defense habits
+  lvUpd() {
+    const m = this.m, sk = { jab: m.jab, power: m.power, body: m.body }, L = this.mast = { force: {}, gas: {}, off: {}, late: {} };
+    for (const c in sk) { L.force[c] = lvV('force', sk[c]); L.gas[c] = lvV('gas', (sk[c] + m.pacing) / 2); L.off[c] = lvV('off', (sk[c] + m.footwork) / 2); L.late[c] = lvV('late', (sk[c] + m.block) / 2); }
+    L.flinch = lvV('flinch', (m.block + m.slip) / 2);
   }
   rnd(a, b) { return a + this.R() * (b - a); }
   mm() { return this.mode === 'survive' ? SURV[this.hurtResp] || MODES.survive : MODES[this.mode]; } // the numbers of what he's doing now
@@ -516,7 +542,7 @@ class Brain {
   // hurt: the first reaction, then a second pick a second or two later. Composure decides both
   survStart(P) {
     const tr = this.tr, comp = tr.composure, k = this.k, SV = BR.surv, H = this.h;
-    const w = { clinch: tr.clinch * (.3 + k.clinch) * comp * 1.5, shell: tr.shell * (1.2 - comp * .5), run: tr.legs * (.3 + k.footwork) * comp, fire: tr.risk * (1 - comp) * 1.4, freeze: (1 - comp) * (1 - k.read) * .6,
+    const w = { clinch: tr.clinch * (.3 + k.clinch) * comp * 1.5, shell: tr.shell * (1.2 - comp * .5), run: tr.legs * (.3 + k.footwork) * comp, fire: tr.risk * (1 - comp) * 1.4, freeze: (1 - comp) * (1 - k.read) * .6 + lvV('freeze', (this.m.read + this.m.clinch) / 2),
       bait: comp > .6 ? (tr.patience - .4) * k.counter * 1.2 : 0 };
     if (this.ct - H.kdMe < 8) { w.fire += comp * tr.risk * SV.kdFire; w.shell *= lerp(SV.kdShell, 1, comp); } // off the floor: fire back harder, or cover up
     if (P.roundLen - P.clock < SV.late) { w.run *= SV.lateRun; w.clinch *= SV.lateRun; w.fire *= SV.lateFire; } // ride it to the bell
@@ -571,7 +597,7 @@ class Brain {
     if (H.punch && !H.punch.feint && this.mode !== 'counter' && !(this.mode === 'survive' && this.hurtResp === 'bait')) p *= .6 + .6 * (1 - k.read) * tr.risk; // he's punching: most men cover, the reckless trade
     if (this.R() > p) { if (dSeen < 80) this.tel.holds++; return null; }
     // feint, a planned sequence, or a combo
-    if (this.R() < BR.feintP * (.4 + k.feints * 1.5) * (.5 + tr.patience) / Math.max(.3, m.aggr) * (this.mode === 'feelout' || this.mode === 'reset' ? 2 : 1)) return this.feint(dSeen);
+    if (this.R() < BR.feintP * (.4 + k.feints * 1.5) * lvV('feint', this.m.feints) * (.5 + tr.patience) / Math.max(.3, m.aggr) * (this.mode === 'feelout' || this.mode === 'reset' ? 2 : 1)) return this.feint(dSeen);
     if (this.mode !== 'survive' && !HUNTS[this.mode] && this.R() < BR.setupP * k.read * (.5 + k.feints * .5 + k.combos * .5) * (this.mode === 'burst' ? .4 : 1)) { const s = this.startSetup(P, dSeen); if (s) return s; }
     const c = this.pickCombo(P, dSeen);
     if (!c) return null;
@@ -579,7 +605,7 @@ class Brain {
   }
   pickCombo(P, dSeen) {
     const k = this.k, tr = this.tr, E = this.emo, md = this.mode, H = P.him, fat = 1 - P.me.stam / (P.me.stamMax || 100), pl = this.plan;
-    const maxLen = 1 + Math.round(1 + 3 * k.combos * (.6 + .5 * tr.combo));
+    const maxLen = Math.min(1 + Math.round(1 + 3 * k.combos * (.6 + .5 * tr.combo)), BR.lv.on.len ? Math.round(lvV('len', this.m.combos)) : 9);
     const last = this.hist[this.hist.length - 1], noise = lerp(.75, .3, (k.read + k.combos) / 2) * (1 + .8 * fat) * (1 + .6 * E.frus);
     const nd = this.nd;
     let ctrN = 0, mN = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctrN += e.c || 0; mN += e.n || 0; }
@@ -686,12 +712,12 @@ class Brain {
   fire(ps, why, dSeen, ctr) {
     const k = this.k, tr = this.tr, E = this.emo, fat = this.fat || 0;
     if (!ps || !ps.length) return null;
-    const skillOf = p => PUNCHES[p].cat === 'jab' ? k.jab : PUNCHES[p].cat === 'body' ? k.body : k.power;
+    const skillOf = p => PUNCHES[p].cat === 'jab' ? k.jab : PUNCHES[p].cat === 'body' ? k.body : k.power, skillM = p => this.m[PUNCHES[p].cat === 'jab' ? 'jab' : PUNCHES[p].cat === 'body' ? 'body' : 'power'];
     const tech = ps.map((p, i) => clamp(skillOf(p) * (i ? lerp(.7, 1, k.combos) : 1) * (1 - .25 * fat) * (1 - .15 * E.frus * (1 - tr.composure)) + this.g() * .06, .1, 1));
     let commit = clamp(tr.power * .5 + tr.risk * .3 + BR.desp.commit * this.desp + E.frus * .2 - (ps.length > 2 ? .2 : 0), 0, 1) + (BR.fin.commit[this.mode] || 0); // finishing: he sits down on everything (past his usual)
     if (ctr && this.mode === 'survive' && (this.hurtResp === 'fire' || this.hurtResp === 'bait')) commit = Math.min(1, commit + BR.fin.ctrCommit); // nothing to lose: he sits down on it
     if (this.mode === 'hunt' || this.mode === 'huntSafe') { const H = this.h; H.n += ps.length; if (H.n >= H.goal) { H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = this.t + this.rnd(BR.fin.look[0], BR.fin.look[1]); } } // the flurry, then a look
-    const tell = clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1); // loading up shows it
+    const tell = clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1) + lvV('tell', skillM(ps[0])); // loading up shows it; a novice shows it from the parking lot
     this.tel.techSum += tech[0]; this.tel.techN++;
     if (!this.thrownEv) { this.tel.throws++; this.tmode(ps.length); } // no word from the game: count what he decided
     const id = ps.map(p => PUNCHES[p].num).join('-');
@@ -782,7 +808,7 @@ class Brain {
     this.queue = null; this.setup = null; this.threat = null;
     const lost = this.sc.rounds.slice(-2).filter(x => x < 0).length;
     // the best adjust between rounds; the shared way they lose is waiting too long
-    const ch = Math.pow(k.adjust, 1.4) * (r < 0 ? 1 : .25) * (1 + .5 * lost);
+    const on = BR.lv.on.adjust, ch = lerp(Math.pow(k.adjust, 1.4) * (1 + .5 * lost), tierV(this.m.adjust, BR.lv.adjust) * (1 + .3 * lost), on) * (r < 0 ? 1 : .25);
     let change = null;
     if (this.R() < ch) {
       const cat = c => { let v = 0, n = 0; for (const p of PTYPES) if (PUNCHES[p].cat === c) { v += this.punchVal(p); n++; } return v / n; };
@@ -815,5 +841,5 @@ class Brain {
 }
 
 function create(profile, opts) { return new Brain(profile, opts); }
-return { create, makeProfile, tierOf, mulberry32, PUNCHES, COMBOS, SKILLS, SKILL_KEYS, TRAIT_KEYS, TIERS, STYLES, MODES, SURV, BR, DEF_THRU, kindOf };
+return { create, makeProfile, tierOf, tierV, mulberry32, PUNCHES, COMBOS, SKILLS, SKILL_KEYS, TRAIT_KEYS, TIERS, STYLES, MODES, SURV, BR, DEF_THRU, kindOf };
 });
