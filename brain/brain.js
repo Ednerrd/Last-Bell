@@ -83,7 +83,7 @@ function tierOf(skills) { const v = SKILL_KEYS.reduce((s, k) => s + (skills[k] |
 const TRAIT_KEYS = ['output', 'jab', 'power', 'body', 'combo', 'initiative', 'patience', 'shell', 'slip', 'legs', 'clinch', 'composure', 'risk', 'killer', 'range', 'circle'];
 const STYLES = {
   outboxer:     { label: 'Out-boxer',       t: { output: .55, jab: .85, power: .35, body: .25, combo: .4, initiative: .55, patience: .6, shell: .3, slip: .5, legs: .85, clinch: .35, composure: .6, risk: .3, killer: .4, range: .9, circle: .8 },
-                  sk: { jab: 10, footwork: 10, range: 10, angles: 6, power: -6, cutoff: -8, clinch: -2 } },
+                  sk: { jab: 10, footwork: 6, range: 4, angles: 6, power: -6, cutoff: -8, clinch: -2 } },
   slugger:      { label: 'Slugger',         t: { output: .42, jab: .3, power: .9, body: .45, combo: .35, initiative: .75, patience: .35, shell: .75, slip: .25, legs: .2, clinch: .4, composure: .5, risk: .8, killer: .9, range: .3, circle: .2 },
                   sk: { power: 12, cutoff: 6, slip: -8, footwork: -8, jab: -6, angles: -4 } },
   swarmer:      { label: 'Swarmer',         t: { output: .9, jab: .35, power: .55, body: .7, combo: .85, initiative: .9, patience: .15, shell: .72, slip: .65, legs: .2, clinch: .3, composure: .78, risk: .7, killer: .7, range: .08, circle: .35 },
@@ -140,6 +140,7 @@ const BR = {
   shortCtr: .5,           // a punch that fell short is a counter chance this often (the pull counter)
   stealT: 30,             // the last 30 s, where rounds get stolen
   hurtQ: .6,              // a hurt man's defense works this much worse
+  ropes: { lo: .5, hi: 1.3, legs: [.7, 1.6], flip: 0 }, // on the ropes: how hard he slides off (by ropes skill, by how much a mover he is: a mover gets off, a shell man can stay), how often he tries the other side
   fuse: { gas: .5, w: 1.5, liver: .5 }, // under this much gas he digs: body weight up to x(1 + w), the 3b on top
   // clarity: damage taken (this round's and the wear), and knockdowns, blur the eye. blur 0..1 -> reaction x(1 + react), misreads x(1 + mis), defense quality x(1 - q)
   blur: { cur: .5, wear: 2.5, late: 0, kd: .25, react: .5, mis: 2, q: .35, at: .5 }, // at: damage below this share of his head doesn't count. late: by the last round (the championship rounds)
@@ -711,7 +712,7 @@ class Brain {
     if (sv === 'freeze' || sv === 'bait') range = P.dist;
     let lateral = tr.circle * lerp(.4, 1, k.angles) * (md.lat || .5);
     // on the ropes: get off them (a man without ring craft stays there and covers up; hurt, the runner and the steady man push off first)
-    if (P.ropes.me > .4) lateral = Math.max(lateral, P.ropes.me * lerp(.15, 1, k.ropes) * (sv === 'shell' ? .3 : sv === 'run' || sv === 'steady' ? 1.5 : 1));
+    if (P.ropes.me > .4) lateral = Math.max(lateral, P.ropes.me * lerp(BR.ropes.lo, BR.ropes.hi, k.ropes) * lerp(BR.ropes.legs[0], BR.ropes.legs[1], tr.legs) * (sv === 'shell' ? .3 : sv === 'run' || sv === 'steady' ? 1.5 : 1));
     let cut = (md.cut || (tr.initiative > .6 && tr.range < .5) || P.ropes.him > .4) ? lerp(.2, 1, k.cutoff) * (md.cut ? 1 : .6) : 0;
     if (HUNTS[this.mode] && P.him.closing < -25) cut = Math.min(1, cut * 1.5); // he's running: cut the ring, trap him on the ropes
     let clinch = false;
@@ -756,7 +757,7 @@ class Brain {
       this.decBase = lerp(BR.decT[0], BR.decT[1], (this.k.read + this.k.combos + this.k.counter) / 3);
       this.decT = this.decBase * (1 - .3 * this.fat) * Math.exp(this.g() * .25);
       if (this.R() < .1) this.rangeJit = this.g() * lerp(5, 2, this.k.range);
-      if (this.R() < .08 + (P.ropes.me > .5 ? .15 : 0)) this.lat *= -1;
+      if (this.R() < .08 + (P.ropes.me > .5 ? BR.ropes.flip : 0)) this.lat *= -1;
       this.out.move = this.move(P);
       if (!P.me.busy && !P.me.clinch) {
         const a = this.offense(P);
