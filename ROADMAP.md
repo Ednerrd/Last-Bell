@@ -9,7 +9,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 
 ## Claude, in this order
 0. **Boxer brain on the engine (branch `claude/brain-wire`, reviewed Oct 13).** Wired behind `AI.brain` (default 0 = old AI, same.js 7f58e976), lab has an AI row. Audit and styles on target (`docs/BRAIN.md` "The brain on the engine" + "Review and handoff").
-   - **Ed:** watches brain vs brain on the private brain test page (https://claude.ai/artifact/HQopfRTmoBmSZLbEfDa94P, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
+   - **Ed:** watches brain vs brain on the private brain test page (https://claude.ai/artifact/UHAiLaZMKM7CPMfbsyaYzA, `index.html` with `AI.brain: 1`) and says go/no-go on the default.
    - **After that:**
      - **Finishing and the hurt brain: built (Oct 13, `docs/BRAIN.md` "Finishing and the hurt brain").** Stops 19.6 → ~24%, styles 46.8–54.1. Left from it:
        - finisher caught (hurt) 0.7% of hunts, wanted 5–10 (stung 12%); same-round stop after a KD ~25%, research guess 35–45;
