@@ -461,3 +461,39 @@ The body decides it. An 18-point stat gap alone is almost as decisive as the ful
   - Adjusts between rounds: 2.2 → 3.2 → 4.0 → 4.4 per fight. Research: 5 / 25 / 55 / 80% chance when losing.
   - Froze when hurt: 6 → 5 → 5 → 2%. Research: Novice 40%.
 - Stoppages fall with level (31 → 7% in mirrors). Real life doesn't: world-class rates are high. Check in L6. The mirror pool (specials in, rating 78) also stops less than the audit (82, base styles): 15 vs ~26%.
+
+### Skill levels L1: the skill sheet (Oct 14, later; data only)
+
+Ed's call: stats are the body, skills are what he knows how to do with it; the level comes from skills. Built (index.html, after `brainProfile`):
+- **`sheet.sk`**: mastery per brain skill (the 17 `BoxerBrain.SKILL_KEYS`), 0..100 on the brain's own scale (tiers: Novice under 46, Intermediate 46+, Pro 66+, World class 84+; centers 34 / 56 / 74 / 90). `research/mind_learn.md` 4 uses 0–30 / 30–55 / 55–80 / 80–100 bands; read its tier columns as these tiers.
+- **`sheet.know`**: familiarity 0..1 per opponent style (every `STYLES` key) and stance (orthodox, southpaw). Specials x.6 and southpaws x.55 (scarcity). Nothing reads it yet (L3).
+- **`levelOf(sheet)`**: `BoxerBrain.tierOf(sheet.sk)`, or, with no sheet, the skills the brain reads off the body.
+- **The brain reads `sheet.sk`** when it's there (`brainProfile`); without it, `brainSkills(stats, iq, style)` does what it always did. `same.js` 7f58e976 (brain off) and **ac686464 with `PATCH="AI.brain=1"`** both held across L1.
+- **Defaults** (`SKL`, `skillSheet(sheet, type)`, `skFromRecord(sheet, {w,l,d}, rating)`; `node tests/sheet.js` prints them):
+
+| Walk-in / record | avg skill | Level | know (base / specials / southpaw) |
+|---|---|---|---|
+| beginner | 35 | N 100% | .12 / .07 / .07 |
+| journeyman (Pro at clinch, ropes, pacing) | 59 | I 100% | .60 / .36 / .33 |
+| veteran (IQ up, legs down) | 77 | P 100% | .80 / .48 / .44 |
+| ranked (adjusts less: set habits) | 83 | P 76% / W 24% | .65 / .39 / .36 |
+| 0-0 @70 | 27 | N | .12 |
+| 4-0 @74 | 51 | I | .34 |
+| 10-0 @78 | 66 | I 57% / P 43% | .56 |
+| 20-25-2 @72 | 59 | I | .88 |
+| 25-0 @82 | 79 | P | .80 |
+| 45-2 @90 | 86 | W 90% | .88 |
+
+  Record center = 30 + 34·(1−e^(−fights/15)) + (win% − .5)·36 + (rating − 78)·.5, clamped 20–92. Style leans as in `makeProfile`, noise ±6 per skill.
+
+**`levels.js sk`** (the lever for L2/L6): same body (rating 78 both, random styles + guards), levels set by `sheet.sk` only. 300 fights per pair, brain on:
+
+| Pair | Dog wins | Draws | Stoppages |
+|---|---|---|---|
+| I v N | 30.7% | 7.3% | 11.3% |
+| P v I | 32.0% | 6.3% | 19.0% |
+| W v P | 31.7% | 9.7% | 16.0% |
+| P v N (two down) | 17.7% | 3.0% | 21.3% |
+| P mirror | 45.0 / 46.3 | 8.7% | 13.7% |
+
+Matches the L0 split (skills-only 31.7%). A skill level is worth ~68/32 today, the same at every rung; **two** levels is the 15–20% target. So L2 needs a level to hit about twice as hard (mastery effects: telegraph read, off balance, arm-punch damage, combo length, flinch; then `BR.spread` .6 in L6). Skill use by level from sheets looks like L0's (telegraphed 90 → 43 → 10 → 2%, unsold feints 41 → 13 → 4 → 1%, reaction 147 → 126/136 → 120 → 106 ms); feints /rd (3.5 → 5.4), adjusts and freezing when hurt (9.5 → 2.6%) still too flat, as in L0.
