@@ -178,7 +178,7 @@ const BR = {
     off:    [.5, .3, .15, .08],      // off balance after a miss (s): crossed feet, overreaching
     late:   [.4, .2, .05, 0],        // hands come back late: extra damage if he's caught on the way back
     flinch: [.25, .1, .03, .01],     // eyes shut on a hard shot: no defense for the next one
-    tell:   [1, .5, .17, 0],         // wind-up he shows (x AI.tell in the game: +120 ms for a Novice)
+    tell:   [.83, .33, 0, -.1],      // extra wind-up he shows, 0 at Pro (x AI.tell in the game: a Novice ~+70 ms on top of his bad technique)
     feint:  [.15, .4, 1, 1.4],       // feints per round x (a novice barely feints; the ones he does, nobody buys)
     len:    [2, 3, 4.5, 5.5],        // longest combo he really owns
     adjust: [.05, .25, .55, .8],     // chance to change one thing between rounds when losing
@@ -721,7 +721,7 @@ class Brain {
     let commit = clamp(tr.power * .5 + tr.risk * .3 + BR.desp.commit * this.desp + E.frus * .2 - (ps.length > 2 ? .2 : 0), 0, 1) + (BR.fin.commit[this.mode] || 0); // finishing: he sits down on everything (past his usual)
     if (ctr && this.mode === 'survive' && (this.hurtResp === 'fire' || this.hurtResp === 'bait')) commit = Math.min(1, commit + BR.fin.ctrCommit); // nothing to lose: he sits down on it
     if (this.mode === 'hunt' || this.mode === 'huntSafe') { const H = this.h; H.n += ps.length; if (H.n >= H.goal) { H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = this.t + this.rnd(BR.fin.look[0], BR.fin.look[1]); } } // the flurry, then a look
-    const tell = clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1) + lvV('tell', skillM(ps[0])); // loading up shows it; a novice shows it from the parking lot
+    const tell = clamp(clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1) + lvV('tell', skillM(ps[0])), 0, 2); // loading up shows it; a novice shows it from the parking lot
     this.tel.techSum += tech[0]; this.tel.techN++;
     if (!this.thrownEv) { this.tel.throws++; this.tmode(ps.length); } // no word from the game: count what he decided
     const id = ps.map(p => PUNCHES[p].num).join('-');
