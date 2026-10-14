@@ -577,3 +577,21 @@ Built (brain/brain.js `BR.fam`, `famSet`/`famUpd`; engine `famOf`): at the bell 
 | south (orth v south, default know .6) | 50.2% | 43.0 / 51.7 | **45.4%** | 48.2 / 49.4 / 49.5 / 49.6 |
 
 Off = 50 ± 3 everywhere (noise at 300/pair). On: a Pro who has never seen the style or the stance wins ~44% of decided fights, the hole is clearest in rounds 1–2 and mostly closes by mid-fight (the slow habit read lingers a little). The southpaw's scarcity edge at default know: ~4–5 points. "Both" barely stacks (the read takes the larger of the two; only the weapon is stance-only).
+
+#### L3 tuned softer (Oct 14, Ed: "soften it", from `research/mind_southpaw.md`)
+The research: the real southpaw edge is small (2–4 points at normal familiarity; facing a southpaw costs top-20 pros ~4 points, 2014; lefty pros win ~52%, 2019), and nobody measured "never faced one". The first L3 (44% / 43%) was steeper than anything published. Changes:
+- `atS` .9: a separate bar for the stance. Southpaws are rare, so most men's southpaw know (default .6 → .33) sits under it (u .63); a never-seen .1 → .89. Style keeps `at` .45.
+- `keep` .2: a floor under the in-fight fade (a southpaw stays a bit awkward all night). The research has no in-fight fade data; mild and lasting beats sharp and gone.
+- react .2, weapon .22, pred/mem/mis .3 (from .35 / .6 / .5).
+
+`levels.js know` 1200/pair (`PR=style,stance,south`), A's share of decided fights, landed R1-2 / 3-4 / 5-7 / 8-10:
+
+| Pair | A share | Landed |
+|---|---|---|
+| stance (never saw a southpaw) | **46.2%** | 48.3 / 49.4 / 49.4 / 48.7 |
+| south (default know .6): the southpaw wins | **53.4%** (A 46.6) | 48.5 / 49.5 / 49.3 / 49.0 |
+| style (never saw the style) | **48.2%** | 49.1 / 49.6 / 49.7 / 49.8 |
+
+Targets (`mind_southpaw.md`): stranger ~45–47 ✓; southpaw at normal know 51–53, we sit at the top (some of it may be the engine, below). Tries on the way (600/pair): keep .3 with knobs ×.6 overshot (stance 41.7%); atS .7 with knobs ~×.45 left the default-know southpaw edge at ~0.
+**Engine note:** ctrl (both know .8, A orthodox v B southpaw, fam has no effect there) pooled over 3,400 fights: A 51.6%. A possible ~1.5 point orthodox edge in the engine itself (about 1.2 SE, not proven). Check with a stance-swapped ctrl before trusting it.
+same.js holds 45127603 (no know in the default field) / old AI 7f58e976.

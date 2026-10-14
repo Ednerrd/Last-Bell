@@ -6,19 +6,18 @@ The only to-do list. When something is done, delete its line here and put the nu
 1. **Delete the old branches on GitHub** (this session can't: 403). Safe to delete: `ccr-026fa9ad-j4d8rw`, `ccr-88f84d50-12dv5y`, `ccr-9a5a152f-n8ld1d`, `ccr-b57f3498-nk3hk1`, `claude/boxer-brain`, `claude/festive-thompson-e2ch70`, `claude/handoff-review-32nske`, `claude/new-session-ne6ynn`, `claude/step9-contact`. Keep `claude/determined-feynman-6z4lju` (the only copy of the Oct 2–6 history: the main line was re-rooted Oct 8) and `claude/brave-einstein-ojkyzm` (v2, parked).
 
 ## Claude, in this order
-1. **L3 targets with Ed:** L3 is built and on (`BR.fam`, `levels.js know`): never seen the style/stance = ~44% of decided fights, southpaw edge at default know ~4–5 points. Ed picks: keep, stronger, or softer.
-2. **Brain pieces that hang off the levels** (fold into L3–L4):
+1. **Brain pieces that hang off the levels** (fold into L3–L4):
    - Setups and traps: "show it twice, change it", armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
    - Hurt brain by tier; the finisher weighs the risk (`research/mind_vision.md` 8d). Finisher caught 0.7% of hunts (want 5–10); same-round stop after a KD ~25% (research 35–45).
    - Gassers save it for later (stamina pacing).
-3. **L6 balance pass** (one level down is 15–20% now; then the CLAUDE.md targets; counter-puncher 47.2 and swarmer 53.9 on the band edges; specials not re-checked since L2).
-4. **Retire `decide()`/`react()`**: the brain is the default now; L2 is in; keep the old AI until L3 settles (bvo and same.js old-AI hash still use it).
-5. **Merge `claude/brain-wire` into the main line and republish the fight lab** (with Ed's OK; the lab still shows the Oct 6 build).
-6. **After the AI / brain / fight sim:** career back, then L4 (learning from fights and camp), L5 (skill sheet UI), gym mode steps 3–6 (`docs/GYM.md`), 3D phase 1 (`proto/PLAN.md`; the phone numbers are in, see below), footwork during punches (do it in 3D).
+2. **L6 balance pass** (one level down is 15–20% now; then the CLAUDE.md targets; counter-puncher 47.2 and swarmer 53.9 on the band edges; specials not re-checked since L2).
+3. **Retire `decide()`/`react()`**: the brain is the default now; L2 is in; keep the old AI until L3 settles (bvo and same.js old-AI hash still use it).
+4. **Merge `claude/brain-wire` into the main line and republish the fight lab** (with Ed's OK; the lab still shows the Oct 6 build).
+5. **After the AI / brain / fight sim:** career back, then L4 (learning from fights and camp), L5 (skill sheet UI), gym mode steps 3–6 (`docs/GYM.md`), 3D phase 1 (`proto/PLAN.md`; the phone numbers are in, see below), footwork during punches (do it in 3D).
 
 ## Done lately (numbers in `docs/BRAIN.md`)
 - Oct 11–14: the brain on the engine (behind `AI.brain`), finishing and the hurt brain, balance pass, weak specials, angle fighter, out-boxer off the ropes, all specials 47.4–52.1, body KDs on target.
-- Oct 14: skill levels L3 (style and stance familiarity, `sheet.know` read by the brain; numbers in `docs/BRAIN.md`).
+- Oct 14: skill levels L3 (style and stance familiarity, `sheet.know` read by the brain), tuned softer to `research/mind_southpaw.md`: never saw a southpaw ~46%, the southpaw at default know ~53%, never saw the style ~48% (`docs/BRAIN.md`). Possible ~1.5 pt orthodox edge in the engine itself, unproven.
 - Oct 14: skill levels L0 (baseline), L1 (skill sheet: `sheet.sk`, `sheet.know`, `levelOf`, walk-in and record defaults) and L2 (what a level does: force, gas, off balance, flinch, tells, feints, combo length, adjusts, freezing; one level down wins 15–20%, was ~31%).
 - Oct 14: project review, dead code from the career cut removed. The brain is the default AI (same.js ac686464).
 - Oct 9 (on the v2 branch): Ed's S25 Ultra phone test, 60 fps on every quality setting with shadows on. Defaults res 2 / shadows on / cap 60.

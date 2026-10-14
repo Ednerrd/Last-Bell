@@ -388,12 +388,13 @@ const BR = {
     freeze: [.75, .25, 0, 0] },      // extra weight on freezing when hurt (novice ~40% of his answers)
   // skill levels L3: style and stance familiarity (research/mind_learn.md 4b). opts.fam = { style, stance }: how well he knows THIS man's style and stance (0..1, sheet.know).
   // No fam = neutral. Unfamiliar = under `at`, all the way at 0. It fades over the first rounds (`full` rounds at full size, gone by `gone`, a reader adapts sooner)
-  fam: { on: 1, at: .45, full: 1, gone: [4.5, 3], keep: 0, // keep: the part that never fades in the fight (a southpaw stays awkward all night)
-    react: .35,             // he sees everything later (x(1 + react) at full unfamiliarity)
-    weapon: .6,             // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top
-    pred: .5,               // the predicted-punch bonus, cut by this much
-    mem: .5,                // reads his habits this much slower (memory notice)
-    mis: .5 }               // misreads up this much
+  // Tuned to research/mind_southpaw.md (Oct 14): a Pro who never saw the stance wins ~46%, default know vs a southpaw ~47%, never saw the style ~48%
+  fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
+    react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
+    weapon: .22,            // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top
+    pred: .3,               // the predicted-punch bonus, cut by this much
+    mem: .3,                // reads his habits this much slower (memory notice)
+    mis: .3 }               // misreads up this much
 };
 // the opposite stance's main weapons: the rear straight down the middle, the lead hook from outside
 const FAM_WPN = { cross: 1, bodyCross: .7, hook: .5 };
@@ -499,7 +500,7 @@ class Brain {
     L.flinch = lvV('flinch', (m.block + m.slip) / 2);
   }
   // L3: how new this man is to him (0 = seen plenty, 1 = never), by style and by stance. null = neutral. The game calls it again when he switches stance
-  famSet(f) { const a = BR.fam.at, u = k => k == null ? 0 : clamp((a - k) / a, 0, 1); this.fam = f ? { style: u(f.style), stance: u(f.stance) } : null; }
+  famSet(f) { const F = BR.fam, u = (k, a) => k == null ? 0 : clamp((a - k) / a, 0, 1); this.fam = f ? { style: u(f.style, F.at), stance: u(f.stance, F.atS || F.at) } : null; }
   // ... and now: it fades as the rounds go (a reader adapts sooner). fx.u = his reads, fx.s = the stance (the main weapon)
   famUpd(P) {
     const F = BR.fam, x = this.fx; if (!this.fam || !F.on) { x.u = x.s = 0; return; }
