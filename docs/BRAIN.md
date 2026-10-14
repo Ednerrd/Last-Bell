@@ -497,3 +497,39 @@ Ed's call: stats are the body, skills are what he knows how to do with it; the l
 | P mirror | 45.0 / 46.3 | 8.7% | 13.7% |
 
 Matches the L0 split (skills-only 31.7%). A skill level is worth ~68/32 today, the same at every rung; **two** levels is the 15–20% target. So L2 needs a level to hit about twice as hard (mastery effects: telegraph read, off balance, arm-punch damage, combo length, flinch; then `BR.spread` .6 in L6). Skill use by level from sheets looks like L0's (telegraphed 90 → 43 → 10 → 2%, unsold feints 41 → 13 → 4 → 1%, reaction 147 → 126/136 → 120 → 106 ms); feints /rd (3.5 → 5.4), adjusts and freezing when hurt (9.5 → 2.6%) still too flat, as in L0.
+
+### Skill levels L2: the engine reads mastery (Oct 14, later)
+
+What a level now does, all in `BR.lv` (brain/brain.js; tables are [Novice, Intermediate, Pro, World class] at the tier centers, `BR.lv.on` switches each one, `BR.lv.own` .3 = how much one skill's own gap from his level counts):
+
+| Effect | N / I / P / W | Where |
+|---|---|---|
+| Punch force x | .7 / .85 / 1 / 1.06 | engine damage (`mast.force`) |
+| Gas per punch x | 1.22 / 1.12 / 1 / .92 | engine punch cost |
+| Off balance after a miss (s): no defense, no punch, takes +20% (`AI.offDmg`) | .28 / .15 / 0 / 0 | engine `miss()`, `offT` |
+| Hands back late: extra damage caught on the way back | .28 / .15 / 0 / 0 | engine resolve |
+| Flinch on a hard shot: no defense for .35 s (`AI.flinchT`) | .17 / .07 / 0 / 0 | engine resolve, `flinchT` |
+| Extra wind-up (tell) | .65 / .33 / 0 / -.1 | brain `fire()` |
+| Feints x | .15 / .4 / 1 / 1.4 | brain `offense()` |
+| Longest combo he owns | 2 / 3 / any / any | brain `pickCombo()` |
+| Adjust between rounds when losing | 5 / 25 / 55 / 80% | brain `rest()` |
+| Extra weight on freezing when hurt | .75 / .25 / 0 / 0 | brain `survStart()` |
+| Level as the brain plays it (`kLvl`, [mastery, k]) | .34→.43, .56→.55, .74→.644, .82→.692, .90→.86 | brain constructor (replaces the straight `spread` line) |
+
+Rule learned the hard way: **every table is neutral at Pro.** The first cut had penalties at Pro (off balance .15 s, late hands, flinch, tell .17, a combo cap) and a straight World-class pull on the level: that changed the whole rating-82 field and swung the styles (swarmer 56–60, counter-puncher 42–44 vs 53.8 with L2 off). Ablations at 150/pair were too noisy to name one piece; making every table neutral at Pro put the styles back.
+
+Commentary hooks (UI): `offBalance` ("misses and stumbles") and a feint sold under .3 ("nobody's buying it").
+
+**Results** (brain default; `same.js` now **45127603**, old AI still 7f58e976):
+
+| | Before L2 | After |
+|---|---|---|
+| `levels.js sk` I v N / P v I / W v P (300/pair) | 30.7 / 32.0 / 31.7% | **20.0 / 15.0 / 17.0%** |
+| P v N (two down) | 17.7% | 2.3% |
+| Feints /rd N → W | 3.5 → 5.4 | 0.8 → 7.1 |
+| Froze when hurt N → W | 9.5 → 2.6% | 36.7 → 0.7% |
+| Adjusts /fight N → W | 2.6 → 3.5 | 0.5 → 3.0 (P up to 4.7) |
+| Styles 300/pair @82 | 45.1–53.8 (L2 off, same code) | 47.2–53.9 (swarmer 53.9, outboxer 50.8, slugger 49.4, bp 48.5, counter 47.2) |
+| Audit 600 | 51.7 / 15.5 / 30.0%, stops 21.0%, fav @ gap 10 88.5% | AUDIT_AFTER |
+
+Left for L6: counter-puncher 47.2 and swarmer 53.9 at the band edges; thrown under the ~52 target. Fighters without a skill sheet get their skills from their body, so a rating gap now counts twice (body + skills): steeper upsets by rating in the audit, expected until fighters carry `sheet.sk` with close bodies.
