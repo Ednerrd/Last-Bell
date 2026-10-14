@@ -340,3 +340,11 @@ Open:
 - **Thrown 51.6 vs the 53 target: Ed's call.** The brain pulls back ~1.7 punches a round (un-counted, gas spent), and no balance knob here moved thrown. Either the brain's target becomes ~51–52, or an output bump (`BR.throwP`) gets tried; an output bump will push connect and stops around again.
 - Connect 30.4%: inside 29–30 would want defQ ~1.6 (expect stops −1, swarmer −1).
 - Not re-checked this pass: dummy ring audit, guards vs standard, specials, bvo, finish.js.
+
+### Re-check on the balance-pass numbers (Oct 14, later)
+Brain on, @82, code at 599098d (nothing changed for these).
+- **Guards vs standard** (`bal2.js` 4x75 = 300/guard, ±3): high 57.9, handslow 55.1, cross 53.3, philly 53.1, peekaboo 49.2. All in 48–58; handslow isn't on top this run (high 57.9 vs 55.1 sits inside the ±3).
+- **Specials vs base styles** (`styles.js` 75 x4, stopped at the 30-min background cap: ~260–290/pair, feinter ~190/pair): spoiler 53.1, awkward 51.4, jabgrab 50.9, feinter 50.4, pboxer 48.7, switch 47.8, angle 46.4, volume 46.3, body 44.3 (±1.3–1.6). The base styles in the same run: slugger 52.3, outboxer 52.2, swarmer 51.9, counter 51.5, bp 48.5. Weak: body, volume, angle. Volume throws the most (69/rd) but 77% power at light hands; body 79% power.
+- **Brain vs old AI** (`bvo.js` 3x100 pooled): 35.4% (93-170, 37 draws), back up from ~27. The brain's out-boxer is the hole (7–19% by run); slugger ~56, counter ~41.
+- **Dummy ring audit 300** (pro): 47.9 thrown / 16.4 landed / 34.3% connect, stops 28.0%, KDs 0.8/fight. Same as Oct 13 (28.3 / 34.1).
+- Lesson: the full 9-special run at 75 x4 takes >30 min: run it in halves, or with a long background timeout.
