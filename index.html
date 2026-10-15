@@ -1453,7 +1453,9 @@ const STRATS = {
   body:     { label: 'Go to the body',aggr: 1.1,  range: -6,  body: 2.6, power: 1,   jab: .8,  def: 1,   clinch: 1,   counter: 1,   circ: .8 },
   counter:  { label: 'Counter',       aggr: .7,   range: 4,   body: .9,  power: 1,   jab: 1,   def: 1.3, clinch: 1,   counter: 1.8, circ: 1.2 },
   ko:       { label: 'Go for the KO', aggr: 1.5,  range: -8,  body: .9,  power: 1.9, jab: .6,  def: .7,  clinch: .6,  counter: .8,  circ: .5, cut: .3 },
-  survive:  { label: 'Survive',       aggr: .5,   range: 18,  body: .8,  power: .8,  jab: 1.3, def: 1.5, clinch: 2.4, counter: 1.1, circ: 1.6 }
+  survive:  { label: 'Survive',       aggr: .5,   range: 18,  body: .8,  power: .8,  jab: 1.3, def: 1.5, clinch: 2.4, counter: 1.1, circ: 1.6 },
+  up:       { label: 'Pick it up',    aggr: 1.2,  range: -2,  body: 1,   power: 1,   jab: 1,   def: .95, clinch: .9,  counter: 1,   circ: 1 },
+  down:     { label: 'Slow down',     aggr: .85,  range: 2,   body: 1,   power: .95, jab: 1.1, def: 1.05, clinch: 1.1, counter: 1.05, circ: 1 }
 };
 // in-round instructions from the corner: a short-lived tweak on top of the round plan. How much sinks in depends on the fighter
 const SHOUTS = {
@@ -1462,7 +1464,9 @@ const SHOUTS = {
   press:   { label: 'Get on him!', mods: { aggr: 1.3, range: -10, cut: .3, circ: .7 } },
   counter: { label: 'Counter!',    mods: { aggr: .72, counter: 1.4 } },
   move:    { label: 'Move!',       mods: { aggr: .85, range: 10, circ: 1.7, def: 1.1 } },
-  hands:   { label: 'Hands up!',   mods: { aggr: .78, def: 1.15, power: .82, clinch: 1.35 } }
+  hands:   { label: 'Hands up!',   mods: { aggr: .78, def: 1.15, power: .82, clinch: 1.35 } },
+  up:      { label: 'Pick it up!', mods: { aggr: 1.2 } },
+  down:    { label: 'Slow down!',  mods: { aggr: .85, def: 1.05 } }
 };
 // which round plans a corner reaches for with each style (when nothing in the fight says otherwise)
 const STYLE_PLANS = {
@@ -2797,6 +2801,8 @@ class Fight {
       case 'press': return clamp(Math.max(hurt(O) ? 1 : 0, gas(O) < .45 ? .8 : 0, this.trapped(O) ? .6 : 0, O.headMax < 60 ? .6 : 0) * (hurt(F) ? .3 : 1), 0, 1);
       case 'counter': return clamp(Math.max((pace(O) - 60) / 30, /pressure|ko/.test(O.strategy) ? .7 : 0, /swarmer|slugger/.test(style(O)) ? .5 : 0), 0, 1);
       case 'move': return clamp(Math.max(this.trapped(F) ? .9 : 0, gas(F) < .45 ? .7 : 0, O.cutting ? .45 : 0, hurt(F) ? .5 : 0), 0, 1);
+      case 'up': return clamp(Math.max(pace(O) - pace(F) > 12 ? .7 : 0, gas(O) < .45 && gas(F) > .6 ? .75 : 0, this.round > this.rounds - 3 && (F.side === 0 ? this.lead < 0 : this.lead > 0) ? .8 : 0) * (gas(F) < .35 ? .3 : 1), 0, 1); // he's being outworked, the other man is fading, or he's behind late
+      case 'down': return clamp(Math.max(gas(F) < .4 ? .9 : 0, gas(F) < .55 && this.round < this.rounds - 2 ? .6 : 0, pace(F) > 75 && F.rs.thrown > 2.6 * F.rs.landed + 20 ? .5 : 0), 0, 1); // he's emptying the tank, or throwing a lot and missing
       case 'hands': return clamp(Math.max(hurt(F) ? 1 : 0, O.rs.landedPow / Math.max(30, this.clock) * ROUND_LEN > 12 ? .7 : 0, F.gi < .4 ? .4 : 0), 0, 1);
     }
     return 0;
@@ -4134,14 +4140,16 @@ function feed(text, hot) {
 let popT = 0;
 function pop(text) { const p = $('#pop'); if (!p) return; p.textContent = '“' + text + '”'; p.classList.add('show'); clearTimeout(popT); popT = setTimeout(() => p.classList.remove('show'), 2600); }
 // yelling from the corner during the round
-const SHOUT_BTN = { jab: 'Jab', body: 'Body', press: 'Pressure', counter: 'Counter', move: 'Move', hands: 'Hands up' };
+const SHOUT_BTN = { jab: 'Jab', body: 'Body', press: 'Pressure', counter: 'Counter', move: 'Move', hands: 'Hands up', up: 'Pick it up', down: 'Slow down' };
 const YELLS = {
   jab: ['Jab! Jab!', 'Double the jab!', 'Stick the jab!'],
   body: ['Body! Go downstairs!', 'Dig to the body!', 'Kill the body!'],
   press: ['Get on him!', 'Walk him down!', 'Cut the ring off!'],
   counter: ['Make him miss! Counter!', 'Let him come, fire back!', 'Sit down on the counter!'],
   move: ['Move your feet!', 'Get off the ropes!', 'Angles! Move!'],
-  hands: ['Hands up!', 'Chin down, hands up!', 'Tighten up!']
+  hands: ['Hands up!', 'Chin down, hands up!', 'Tighten up!'],
+  up: ['Pick it up!', 'Let your hands go!', 'Throw more! Go!'],
+  down: ['Slow down! Pick your shots!', 'Breathe! Pick your shots!', 'Easy! Pace yourself!']
 };
 const CALL_GOOD = ['Good call. That is open.', 'The corner sees it.', 'Right call at the right time.'];
 const CALL_BAD = ["He does it, but that's not what's open.", "Not sure that's the look, coach.", 'That call does not fit this fight right now.'];
@@ -4407,10 +4415,13 @@ const TALK_PLAN = [
   ['body', /body|rib|stomach|downstairs|liver|belly|midsection/],
   ['counter', /counter|make him miss|let him come|be patient|patien|wait for|slip and/],
   ['move', /move|feet|footwork|angle|circle|stay outside|keep (your )?distance|off the ropes|box him|stick and/],
-  ['pressure', /pressure|press|walk him|cut (off )?the ring|get on him|back him up|more punches|work rate|throw more|busier|let your hands go|attack/]
+  ['down', /slow (it )?down|pace yourself|pick your shots|save (your )?(gas|energy)|settle down|catch your breath/],
+  ['up', /pick it up|step it up|turn it up|step on the gas|more punches|work rate|throw more|busier|let your hands go/],
+  ['pressure', /pressure|press|walk him|cut (off )?the ring|get on him|back him up|attack/]
 ];
 const TALK_CALL = [['hands', /hands up|keep your hands|chin down|tight|protect/], ['jab', /jab/], ['body', /body|rib|downstairs|liver/],
-  ['counter', /counter|make him miss/], ['move', /move|feet|angle|ropes|circle/], ['press', /pressure|get on him|walk him|cut (off )?the ring|back him up/]];
+  ['counter', /counter|make him miss/], ['move', /move|feet|angle|ropes|circle/], ['press', /pressure|get on him|walk him|cut (off )?the ring|back him up/],
+  ['down', /slow (it )?down|pick your shots|pace yourself/], ['up', /pick it up|let your hands go|throw more|step it up/]];
 const TALK_OK = ['Got you, coach.', 'Heard. I got it.', "Alright. Let's go.", 'Yeah. I see it.'];
 function talkWords(txt) {
   const t = txt.toLowerCase(); const plan = (TALK_PLAN.find(([, re]) => re.test(t)) || ['auto'])[0];
@@ -4434,14 +4445,16 @@ function talkPrompt(txt) {
 You may only choose from these.
 plan (how you fight next round):
 - auto: keep fighting your own way
-- pressure: walk him down, cut off the ring, throw more
+- pressure: walk him down, cut off the ring
+- up: pick it up, let your hands go, throw more
+- down: slow down, pick your shots, save your gas
 - move: box and move, jab, circle, stay outside
 - body: go to the body
 - counter: be patient, make him miss and counter
 - ko: go for the knockout, load up on power shots (risky, you open up)
 - survive: hold, move, get through the round
 call (what you do first when the bell rings), or null:
-- jab, body, press (get on him), counter, move, hands (hands up, tighten up)
+- jab, body, press (get on him), counter, move, hands (hands up, tighten up), up (pick it up), down (slow down)
 
 Rules:
 - Pick what the coach asked for, not what you think is best. If he is only firing you up or is vague, use plan "auto" and call null.
