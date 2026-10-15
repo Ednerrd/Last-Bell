@@ -158,7 +158,7 @@ const BR = {
     baitCtr: 1.5, fireCtr: 1.2, ctrCommit: .4, // the hurt man's counter vs a hunter who dropped his hands, and how hard he sits down on it
     kdChase: 2,               // the man who scored the knockdown goes after him on the resume
     wob: 6, wobHead: .55,     // he saw him hurt this recently (clock s) and the man's still beat up: he's still hurt, keep going
-    kdWob: 10 },              // he just got up off the floor: he's hurt, whatever he shows (clock s after the resume)
+    kdWob: 25 },              // he just got up off the floor: he's hurt, whatever he shows (clock s after the resume)
   // surviving (4b)
   surv: { hurtT: [12, 5],     // how long the hurt lasts in his head (clock s, composure 0 .. 1)
     hitAdd: 1, hurtMax: 15,   // each clean shot while hurt adds to it

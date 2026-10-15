@@ -360,7 +360,7 @@ const BR = {
     baitCtr: 1.5, fireCtr: 1.2, ctrCommit: .4, // the hurt man's counter vs a hunter who dropped his hands, and how hard he sits down on it
     kdChase: 2,               // the man who scored the knockdown goes after him on the resume
     wob: 6, wobHead: .55,     // he saw him hurt this recently (clock s) and the man's still beat up: he's still hurt, keep going
-    kdWob: 10 },              // he just got up off the floor: he's hurt, whatever he shows (clock s after the resume)
+    kdWob: 25 },              // he just got up off the floor: he's hurt, whatever he shows (clock s after the resume)
   // surviving (4b)
   surv: { hurtT: [12, 5],     // how long the hurt lasts in his head (clock s, composure 0 .. 1)
     hitAdd: 1, hurtMax: 15,   // each clean shot while hurt adds to it
@@ -1499,7 +1499,7 @@ function freeRun(x, z, dx, dz) {
   return Math.max(0, t);
 }
 let DMG = 0.38; // global tuning
-const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: 1, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
+const TUNE = { ev: .3, guard: .34, react: .8, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, vol: .36, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, pace: 1.45, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, jabCtr: .5, moveEv: .2, setup: .3 };
 
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
 function cutChance(D, dmg, crit) {
