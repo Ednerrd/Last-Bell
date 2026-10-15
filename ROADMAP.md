@@ -10,8 +10,8 @@ The only to-do list. When something is done, delete its line here and put the nu
    - Hurt brain: by tier ON, the finish after a KD ON (Oct 15). Still open: the hurt vet's counter danger unmeasured (too rare for 300/pair: pool it). Finisher caught ~1% of hunts; stung ~14% is the honest measure.
    - Coach calls + gas pacing: ON (Oct 15). Open: the AI corner (`aiStrategy`) is blind: its plans only beat a silent corner by ~3 in mirrors, pressure loses 4 pts as a blanket plan (the engine's lead-and-get-countered lean, L6). The AI corner never says pick it up / slow down yet. Rest of the corner talk (parking lot) later.
 2. **L6 balance pass** (one level down 15–20%; then the CLAUDE.md targets; specials not re-checked since L2). Ed: "the better fighter wins": no single factor decides; landing, adjusting, best shots, best combos and coaching all add up, style vs style included.
-3. **Fighter traits** (glass jaw, slow starter, dangerous when hurt, fades late), from the parking lot.
-4. **L4 learning** (skills grow from fights and camp).
+3. **L4 learning** (skills grow from fights and camp; style/stance know grows; opponent memory for rematches). Before traits (Ed, Oct 15: the learning brain every fighter has is the heart of the game; some traits can grow out of it).
+4. **Fighter traits** (glass jaw, slow starter, dangerous when hurt, fades late), from the parking lot.
 5. **Retire `decide()`/`react()`** (bvo and the same.js old-AI hash still use it).
 6. **Merge `claude/brain-wire` into the main line.** Republish the fight lab only when Ed says (Oct 15: "when I say").
 7. **After the whole engine is done (items 1–6):** 3D phase 1 (`proto/PLAN.md`; Ed's top gripe is the 2D look: fighters, punches, distance, can't read punches), footwork during punches (in 3D), career back, L5 (skill sheet UI), gym mode steps 3–6 (`docs/GYM.md`).
