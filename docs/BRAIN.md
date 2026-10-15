@@ -654,3 +654,21 @@ Ed: dig first, then all five on. Leave-one-out (styles.js 300/pair, all on = ob 
 - **Level gaps (levels.js sk 300):** off IvN 18.7 / PvI 17.7 / WvP 17.0 / PvN 3.7; on 16.7 / 16.0 / 19.7 / 4.0. PvN ~4 is the baseline, not the traps.
 - **Audit 500:** 50.6 thrown / 14.8 landed / 29.2%, stops 23.8% (was 25.5 before traps). Hash 281f4411, old AI 7f58e976.
 - Left for L6: counter-puncher 46.9 and outboxer 53.5 on the band edges (both were there with traps off), stops a hair low.
+
+### Hurt brain by tier (Oct 15, ON)
+
+Ed: most go for the stop; a novice swings for the fences, a vet picks clean shots and respects that a hurt man can still defend, fight back, or land a fight-ending counter (rare); experienced men are the most dangerous hurt, anyone can be, rarely. `BR.hb` in brain/brain.js, tables [N, I, P, W] neutral at Pro, `hbV(key, m)`; finishing mastery `finM()` = (read + pacing) / 2; danger reads (counter + read) / 2.
+- **reck** [.35, .15, 0, 0] extra chance to skip the look and go all in. **ignore** [.6, .3, 0, 0] misses the warning signs (still throwing back / countered me) and goes all out. **respect** [0, 0, 0, .25] no warning signs, behind the guard anyway. **wild** [1.6, 1.25, 1, .85] wide punches in the all-out hunt. **tunnel** [1.4, 1.15, 1, .8] x BR.tunnel while hunting. **danger** [.8, .9, 1, 1.25] the hurt man's fire/bait counter chance.
+
+| levels.js sk 300 (traps on) | off | on |
+|---|---|---|
+| Reckless hunts N / I / P / W | 18 / 15 / 13 / 12% | 51 / 26–31 / 15 / 12% |
+| Behind the guard N / I / P / W | 74 / 66–73 / 67 / 71% | 40 / 55–59 / 70 / 76% |
+| One level down wins IvN / PvI / WvP | 18.0 / 18.0 / 16.3 | 15.0 / 14.0 / 16.7 |
+| PvI dog wins by stoppage | 25.9% | 14.3% |
+| finish.js 600: stops / same-rd stop after KD / KDs both ways | 23.2 / 25.9 / 5.2% | 23.2 / 25.5 / 8.5% |
+| audit 500: thrown / landed / conn, stops | 50.6 / 14.8 / 29.2, 23.8% | 50.2 / 14.8 / 29.5, 21.6% |
+
+- Wild novices throw away their own stoppage chances: upsets one level down drop ~3 (to the band floor). Watch in L6.
+- Danger (the hurt vet's counter) is ~0.5 events per man per fight: 300/pair can't see it. Pool 1500+ before tuning it.
+- Hash 42febe1a, old AI 7f58e976.

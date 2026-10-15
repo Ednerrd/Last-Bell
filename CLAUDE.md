@@ -25,7 +25,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **281f4411**, the brain with skill levels L2 + traps on; old AI `PATCH="AI.brain=0"` 7f58e976).
+- Render-only changes must keep the `same.js` hash (now **42febe1a**, the brain with skill levels L2 + traps + hurt brain by tier; old AI `PATCH="AI.brain=0"` 7f58e976).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -58,7 +58,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain (default, with skill levels L2 + traps, Oct 15): 50.6 thrown / 14.8 landed / 29.2% connect, stops 23.8% (500), styles 46.9–53.5 (pooled 2x300/pair). Skill levels: one level down wins 15–20% (`levels.js sk`). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
+- Brain (default, with skill levels L2 + traps + hurt by tier, Oct 15): 50.2 thrown / 14.8 landed / 29.5% connect, stops 21.6% (500; finish.js 600: 23.2%), styles 46.9–53.5 (pooled 2x300/pair). Skill levels: one level down wins 15–20% (`levels.js sk`). History: `docs/BRAIN.md` "Balance pass (Oct 14)". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58 (handslow highest). Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
