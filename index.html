@@ -427,7 +427,8 @@ const BR = {
     menu:   [2, 4, 6, 6],          // how many answers he knows between rounds
     // his side: a smart defender doesn't give the same answer every time
     vary:   [0, .15, .35, .55],    // chance he breaks his habit when one answer is over `same` of his last ones
-    varyN: 5, varyX: .35 }         // last answers he remembers, weight left on the habit
+    varyN: 5, varyX: .35,
+    burnWin: 1.2, burnN: 2, burnFade: .5 } // he only varies once the habit got him hit: he answered, then ate the next one this soon (s); full chance at burnN burns; burns carry to the next round this much         // last answers he remembers, weight left on the habit
 };
 // the opposite stance's main weapons: the rear straight down the middle, the lead hook from outside
 const FAM_WPN = { cross: 1, bodyCross: .7, hook: .5 };
@@ -615,6 +616,7 @@ class Brain {
         if (this.mode === 'survive') { if (PUNCHES[p].cat !== 'jab') this.h.unans++; this.modeT = Math.min(BR.surv.hurtMax, this.modeT + BR.surv.hitAdd); }
         if (ev.counter) { this.h.ctrd = this.ct; if (HUNTS[this.mode] && PUNCHES[p].cat !== 'jab' && !this.h.stung) { this.h.stung = 1; this.tel.stung = (this.tel.stung || 0) + 1; } } // walked onto one
         if (ev.counter && this.lf && BR.trap.on.show && this.t - (this.lf.done || this.t) < BR.trap.ctrWin) { this.madd(this.bait, this.lf.id, { ctr: 1 }); this.lf = null; } // he answers that one with a counter
+        if (BR.trap.on.vary && this.lastDef && this.t - this.lastDef.t < BR.trap.burnWin) this.burn = (this.burn || 0) + 1; // my answer got me hit
         if (ev.counter && this.lastMine && this.t - this.lastMine.t < 1.5) { this.madd(this.mem.mine, this.lastMine.p, { c: 1 }); E.frus = clamp(E.frus + .04 * (1 - comp * .5), 0, 1); }
       }
       if (ev.type === 'evaded' || ev.type === 'blocked') { if (ev.def) this.lastDef = { def: ev.def, p, t: this.t }; this.tryCounter(ev.def, p); }
@@ -766,7 +768,7 @@ class Brain {
     if (this.mode === 'survive' && this.hurtResp === 'run') w.pull *= 3;
     if (T.pull) w.pull = Math.max(w.pull, .5) * 4; // the trap: he's ready to pull back from it
     if (BR.trap.on.vary) { const hs = (this.myDef || (this.myDef = {}))[kd] || [], c = {}; let top = null; for (const x of hs) { c[x] = (c[x] || 0) + 1; if (!top || c[x] > c[top]) top = x; }
-      if (top && hs.length >= 3 && c[top] / hs.length >= BR.trap.same && w[top] && this.R() < trV('vary', (this.m.read + this.m.block + this.m.slip) / 3)) { w[top] *= BR.trap.varyX; this.tel.varied = (this.tel.varied || 0) + 1; } } // he's been giving the same answer: a smart man changes it before it gets him hit
+      if (top && hs.length >= 3 && c[top] / hs.length >= BR.trap.same && w[top] && this.burn && this.R() < trV('vary', (this.m.read + this.m.block + this.m.slip) / 3) * Math.min(1, this.burn / BR.trap.burnN)) { w[top] *= BR.trap.varyX; this.tel.varied = (this.tel.varied || 0) + 1; } } // he's been giving the same answer: a smart man changes it before it gets him hit
     const def = wpickR(this.R, Object.keys(w), x => w[x] * (x === best ? 1 + 2 * rd + k.read * .5 : 1)) || 'block';
     if (BR.trap.on.vary) { const hs = this.myDef[kd] = this.myDef[kd] || []; hs.push(def); if (hs.length > BR.trap.varyN) hs.shift(); }
     const q = clamp(lerp(BR.defQ, 1, k[DEF_SKILL[def]]) * (1 - .35 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + .3 * rd) * (1 - .15 * E.frus) * (1 - BR.hurtQ * hurt) * (1 - BR.blur.q * this.blur), .05, 1); // hurt or beat up: the legs and the hands are slow
@@ -1155,7 +1157,7 @@ class Brain {
     const k = this.k, tr = this.tr, E = this.emo, won = this.sc.me - this.sc.him;
     const r = won > 1 ? 1 : won < -1 ? -1 : 0;
     this.sc.rounds.push(r); this.sc.lead += r; this.sc.me = 0; this.sc.him = 0;
-    E.fear *= .5; E.frus *= .3; E.conf *= .7; if (this.bank) this.bank *= BR.trap.bankFade;
+    E.fear *= .5; E.frus *= .3; E.conf *= .7; if (this.bank) this.bank *= BR.trap.bankFade; if (this.burn) this.burn *= BR.trap.burnFade;
     this.queue = null; this.setup = null; this.threat = null; this.lf = null;
     { const D = this.dl; D.hits *= .8; for (const x in D.led) D.led[x] *= .8; if (D.armed && (info.round || 0) - D.armedR >= 2) this.dlPaid(); D.win = D.back = -9; } // he forgets some; armed two rounds and never sprung: drop it
     const lost = this.sc.rounds.slice(-2).filter(x => x < 0).length;
