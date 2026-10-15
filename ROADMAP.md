@@ -7,13 +7,15 @@ The only to-do list. When something is done, delete its line here and put the nu
 
 ## Claude, in this order
 1. **Brain pieces that hang off the levels** (fold into L3–L4):
-   - Setups and traps: "show it twice, change it", armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`). **Built, all off (Oct 15)**: waiting on Ed to switch on; see `docs/BRAIN.md` "Handoff (Oct 15, after traps)".
-   - Hurt brain by tier; the finisher weighs the risk (`research/mind_vision.md` 8d). Finisher caught 0.7% of hunts (want 5–10); same-round stop after a KD ~25% (research 35–45).
-   - Gassers save it for later (stamina pacing).
-2. **L6 balance pass** (one level down is 15–20% now; then the CLAUDE.md targets; counter-puncher 47.2 and swarmer 53.9 on the band edges; specials not re-checked since L2).
-3. **Retire `decide()`/`react()`**: the brain is the default now; L2 is in; keep the old AI until L3 settles (bvo and same.js old-AI hash still use it).
-4. **Merge `claude/brain-wire` into the main line and republish the fight lab** (with Ed's OK; the lab still shows the Oct 6 build).
-5. **After the AI / brain / fight sim:** career back, then L4 (learning from fights and camp), L5 (skill sheet UI), gym mode steps 3–6 (`docs/GYM.md`), 3D phase 1 (`proto/PLAN.md`; the phone numbers are in, see below), footwork during punches (do it in 3D).
+   - Setups and traps (`research/mind_traps.md`, `mind_combos.md`). **Built, all off (Oct 15).** Ed (Oct 15): dig first, then switch **all five** on. Dig = style runs with all-minus-one (all minus show, minus bank, minus draw, minus delay, minus vary), 300/pair, to find what lifts the outboxer to 57 and drops the counter-puncher to 44; fix it, then switch on (steps in `docs/BRAIN.md` "Handoff (Oct 15, after traps)"). Also check PvN 3.7 vs the traps-off run.
+   - Hurt brain by tier; the finisher weighs the risk (`research/mind_vision.md` 8d). Ed: most go for the stop; a novice swings for the fences, a vet picks clean shots and respects that a hurt man can still defend, fight back, or land a fight-ending counter (rare). Most dangerous when hurt: experienced men; anyone can, rarely. Finisher caught 0.7% of hunts (want 5–10); same-round stop after a KD ~25% (research 35–45).
+   - Gas pacing + coach calls into the brain (built together). Ed: a man who knows his tank adjusts naturally and adapts to the fight; the coach can tell him to pick it up or slow down. Calls reach the brain both from the corner (weighs more) and live mid-round; he always listens (no trust system yet). Then the rest of the shouts/corner orders.
+2. **L6 balance pass** (one level down 15–20%; then the CLAUDE.md targets; specials not re-checked since L2). Ed: "the better fighter wins": no single factor decides; landing, adjusting, best shots, best combos and coaching all add up, style vs style included.
+3. **Fighter traits** (glass jaw, slow starter, dangerous when hurt, fades late), from the parking lot.
+4. **L4 learning** (skills grow from fights and camp).
+5. **Retire `decide()`/`react()`** (bvo and the same.js old-AI hash still use it).
+6. **Merge `claude/brain-wire` into the main line.** Republish the fight lab only when Ed says (Oct 15: "when I say").
+7. **After the whole engine is done (items 1–6):** 3D phase 1 (`proto/PLAN.md`; Ed's top gripe is the 2D look: fighters, punches, distance, can't read punches), footwork during punches (in 3D), career back, L5 (skill sheet UI), gym mode steps 3–6 (`docs/GYM.md`).
 
 ## Done lately (numbers in `docs/BRAIN.md`)
 - Oct 11–14: the brain on the engine (behind `AI.brain`), finishing and the hurt brain, balance pass, weak specials, angle fighter, out-boxer off the ropes, all specials 47.4–52.1, body KDs on target.
@@ -28,13 +30,12 @@ The only to-do list. When something is done, delete its line here and put the nu
 - Lab B rhythm (`ccr-026fa9ad-j4d8rw`) is dead; Ed picked Lab A. The parallel step 6 (`ccr-b57f3498-nk3hk1`) is superseded.
 - Ring IQ when hurt or tired as its own step: parked; it lives in the hurt brain now.
 - Corner lesson size: medium (`TEACH` .18 / .7 / .7).
-- Coach shouts / corner orders do NOT get wired into the brain (Ed, Oct 13).
+- Ed, Oct 15 (12-question round): coach calls DO go into the brain now (replaces Oct 13's no): corner and live, corner weighs more, he always listens. 3D waits until the engine is done (brain list, balance, traits, L4). Lab republish only when Ed says.
 - Stats vs skills (Ed, Oct 14, after L0: "start the next phase"): stats are the body (power, speed, chin, stamina...), skills are what he knows how to do with them and grow from fights and camp. Level comes from skills; bodies inside a division stay close; a skill level gets worth a bit more (L0: skills-only gap 32% upsets, target 15-20%).
 - No sparring in the skill system for now. No bond/trust system yet.
 
 ## Parking lot (ideas, not scheduled)
 - Corner: "fire him up" / "calm him down" / "tell him the truth"; cutman priority (cut, swelling, or breathing).
-- Fighter traits (glass jaw, slow starter, dangerous when hurt, fades late), earned or lost over a career.
 - Mentality: confidence, composure, frustration that leads to fouls.
 - Opponent-specific camp: spar partners who copy his style, film study that reveals a habit to call.
 - Live read line during the round ("he's landing the right over your jab").
