@@ -55,7 +55,10 @@ function report(rows) {
     ['adjusts /fight', t => (t.adj / t.fights).toFixed(2)],
     ['hunts /fight', t => (t.hunt / t.fights).toFixed(2)],
     ['hurt: froze', t => pc(t.freeze, t.hurts)],
-    ['dropped /fight', t => (t.kdT / t.fights).toFixed(2)]
+    ['dropped /fight', t => (t.kdT / t.fights).toFixed(2)],
+    ['changes /fight', t => (t.chg / t.fights).toFixed(2)],
+    ['change picked right', t => pc(t.chgRight, t.chg)],
+    ['change punch landed', t => pc(t.chgL, t.chgPay)]
   ];
   // L3 (know mode): side A's share of the landed punches by round group, per pair
   if (rows.some(r => r.rl)) {
@@ -109,7 +112,7 @@ for (const PR of PAIRS.filter(x => !ONLY || ONLY.includes(x.pair))) for (let i =
   const side = i % 2, f = new S.Fight(side ? sh[1] : sh[0], side ? sh[0] : sh[1], { rounds: 10 });
   const F = [f.f[side], f.f[1 - side]]; // F[0] = the favourite (or side A of a mirror)
   if (F[0].brain) hook(F[0].brain);
-  const z = () => ({ fights: 1, rd: 0, thr: 0, land: 0, landP: 0, feint: 0, feintBit: 0, feintBad: 0, setup: 0, ctrTry: 0, ctrLand: 0, techSum: 0, techN: 0, techBad: 0, reactSum: 0, reactN: 0, late: 0, noTry: 0, misread: 0, seen: 0, feintRead: 0, feintsAtHim: 0, evAct: 0, blk: 0, oppThr: 0, trap: 0, esc: 0, adj: 0, hunt: 0, freeze: 0, hurts: 0, kdT: 0 });
+  const z = () => ({ fights: 1, rd: 0, thr: 0, land: 0, landP: 0, feint: 0, feintBit: 0, feintBad: 0, setup: 0, ctrTry: 0, ctrLand: 0, techSum: 0, techN: 0, techBad: 0, reactSum: 0, reactN: 0, late: 0, noTry: 0, misread: 0, seen: 0, feintRead: 0, feintsAtHim: 0, evAct: 0, blk: 0, oppThr: 0, trap: 0, esc: 0, adj: 0, hunt: 0, freeze: 0, hurts: 0, kdT: 0, chg: 0, chgRight: 0, chgPay: 0, chgL: 0 });
   const tel = [z(), z()], idx = s => s === F[0].side ? 0 : 1;
   let n = 0; const rl = [];
   while (f.phase !== 'over' && n < 600000) {
@@ -134,7 +137,7 @@ for (const PR of PAIRS.filter(x => !ONLY || ONLY.includes(x.pair))) for (let i =
     t.rd = rds;
     if (b) { const T = b.tel, L = b.lv || {};
       Object.assign(t, { setup: T.setups, reactSum: T.reactSum, reactN: T.reactN, late: T.late, noTry: T.noTry, misread: T.misreads, seen: T.seen, feintRead: T.feintsRead, hunt: T.hunts, freeze: T.hurtR.freeze || 0, hurts: T.hurts,
-        techSum: L.techSum || 0, techN: L.techN || 0, techBad: L.techBad || 0, feintBad: L.feintBad || 0, adj: L.adj || 0 });
+        techSum: L.techSum || 0, techN: L.techN || 0, techBad: L.techBad || 0, feintBad: L.feintBad || 0, adj: L.adj || 0, chg: T.chg || 0, chgRight: T.chgRight || 0, chgPay: T.chgPay || 0, chgL: T.chgL || 0 });
       if (o) t.feintBit = o.tel.bites;
     }
     if (o) t.feintsAtHim = tel[1 - j].feint;
