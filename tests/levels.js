@@ -64,6 +64,7 @@ function report(rows) {
     ['traps armed /fight', t => (t.armed / t.fights).toFixed(2)],
     ['traps sprung /fight', t => (t.sprung / t.fights).toFixed(2)],
     ['trap counter landed', t => pc(t.trapL, t.trapN)],
+    ['varied his defense /fight', t => ((t.varied || 0) / t.fights).toFixed(2)],
     ['first adjust rd', t => (t.adj1 / Math.max(1, t.adj1n)).toFixed(1) + ' (' + pc(t.adj1n, t.fights) + ')']
   ];
   // L3 (know mode): side A's share of the landed punches by round group, per pair
@@ -143,7 +144,7 @@ for (const PR of PAIRS.filter(x => !ONLY || ONLY.includes(x.pair))) for (let i =
     t.rd = rds;
     if (b) { const T = b.tel, L = b.lv || {};
       Object.assign(t, { setup: T.setups, reactSum: T.reactSum, reactN: T.reactN, late: T.late, noTry: T.noTry, misread: T.misreads, seen: T.seen, feintRead: T.feintsRead, hunt: T.hunts, freeze: T.hurtR.freeze || 0, hurts: T.hurts,
-        techSum: L.techSum || 0, techN: L.techN || 0, techBad: L.techBad || 0, feintBad: L.feintBad || 0, adj: L.adj || 0, chg: T.chg || 0, chgRight: T.chgRight || 0, chgPay: T.chgPay || 0, chgL: T.chgL || 0, baits: T.baits || 0, bitL: T.bitL || 0, armed: T.armed || 0, sprung: T.sprung || 0, trapN: T.trapN || 0, trapL: T.trapL || 0, adj1: T.adj1 || 0, adj1n: T.adj1 != null ? 1 : 0 });
+        techSum: L.techSum || 0, techN: L.techN || 0, techBad: L.techBad || 0, feintBad: L.feintBad || 0, adj: L.adj || 0, chg: T.chg || 0, chgRight: T.chgRight || 0, chgPay: T.chgPay || 0, chgL: T.chgL || 0, baits: T.baits || 0, bitL: T.bitL || 0, armed: T.armed || 0, sprung: T.sprung || 0, trapN: T.trapN || 0, trapL: T.trapL || 0, varied: T.varied || 0, adj1: T.adj1 || 0, adj1n: T.adj1 != null ? 1 : 0 });
       if (o) t.feintBit = o.tel.bites;
     }
     if (o) t.feintsAtHim = tel[1 - j].feint;
