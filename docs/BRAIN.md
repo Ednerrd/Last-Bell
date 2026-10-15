@@ -741,3 +741,18 @@ Lessons:
 - A first 300/pair read can be 3 pts off (jab trim: 51.0 then 54.4). Never ship a style knob on one read of 4 pairs.
 - Trait `output` is the strong style lever (+.05 on the counter-puncher moved him ~+5); skill leans of 4 points barely move anything (x .8 lean).
 - Watch: IvN at ~14.4 (floor 15); the side-A edge in even fights (audit gap 0 pooled ~42% over ~750, ~47.5 expected with draws).
+
+### Handoff (Oct 15, after L6)
+**State:** `claude/brain-wire` = `claude/l6-balance` (L6 done, full check in "Balance pass L6" above). Hash 1de442e5, old AI 445f9aa3. CLAUDE.md and ROADMAP current. Drama decided (`docs/DRAMA.md`), L4 not started.
+
+**Next (ROADMAP 2): retire the old AI** (`decide()`/`react()` and what only they use). Effort: high (ask Ed first; it must keep the brain hash 1de442e5).
+- What still leans on the old AI: `tests/bvo.js` (brain vs old AI) and the `PATCH="AI.brain=0"` hash 445f9aa3; the engine's `if (!F.brain)` / `if (D.brain) return` branches (react, miss, beat, updateF's `ret`, sgOf/planOf used by decide). Grep `F.brain`, `D.brain`, `!F.brain`, `sgOf`, `planOf`, `STRATS[` before cutting.
+- The brain path must not change: same.js 200 must still print 1de442e5 after every cut. Cut in small commits (dead branches first, then decide/react, then the STRATS fields only they read).
+- Then: JSDoc + `// @ts-check` with a `tsconfig.json` `checkJs` (no build step) on `brain/brain.js` first, and gather the tuning knobs (TUNE, DMG, AI, BR...) into one marked block.
+- bvo.js and the old-AI hash go away with it: update CLAUDE.md (hash line, Tests list, Code map: `decide()` on a timer, `react()`).
+
+**Measurements queued before L4 design (ROADMAP 4):** `levels.js curve` (win % vs a continuous skill gap), the side-A edge in even fights (audit gap 0 pooled ~42% over ~750, ~47.5 expected; `tests/swap.js 100` is the tool), a well-timed KO call's value (a plan test: KO only when he's hurt or behind late, vs never; the blanket-plan script lived in the old scratchpad: corner calls a fixed plan every round in mirrors @82, the other side 'auto').
+
+**Watch:** IvN one-level-down ~14.4% (floor 15). Body snatcher read 55.2 then 51.4 (fine pooled).
+
+**Ed, Oct 15 (this session):** L4 learning before traits; outside review (DeepSeek) folded into ROADMAP: learn more from losses, drama before L4; crowd look and sound only; named officials with made-up names (`docs/DRAMA.md`); medium effort by default, one step per session. Roadmap flowchart (private artifact): https://claude.ai/artifact/JFthHeFf3SvBh2WUqEyogg (source lived in the scratchpad; rebuild from ROADMAP.md if it needs an update).

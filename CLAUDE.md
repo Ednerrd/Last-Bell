@@ -10,8 +10,10 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
 - Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (83 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
 - Never publish to the live game without Ed's explicit OK.
-- Models (Ed, Oct 14): Opus for everything (tuning, code, docs); Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write).
-- Effort (Ed, Oct 14): before starting a task that needs high effort, stop and ask Ed to switch to high, then wait for his OK. High = engine/balance tuning (sim-driven tries), retiring or refactoring engine code that must keep the same.js hash, debugging odd sim results, design plans (skill levels). Docs, roadmap edits, overviews, running set-up sims and reading numbers stay at his current setting: just do them.
+- Models (Ed, Oct 14): Opus for tuning, code and design; Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write). Sonnet subagents are fine for grunt work too (docs bookkeeping, sim runs and tables).
+- Effort (Ed, Oct 15, replaces Oct 14): **medium is the default.** Before a task that needs high, say so in one line and ask Ed to switch, then wait for his OK. High = debugging odd sim results, retiring or refactoring engine code that must keep the same.js hash, design plans (L4 learning, the drama build). Sim-driven knob tries, docs, roadmap edits, overviews, running sims and reading numbers stay at medium.
+- Sessions (Ed, Oct 15): one roadmap step per session. Long sessions drag their whole context into every message; the docs are the handoff. End a step with CLAUDE.md, ROADMAP.md and a `docs/BRAIN.md` handoff note current, then start fresh.
+- The container restarts often and kills background jobs: run sim batches through `tests/check.sh` (resumable) or write each job's result to disk as it finishes.
 
 ## Links
 - **Live game** (Claude Code can NOT publish): https://claude.ai/artifact/KYmQg6PQo4qE4qoyDDDt7k. Ed uploads `index.html` in a claude.ai chat with `{db:{},user:{},sample:{}}` (sample powers corner talk; without it a keyword matcher runs). Save sync uses data/users/<id>/slot0..2.
@@ -43,6 +45,7 @@ engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, di
 
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless (`sim.js` is the shared loader). `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
+- **`tests/check.sh TAG [s a l f sp g]`: the full check on 4 cores, resumable after a restart (rerun the same line); `tests/check.sh TAG report` prints it all.** Default parts s a l f (~25 min); sp (specials) adds ~20 min.
 - `node tests/same.js 200`: determinism hash.
 - `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
