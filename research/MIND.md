@@ -12,6 +12,8 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_southpaw.md` | Southpaw edge by the numbers (boxing, MMA, fencing, tennis), the experience effect, targets for the L3 familiarity knob |
 | `mind_between.md` | Between fights: rest and medical suspensions, gaps between fights, what wins teach, matchmaking, confidence and complacency, gun-shy after a KO, ring rust (UFC data), chin wear, age curves by attribute, habits coming back; game rules with numbers |
 | `mind_traps.md` | Traps across rounds (bait, answer, payoff), body banking, adjust timing by tier, rematch changes, corner talk, Plan B menus |
+| `mind_coach.md` | Live shouts vs corner calls: what a fighter can hear and use, absorb limits (1-2 per break), famous corner turnarounds, est. knobs (strength, delay, half-life, hurt/gassed gates) for wiring calls into the brain (Oct 15) |
+| `mind_traits.md` | 12 fighter traits (chin, recovery, starts/closers, cuts, dangerous when hurt, quitter): examples, numbers (mostly UFC proxies), born vs earned, stacks, est. knobs and roll rates (Oct 15) |
 | `fighters_c.md` … `fighters_g.md` | Exciting fighters (Reddit r/Boxing list, Oct 2026): 60 DNA cards with style, why they're exciting, mind, best bouts, brain knobs. c 140-160 punchers, d feather-light, e 105-122, f heavyweights, g mixed + Pacquiao |
 | `mind_vision.md` | Where boxers look, anticipation vs reaction, tells, feints vs the read, fear/composure, fatigue |
 | `mind_p4p_a.md` | Mind profiles: Shakur, Loma, Inoue, Usyk, Crawford, Bivol, Canelo, Mayweather |
