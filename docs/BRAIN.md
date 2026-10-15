@@ -705,3 +705,39 @@ Corner at 1.0 swung mirror fights -4..+7 for a blind plan (research: a talk-in m
 
 Full check (ON): audit 500 x3 50.6-51.5 thrown, ~15 landed, ~29.5%, stops pooled 23.5% (off 24.5%; one 500 read 19.8, noise); finish 600 28.0%, same-round stop after a KD 31%; styles 2x300/pair outboxer 53.9, swarmer 50.3, slugger 49.8, boxer-puncher 48.1, counter 47.9; levels sk IvN 15.7, PvI 16.7, WvP 16.7, PvN 1.7. Gas by round (12 rds @75): output 51 / 55 / 54 / 53 / 52 / 51 / 50 / 49 / 48 / 46 / 45 (R1-11), under 45% gas ~2-3 pts less late with pacing on. Pick it up / Slow down at 600: only_up 49.8, only_down 47.2 (blind spam costs), oracle 52.4. Hash 8443008f, old AI 445f9aa3.
 
+
+### Balance pass L6 (Oct 15)
+Brain on, @82. Styles 2x300/pair (600/pair, ±1.1 per style); specials 200/pair vs each base style (±1.6); audit 500 x3 pooled; levels `sk` 300/pair; finish 600.
+
+**1. The pocket bug (commit 2444a36).** The pressure boxer read 42.7. Diagnosis on `vs:pboxer`: no pressure plans 48.9; a softer `BR.coach.plan.pressure` 46.8-47.5; the engine's `STRATS.pressure` neutral 48.5. Under the brain, the only engine-side leftover of a round plan was `updateF`'s `ret` x.6 on pressure/KO: after every punch he only stepped 60% of the way back, so he parked in the pocket and ate counters, on top of the brain's own pressure plan. Now old-AI only (`!F.brain`). Pressure boxer ~47.8 pooled, then 49.8 after the style tune.
+
+| Blanket corner plan, every round (mirrors, 600 each, ±2.2) | after the pocket fix |
+|---|---|
+| silent / ai / move / survive | 53.4 (noise) / 50.5 / 49.6 / 50.9 |
+| pressure / counter / body / KO | 48.0 / 48.5 / 45.7 / 45.2 |
+Pressure was ~-4 vs silent (Oct 15 table, corner at 1.0), now about even. KO every round on a fresh man should lose; a well-timed KO call is unmeasured.
+
+**2. The style tune (commit eedbd2c).** Tries (style's 4 pairs at 300, or the round robin):
+| Try | Result |
+|---|---|
+| out-boxer `sk.jab` 10 -> 6 | first read 51.0, full 2x300 54.4: no effect (dropped) |
+| boxer-puncher initiative .5, patience .6 | bp 47.2: no help |
+| out-boxer `t.output` .55 -> .48 | out-boxer 52.8 (4 pairs) |
+| out-boxer `sk.footwork`/`angles` 6 -> 2 | out-boxer 52.8 (4 pairs) |
+| boxer-puncher `sk.power` 10, slip/block +4 | bp 48.8 (4 pairs); with both out-boxer trims: bp 52.1, counter 46.9 (overshot) |
+| **Kept:** out-boxer output .48 + footwork/angles 2; bp power 8, slip/block +2; counter `t.output` .35 -> .4 | counter 52.1, swarmer 50.3, out-boxer 50.2, bp 49.3, slugger 48.2 |
+
+| Full check | Before L6 (4932e28) | After L6 (hash 1de442e5) |
+|---|---|---|
+| Audit 3x500 | 51.6 / 15.2 / 29.5%, stops 27.7% | 51.5 / 15.1 / 29.3%, stops 26.6% |
+| Styles | outboxer 53.0, swarmer 50.8, slugger 50.3, bp 48.4, counter 47.5 | counter 52.1, swarmer 50.3, outboxer 50.2, bp 49.3, slugger 48.2 |
+| Specials vs base | body 53.2, volume 52.1, jabgrab 51.3, awkward 50.1, feinter 49.8, angle 49.5, spoiler 47.6, switch 46.7, pboxer 42.7 | body ~53.3 (55.2, 51.4), awkward 52.4, angle 52.0, jabgrab 51.6, spoiler 51.5, volume 50.9, pboxer 49.8, switch 49.2, feinter 48.3 |
+| Guards vs standard (300) | high 50.4, peekaboo 48.3, philly 48.7, cross 55.4, handslow 53.6 | not re-run (guards untouched) |
+| Levels sk | IvN 18.3, PvI 19.7, WvP 16.0, PvN 2.0 | IvN 14.4 (900), PvI 16.0, WvP 16.0, PvN 4.3 |
+| finish 600 | 27.8%, same-round stop after a KD 35.2% | 26.3%, 31.1% |
+
+Lessons:
+- Stops were already in band: the "~23.5%" in CLAUDE.md was a low read. Three fresh 500s read 26-29%.
+- A first 300/pair read can be 3 pts off (jab trim: 51.0 then 54.4). Never ship a style knob on one read of 4 pairs.
+- Trait `output` is the strong style lever (+.05 on the counter-puncher moved him ~+5); skill leans of 4 points barely move anything (x .8 lean).
+- Watch: IvN at ~14.4 (floor 15); the side-A edge in even fights (audit gap 0 pooled ~42% over ~750, ~47.5 expected with draws).
