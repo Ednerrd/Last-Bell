@@ -413,13 +413,13 @@ const BR = {
     payFrom: 3,                    // the bank pays from this round
     pay:    [0, .5, 1, 1.2],       // head-ending-after-body weight x(1 + pay x min(payMax, payK x bank))
     payK: .1, payMax: .6,
-    // the armed trap: draw the lead (jab and step back, he steps in behind his lead, the pull counter) (Atlas, Marquez)
+    // the armed trap: draw the lead (show the jab, he steps in behind his lead, the pull counter) (Atlas, Marquez)
     draw:   [0, 0, .3, .4],        // chance a throw is the bait instead (x(1.3 - initiative): counter-minded men more), when he has the skills
     drawCtr: .6,                   // counter skill it takes
     drawWin: 1.1,                  // he led into it this soon after the bait (s)
-    drawBack: 10, drawBackT: .6,   // the step back after the bait jab (range, s)
+    drawBack: 0, drawBackT: .6,    // a step back after the bait jab (range, s). Off: it gave a mover free room (counter-puncher 44 vs the field, styles.js Oct 15)
     drawNeed: [9, 9, 3, 2],        // he led into the bait this often before it's armed
-    drawHide: .7,                  // before it's armed, he doesn't burn the counter on the bait (counter chance x)
+    drawHide: 1,                   // before it's armed, he doesn't burn the counter on the bait (counter chance x). 1: hiding it cost a counterman more than the trap paid
     drawRd: .6,                    // armed: he's sure what's coming (read bonus)
     drawSpring: [.35, .4],         // armed and he leads into it: chance the counter goes with his shoulder (+ x counter skill)
     // adjust delay: rounds of losing before he changes anything (Crawford 2-3, Loma 8, Canelo never)
@@ -667,7 +667,7 @@ class Brain {
   dlBait(dSeen) {
     const D = this.dl, T = BR.trap;
     this.tel.baits++; D.win = this.t + .3 + T.drawWin; D.back = this.t + .3 + T.drawBackT; D.next = this.t + 2;
-    return this.fire(['jab'], 'bait: jab and step back' + (D.armed ? ' (armed)' : ''), dSeen);
+    return this.fire(['jab'], 'bait: show the jab' + (D.armed ? ' (armed)' : ''), dSeen);
   }
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
