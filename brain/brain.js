@@ -229,6 +229,15 @@ const BR = {
     burnWin: 1.2, burnN: 2, burnFade: .5 },
   // the hurt brain by tier (Ed, Oct 15): a novice swings for the fences, a vet picks clean shots and respects a hurt man's counter; a hurt vet is the dangerous one.
   // Tables [Novice, Intermediate, Pro, World class] on mastery, neutral at Pro. on: each piece's switch (0 = off, the old code)
+  // the corner (Ed, Oct 15: the corner and live shouts, the corner weighs more, he always listens; research/mind_coach.md 4-5). Each call is an offset on his own plan
+  // (initiative, range, jab, power, body: the same units as this.plan), out = throw rate x, guard = + on his guard. Corner plan (STRATS key) at full strength, fading to 1 - fade by the bell;
+  // a live shout (SHOUTS key) at live x how well he took it (engine q), in over ramp clock s, out with the engine's own fade. Output calls are capped by the tank (gasOut .. 1)
+  coach: { on: 0, live: .45, ramp: 2, fade: .5, gasOut: .5,
+    plan: { pressure: { initiative: .25, range: -8, out: 1.1 }, move: { range: 10, initiative: -.15, jab: .25, power: -.1 }, body: { body: .35, range: -4 },
+      counter: { initiative: -.3, out: .9 }, ko: { power: .3, initiative: .25, range: -6, out: 1.1 }, survive: { range: 12, initiative: -.35, out: .75, guard: .15 },
+      up: { out: 1.18, initiative: .15 }, down: { out: .85 } },
+    call: { jab: { jab: .3, range: 3 }, body: { body: .35, range: -3 }, press: { initiative: .3, range: -8 }, counter: { initiative: -.3 }, move: { range: 8, initiative: -.15 },
+      hands: { guard: .15, out: .85 }, up: { out: 1.18, initiative: .15 }, down: { out: .85 } } },
   hb: { on: { reck: 1, ignore: 1, respect: 1, wild: 1, tunnel: 1, danger: 1 },
     reck:    [.35, .15, 0, 0],      // finisher (read + pacing): extra chance he skips the look and goes all in
     ignore:  [.6, .3, 0, 0],        // ... he doesn't see the warning signs (still throwing back, countered me) and goes all out anyway
@@ -484,7 +493,7 @@ class Brain {
   tryCounter(def, p) {
     if (this.queue && this.queue.trap) return; // the trap's counter is already on its way
     const k = this.k, m = this.mm();
-    let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * clamp(this.tr.initiative + this.plan.initiative, 0, 1)) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
+    let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * clamp(this.tr.initiative + this.pv('initiative'), 0, 1)) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
     if (this.t < this.ctrReady) ch *= BR.trap.ctrUp;   // I showed him half of it to draw his counter: mine is waiting
     if (BR.trap.on.draw && !this.dl.armed && this.t < this.dl.win + .6) ch *= BR.trap.drawHide;              // building the trap: don't show him the counter yet
@@ -597,7 +606,7 @@ class Brain {
   /* ---------- intent: what he's trying to do for the next few seconds ---------- */
   setMode(m, dur, why) { if (m !== this.mode) this.note('-> ' + m + (why ? ' (' + why + ')' : '')); this.mode = m; this.modeT = dur; }
   pickMode(P) {
-    const tr = this.tr, E = this.emo, fat = 1 - P.me.stam / (P.me.stamMax || 100), nd = this.nd, ini = clamp(tr.initiative + this.plan.initiative, 0, 1);
+    const tr = this.tr, E = this.emo, fat = 1 - P.me.stam / (P.me.stamMax || 100), nd = this.nd, ini = clamp(tr.initiative + this.pv('initiative'), 0, 1);
     const inRange = P.dist < 84;
     const w = {
       work: 1,
@@ -645,6 +654,16 @@ class Brain {
     if (this.modeT <= 0) this.pickMode(P);
   }
   // is he still hurt? The engine's tells come and go; the man who saw it knows the legs aren't back yet
+  // the corner's calls on top of his own plan (BR.coach): rebuilt every decision; null when off
+  coachUpd(P) {
+    const C = BR.coach; if (!C.on) { this.cc = null; return; }
+    const o = { initiative: 0, range: 0, jab: 0, power: 0, body: 0, out: 1, guard: 0 }, gas = P.me.stam / (P.me.stamMax || 100);
+    const add = (m, w) => { if (!m || w <= 0) return; for (const x in m) { if (x === 'out') { const v = m.out > 1 ? 1 + (m.out - 1) * lerp(C.gasOut, 1, gas) : m.out; o.out *= 1 + (v - 1) * w; } else o[x] += m[x] * w; } };
+    if (P.me.strat) add(C.plan[P.me.strat], 1 - C.fade * P.clock / P.roundLen);
+    const s = P.me.order; if (s) add(C.call[s.k], C.live * s.q * Math.min(1, s.age / C.ramp) * Math.min(1, s.left / .3));
+    this.cc = o;
+  }
+  pv(x) { return this.plan[x] + (this.cc ? this.cc[x] : 0); } // his plan plus what the corner told him
   finM() { return (this.m.read + this.m.pacing) / 2; } // finishing mastery: reading the hurt, and knowing when to spend it
   wobbly(P) { if (P.him.hurt) this.h.seen = this.ct; return P.him.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
   // the hunt: check, then commit (all-out or behind a guard); flurries with a look in between; capped, and it costs gas
@@ -722,7 +741,7 @@ class Brain {
     if (this.t < this.h.look) return null; // between flurries: a look (is he still there?)
     const open = this.opening(P);
     // a quick thinker decides more often, not more: the work rate is his nature, the timing is his skill
-    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace;
+    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace * (this.cc ? this.cc.out : 1);
     // when NOT to: he keeps getting countered, he's gassed (a smart man paces it), he's scared, the other man is loaded and waiting
     let ctr = 0, n = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctr += e.c || 0; n += e.n || 0; }
     p *= 1 - clamp(ctr / Math.max(4, n) * 2.5, 0, .6) * k.read * (1 - tr.risk * .5);
@@ -735,7 +754,7 @@ class Brain {
     if (this.R() > p) { if (dSeen < 80) this.tel.holds++; return null; }
     // the bait: a counterman shows the jab and steps back, to draw the lead
     if (BR.trap.on.draw && this.t > this.dl.next && dSeen > 58 && dSeen < 82 && this.k.counter >= BR.trap.drawCtr && (this.mode === 'counter' || this.mode === 'work' || this.mode === 'feelout')
-      && this.R() < trV('draw', (this.m.counter + this.m.read) / 2) * (1.3 - clamp(tr.initiative + this.plan.initiative, 0, 1))) return this.dlBait(dSeen);
+      && this.R() < trV('draw', (this.m.counter + this.m.read) / 2) * (1.3 - clamp(tr.initiative + this.pv('initiative'), 0, 1))) return this.dlBait(dSeen);
     // feint, a planned sequence, or a combo
     if (this.R() < BR.feintP * (.4 + k.feints * 1.5) * lvV('feint', this.m.feints) * (.5 + tr.patience) / Math.max(.3, m.aggr) * (this.mode === 'feelout' || this.mode === 'reset' ? 2 : 1)) return this.feint(dSeen);
     if (this.mode !== 'survive' && !HUNTS[this.mode] && this.R() < BR.setupP * k.read * (.5 + k.feints * .5 + k.combos * .5) * (this.mode === 'burst' ? .4 : 1)) { const s = this.startSetup(P, dSeen); if (s) return s; }
@@ -761,7 +780,7 @@ class Brain {
     return o;
   }
   pickCombo(P, dSeen) {
-    const k = this.k, tr = this.tr, E = this.emo, md = this.mode, H = P.him, fat = 1 - P.me.stam / (P.me.stamMax || 100), pl = this.plan;
+    const k = this.k, tr = this.tr, E = this.emo, md = this.mode, H = P.him, fat = 1 - P.me.stam / (P.me.stamMax || 100);
     const maxLen = Math.min(1 + Math.round(1 + 3 * k.combos * (.6 + .5 * tr.combo)), BR.lv.on.len ? Math.round(lvV('len', this.m.combos)) : 9);
     const last = this.hist[this.hist.length - 1], noise = lerp(.75, .3, (k.read + k.combos) / 2) * (1 + .8 * fat) * (1 + .6 * E.frus);
     const nd = this.nd;
@@ -777,9 +796,9 @@ class Brain {
       { // every combo has a working range: a hook wants to be well inside its reach (he only has to lean back from one at the end of it), a straight at the end of the arm
         const P0 = PUNCHES[c.ps[0]], ideal = P0.max - (P0.kind === 'straight' ? BR.workS : BR.workH);
         w *= lerp(1, BR.workLo + Math.exp(-Math.pow((dSeen - ideal) / BR.workW, 2)), k.range); }
-      { const jt = clamp(tr.jab + pl.jab, 0, 1); w *= c.jab ? lerp(.5, 4, jt) * (.5 + c.jab) : lerp(1.6, .3, jt); }
-      w *= 1 + c.power * (clamp(tr.power + pl.power, 0, 1) * 2 - .6);
-      w *= 1 + c.body * (clamp(tr.body + pl.body, 0, 1) * 2.4 - .7);
+      { const jt = clamp(tr.jab + this.pv('jab'), 0, 1); w *= c.jab ? lerp(.5, 4, jt) * (.5 + c.jab) : lerp(1.6, .3, jt); }
+      w *= 1 + c.power * (clamp(tr.power + this.pv('power'), 0, 1) * 2 - .6);
+      w *= 1 + c.body * (clamp(tr.body + this.pv('body'), 0, 1) * 2.4 - .7);
       w *= c.n === 1 ? 1.5 - tr.combo : c.n === 2 ? 1 : (.2 + tr.combo * 1.3) * (c.n > 3 ? .6 : 1);
       if (c.n > maxLen) w *= .15; // tries it anyway, badly
       // what's been working against this man (a smart man weighs it, a novice barely notices)
@@ -894,7 +913,7 @@ class Brain {
     let pv = 0, n = 0; for (const p of ['hook', 'rhook', 'uppercut', 'lupper', 'bodyHook']) { pv += this.punchVal(p); n++; }
     let po = 0; for (const p of ['jab', 'cross', 'bodyJab']) po += this.punchVal(p);
     const shift = clamp(pv / n - po / 3, -1, 1) * 10 * k.range * (tr.range > .7 ? .4 : 1); // what's working decides where he wants to be, inside his style
-    let range = lerp(50, 76, tr.range) + md.range + this.plan.range - shift + fat * 5 + E.fear * 10 + this.rangeJit + (this.wary && P.round <= this.wary.until ? this.wary.v : 0);
+    let range = lerp(50, 76, tr.range) + md.range + this.pv('range') - shift + fat * 5 + E.fear * 10 + this.rangeJit + (this.wary && P.round <= this.wary.until ? this.wary.v : 0);
     if (this.t < this.dl.back) range += BR.trap.drawBack; // the step back after the bait
     if (sv === 'clinch') range = 30;
     if (sv === 'fire') range = 50;
@@ -948,6 +967,7 @@ class Brain {
       this.decT = this.decBase * (1 - .3 * this.fat) * Math.exp(this.g() * .25);
       if (this.R() < .1) this.rangeJit = this.g() * lerp(5, 2, this.k.range);
       if (this.R() < .08 + (P.ropes.me > .5 ? BR.ropes.flip : 0)) this.lat *= -1;
+      this.coachUpd(P);
       this.out.move = this.move(P);
       if (!P.me.busy && !P.me.clinch) {
         const a = this.offense(P);
@@ -958,7 +978,7 @@ class Brain {
     }
     const md = this.mm();
     this.out.intent = this.mode; this.out.hurt = this.mode === 'survive' ? this.hurtResp : null;
-    this.out.guard = clamp(md.guard * lerp(.7, 1.2, this.tr.shell) * (1 - .35 * this.fat) * (this.mode === 'survive' && this.hurtResp === 'shell' ? 1.3 : 1), .1, 1);
+    this.out.guard = clamp(md.guard * lerp(.7, 1.2, this.tr.shell) * (1 - .35 * this.fat) * (this.mode === 'survive' && this.hurtResp === 'shell' ? 1.3 : 1) + (this.cc ? this.cc.guard : 0), .1, 1);
     return this.out;
   }
 
