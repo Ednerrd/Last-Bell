@@ -232,7 +232,7 @@ const BR = {
   // the corner (Ed, Oct 15: the corner and live shouts, the corner weighs more, he always listens; research/mind_coach.md 4-5). Each call is an offset on his own plan
   // (initiative, range, jab, power, body: the same units as this.plan), out = throw rate x, guard = + on his guard. Corner plan (STRATS key) at full strength, fading to 1 - fade by the bell;
   // corner x (blind plans at 1 swung mirror fights -4..+7: research says 20-40% of the gap); a live shout (SHOUTS key) at live x how well he took it (engine q), in over ramp clock s, out with the engine's own fade. Output calls are capped by the tank (gasOut .. 1)
-  coach: { on: 0, corner: .6, live: .45, ramp: 2, fade: .5, gasOut: .5,
+  coach: { on: 1, corner: .6, live: .45, ramp: 2, fade: .5, gasOut: .5,
     plan: { pressure: { initiative: .25, range: -8, out: 1.1 }, move: { range: 10, initiative: -.15, jab: .25, power: -.1 }, body: { body: .35, range: -4 },
       counter: { initiative: -.3, out: .9 }, ko: { power: .3, initiative: .25, range: -6, out: 1.1 }, survive: { range: 12, initiative: -.35, out: .75, guard: .15 },
       up: { out: 1.18, initiative: .15 }, down: { out: .85 } },
@@ -241,7 +241,7 @@ const BR = {
   // gas pacing (Ed, Oct 15: a man who knows his tank adjusts naturally and adapts to the fight; research/mind_pace.md 2, 4). A throw-rate x for the round, on top of the in-the-moment fatigue throttle.
   // know [N, I, P, W] on pacing mastery: how much he budgets. His tank (stamMax vs the first bell) against the line from 1 to end by the last round (the field's tank runs ~1 to .64 by R11 of 12): ahead of it he spends, behind it he saves (adj per point, capped at max).
   // last: the last round, nothing to save. fade: the other man's gas under fadeAt and well under mine, step on it (x read). rush: a novice comes out too hot the first rushR rounds (the fast-start fade)
-  gas: { on: 0, know: [0, .4, .8, 1], end: .62, adj: 1.2, max: .15, last: .1, fade: .12, fadeAt: .4, rush: [.12, .06, 0, 0], rushR: 3 },
+  gas: { on: 1, know: [0, .4, .8, 1], end: .62, adj: 1.2, max: .15, last: .1, fade: .12, fadeAt: .4, rush: [.12, .06, 0, 0], rushR: 3 },
   hb: { on: { reck: 1, ignore: 1, respect: 1, wild: 1, tunnel: 1, danger: 1 },
     reck:    [.35, .15, 0, 0],      // finisher (read + pacing): extra chance he skips the look and goes all in
     ignore:  [.6, .3, 0, 0],        // ... he doesn't see the warning signs (still throwing back, countered me) and goes all out anyway
