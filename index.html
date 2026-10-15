@@ -440,6 +440,10 @@ const BR = {
       up: { out: 1.18, initiative: .15 }, down: { out: .85 } },
     call: { jab: { jab: .3, range: 3 }, body: { body: .35, range: -3 }, press: { initiative: .3, range: -8 }, counter: { initiative: -.3 }, move: { range: 8, initiative: -.15 },
       hands: { guard: .15, out: .85 }, up: { out: 1.18, initiative: .15 }, down: { out: .85 } } },
+  // gas pacing (Ed, Oct 15: a man who knows his tank adjusts naturally and adapts to the fight; research/mind_pace.md 2, 4). A throw-rate x for the round, on top of the in-the-moment fatigue throttle.
+  // know [N, I, P, W] on pacing mastery: how much he budgets. His tank (stamMax vs the first bell) against the line from 1 to end by the last round: ahead of it he spends, behind it he saves (adj per point, capped at max).
+  // last: the last round, nothing to save. fade: the other man's gas under fadeAt and well under mine, step on it (x read). rush: a novice comes out too hot the first rushR rounds (the fast-start fade)
+  gas: { on: 0, know: [0, .4, .8, 1], end: .75, adj: 1.2, max: .15, last: .1, fade: .12, fadeAt: .4, rush: [.12, .06, 0, 0], rushR: 3 },
   hb: { on: { reck: 1, ignore: 1, respect: 1, wild: 1, tunnel: 1, danger: 1 },
     reck:    [.35, .15, 0, 0],      // finisher (read + pacing): extra chance he skips the look and goes all in
     ignore:  [.6, .3, 0, 0],        // ... he doesn't see the warning signs (still throwing back, countered me) and goes all out anyway
@@ -865,6 +869,18 @@ class Brain {
     const s = P.me.order; if (s) add(C.call[s.k], C.live * s.q * Math.min(1, s.age / C.ramp) * Math.min(1, s.left / .3));
     this.cc = o;
   }
+  // how hard to work this round, for the tank (BR.gas)
+  gasPace(P) {
+    const G = BR.gas, kn = tierV(this.m.pacing, G.know), mx = P.me.stamMax || 100, gas = P.me.stam / mx;
+    if (this.tank0 == null) this.tank0 = mx;
+    let v = 1;
+    const R = Math.max(2, P.rounds), line = 1 - (1 - G.end) * (P.round - 1) / (R - 1);
+    v += clamp((mx / this.tank0 - line) * G.adj, -G.max, G.max) * kn; // ahead of the line: spend it; behind: save it
+    if (P.round === P.rounds) v += G.last * kn;
+    if (P.him.gas < G.fadeAt && gas > P.him.gas + .2) v += G.fade * kn * this.k.read; // he's fading: go
+    if (P.round <= G.rushR) v += tierV(this.m.pacing, G.rush); // a novice comes out too hot
+    return v;
+  }
   pv(x) { return this.plan[x] + (this.cc ? this.cc[x] : 0); } // his plan plus what the corner told him
   finM() { return (this.m.read + this.m.pacing) / 2; } // finishing mastery: reading the hurt, and knowing when to spend it
   wobbly(P) { if (P.him.hurt) this.h.seen = this.ct; return P.him.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
@@ -943,7 +959,7 @@ class Brain {
     if (this.t < this.h.look) return null; // between flurries: a look (is he still there?)
     const open = this.opening(P);
     // a quick thinker decides more often, not more: the work rate is his nature, the timing is his skill
-    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace * (this.cc ? this.cc.out : 1);
+    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace * (this.cc ? this.cc.out : 1) * (this.gp || 1);
     // when NOT to: he keeps getting countered, he's gassed (a smart man paces it), he's scared, the other man is loaded and waiting
     let ctr = 0, n = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctr += e.c || 0; n += e.n || 0; }
     p *= 1 - clamp(ctr / Math.max(4, n) * 2.5, 0, .6) * k.read * (1 - tr.risk * .5);
@@ -1169,7 +1185,7 @@ class Brain {
       this.decT = this.decBase * (1 - .3 * this.fat) * Math.exp(this.g() * .25);
       if (this.R() < .1) this.rangeJit = this.g() * lerp(5, 2, this.k.range);
       if (this.R() < .08 + (P.ropes.me > .5 ? BR.ropes.flip : 0)) this.lat *= -1;
-      this.coachUpd(P);
+      this.coachUpd(P); this.gp = BR.gas.on ? this.gasPace(P) : 1;
       this.out.move = this.move(P);
       if (!P.me.busy && !P.me.clinch) {
         const a = this.offense(P);
