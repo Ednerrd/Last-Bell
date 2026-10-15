@@ -404,7 +404,8 @@ const BR = {
     right:  [.35, .65, .9, 1],     // he picks the change from the answer (else any change: often the wrong one)
     bait:   [0, .15, .3, .4],      // shows a combo again on purpose while he builds the read (weight up)
     ctrWin: 1.2,                   // he answered my combo with a counter this soon after (s)
-    ctrUp:  1.6,                   // the change vs a counterman: half the combo, then my counter is loaded (counter chance x)
+    ctrUp:  1.6,
+    fool:   .5,                    // the changed punch: chance the man answers it on autopilot, the way he always does                   // the change vs a counterman: half the combo, then my counter is loaded (counter chance x)
     // the body bank: invest early, cash it upstairs later (Ward, Inoue)
     bankFade: .85,                 // body work carries to the next round this much
     invest: [0, .15, .3, .4],      // extra body weight in the first part of the fight (x his body taste)
@@ -413,7 +414,7 @@ const BR = {
     pay:    [0, .5, 1, 1.2],       // head-ending-after-body weight x(1 + pay x min(payMax, payK x bank))
     payK: .1, payMax: .6,
     // the armed trap: draw the lead (jab and step back, he steps in behind his lead, the pull counter) (Atlas, Marquez)
-    draw:   [0, 0, .25, .35],      // chance per decision he shows the bait (counter-minded men more), when he has the skills
+    draw:   [0, 0, .3, .4],        // chance a throw is the bait instead (x(1.3 - initiative): counter-minded men more), when he has the skills
     drawCtr: .6,                   // counter skill it takes
     drawWin: 1.1,                  // he led into it this soon after the bait (s)
     drawBack: 10, drawBackT: .6,   // the step back after the bait jab (range, s)
@@ -422,7 +423,7 @@ const BR = {
     drawRd: .6,                    // armed: he's sure what's coming (read bonus), the pull counter loaded
     drawSpring: [.35, .4],         // spring chance + x counter skill
     // adjust delay: rounds of losing before he changes anything (Crawford 2-3, Loma 8, Canelo never)
-    delay:  [5, 4, 2.5, 1.5],
+    delay:  [5, 3.5, 2, 1],  
     menu:   [2, 4, 6, 6],          // how many answers he knows between rounds
     // his side: a smart defender doesn't give the same answer every time
     vary:   [0, .15, .35, .55],    // chance he breaks his habit when one answer is over `same` of his last ones
@@ -520,11 +521,11 @@ class Brain {
     this.emo = { conf: 0, frus: 0, fear: 0 };
     this.plan = { jab: 0, power: 0, body: 0, range: 0, initiative: 0 }; // between-round changes
     this.queue = null; this.setup = null; this.hist = [];
-    this.bait = {}; this.lf = null; this.ctrReady = -9; this.payNext = null; // setups and traps: how he answers each of my combos, my last combo on its way, the counter I loaded
+    this.bait = {}; this.lf = null; this.ctrReady = -9; this.payNext = null; this.dl = { hits: 0, led: {}, armed: null, win: -9, back: -9, next: 0, spring: null, armedR: 0 }; // setups and traps: how he answers each of my combos, my last combo on its way, the counter I loaded
     this.threat = null; this.lastHisP = null; this.lastHisT = -9; this.lastMine = null; this.lastDef = null;
     this.rangeJit = 0; this.nd = 0; this.fat = 0; this.lat = (this.R() < .5 ? 1 : -1);
     this.sc = { me: 0, him: 0, lead: 0, rounds: [] }; // his own guess at the cards
-    this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {}, mThr: {}, mLand: {}, chg: 0, chgRight: 0, chgPay: 0, chgL: 0 };
+    this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {}, mThr: {}, mLand: {}, chg: 0, chgRight: 0, chgPay: 0, chgL: 0, baits: 0, bitL: 0, armed: 0, sprung: 0, trapL: 0, trapR: [] };
     this.log = [];
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
@@ -593,7 +594,7 @@ class Brain {
       this.madd(this.mem.mine, p, { n: 1, l: ev.type === 'landed' ? 1 : 0, b: ev.type === 'blocked' ? 1 : 0, e: ev.type === 'evaded' ? 1 : 0 });
       if (ev.def) this.madd(this.mem.def, kd, { n: 1, [ev.def]: 1 }); else if (ev.type === 'landed') this.madd(this.mem.def, kd, { n: 1, none: 1 });
       this.lastMine = { p, t: this.t };
-      if (this.lf && BR.trap.on.show) this.lfHear(ev);
+      if (this.lf && (BR.trap.on.show || BR.trap.on.draw)) this.lfHear(ev);
       if (ev.type === 'landed' && PUNCHES[p].zone === 'body') { this.bodyL = (this.bodyL || 0) + 1; this.bank = (this.bank || 0) + 1; } // body work in the bank
       if (ev.type === 'landed') {
         E.conf = clamp(E.conf + .05 * (ev.dmg || 2) / 3, -1, 1); E.frus = Math.max(0, E.frus - .04); this.sc.me += guess(pts(p)); if (ev.hurt) this.oppHurtT = this.t;
@@ -620,13 +621,14 @@ class Brain {
       else if (ev.type === 'missed' && ev.short && this.R() < BR.shortCtr) this.tryCounter('short', p); // he fell short: he's reaching, and coming back slow
     }
   }
-  // show it, change it: each punch of my last combo comes back; the last one tells me how he answers that combo (the change's own punch: did it work?)
+  // show it, change it: each punch of my last combo comes back; the last one tells me how he answers a combo that ends on that punch (the change's own punch: did it work?)
   lfHear(ev) {
     const L = this.lf, i = L.k++;
-    if (i === L.pay) { this.tel.chgPay++; if (ev.type === 'landed') { this.tel.chgL++; if (L.base) delete this.bait[L.base]; } } // it landed: he'll stop answering it that way, start over
+    if (L.trap) { if (!i && ev.type === 'landed') { this.tel.trapL++; this.dlPaid(); } return; } // the trap's counter: it landed, he won't step in like that again
+    if (i === L.pay) { this.tel.chgPay++; { const A = this.tel.chgA || (this.tel.chgA = {}), x = A[L.ans] || (A[L.ans] = { n: 0, l: 0, b: 0, e: 0, m: 0 }); x.n++; x[ev.type[0]]++; } if (ev.type === 'landed') { this.tel.chgL++; if (L.base) delete this.bait[L.base]; } } // it landed: he'll stop answering it that way, start over
     if (i !== L.n - 1 || L.done) return;
     L.done = this.t;
-    if (L.pay == null) this.madd(this.bait, L.id, { n: 1, [ev.def || (ev.type === 'landed' ? 'none' : ev.type === 'missed' ? 'miss' : 'block')]: 1 });
+    if (L.pay == null && BR.trap.on.show) this.madd(this.bait, L.id, { n: 1, [ev.def || (ev.type === 'landed' ? 'none' : ev.type === 'missed' ? 'miss' : 'block')]: 1 });
   }
   // his answer to this combo, if he gives the same one every time (and I've seen it enough to trust it)
   baitRead(id) {
@@ -638,11 +640,28 @@ class Brain {
   changeFor(ps, ans) {
     const last = ps[ps.length - 1], out = ps.slice();
     if (ans === 'block' || ans === 'roll') { const sw = { jab: 'bodyJab', cross: 'bodyCross', hook: 'bodyHook', rhook: 'bodyHook', uppercut: 'hook', lupper: 'cross', bodyJab: 'jab', bodyCross: 'hook', bodyHook: 'hook' }; out[out.length - 1] = sw[last]; return out; } // he covers where it always goes: go where the guard isn't
-    if (ans === 'slip') { out.push(last === 'hook' ? 'cross' : 'hook'); return out; }    // he slips the last one: the hook where he slips to
-    if (ans === 'duck') { out.push('uppercut'); return out; }                              // he ducks it: come up the middle
+    const d = this.dNow == null ? 60 : this.dNow, fits = p => PUNCHES[p].max + BR.reachStep >= d;
+    if (ans === 'slip') { if (last !== 'hook' && fits('hook')) out.push('hook'); else out[out.length - 1] = PUNCHES[last].zone === 'head' ? (last === 'jab' ? 'bodyJab' : 'bodyCross') : 'hook'; return out; } // he slips the last one: the hook where he slips to (from long range: the head moves, the body doesn't)
+    if (ans === 'duck') { out.push(['uppercut', 'bodyHook', 'bodyCross'].find(fits) || 'bodyCross'); return out; }  // he ducks it: come up the middle
     if (ans === 'pull') { out.unshift('jab'); return out; }                                 // he pulls back: double up the jab, walk him down first
     if (ans === 'ctr') return out.length > 1 ? out.slice(0, -1) : out;                       // he counters it: show half, my counter is loaded for his
     return null;
+  }
+  // draw the lead: he stepped in behind his lead right after my bait jab. Once he does it every time (the same punch), the trap is armed
+  dlBit(H) {
+    const D = this.dl, T = BR.trap, m = (this.m.counter + this.m.read) / 2;
+    D.win = -9; this.tel.bitL++;
+    if (D.armed && H.type === D.armed) { D.spring = H.type; D.springT = this.t + 1.2; if (this.threat) this.threat.rd = Math.max(this.threat.rd, T.drawRd); return; } // there it is: he's sure what's coming
+    D.hits++; D.led[H.type] = (D.led[H.type] || 0) + 1;
+    let top = null, v = 0; for (const x in D.led) if (D.led[x] > v) { v = D.led[x]; top = x; }
+    if (!D.armed && D.hits >= trV('drawNeed', m) && v / D.hits >= .5) { D.armed = top; D.armedR = this.rd || 0; this.tel.armed++; this.note('trap armed: he steps in behind the ' + top); }
+  }
+  dlPaid() { const D = this.dl; D.hits = 0; D.led = {}; D.armed = null; D.spring = null; } // he got caught: he stops biting, start over
+  // the bait: a jab, then a step back to invite him in
+  dlBait(dSeen) {
+    const D = this.dl, T = BR.trap;
+    this.tel.baits++; D.win = this.t + .3 + T.drawWin; D.back = this.t + .3 + T.drawBackT; D.next = this.t + 2;
+    return this.fire(['jab'], 'bait: jab and step back' + (D.armed ? ' (armed)' : ''), dSeen);
   }
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
@@ -650,12 +669,17 @@ class Brain {
     let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * clamp(this.tr.initiative + this.plan.initiative, 0, 1)) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
     if (this.t < this.ctrReady) ch *= BR.trap.ctrUp;   // I showed him half of it to draw his counter: mine is waiting
+    let spring = false;
+    if (BR.trap.on.draw && this.mode !== 'survive') { const D = this.dl;
+      if (D.spring && this.t < D.springT && p === D.spring) { D.spring = null; spring = true; ch = Math.max(ch, BR.trap.drawSpring[0] + BR.trap.drawSpring[1] * k.counter); } // the trap: he stepped in behind it, the pull counter is loaded
+      else if (!D.armed && this.t < D.win + .6) ch *= BR.trap.drawHide; }                                      // building it: don't show him the counter yet
     if (p && PUNCHES[p].cat === 'jab' || p === 'bodyJab') ch *= BR.jabCtr; // a jab snaps back: much harder to counter than a missed hook
     if (this.mode === 'survive') {
       const r = this.hurtResp; ch *= { shell: .3, run: .4, clinch: .3, freeze: .1 }[r] || 1;
       if ((r === 'fire' || r === 'bait') && this.hisG < .55) ch *= r === 'bait' ? BR.fin.baitCtr : BR.fin.fireCtr; // he came in with his hands down: the finisher gets caught
     }
     if (this.R() > ch) return;
+    if (spring) { this.queue = { ps: [this.dNow > PUNCHES.cross.max + BR.reachStep ? 'jab' : 'cross'], why: 'trap: pull counter', ctr: 1, at: this.t + .02, trap: 1 }; this.tel.counters++; this.tel.sprung++; this.tel.trapR.push(this.rd || 0); return; }
     let c, why = 'counter';
     if (this.R() < .25 + .7 * k.counter) { const o = this.counterFor(def, p); if (o) { c = o[0].slice(); why = 'counter: ' + o[2]; if (c.length > 1 && this.R() > .3 + .6 * k.combos) c = c.slice(0, 1); } }
     if (!c) { const d = this.dNow == null ? 60 : this.dNow, ok = PTYPES.filter(x => PUNCHES[x].max + BR.reachStep >= d); c = [ok.length ? ok[Math.floor(this.R() * ok.length)] : 'jab']; } // he knows he should fire back, not with what (but he can see what reaches)
@@ -691,12 +715,12 @@ class Brain {
       d -= BR.tellSee * (H.tell || 0);
       d = Math.max(.04, d);
       const start = this.t - (H.t || 0), deadline = H.feint ? start + .3 : this.t + (H.impactIn != null ? H.impactIn : .25);
-      this.threat = { id: H.id, type: H.type, feint: !!H.feint, sell: H.sell || 0, start, at: start + d, deadline, rd, done: false };
+      this.threat = { id: H.id, type: H.type, feint: !!H.feint, sell: H.sell || 0, look: H.look || null, start, at: start + d, deadline, rd, done: false };
       if (!H.feint) {
         // he files it: what this man throws, what he opens with, what follows what
         this.madd(this.mem.his, H.type, { n: 1 });
         if (this.lastHisP && this.t - this.lastHisT < 1.2) this.madd(this.mem.after, this.lastHisP + '>' + H.type, { n: 1 });
-        else this.madd(this.mem.lead, H.type, { n: 1 });
+        else { this.madd(this.mem.lead, H.type, { n: 1 }); if (BR.trap.on.draw && this.t < this.dl.win) this.dlBit(H); }
         this.lastHisP = H.type; this.lastHisT = this.t;
       }
       this.tel.seen++;
@@ -712,6 +736,8 @@ class Brain {
       const spot = BR.biteRead * k.read * (.4 + .6 * Math.min(1, this.mem.feints / 6)) * (1 - .7 * T.sell);
       if (this.R() < spot) { this.tel.feintsRead++; this.note('read the feint'); return; }
     }
+    // a changed ending: on autopilot he answers the punch it always was (or doesn't answer at all: it always stopped there)
+    if (T.look && BR.trap.on.show && this.R() < BR.trap.fool) { this.tel.fooled = (this.tel.fooled || 0) + 1; if (T.look === 'end') return; T.as = T.look; }
     let tryP = lerp(BR.tryDef[0], BR.tryDef[1], (k.block + k.slip + k.footwork) / 3) * (1 - .25 * E.frus);
     if (this.mode === 'burst' || this.mode === 'hunt') tryP *= .7; // busy punching
     else if (this.mode === 'huntSafe') tryP *= .9;
@@ -719,9 +745,10 @@ class Brain {
     if (P.me.punching) tryP *= .3 + .45 * this.tr.slip; // a head-mover still moves his head mid-combo
     if (this.R() > tryP) { this.tel.noTry++; return; }
     // what does he think it is?
-    let seenAs = T.type;
+    let seenAs = T.as || T.type;
     const exp = this.expected();
-    if (exp && exp !== T.type && this.R() < this.predict(exp) * .6) seenAs = exp; // he was sure it was the other one
+    if (T.as) ;
+    else if (exp && exp !== T.type && this.R() < this.predict(exp) * .6) seenAs = exp; // he was sure it was the other one
     else if (this.R() < BR.misread * (1 - k.read) * (1 + .5 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + BR.blur.mis * this.blur) * (1 + BR.fam.mis * this.fx.u) * (1 - T.rd)) seenAs = PTYPES[Math.floor(this.R() * PTYPES.length)];
     if (seenAs !== T.type) this.tel.misreads++;
     const kd = kindOf(seenAs), tr = this.tr, best = DEF_BEST[kd], rd = seenAs === T.type ? T.rd : 0;
@@ -734,7 +761,10 @@ class Brain {
     };
     if (this.mode === 'survive' && (this.hurtResp === 'shell' || this.hurtResp === 'steady')) w.block *= this.hurtResp === 'shell' ? 3 : 1.6;
     if (this.mode === 'survive' && this.hurtResp === 'run') w.pull *= 3;
+    if (BR.trap.on.vary) { const hs = (this.myDef || (this.myDef = {}))[kd] || [], c = {}; let top = null; for (const x of hs) { c[x] = (c[x] || 0) + 1; if (!top || c[x] > c[top]) top = x; }
+      if (top && hs.length >= 3 && c[top] / hs.length >= BR.trap.same && w[top] && this.R() < trV('vary', (this.m.read + this.m.block + this.m.slip) / 3)) { w[top] *= BR.trap.varyX; this.tel.varied = (this.tel.varied || 0) + 1; } } // he's been giving the same answer: a smart man changes it before it gets him hit
     const def = wpickR(this.R, Object.keys(w), x => w[x] * (x === best ? 1 + 2 * rd + k.read * .5 : 1)) || 'block';
+    if (BR.trap.on.vary) { const hs = this.myDef[kd] = this.myDef[kd] || []; hs.push(def); if (hs.length > BR.trap.varyN) hs.shift(); }
     const q = clamp(lerp(BR.defQ, 1, k[DEF_SKILL[def]]) * (1 - .35 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + .3 * rd) * (1 - .15 * E.frus) * (1 - BR.hurtQ * hurt) * (1 - BR.blur.q * this.blur), .05, 1); // hurt or beat up: the legs and the hands are slow
     this.out.defend = { kind: def, zone: PUNCHES[seenAs].zone, vs: seenAs, quality: q };
     this.note('defends ' + def + ' vs ' + seenAs + (seenAs !== T.type ? ' (it was a ' + T.type + ')' : '') + (T.feint ? ' (bit on a feint)' : ''));
@@ -868,7 +898,7 @@ class Brain {
     const fat = 1 - P.me.stam / (P.me.stamMax || 100);
     // his eye for distance: a novice misjudges and throws from where nothing reaches
     const dSeen = P.dist + this.g() * BR.outShort * (1 - k.range) * .6 + (1 - k.range) * -6;
-    if (this.queue && this.t >= this.queue.at) { const q = this.queue; this.queue = null; const ps = this.fitReach(q.ps, dSeen); const a = ps ? this.fire(ps, q.why, dSeen, q.ctr) : null; if (a && q.pivot) a.pivot = true; return a; }
+    if (this.queue && this.t >= this.queue.at) { const q = this.queue; this.queue = null; if (q.trap) this.payNext = { pay: 0, trap: 1 }; const ps = this.fitReach(q.ps, dSeen); const a = ps ? this.fire(ps, q.why, dSeen, q.ctr) : null; if (a && q.pivot) a.pivot = true; return a; }
     // a planned sequence in progress
     if (this.setup) { const s = this.stepSetup(P, dSeen); if (s) return s; }
     if (dSeen > 92) return null;
@@ -886,6 +916,9 @@ class Brain {
     if (P.round === 1) p *= lerp(.55 + .35 * tr.initiative, 1, P.clock / P.roundLen); // the first round: he's still finding out what the other man has
     if (H.punch && !H.punch.feint && this.mode !== 'counter' && !(this.mode === 'survive' && this.hurtResp === 'bait')) p *= .6 + .6 * (1 - k.read) * tr.risk; // he's punching: most men cover, the reckless trade
     if (this.R() > p) { if (dSeen < 80) this.tel.holds++; return null; }
+    // the bait: a counterman shows the jab and steps back, to draw the lead
+    if (BR.trap.on.draw && this.t > this.dl.next && dSeen > 58 && dSeen < 82 && this.k.counter >= BR.trap.drawCtr && (this.mode === 'counter' || this.mode === 'work' || this.mode === 'feelout')
+      && this.R() < trV('draw', (this.m.counter + this.m.read) / 2) * (1.3 - clamp(tr.initiative + this.plan.initiative, 0, 1))) return this.dlBait(dSeen);
     // feint, a planned sequence, or a combo
     if (this.R() < BR.feintP * (.4 + k.feints * 1.5) * lvV('feint', this.m.feints) * (.5 + tr.patience) / Math.max(.3, m.aggr) * (this.mode === 'feelout' || this.mode === 'reset' ? 2 : 1)) return this.feint(dSeen);
     if (this.mode !== 'survive' && !HUNTS[this.mode] && this.R() < BR.setupP * k.read * (.5 + k.feints * .5 + k.combos * .5) * (this.mode === 'burst' ? .4 : 1)) { const s = this.startSetup(P, dSeen); if (s) return s; }
@@ -896,7 +929,7 @@ class Brain {
   }
   // he's shown this combo enough and the man answers it the same way every time: change the ending to beat that answer
   showChange(c) {
-    const T = BR.trap, m = (this.m.read + this.m.combos) / 2, b = this.baitRead(c.id);
+    const T = BR.trap, m = (this.m.read + this.m.combos) / 2, end = c.ps[c.ps.length - 1], b = this.baitRead(end);
     if (!b || b.n < trV('shows', m) || b.share < T.same || this.R() > trV('spring', m)) return null;
     let ans = b.ans, right = this.R() < trV('right', m);
     if (ans === 'ctr' && this.k.counter < .6) right = false; // he can't counter the counter
@@ -905,8 +938,10 @@ class Brain {
     if (!ps) return null;
     this.tel.chg++; if (right) this.tel.chgRight++;
     if (ans === 'ctr') this.ctrReady = this.t + 1.5;
-    this.payNext = { pay: ans === 'ctr' ? null : ps.length - 1, base: c.id };
-    return this.fire(ps, 'change: ' + c.id + ' (he ' + ans + 's it)', this.dNow);
+    this.payNext = { pay: ans === 'ctr' ? null : ps.length - 1, base: end, ans };
+    const o = this.fire(ps, 'change: ' + c.id + ' (he ' + ans + 's it)', this.dNow);
+    if (o) o.look = ans === 'ctr' ? null : ps.length > c.ps.length && ans !== 'pull' ? 'end' : ps[ps.length - 1] !== end ? end : null; // it looks like the old ending, or like it's over
+    return o;
   }
   pickCombo(P, dSeen) {
     const k = this.k, tr = this.tr, E = this.emo, md = this.mode, H = P.him, fat = 1 - P.me.stam / (P.me.stamMax || 100), pl = this.plan;
@@ -959,7 +994,7 @@ class Brain {
         if (P.round >= T.payFrom && c.lowHigh && this.bank) w *= 1 + trV('pay', mb) * Math.min(T.payMax, T.payK * this.bank); } // later: the hands come down, go upstairs
       // variety: a smart man doesn't show the same thing over and over; a novice falls in love with one
       if (last && last === c.id) w *= lerp(1.4, .3, k.read);
-      if (BR.trap.on.show) { const b = this.baitRead(c.id); if (b && b.share >= BR.trap.same && b.n < trV('shows', (this.m.read + this.m.combos) / 2)) w *= 1 + trV('bait', (this.m.read + this.m.combos) / 2); } // building the read: show it again
+      if (BR.trap.on.show) { const b = this.baitRead(c.ps[c.n - 1]); if (b && b.share >= BR.trap.same && b.n < trV('shows', (this.m.read + this.m.combos) / 2)) w *= 1 + trV('bait', (this.m.read + this.m.combos) / 2); } // building the read: show it again
       w *= Math.exp(this.g() * noise);
       ws.push([c, w]); tot += w;
     }
@@ -1031,7 +1066,7 @@ class Brain {
     if (!this.thrownEv) { this.tel.throws++; this.tmode(ps.length); } // no word from the game: count what he decided
     const id = ps.map(p => PUNCHES[p].num).join('-');
     this.hist.push(id); if (this.hist.length > 6) this.hist.shift();
-    if (BR.trap.on.show) { const q = this.payNext; this.lf = { id, n: ps.length, k: 0, t: this.t, pay: q ? q.pay : null, base: q ? q.base : null }; this.payNext = null; }
+    if (BR.trap.on.show || BR.trap.on.draw) { const q = this.payNext; this.lf = { id: ps[ps.length - 1], n: ps.length, k: 0, t: this.t, pay: q ? q.pay : null, base: q ? q.base : null, trap: q && q.trap, ans: q && q.ans }; this.payNext = null; }
     this.note('throws ' + id + ' (' + why + ')');
     return { type: ps[0], combo: ps, feint: false, tech, tell, commit, counter: !!ctr, why, num: id };
   }
@@ -1043,6 +1078,7 @@ class Brain {
     let po = 0; for (const p of ['jab', 'cross', 'bodyJab']) po += this.punchVal(p);
     const shift = clamp(pv / n - po / 3, -1, 1) * 10 * k.range * (tr.range > .7 ? .4 : 1); // what's working decides where he wants to be, inside his style
     let range = lerp(50, 76, tr.range) + md.range + this.plan.range - shift + fat * 5 + E.fear * 10 + this.rangeJit + (this.wary && P.round <= this.wary.until ? this.wary.v : 0);
+    if (this.t < this.dl.back) range += BR.trap.drawBack; // the step back after the bait
     if (sv === 'clinch') range = 30;
     if (sv === 'fire') range = 50;
     if (sv === 'freeze' || sv === 'bait') range = P.dist;
@@ -1065,7 +1101,7 @@ class Brain {
 
   /* ---------- the one call: perception in, action out ---------- */
   think(P, dt) {
-    this.t = P.t; this.out.punch = null; this.out.defend = null; this.dNow = P.dist;
+    this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist;
     if (P.events) for (const ev of P.events) this.hear(ev);
     const E = this.emo, comp = this.tr.composure;
     const sdt = dt * this.pace; // slow time: moods and intent
@@ -1117,9 +1153,12 @@ class Brain {
     this.sc.rounds.push(r); this.sc.lead += r; this.sc.me = 0; this.sc.him = 0;
     E.fear *= .5; E.frus *= .3; E.conf *= .7; if (this.bank) this.bank *= BR.trap.bankFade;
     this.queue = null; this.setup = null; this.threat = null; this.lf = null;
+    { const D = this.dl; D.hits *= .8; for (const x in D.led) D.led[x] *= .8; if (D.armed && (info.round || 0) - D.armedR >= 2) this.dlPaid(); D.win = D.back = -9; } // he forgets some; armed two rounds and never sprung: drop it
     const lost = this.sc.rounds.slice(-2).filter(x => x < 0).length;
     // the best adjust between rounds; the shared way they lose is waiting too long
-    const on = BR.lv.on.adjust, ch = lerp(Math.pow(k.adjust, 1.4) * (1 + .5 * lost), tierV(this.m.adjust, BR.lv.adjust) * (1 + .3 * lost), on) * (r < 0 ? 1 : .25);
+    const on = BR.lv.on.adjust, TD = BR.trap.on.delay;
+    let ch = lerp(Math.pow(k.adjust, 1.4) * (1 + .5 * lost), tierV(this.m.adjust, BR.lv.adjust) * (1 + .3 * lost), on) * (r < 0 ? 1 : .25);
+    if (TD) { let st = 0; for (let i = this.sc.rounds.length - 1; i >= 0 && this.sc.rounds[i] < 0; i--) st++; ch *= clamp((st - trV('delay', this.m.adjust) + 1) / 2, .15, 1.2); } // the shared way they lose: waiting too long (a world-class man sees it in a round or two)
     let change = null;
     if (this.R() < ch) {
       const cat = c => { let v = 0, n = 0; for (const p of PTYPES) if (PUNCHES[p].cat === c) { v += this.punchVal(p); n++; } return v / n; };
@@ -1135,8 +1174,9 @@ class Brain {
         ['stay long, he is killing me inside', hurtIn > hurtOut * 1.5 ? .5 : 0, () => { this.plan.range = clamp(this.plan.range + 8, -16, 16); }],
         ['go to work, I am waiting too long', this.sc.lead < 0 ? .4 : 0, () => { this.plan.initiative = clamp(this.plan.initiative + .25, -.4, .4); }]
       ];
-      const o = wpickR(this.R, opts, x => x[1] + .05 * this.R());
-      if (o && o[1] > .05) { o[2](); change = o[0]; }
+      const menu = TD ? [0, 5, 1, 2, 3, 4].slice(0, Math.round(trV('menu', this.m.adjust))).map(i => opts[i]) : opts; // a man with one plan has 'more of the same' and 'go to work'
+      const o = wpickR(this.R, menu, x => x[1] + .05 * this.R());
+      if (o && o[1] > .05) { o[2](); change = o[0]; if (this.tel.adj1 == null) this.tel.adj1 = info.round || 0; }
     }
     // plans fade back toward his nature
     if (!change) for (const x in this.plan) this.plan[x] *= .8;
@@ -1686,7 +1726,7 @@ class Fight {
     return {
       t: this.t, clock: this.clock, roundLen: ROUND_LEN, round: this.round, rounds: this.rounds, dist: dist(F, O), ropes: { me: ropesK(F), him: ropesK(O) },
       me: { head: F.head, headMax: F.headMax, stam: F.stam, stamMax: F.stamMax, hurt: hurtNow(F), down: F.state === 'down', clinch: F.state === 'clinch', punching: F.state === 'punch', busy },
-      him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0) } : null, // an awkward man's punches come from where you don't look: seen later
+      him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, look: a.look || null, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0) } : null, // an awkward man's punches come from where you don't look: seen later
         recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
         guard: (O.brain ? O.bg : .6) * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100 },
       events: F.bev
@@ -2272,7 +2312,7 @@ class Fight {
     const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
     const v = vec(F, F.op);
     F.act = { id: this.pid = (this.pid || 0) + 1, type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf) * (1.5 - .5 * tankF(F)), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
-    if (F.brain) { const b = F.binfo, i = F.bi++, a = F.act; a.tech = !b ? .75 : Array.isArray(b.tech) ? b.tech[Math.min(i, b.tech.length - 1)] : b.tech; a.commit = b ? b.commit || 0 : 0; a.tell = b && !i ? b.tell || 0 : 0; a.dur += a.tell * AI.tell; F.stam = Math.max(0, F.stam - P.cost * AI.commit * a.commit * .5); if (b) { a.first = !i; F.bev.push({ type: 'thrown', by: 'me', p: type, first: !i }); } } // the brain hears it started
+    if (F.brain) { const b = F.binfo, i = F.bi++, a = F.act; a.tech = !b ? .75 : Array.isArray(b.tech) ? b.tech[Math.min(i, b.tech.length - 1)] : b.tech; a.commit = b ? b.commit || 0 : 0; a.tell = b && !i ? b.tell || 0 : 0; a.look = b && b.look && i === b.combo.length - 1 ? b.look : null; a.dur += a.tell * AI.tell; F.stam = Math.max(0, F.stam - P.cost * AI.commit * a.commit * .5); if (b) { a.first = !i; F.bev.push({ type: 'thrown', by: 'me', p: type, first: !i }); } } // the brain hears it started
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
@@ -2352,6 +2392,7 @@ class Fight {
     let mult = 1, evaded = false, blocked = false, rolled = false;
     let def = D.def;
     if (def && D.brain && D.state !== 'stun' && R() > D.defQ * AI.defQ) def = null; // late or sloppy: the brain's defense didn't come off
+    if (def === 'block' && a.look && D.defZ && D.defZ !== P.zone) def = null; // a changed ending (brain traps): he covered where it always went, it came somewhere else
     memAdd(A, A.mem.def, defKind(P), this.t, { n: 1, [D.state === 'stun' ? 'stun' : def || 'none']: 1 });
     if (def && D.state !== 'stun') {
       if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25) * (1 - ANT.catch * antOn(D, a.type, this.t)); blocked = true; } // saw it coming: caught it clean
