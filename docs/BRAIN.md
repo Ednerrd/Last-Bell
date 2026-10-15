@@ -595,3 +595,24 @@ The research: the real southpaw edge is small (2–4 points at normal familiarit
 Targets (`mind_southpaw.md`): stranger ~45–47 ✓; southpaw at normal know 51–53, we sit at the top (some of it may be the engine, below). Tries on the way (600/pair): keep .3 with knobs ×.6 overshot (stance 41.7%); atS .7 with knobs ~×.45 left the default-know southpaw edge at ~0.
 **Engine note:** ctrl (both know .8, A orthodox v B southpaw, fam has no effect there) pooled over 3,400 fights: A 51.6%. A possible ~1.5 point orthodox edge in the engine itself (about 1.2 SE, not proven). Check with a stance-swapped ctrl before trusting it.
 same.js holds 45127603 (no know in the default field) / old AI 7f58e976.
+
+### Handoff (Oct 15, after L3)
+
+**State:** branch `claude/brain-wire`, last commit before this note 4ebabc9. Brain is the default AI. `same.js 200` = **45127603** (brain + L2 + L3; L3 is neutral for the default field because no sheet there carries `know`); old AI `PATCH="AI.brain=0"` = 7f58e976. Skill levels L0–L3 done.
+
+**L3 in one breath:** `BR.fam` in brain/brain.js (`famSet`/`famUpd`), engine `famOf(F)` passes his `sheet.know` about the OTHER man's style and stance at `brainInit` (again on a stance switch). Unfamiliar = `(bar − know) / bar`, bar `at` .45 for styles and `atS` .9 for the stance (southpaws are rare). Hurts reaction, prediction, habit reads, misreads, plus the opposite stance's main weapons. Fades over rounds 1–4 with a `keep` .2 floor all fight. Tuned to `research/mind_southpaw.md`: never saw a southpaw 46%, the southpaw at default know 53%, never saw the style 48% (`levels.js know`, 1200/pair, `PR=style,stance,south`).
+
+**Open questions:**
+- Possible ~1.5 point orthodox edge in the engine itself (ctrl pair, 3,400 fights pooled, A orth 51.6%; ~1.2 SE). Quick check if anyone cares: a stance-swapped ctrl (A southpaw) in `levels.js`, 1600 fights with `BoxerBrain.BR.fam.on=0`.
+- No fighter in the lab carries `know` yet, so L3 only shows in `levels.js know` until L4 (learning) or the career.
+
+**Next (ROADMAP "Claude" item 1): the brain pieces that hang off the levels.** Ed picks which first:
+- Setups and traps: "show it twice, change it", armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
+- Hurt brain by tier; the finisher weighs the risk (`research/mind_vision.md` 8d). Finisher caught 0.7% of hunts (want 5–10); same-round stop after a KD ~25% (research 35–45).
+- Gassers save it for later (stamina pacing).
+Same pattern as L2/L3: knobs off first (hash holds), then the read, then on and tune; every effect neutral at Pro; a commit per working step.
+
+**Lessons from L3 (on top of the L2 list above):**
+- 600/pair is still ±2 on a win share; the ctrl pair drifted 49.8 → 53.7 between identical runs. Use 1200/pair for the final call and `PR=` to run only the pairs you need (4 procs × 300 ≈ 9 min for three pairs).
+- Win share swings ~3× the landed-share gap, and later rounds carry the early damage, so a lasting floor (`keep`) costs far more wins than the same peak early.
+- A research subagent's WebFetch was DNS-blocked: numbers came from search snippets only. Say so when quoting them.
