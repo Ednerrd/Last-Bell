@@ -54,6 +54,10 @@ function report(rows) {
     ['rope escapes /rd', t => f1(t.esc / t.rd)],
     ['adjusts /fight', t => (t.adj / t.fights).toFixed(2)],
     ['hunts /fight', t => (t.hunt / t.fights).toFixed(2)],
+    ['hunt: reckless (no look)', t => pc(t.reck || 0, t.hunt)],
+    ['hunt: behind the guard', t => pc(t.hsafe || 0, t.conf)],
+    ['hunt: stung by a counter', t => pc(t.stung || 0, t.hunt)],
+    ['hurt: landed firing back /fight', t => ((t.hurtLand || 0) / t.fights).toFixed(2)],
     ['hurt: froze', t => pc(t.freeze, t.hurts)],
     ['dropped /fight', t => (t.kdT / t.fights).toFixed(2)],
     ['changes /fight', t => (t.chg / t.fights).toFixed(2)],
@@ -144,7 +148,7 @@ for (const PR of PAIRS.filter(x => !ONLY || ONLY.includes(x.pair))) for (let i =
     t.rd = rds;
     if (b) { const T = b.tel, L = b.lv || {};
       Object.assign(t, { setup: T.setups, reactSum: T.reactSum, reactN: T.reactN, late: T.late, noTry: T.noTry, misread: T.misreads, seen: T.seen, feintRead: T.feintsRead, hunt: T.hunts, freeze: T.hurtR.freeze || 0, hurts: T.hurts,
-        techSum: L.techSum || 0, techN: L.techN || 0, techBad: L.techBad || 0, feintBad: L.feintBad || 0, adj: L.adj || 0, chg: T.chg || 0, chgRight: T.chgRight || 0, chgPay: T.chgPay || 0, chgL: T.chgL || 0, baits: T.baits || 0, bitL: T.bitL || 0, armed: T.armed || 0, sprung: T.sprung || 0, trapN: T.trapN || 0, trapL: T.trapL || 0, varied: T.varied || 0, adj1: T.adj1 || 0, adj1n: T.adj1 != null ? 1 : 0 });
+        techSum: L.techSum || 0, techN: L.techN || 0, techBad: L.techBad || 0, feintBad: L.feintBad || 0, adj: L.adj || 0, chg: T.chg || 0, chgRight: T.chgRight || 0, chgPay: T.chgPay || 0, chgL: T.chgL || 0, baits: T.baits || 0, bitL: T.bitL || 0, armed: T.armed || 0, sprung: T.sprung || 0, trapN: T.trapN || 0, trapL: T.trapL || 0, varied: T.varied || 0, reck: T.reckless || 0, conf: T.confirm || 0, hsafe: T.huntSafe || 0, stung: T.stung || 0, hurtLand: ((T.mLand || {})['s:fire'] || 0) + ((T.mLand || {})['s:bait'] || 0), adj1: T.adj1 || 0, adj1n: T.adj1 != null ? 1 : 0 });
       if (o) t.feintBit = o.tel.bites;
     }
     if (o) t.feintsAtHim = tel[1 - j].feint;

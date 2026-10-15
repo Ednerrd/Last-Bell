@@ -428,7 +428,16 @@ const BR = {
     // his side: a smart defender doesn't give the same answer every time
     vary:   [0, .15, .35, .55],    // chance he breaks his habit when one answer is over `same` of his last ones
     varyN: 5, varyX: .35,
-    burnWin: 1.2, burnN: 2, burnFade: .5 } // he only varies once the habit got him hit: he answered, then ate the next one this soon (s); full chance at burnN burns; burns carry to the next round this much         // last answers he remembers, weight left on the habit
+    burnWin: 1.2, burnN: 2, burnFade: .5 },
+  // the hurt brain by tier (Ed, Oct 15): a novice swings for the fences, a vet picks clean shots and respects a hurt man's counter; a hurt vet is the dangerous one.
+  // Tables [Novice, Intermediate, Pro, World class] on mastery, neutral at Pro. on: each piece's switch (0 = off, the old code)
+  hb: { on: { reck: 0, ignore: 0, respect: 0, wild: 0, tunnel: 0, danger: 0 },
+    reck:    [.35, .15, 0, 0],      // finisher (read + pacing): extra chance he skips the look and goes all in
+    ignore:  [.6, .3, 0, 0],        // ... he doesn't see the warning signs (still throwing back, countered me) and goes all out anyway
+    respect: [0, 0, 0, .25],        // ... no warning signs, but he finishes behind the guard anyway (a hurt man can still bite)
+    wild:    [1.6, 1.25, 1, .85],   // all-out hunt: wide punches x(lerp to this by how wide)
+    tunnel:  [1.4, 1.15, 1, .8],    // hunting, he sees the counter late: x this on BR.tunnel
+    danger:  [.8, .9, 1, 1.25] } // he only varies once the habit got him hit: he answered, then ate the next one this soon (s); full chance at burnN burns; burns carry to the next round this much         // last answers he remembers, weight left on the habit
 };
 // the opposite stance's main weapons: the rear straight down the middle, the lead hook from outside
 const FAM_WPN = { cross: 1, bodyCross: .7, hook: .5 };
@@ -441,6 +450,8 @@ function ptsV(x, P) { if (x <= P[0][0]) return P[0][1]; for (let i = 1; i < P.le
 function lvV(key, m) { const on = BR.lv.on[key] || 0, v = tierV(m, BR.lv[key]); return on === 1 ? v : lerp(key === 'off' || key === 'late' || key === 'flinch' || key === 'tell' || key === 'freeze' ? 0 : key === 'len' ? 9 : 1, v, on); }
 // a trap table (BR.trap) read at mastery m
 const trV = (key, m) => tierV(m, BR.trap[key]);
+// a hurt-brain table (BR.hb) at mastery m, or neutral (Pro's value) when that piece is off
+const hbV = (key, m) => BR.hb.on[key] ? tierV(m, BR.hb[key]) : BR.hb[key][2];
 // intent modes: each lasts seconds, not one roll. aggr: how often he lets go. range: offset from his range. guard: how high the hands sit
 const MODES = {
   feelout: { aggr: .35, range: 6, guard: .6, lat: .7 },
@@ -682,7 +693,7 @@ class Brain {
     if (p && PUNCHES[p].cat === 'jab' || p === 'bodyJab') ch *= BR.jabCtr; // a jab snaps back: much harder to counter than a missed hook
     if (this.mode === 'survive') {
       const r = this.hurtResp; ch *= { shell: .3, run: .4, clinch: .3, freeze: .1 }[r] || 1;
-      if ((r === 'fire' || r === 'bait') && this.hisG < .55) ch *= r === 'bait' ? BR.fin.baitCtr : BR.fin.fireCtr; // he came in with his hands down: the finisher gets caught
+      if ((r === 'fire' || r === 'bait') && this.hisG < .55) ch *= (r === 'bait' ? BR.fin.baitCtr : BR.fin.fireCtr) * (BR.hb.on.danger ? hbV('danger', (this.m.counter + this.m.read) / 2) : 1); // he came in with his hands down: the finisher gets caught (a hurt vet more)
     }
     if (this.R() > ch) return;
     let c, why = 'counter';
@@ -713,7 +724,7 @@ class Brain {
       // a new punch: when will he see it?
       const fat = 1 - P.me.stam / (P.me.stamMax || 100), hurt = P.me.hurt ? 1 : 0;
       let d = lerp(BR.react[0], BR.react[1], k.read * .5 + (k.slip + k.block) * .25);
-      d *= (1 + BR.reactFat * fat) * (1 + BR.reactFear * E.fear) * (1 + BR.reactHurt * hurt) * (1 + BR.blur.react * this.blur) * (1 + (BR.tunnel[this.mode] || 0)) * Math.exp(this.g() * BR.jitter);
+      d *= (1 + BR.reactFat * fat) * (1 + BR.reactFear * E.fear) * (1 + BR.reactHurt * hurt) * (1 + BR.blur.react * this.blur) * (1 + (BR.tunnel[this.mode] || 0) * (BR.hb.on.tunnel && HUNTS[this.mode] ? hbV('tunnel', this.finM()) : 1)) * Math.exp(this.g() * BR.jitter);
       d *= (1 + BR.fam.react * this.fx.u) * (1 + BR.fam.weapon * this.fx.s * (FAM_WPN[H.type] || 0)); // L3: a style he hasn't seen, a stance he hasn't seen
       const rd = H.feint ? this.predict(H.type) * .5 : this.predict(H.type);
       d *= 1 - BR.antic * rd;
@@ -836,12 +847,13 @@ class Brain {
     if (this.modeT <= 0) this.pickMode(P);
   }
   // is he still hurt? The engine's tells come and go; the man who saw it knows the legs aren't back yet
+  finM() { return (this.m.read + this.m.pacing) / 2; } // finishing mastery: reading the hurt, and knowing when to spend it
   wobbly(P) { if (P.him.hurt) this.h.seen = this.ct; return P.him.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
   // the hunt: check, then commit (all-out or behind a guard); flurries with a look in between; capped, and it costs gas
   huntStart(P, late) {
     const tr = this.tr, H = this.h;
     this.tel.hunts++; H.t0 = this.ct; H.n = 0; H.stung = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = -9; H.chk = 0;
-    const reckless = this.R() < BR.fin.reckless * tr.killer * (1 - tr.composure) + .3 * this.desp;
+    const reckless = this.R() < BR.fin.reckless * tr.killer * (1 - tr.composure) + .3 * this.desp + hbV('reck', this.finM());
     if (reckless || late) { if (reckless) this.tel.reckless = (this.tel.reckless || 0) + 1; this.setMode('hunt', this.rnd(4, 8), late ? 'he is hurt, the bell is coming' : 'he is hurt: all in'); return; }
     this.tel.confirm = (this.tel.confirm || 0) + 1;
     this.setMode('check', lerp(BR.fin.confirm[0], BR.fin.confirm[1], this.k.read) * this.rnd(.8, 1.2), 'is he hurt?');
@@ -854,7 +866,8 @@ class Brain {
       H.chk = 0;
       if (!hurt) { stop('he is fine'); return; }
       // he still throws back, or he's countered me, or I'm low: finish behind the guard
-      const safe = this.t - this.lastHisT < 1 || this.ct - H.ctrd < 5 || gas < F.gasSafe;
+      const warn = this.t - this.lastHisT < 1 || this.ct - H.ctrd < 5, fm = this.finM(), HB = BR.hb.on;
+      const safe = warn && !(HB.ignore && this.R() < hbV('ignore', fm)) || gas < F.gasSafe || !warn && HB.respect && this.R() < hbV('respect', fm); // a novice misses the signs; a vet respects a hurt man anyway
       if (safe) this.tel.huntSafe = (this.tel.huntSafe || 0) + 1;
       this.setMode(safe ? 'huntSafe' : 'hunt', this.rnd(4, 8), safe ? 'he is hurt, careful' : 'he is hurt');
       return;
@@ -974,7 +987,7 @@ class Brain {
       // what's been working against this man (a smart man weighs it, a novice barely notices)
       let v = 0; for (const p of c.ps) v += this.punchVal(p); w *= Math.pow(v / c.n, 1.5);
       if (md === 'feelout' || md === 'reset') w *= c.n === 1 && c.jab ? 4 : c.jab ? 1 : .25;
-      if (md === 'hunt') w *= 1 + c.power * 2.5 * tr.killer;
+      if (md === 'hunt') w *= (1 + c.power * 2.5 * tr.killer) * (BR.hb.on.wild ? lerp(1, hbV('wild', this.finM()), c.wide) : 1);
       else if (md === 'huntSafe') w *= (1 + c.power * 2.5 * BR.fin.safePow * tr.killer) * lerp(1, BR.fin.safeStr, c.str) * lerp(1, BR.fin.safeWide, c.wide) * (c.n > 3 ? .6 : 1);
       else if (md === 'check') w *= lerp(.4, 1.6, c.str) * (c.n <= 2 ? 1.3 : .3);
       if (HUNTS[md]) {
