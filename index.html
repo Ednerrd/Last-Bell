@@ -431,7 +431,7 @@ const BR = {
     burnWin: 1.2, burnN: 2, burnFade: .5 },
   // the hurt brain by tier (Ed, Oct 15): a novice swings for the fences, a vet picks clean shots and respects a hurt man's counter; a hurt vet is the dangerous one.
   // Tables [Novice, Intermediate, Pro, World class] on mastery, neutral at Pro. on: each piece's switch (0 = off, the old code)
-  hb: { on: { reck: 0, ignore: 0, respect: 0, wild: 0, tunnel: 0, danger: 0 },
+  hb: { on: { reck: 1, ignore: 1, respect: 1, wild: 1, tunnel: 1, danger: 1 },
     reck:    [.35, .15, 0, 0],      // finisher (read + pacing): extra chance he skips the look and goes all in
     ignore:  [.6, .3, 0, 0],        // ... he doesn't see the warning signs (still throwing back, countered me) and goes all out anyway
     respect: [0, 0, 0, .25],        // ... no warning signs, but he finishes behind the guard anyway (a hurt man can still bite)
