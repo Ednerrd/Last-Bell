@@ -672,3 +672,19 @@ Ed: most go for the stop; a novice swings for the fences, a vet picks clean shot
 - Wild novices throw away their own stoppage chances: upsets one level down drop ~3 (to the band floor). Watch in L6.
 - Danger (the hurt vet's counter) is ~0.5 events per man per fight: 300/pair can't see it. Pool 1500+ before tuning it.
 - Hash 42febe1a, old AI 7f58e976.
+
+### The finish after a knockdown (Oct 15, ON)
+Probe (scratch, 600 fights): a man who beat the count came back at 34% of his head max, already above the engine's hurt line (30%). Over the ~80 s left he ate ~7 clean head shots, ~13 damage, and regenerated ~14: he healed as fast as he got hit. The man who dropped him called him hurt for only 10 clock s (`BR.fin.kdWob`). Same-round stop by when the KD came: <30 s left ~18%, 120+ s left only ~31%.
+- `TUNE.kdRegen` (engine, new): head regen x this the rest of a round once he's been down (`F.kdR`). .3.
+- `BR.fin.kdWob` 10 → 25: the chase on the resume (also how long he feels hurt himself).
+- Either alone barely moves it (kdRegen .3: 29.8%; kdWob 30 alone: ~24%, 600 fights).
+
+| finish.js 1200 | base | kdRegen .3 | .3 + kdWob 25 (ON) | .15 + kdWob 25 |
+|---|---|---|---|---|
+| stoppages | 23.4% | 24.4% | 29.6% | 26.4% |
+| same-round stop after a first KD | 25.6% | 29.8% | 35.8% | 34.4% |
+| KDs/fight | .82 | .80 | .89 | .84 |
+| man dropped first wins | 23.2% | 21.3% | 19.9% | 22.4% |
+
+After (ON): audit 500 50.6 / 15.1 / 29.9%, stops 26.4%, KDs .9/fight. Styles 2x300/pair: outboxer 52.3, swarmer 52.1, slugger 50.3, boxer-puncher 48.9, counter 46.3 (was 46.9: the low man, L6). levels sk 300: IvN 16.3, PvI 15.0, WvP 14.3, PvN 3.0. Hash caec652, old AI 445f9aa3 (the engine regen knob reaches the old AI too).
+
