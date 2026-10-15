@@ -194,7 +194,7 @@ const BR = {
     mem: .3,                // reads his habits this much slower (memory notice)
     mis: .3 },              // misreads up this much
   // setups and traps (research/mind_traps.md 4). Tables [Novice, Intermediate, Pro, World class] on mastery, like BR.lv. on: each piece's switch (0 = off, the old code)
-  trap: { on: { show: 0, bank: 0, draw: 0, delay: 0, vary: 0 },
+  trap: { on: { show: 1, bank: 1, draw: 1, delay: 1, vary: 1 },
     // show it, change it: he watches how the man answers a combo, and once the answer is the same every time, he changes the ending to beat it
     shows:  [9, 4, 3, 2],          // looks at a combo before he trusts the answer (a novice never really does)
     same:   .6,                    // the top answer's share that counts as "he does that every time"
