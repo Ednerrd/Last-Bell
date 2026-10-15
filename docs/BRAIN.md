@@ -645,3 +645,12 @@ Same pattern as L2/L3: knobs off first (hash holds), then the read, then on and 
 - Scratchpad copies (t1/t2/t3.html) die with the old session; rebuild with `PATCH=` on the switches.
 
 **Still left on ROADMAP item 1:** hurt brain by tier (finisher weighs the risk), gassers pacing.
+
+### Traps ON (Oct 15, the dig)
+
+Ed: dig first, then all five on. Leave-one-out (styles.js 300/pair, all on = ob 54.2 / ctr 44.3): minus vary ob 50.2 / ctr 47.4, minus delay 50.9 / 46.0, minus show 51.1 / 46.9, minus draw 56.8 / 46.1, minus bank 55.8 / 44.3 (each ±1.5, a diff ±2.1).
+- **Fix: vary only after a burn.** He varied his top answer whether or not anyone punished it: a pure cost for the slip-and-counter man. Now `this.burn` +1 when a punch lands within `burnWin` 1.2 s after one he blocked/evaded; vary chance × min(1, burn / `burnN` 2); burns ×`burnFade` .5 between rounds. Varied /fight (sk): Int 22–29, Pro ~67, World ~130.
+- **Pooled styles (2×300/pair):** off ob 52.4 / sw 53.1 / sl 50.4 / bp 47.9 / ctr 46.0; on ob 53.5 / bp 50.4 / sw 50.2 / sl 49.0 / ctr 46.9. The old "off 54.5 vs on 57" pair was noise on both sides; single runs swing ±3.
+- **Level gaps (levels.js sk 300):** off IvN 18.7 / PvI 17.7 / WvP 17.0 / PvN 3.7; on 16.7 / 16.0 / 19.7 / 4.0. PvN ~4 is the baseline, not the traps.
+- **Audit 500:** 50.6 thrown / 14.8 landed / 29.2%, stops 23.8% (was 25.5 before traps). Hash 281f4411, old AI 7f58e976.
+- Left for L6: counter-puncher 46.9 and outboxer 53.5 on the band edges (both were there with traps off), stops a hair low.
