@@ -7,7 +7,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 
 ## Claude, in this order
 1. **Brain pieces that hang off the levels** (fold into L3–L4):
-   - Setups and traps: "show it twice, change it", armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`).
+   - Setups and traps: "show it twice, change it", armed traps, body bank, adjust delay by tier (`research/mind_traps.md`, `mind_combos.md`). **Built, all off (Oct 15)**: waiting on Ed to switch on; see `docs/BRAIN.md` "Handoff (Oct 15, after traps)".
    - Hurt brain by tier; the finisher weighs the risk (`research/mind_vision.md` 8d). Finisher caught 0.7% of hunts (want 5–10); same-round stop after a KD ~25% (research 35–45).
    - Gassers save it for later (stamina pacing).
 2. **L6 balance pass** (one level down is 15–20% now; then the CLAUDE.md targets; counter-puncher 47.2 and swarmer 53.9 on the band edges; specials not re-checked since L2).

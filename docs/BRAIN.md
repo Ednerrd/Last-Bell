@@ -616,3 +616,32 @@ Same pattern as L2/L3: knobs off first (hash holds), then the read, then on and 
 - 600/pair is still ±2 on a win share; the ctrl pair drifted 49.8 → 53.7 between identical runs. Use 1200/pair for the final call and `PR=` to run only the pairs you need (4 procs × 300 ≈ 9 min for three pairs).
 - Win share swings ~3× the landed-share gap, and later rounds carry the early damage, so a lasting floor (`keep`) costs far more wins than the same peak early.
 - A research subagent's WebFetch was DNS-blocked: numbers came from search snippets only. Say so when quoting them.
+
+### Setups and traps (Oct 15, built, all OFF)
+
+`BR.trap` in brain/brain.js, five switches in `BR.trap.on`, all 0 so the hash holds (45127603 / old AI 7f58e976). Commits 43de6df, 83be36e, 99c21b3.
+- **show** ("show it, change it"): `lfHear` files his answer to my last punch by that punch (`this.bait`, faded `madd`). Once he shows the same answer (`shows` by tier, share ≥ `same`), `changeFor` builds the change: block/roll → swap head↔body; slip → add a hook if it fits the range, else body; duck → uppercut/body shot; pull → jab first; he counters → drop it and load my counter. The changed punch carries `look` (engine: `a.look` → perception; a block set for the old zone fails on the new one; autopilot `fool` .5).
+- **bank** (body bank): body landed fills `this.bank`, fades ×`bankFade` per round. Early rounds weight body investing, from round 3 lowHigh pays it off.
+- **draw** (draw the lead): smart counter-punchers show a jab; when he leads into it `drawNeed` times the trap arms; next time he leads with that punch: pull (weight ×4), then a protected `cross` after his impact (`queue.trap`). No step back, no hidden counter (they cost the counter-puncher 3.6 pts).
+- **delay**: adjust delay by tier (`delay` losing rounds before he changes; World 1, Novice 5), `menu` how many fixes he knows.
+- **vary**: a smart defender (read/block/slip) notices his own habit (top answer ≥ .6 of the last 5) and fades it ×.35.
+- `levels.js` rows: changes/fight, picked right, landed, baits, traps armed/sprung, trap counter landed, first adjust rd.
+
+**All on (sk 300/pair):** IvN 18.7, PvI 16.0, PvN 3.7(!), WvP 15.0, P mirror 45/47.7. Audit 50.7 / 14.9 / 29.4%, stops 23.6%. Body: liver KDs 13 v 14 base. Pro: ~1.9 changes/fight (82% right, 40% land), traps armed .8 / sprung .5, pull counter lands 31%. World: ~8 changes, 1.5 armed / 1.3 sprung. First adjust: Pro rd ~4.0, World ~3.6.
+**Styles (300/pair):** off 54.5 sw / 51.9 ob / 50.1 sl / 46.9 bp / 46.3 ctr. All on: ob 57.0, sw 51.7, bp 50.5, sl 46.9, ctr 44.0. Each piece alone sits in noise; stacked, the outboxer gains ~5 and the counter-puncher drops ~2.
+
+### Handoff (Oct 15, after traps)
+
+**State:** `claude/brain-wire`, traps built and pushed, everything off. Hashes unchanged (45127603 / 7f58e976). Docs for the traps live in the section above; CLAUDE.md and ROADMAP not yet changed for them.
+
+**Waiting on Ed (two calls):**
+1. A (rec): switch the traps on now, fix outboxer (57) / counter-puncher (44) in the L6 balance pass. B: keep off, dig into why the outboxer gains when stacked (style runs with all-minus-one: all minus vary, all minus show…), ~1–2 hrs.
+2. If A: all five on, or skip some?
+
+**When decided:** set `BR.trap.on`, `node brain/inline.js`, `node tests/same.js 200` (new hash), `PATCH="AI.brain=0" node tests/same.js 200` (expect 7f58e976). Update CLAUDE.md hash + brain targets, ROADMAP (traps item done), this file. Commit, push.
+
+**Watch out:**
+- PvN 3.7 in the all-on sk run looks off (a two-level gap should beat a one-level one). Compare with the base run's PvN row before switching on.
+- Scratchpad copies (t1/t2/t3.html) die with the old session; rebuild with `PATCH=` on the switches.
+
+**Still left on ROADMAP item 1:** hurt brain by tier (finisher weighs the risk), gassers pacing.
