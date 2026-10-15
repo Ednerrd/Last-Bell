@@ -8,7 +8,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 ## Claude, in this order
 1. **Brain pieces that hang off the levels** (fold into L3–L4):
    - Hurt brain: by tier ON, the finish after a KD ON (Oct 15). Still open: the hurt vet's counter danger unmeasured (too rare for 300/pair: pool it). Finisher caught ~1% of hunts; stung ~14% is the honest measure.
-   - Gas pacing + coach calls into the brain (built together). Ed: a man who knows his tank adjusts naturally and adapts to the fight; the coach can tell him to pick it up or slow down. Calls reach the brain both from the corner (weighs more) and live mid-round; he always listens (no trust system yet). Then the rest of the shouts/corner orders.
+   - Coach calls + gas pacing: ON (Oct 15). Open: the AI corner (`aiStrategy`) is blind: its plans only beat a silent corner by ~3 in mirrors, pressure loses 4 pts as a blanket plan (the engine's lead-and-get-countered lean, L6). The AI corner never says pick it up / slow down yet. Rest of the corner talk (parking lot) later.
 2. **L6 balance pass** (one level down 15–20%; then the CLAUDE.md targets; specials not re-checked since L2). Ed: "the better fighter wins": no single factor decides; landing, adjusting, best shots, best combos and coaching all add up, style vs style included.
 3. **Fighter traits** (glass jaw, slow starter, dangerous when hurt, fades late), from the parking lot.
 4. **L4 learning** (skills grow from fights and camp).
@@ -17,6 +17,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 7. **After the whole engine is done (items 1–6):** 3D phase 1 (`proto/PLAN.md`; Ed's top gripe is the 2D look: fighters, punches, distance, can't read punches), footwork during punches (in 3D), career back, L5 (skill sheet UI), gym mode steps 3–6 (`docs/GYM.md`).
 
 ## Done lately (numbers in `docs/BRAIN.md`)
+- Oct 15: coach calls + gas pacing ON (`BR.coach`, `BR.gas`). The corner's plan and the live shout move his own plan (corner .6, live .45 of it); new calls Pick it up / Slow down (buttons, corner plans, talk). Live shouts at 1200: oracle 54.5, none 51.1, random 45.7: a good coach wins fights, a bad one loses them. Gas: a smart man budgets his tank to the rounds left, spends in the last round and when the other man fades; a novice comes out hot. Styles 47.9–53.9, one level down 15.7–16.7. Hash 8443008f.
 - Oct 15: the finish after a KD ON: a man off the floor heals at 30% speed the rest of the round (`TUNE.kdRegen` .3, engine) and the man who dropped him chases 25 s, not 10 (`BR.fin.kdWob`). Same-round stop after a KD 25.6 → 35.8%, stops 23.4 → 29.6% (finish 1200), audit 26.4%. Styles 46.3–52.3 (counter low), one level down 14.3–16.3. Hash caec652, old AI 445f9aa3.
 - Oct 15: hurt brain by tier ON (`BR.hb`): Novice reckless hunts 18→51%, behind the guard 74→40%; World behind the guard 71→76%; one level down 14–17% (was 16–18). Hash 42febe1a.
 - Oct 15: setups and traps ON (show, bank, draw, delay, vary). Leave-one-out dig: vary (unconditional habit breaking) cost the counter-puncher; now he only varies after the habit got him hit. Pooled styles on 46.9–53.5 (off 46.0–53.1), level gaps unchanged, audit 50.6 / 14.8 / 29.2%, stops 23.8%. Hash 281f4411. Research: `mind_coach.md`, `mind_traits.md`.
@@ -32,7 +33,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 - Lab B rhythm (`ccr-026fa9ad-j4d8rw`) is dead; Ed picked Lab A. The parallel step 6 (`ccr-b57f3498-nk3hk1`) is superseded.
 - Ring IQ when hurt or tired as its own step: parked; it lives in the hurt brain now.
 - Corner lesson size: medium (`TEACH` .18 / .7 / .7).
-- Ed, Oct 15 (12-question round): coach calls DO go into the brain now (replaces Oct 13's no): corner and live, corner weighs more, he always listens. 3D waits until the engine is done (brain list, balance, traits, L4). Lab republish only when Ed says.
+- Ed, Oct 15 (12-question round): coach calls DO go into the brain now (built and ON the same day) (replaces Oct 13's no): corner and live, corner weighs more, he always listens. 3D waits until the engine is done (brain list, balance, traits, L4). Lab republish only when Ed says.
 - Stats vs skills (Ed, Oct 14, after L0: "start the next phase"): stats are the body (power, speed, chin, stamina...), skills are what he knows how to do with them and grow from fights and camp. Level comes from skills; bodies inside a division stay close; a skill level gets worth a bit more (L0: skills-only gap 32% upsets, target 15-20%).
 - No sparring in the skill system for now. No bond/trust system yet.
 

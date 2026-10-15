@@ -688,3 +688,20 @@ Probe (scratch, 600 fights): a man who beat the count came back at 34% of his he
 
 After (ON): audit 500 50.6 / 15.1 / 29.9%, stops 26.4%, KDs .9/fight. Styles 2x300/pair: outboxer 52.3, swarmer 52.1, slugger 50.3, boxer-puncher 48.9, counter 46.3 (was 46.9: the low man, L6). levels sk 300: IvN 16.3, PvI 15.0, WvP 14.3, PvN 3.0. Hash caec652, old AI 445f9aa3 (the engine regen knob reaches the old AI too).
 
+### Coach calls and gas pacing (Oct 15, ON)
+Ed (12-question round): the coach's calls reach the brain, from the corner (weighs more) and live; he always listens (no trust yet). A man who knows his tank paces himself naturally; the coach can tell him to pick it up or slow down. Research: `research/mind_coach.md` 4-5, `mind_pace.md` 2, 4.
+- `BR.coach`: the corner's round plan (`F.strategy`, STRATS key) and the live shout (`F.order`, SHOUTS key) are offsets on his own plan (initiative, range, jab, power, body: the `this.plan` units), a throw-rate x (`out`) and guard +. Corner at `corner` .6, fading to half by the bell; live at `live` .45 x the engine's q (how he took it), in over 2 clock s, out with the shout's own fade. Output calls are capped by the tank (`gasOut` .5 .. 1). Read through `pv(x)` (plan + corner) wherever the plan was read. The engine passes `me.strat` and `me.order`.
+- `BR.gas`: a throw-rate x per decision. His tank (stamMax vs the first bell) against a line from 1 to `end` .62 by the last round (the field runs 1 to .64 by R11 of 12): ahead he spends, behind he saves (`adj` 1.2 per point, `max` .15); the last round +.1; the other man under .4 gas and well under his own +.12 x read; all x `know` [0, .4, .8, 1] on pacing mastery. A novice comes out hot the first 3 rounds (`rush` [.12, .06, 0, 0]).
+- New calls: Pick it up / Slow down as live buttons (SHOUTS up/down, yells, shoutFit: outworked, the other man fading, behind late / emptying the tank, throwing and missing) and as corner plans (STRATS up/down, talk words, the Claude prompt menu).
+
+| Coach value (mirrors @82, side 0's corner) | brain ignores the corner | brain follows (ON) |
+|---|---|---|
+| live: oracle (best fit) 1200 | 57.6 | 54.5 |
+| live: none 1200 | 51.1 | 51.1 |
+| live: random 1200 | 49.0 | 45.7 |
+| corner plan vs a silent corner, 1200 (corner at 1.0; silent mirror 46.1) | - | ai 49.1, move 52.7, survive 52.9, counter 49.1, body 48.7, ko 45.3, pressure 41.8 |
+
+Corner at 1.0 swung mirror fights -4..+7 for a blind plan (research: a talk-in moves the tendency 20-40% of the gap); cut to .6. Pressure as a blanket plan loses: the engine's lead-and-eat-counters lean (L6).
+
+Full check (ON): audit 500 x3 50.6-51.5 thrown, ~15 landed, ~29.5%, stops pooled 23.5% (off 24.5%; one 500 read 19.8, noise); finish 600 28.0%, same-round stop after a KD 31%; styles 2x300/pair outboxer 53.9, swarmer 50.3, slugger 49.8, boxer-puncher 48.1, counter 47.9; levels sk IvN 15.7, PvI 16.7, WvP 16.7, PvN 1.7. Gas by round (12 rds @75): output 51 / 55 / 54 / 53 / 52 / 51 / 50 / 49 / 48 / 46 / 45 (R1-11), under 45% gas ~2-3 pts less late with pacing on. Pick it up / Slow down at 600: only_up 49.8, only_down 47.2 (blind spam costs), oracle 52.4. Hash 8443008f, old AI 445f9aa3.
+
