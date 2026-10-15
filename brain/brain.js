@@ -82,16 +82,16 @@ function tierOf(skills) { const v = SKILL_KEYS.reduce((s, k) => s + (skills[k] |
    ring:     range (0 lives inside, 1 lives at the end of the jab), circle (moves laterally) */
 const TRAIT_KEYS = ['output', 'jab', 'power', 'body', 'combo', 'initiative', 'patience', 'shell', 'slip', 'legs', 'clinch', 'composure', 'risk', 'killer', 'range', 'circle'];
 const STYLES = {
-  outboxer:     { label: 'Out-boxer',       t: { output: .55, jab: .85, power: .35, body: .25, combo: .4, initiative: .55, patience: .6, shell: .3, slip: .5, legs: .85, clinch: .35, composure: .6, risk: .3, killer: .4, range: .9, circle: .8 },
-                  sk: { jab: 10, footwork: 6, range: 4, angles: 6, power: -6, cutoff: -8, clinch: -2 } },
+  outboxer:     { label: 'Out-boxer',       t: { output: .48, jab: .85, power: .35, body: .25, combo: .4, initiative: .55, patience: .6, shell: .3, slip: .5, legs: .85, clinch: .35, composure: .6, risk: .3, killer: .4, range: .9, circle: .8 },
+                  sk: { jab: 10, footwork: 2, range: 4, angles: 2, power: -6, cutoff: -8, clinch: -2 } },
   slugger:      { label: 'Slugger',         t: { output: .42, jab: .3, power: .9, body: .45, combo: .35, initiative: .75, patience: .35, shell: .75, slip: .25, legs: .2, clinch: .4, composure: .5, risk: .8, killer: .9, range: .3, circle: .2 },
                   sk: { power: 12, cutoff: 6, slip: -8, footwork: -8, jab: -6, angles: -4 } },
   swarmer:      { label: 'Swarmer',         t: { output: .9, jab: .35, power: .55, body: .7, combo: .85, initiative: .9, patience: .15, shell: .72, slip: .65, legs: .2, clinch: .3, composure: .78, risk: .7, killer: .7, range: .08, circle: .35 },
                   sk: { combos: 10, body: 10, cutoff: 14, slip: 14, block: 10, pacing: 4, range: -4, footwork: -4, jab: -4 } },
-  counter:      { label: 'Counter-puncher', t: { output: .35, jab: .5, power: .55, body: .3, combo: .4, initiative: .15, patience: .9, shell: .45, slip: .8, legs: .55, clinch: .4, composure: .8, risk: .35, killer: .5, range: .65, circle: .55 },
+  counter:      { label: 'Counter-puncher', t: { output: .4, jab: .5, power: .55, body: .3, combo: .4, initiative: .15, patience: .9, shell: .45, slip: .8, legs: .55, clinch: .4, composure: .8, risk: .35, killer: .5, range: .65, circle: .55 },
                   sk: { counter: 12, read: 8, slip: 8, block: 2, combos: -6, cutoff: -8, body: -4 } },
   boxerpuncher: { label: 'Boxer-puncher',   t: { output: .66, jab: .6, power: .66, body: .45, combo: .55, initiative: .6, patience: .55, shell: .5, slip: .5, legs: .5, clinch: .4, composure: .65, risk: .5, killer: .7, range: .55, circle: .5 },
-                  sk: { power: 6, jab: 6, combos: 5, adjust: 6, read: 4 } }
+                  sk: { power: 8, jab: 6, combos: 5, adjust: 6, read: 4, slip: 2, block: 2 } }
 };
 const STYLE_KEYS = Object.keys(STYLES);
 
