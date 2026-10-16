@@ -756,3 +756,14 @@ Lessons:
 **Watch:** IvN one-level-down ~14.4% (floor 15). Body snatcher read 55.2 then 51.4 (fine pooled).
 
 **Ed, Oct 15 (this session):** L4 learning before traits; outside review (DeepSeek) folded into ROADMAP: learn more from losses, drama before L4; crowd look and sound only; named officials with made-up names (`docs/DRAMA.md`); medium effort by default, one step per session. Roadmap flowchart (private artifact): https://claude.ai/artifact/JFthHeFf3SvBh2WUqEyogg (source lived in the scratchpad; rebuild from ROADMAP.md if it needs an update).
+
+### Old AI retired (Oct 16)
+**Done (ROADMAP 2, now gone from the list):** the brain is the only AI. Cut: the `AI.brain` flag, the lab's Old AI picker, `tests/bvo.js`, `decide()`, `react()` (the spoiler's tie-up stays as `spoil()`), the old counters (on a miss, out of the guard), the engine's `pickCombo`/`punchVal`/`pickCounter`/`need`/`escape`/`tryBait`/`startFeint`/`tempoStart`/`beat`, the engine combo book (`COMBOS`, `PNUM`, `RANGE_C`, `STYLE_COMBO`), its opponent memory (`F.mem`, `MEMV`, `memAdd`) and anticipation (`ANT`, `antRead`), the plan math (`planOf`/`sgOf`/`mixMods`, STRATS numbers, SHOUTS mods), `NEED`, most of `TEMPO`, `FEINT_READ`, `GUARD_FEINT`, `OPEN_W`, `F.bait`, `F.decT`, `ctrEdge`. All of it was unreachable or write-only with the brain on.
+- **Hash held:** same.js 200 = 1de442e5 at every commit (same.js 40 = 3e588522 for a quick look). The old AI's dice rolls on shared paths (feel-out at fight/round start, the reset after an exchange, stick jab, clinch break, combo cut short, the opportunist) stay as bare `R()` calls with a `same.js hash` comment. Drop them only together, on purpose, and record the new hash. No sims needed: same seeds, same fights.
+- **Type checks:** `tsconfig.json` (`checkJs`, `strict` off, no build step); `tsc -p .` is clean on `brain/brain.js`. Typedefs Perception, SeenPunch, Action, BrainOpts at the top of brain.js. Next files to add: `brain/ring.js`, then maybe an extracted engine.
+- **Knobs:** one `TUNING` block in index.html right after the ring constants.
+- **Found while cutting:** the corner's lessons (`teach()`, `F.read.les`) only ever fed the old AI's plan, so with the brain they do nothing but print the 'learned' line (`tests/teach.js` measures nothing now). L4 decides: wire them into the brain's plan or cut them (ROADMAP 3). The brain's own rope-a-dope has no 'bait' commentary event (parking lot).
+
+### Handoff (Oct 16, after the old AI)
+**State:** `claude/brain-wire` = `claude/retire-old-ai`. Hash 1de442e5 (no old-AI hash anymore). CLAUDE.md, ROADMAP current.
+**Next (ROADMAP 1–3):** the brain pieces still open (the AI corner is blind: `aiStrategy`), then Drama (`docs/DRAMA.md`), then L4. The measurements queued before L4 (above) still stand.

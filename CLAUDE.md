@@ -1,14 +1,14 @@
 # Last Bell
 
-Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 lines) boots straight into a fight (random or picked fighters). Career, saves, hub, camp and gym mode were cut (Oct 2026); the old full game lives in git history on `claude/epic-goldberg-ps6ip4` before that cut. Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
+Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 lines) boots straight into a fight (random or picked fighters). Career, saves, hub, camp and gym mode were cut (Oct 2026); the old full game lives in git history on `claude/epic-goldberg-ps6ip4` before that cut. Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
-**The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the default AI (`AI.brain` 1 since Oct 14; `PATCH="AI.brain=0"` runs the old engine AI). `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
+**The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the only AI: the old engine AI (`decide()`/`react()`) was retired Oct 16. `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
 **What to do next: `ROADMAP.md`** (the only to-do list). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
-- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (83 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
+- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (54 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
 - Never publish to the live game without Ed's explicit OK.
 - Models (Ed, Oct 14): Opus for tuning, code and design; Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write). Sonnet subagents are fine for grunt work too (docs bookkeeping, sim runs and tables).
 - Effort (Ed, Oct 15, replaces Oct 14): **medium is the default.** Before a task that needs high, say so in one line and ask Ed to switch, then wait for his OK. High = debugging odd sim results, retiring or refactoring engine code that must keep the same.js hash, design plans (L4 learning, the drama build). Sim-driven knob tries, docs, roadmap edits, overviews, running sims and reading numbers stay at medium.
@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **1de442e5**, the brain with skill levels L2 + traps + hurt brain by tier + the finish after a KD + coach calls + gas pacing + the L6 balance pass; old AI `PATCH="AI.brain=0"` 445f9aa3).
+- Render-only changes must keep the `same.js` hash (now **1de442e5**, the brain with skill levels L2 + traps + hurt brain by tier + the finish after a KD + coach calls + gas pacing + the L6 balance pass; still the same after the old AI was cut, Oct 16).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -35,10 +35,10 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,400 
 ## Code map (markers `/* ===== LAST BELL : ... ===== */`)
 engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, divisions, gear, P4P stars) → render → audio → ui part 1 (helpers) → ui part 3 (fight loop, corner, replay) → the fight screen (`LAB`, `labNew`, `labFight`, `resultScreen`).
 - Ring: x ±146 (RING), z ±115 (ZR), MIN_D 30. `P3()` projection.
-- Fight loop: `footwork()` every frame, `decide()` on a timer, `react()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'.
-- Knobs: `TUNE` (combat), `DMG` (damage), `CUT` (cuts/doctor), `GUARDS`, `STYLES` / `STYLE_*`, `SHOUTS` / `SHOUT_EDGE`, `COMBOS` / `PNUM` / `OPEN_W`, `TEMPO` (rhythm), `NEED` (round awareness), `TEACH` (corner lessons), `ANT` / `MEMV` / `FEINT_READ` (brain).
+- Fight loop: `brainTick()` every frame (`perceive()` → `F.brain.think()` → feet, hands, defense), `footwork()`, `spoil()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'. Bare `R()` calls are rolls the old AI made, kept so the seeded fights don't shift: drop them only on purpose (new hash).
+- Knobs: one marked block `TUNING` (TUNE combat, DMG damage, CUT cuts/doctor, STAM gas, BODY, EXT reach, AI the brain on this engine, SKL skill sheet, SHOUT_EDGE, TEACH, STYLE_* tricks). Content tables stay with their code: `PUNCH`, `STYLES`, `GUARDS`, `STRATS` (labels), `SHOUTS`. The brain's own knobs: `BoxerBrain.BR` in `brain/brain.js`.
 - Skill sheet (L1): `sheet.sk` (mastery, the brain reads it if set), `sheet.know`, `levelOf`, `skillSheet`, `skFromRecord`, knobs `SKL`. What a level does (L2): `BoxerBrain.BR.lv` (tables N/I/P/W, neutral at Pro, `on` switches), engine side `F.brain.mast`, `offT`, `flinchT`, `AI.offDmg`. Familiarity (L3): `BR.fam` (on), `famSet`/`famUpd`, engine `famOf` (sheet.know about the other man; none = neutral).
-- Brain: `F.mem` + `memAdd`/`memPeek` (opponent memory), `antRead` (anticipation), `pickCounter(…, def)`, `need()`, `teachK`/`planOf`. Ring IQ: `ringIQ(sheet)`, `iqK`.
+- Brain wiring: `brainInit`, `perceive` (the contract is typed in `brain/brain.js`: Perception, Action; `tsc -p .` checks it), `brainTick`, `bev` (events to both brains), `brainProfile`/`brainSkills` (stats or `sheet.sk` → skills). Opponent memory lives in the brain. Corner lessons: `teach()`/`teachK` (F.read.les: only the 'learned' commentary reads them now). Ring IQ: `ringIQ(sheet)`, `iqK`.
 - Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career.
 - Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `carry()`, `blendSnap`, `spreadView()`.
 - Corner talk: `roundNotes()`, `talkPrompt`, `ACT.talk`, `talkWords()` fallback, `FX.cornerCall` in `updShouts`.
@@ -46,14 +46,14 @@ engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, di
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless (`sim.js` is the shared loader). `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
 - **`tests/check.sh TAG [s a l f sp g]`: the full check on 4 cores, resumable after a restart (rerun the same line); `tests/check.sh TAG report` prints it all.** Default parts s a l f (~25 min); sp (specials) adds ~20 min.
-- `node tests/same.js 200`: determinism hash.
+- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 3e588522 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
 - `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials).
 - `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
 - `node tests/brain.js [tempo|iq|adapt|pace|styles] N`: brain report. Baselines in `docs/BRAIN.md`.
 - `QUIET=3 node tests/teach.js 300 82 body 20`: corner-as-teacher log (control `PATCH="TEACH.max=0"`).
-- Brain (the default now; `PATCH="AI.brain=0"` for the old AI): `node tests/bvo.js 300` brain vs old AI; `node tests/bprobe.js 150` how punches end, defense, counters, distance. `node tests/ropes.js 40 [style]` time on the ropes and how he gets off. `SEED=7 node tests/scout.js 20 [style|random] [rating] [guard|roll]` scouting report: one new fighter, 20 fights vs a random field, record, strengths, weaknesses (no learning between fights yet). `TAG=x node tests/levels.js 75 [curve|split]` (x4) then `node tests/levels.js agg x`: skill levels, win % across a level gap and skill use by level; `sk` mode = same body, levels from `sheet.sk` (L1). `know` mode = two Pros, A unfamiliar with B's style/stance (L3). `node tests/sheet.js` prints the skill-sheet defaults (walk-in types, records).
+- Brain: `node tests/bprobe.js 150` how punches end, defense, counters, distance. `node tests/ropes.js 40 [style]` time on the ropes and how he gets off. `SEED=7 node tests/scout.js 20 [style|random] [rating] [guard|roll]` scouting report: one new fighter, 20 fights vs a random field, record, strengths, weaknesses (no learning between fights yet). `TAG=x node tests/levels.js 75 [curve|split]` (x4) then `node tests/levels.js agg x`: skill levels, win % across a level gap and skill use by level; `sk` mode = same body, levels from `sheet.sk` (L1). `know` mode = two Pros, A unfamiliar with B's style/stance (L3). `node tests/sheet.js` prints the skill-sheet defaults (walk-in types, records).
 - Finishing: `TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).

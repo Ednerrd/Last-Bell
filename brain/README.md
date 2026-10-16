@@ -5,7 +5,7 @@ The AI inside a boxer's head, built on its own so any game (2D canvas, the 3D pr
 - `brain.js`: the brain. No DOM, no canvas, no engine globals. Works in Node (`require`) and the browser (`window.BoxerBrain`).
 - `ring.js`: a dummy ring. Two boxers on a line between the ropes, real punch timing, simple hit math, 10-point must. It knows nothing about thinking: it builds perception, calls `think()`, and applies the answer. Use it as the reference for wiring a real game.
 - `tests/`: headless sims (below).
-- `inline.js`: copies `brain.js` into `index.html` (the engine runs it behind `AI.brain`). `--check` verifies the copy.
+- `inline.js`: copies `brain.js` into `index.html` (the engine's only AI since Oct 16). `--check` verifies the copy.
 - `lab.src.html` + `build-lab.js`: the brain lab, a side-view viewer that runs both files live in the browser (https://claude.ai/artifact/5UhTsjMSCTqhtRnCfdZBSV). `node brain/build-lab.js` writes `lab.html` (build output, not tracked).
 
 ## Plugging it in
