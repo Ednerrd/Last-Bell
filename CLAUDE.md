@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **d9fe6759**, Oct 16: the AI corner reads the fight and yells live, both corners, with the style re-tunes that came with it; before it 1de442e5).
+- Render-only changes must keep the `same.js` hash (now **1a66d14e**, Oct 16: the officials as characters, named judges with tastes and refs with stoppage and holding dials; before it d9fe6759, the AI corner).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -42,12 +42,13 @@ engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, di
 - Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career.
 - Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `carry()`, `blendSnap`, `spreadView()`.
 - Corner talk: `roundNotes()`, `talkPrompt`, `ACT.talk`, `talkWords()` fallback, `FX.cornerCall` in `updShouts`.
+- Officials (Drama step b): `JUDGES` (taste weights `w`, `noise`) scored through `judgeScore(F, w)` in `scoreRound`; `REFS` (`stop` +1 early / 0 / -1 late: the unanswered-punch stop and the check after the count; `hold` clinch length; `holdN` clinches a round before a holding warning; `dirty`); `F.judges`, `F.ref`, pinned by `opts.judges` / `opts.ref`; `foul(F, O, why)`.
 - AI corner: `aiStrategy(side)` between rounds (cards, gas, work rate, hurt; Pick it up / Slow down), `aiShout(F)` live (best `shoutFit` over `AIC.bar`; `f.aiCorner` per side, on for both; the player's yell quiets side 0 for `AIC.hold`). How right a call is: `shoutRead`; what it is worth in the engine: `orderPow`, `atkEdge`, `defEdge` (Move/Hands defend on every punch, the rest only on matching punches, Up/Down no engine edge).
 
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless (`sim.js` is the shared loader). `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
 - **`tests/check.sh TAG [s a l f sp g]`: the full check on 4 cores, resumable after a restart (rerun the same line); `tests/check.sh TAG report` prints it all.** Default parts s a l f (~25 min); sp (specials) adds ~20 min.
-- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 5f989e36 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
+- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 63a19c0 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
 - `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials).
@@ -65,7 +66,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain (default, with both AI corners, Oct 16): ~51.2 thrown / ~15.1 landed / ~29.5% connect, stops ~26.7–28.2% (audit 500 x3; finish.js 600: 26.8%), styles 48.4–52.2 (slugger pooled), specials 48.5–54.3 pooled (angle at the ceiling), guards 47.7–55.8. Skill levels: one level down wins 16.5–20% (`levels.js sk`, 600/pair). AI corner vs a silent one +3.6 (53.6 over 1800). History: `docs/BRAIN.md` "AI corner reads the fight", "Balance pass L6". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58. Specials vs base styles 48–54%.
+- Brain (default, with both AI corners, Oct 16): ~51.2 thrown / ~15.1 landed / ~29.5% connect, stops ~24.7–28% (audit 500 x3; finish.js 600: 25.8%; ~26% under every ref), styles 48.1–51.5, specials 48.0–54.3 pooled (angle at the ceiling), guards 47.7–55.8 (before the officials). Skill levels: one level down wins 15.8–18.0% (`levels.js sk`, 600/pair). Drama (`drama.js`, close fights): a lead change in ~41%, comebacks ~11.5% (target ~11, Ed). AI corner vs a silent one +3.6 (53.6 over 1800). History: `docs/BRAIN.md` "AI corner reads the fight", "Balance pass L6". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58. Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.

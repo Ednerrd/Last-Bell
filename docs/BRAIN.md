@@ -830,3 +830,8 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 ### Handoff (Oct 16, ROADMAP 1 closed)
 **State:** `claude/brain-wire` = `claude/hurt-danger` (danger.js + docs, no engine change). Hash d9fe6759. ROADMAP item 1 (brain pieces) is done; the open AI-corner plan note moved to the parking lot.
 **Next: ROADMAP 1 is now Drama** (`docs/DRAMA.md`: metrics first, then the build order there). Effort: high for the drama build plan (CLAUDE.md), so ask Ed to switch first.
+
+### Handoff (Oct 16, Drama steps a-b)
+**State:** `claude/brain-wire` = `claude/drama-metrics`. Hash **1a66d14e** (same.js 40 = 63a19c0). Drama step a (`tests/drama.js`, comeback target ~11%) and step b (the officials) done, details in `docs/DRAMA.md` sections 6 and 8. `research/comebacks.md`: no published real-world comeback rate; coin-flip rounds give ~12.7%.
+**Next:** Drama step c, crowd mood and booing (render and audio only, keep the hash), then d, the coach feedback line on the corner screen.
+**Watch:** audit stops read 24.7% on one pass (finish 25.8%); the angle fighter at 54.3.
