@@ -190,7 +190,7 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .sumgrid>div{background:var(--panel);border-radius:5px;padding:10px;display:flex;flex-direction:column}
 .sumgrid small{color:var(--mute);font-size:14px}.sumgrid b{font-family:var(--disp);font-weight:400;font-size:22px}
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.cards div{display:flex;flex-direction:column;align-items:center;background:var(--panel);border-radius:5px;padding:8px}
-.cards span{color:var(--mute);font-size:14px}.cards b{font-family:var(--disp);font-weight:400;font-size:22px}
+.cards span{color:var(--mute);font-size:14px;text-align:center}.cards small{color:var(--mute);font-size:11px;text-align:center;line-height:1.2}.cards b{font-family:var(--disp);font-weight:400;font-size:22px}
 .lgd{color:#c9a24a}.pstats{display:grid}.pr{display:grid;grid-template-columns:1fr auto 1fr;padding:7px 0;border-bottom:1px solid var(--line);gap:10px}
 .pr>b:last-child{text-align:right}.pr span{color:var(--mute);text-align:center}.pr.head b{font-family:var(--disp);font-weight:400}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -3724,6 +3724,7 @@ const Comm = (() => {
     ignored: ["{a} is not hearing his corner.", "The corner is yelling, but {a} is doing his own thing.", "{a} tunes out the corner."],
     angle: ['{a} steps off to the side and {d} is punching air.', 'Beautiful angle by {a}. {d} has to turn to find him.', '{a} hits and pivots out. He is gone.', '{a} lands and steps around him. {d} is looking at nothing.'],
     swap: ['{a} switches to {s}.', '{a} changes stances again. Now he is {s}.', 'There is the switch. {a} goes {s}.', '{a} flips to {s}. Back to the drawing board for {d}.'],
+    hold: ['The ref warns {a} for holding.', '{a} keeps grabbing. The ref has seen enough of it.', 'Warning to {a}: let go and fight.'],
     foul: ['The ref warns {a} for holding and hitting.', 'Warning for {a}. Watch the hands in the clinch.', '{a} is sneaking shots in the clinch. The ref has words with him.'],
     foulDed: ['The referee takes a point from {a}!', 'Point deduction! {a} has been warned enough.', 'That is a point off for {a}. The ref has had it.'],
     lean: ['{a} grabs and leans all his weight on him.', '{a} ties him up and makes him carry him.', '{a} smothers him and leans on the back of his neck.'],
@@ -3762,7 +3763,7 @@ const Comm = (() => {
       case 'clinch': if (e.lean && ok('lean', t, 25)) { o.a = nm(e.c); L('lean', 1); } else if (ok('clinch', t, 10)) L('clinch', 0); break;
       case 'angle': if (ok('angle', t, 22)) L('angle', 1); break;
       case 'switch': if (ok('swap', t, 30)) L('swap', 1); break;
-      case 'foul': if (e.ded) L('foulDed', 4); else if (ok('foul', t, 15)) L('foul', 2); break;
+      case 'foul': if (e.ded) L('foulDed', 4); else if (ok('foul', t, 15)) L(e.why === 'hold' ? 'hold' : 'foul', 2); break;
       case 'cut': if (e.fresh) L('cut', 3); break;
       case 'roundEnd': L('end', 2); break;
       case 'miss': if (e.why === 'wild' && e.p !== 'jab' && e.p !== 'bodyJab' && ok('wild', t, 16)) { o.p = pn(e.p, fight.f[e.a]); L('wild', 0); break; }
@@ -4308,7 +4309,8 @@ function labFight(L) {
   </div>`, 'fightmode');
   Render.init($('#cv'));
   Sfx.init(); Comm.initVoices(); Sfx.crowd(CROWD_BASE[FX.venue], 1);
-  overlay(`<div class="intro"><span>${esc(DIVS[L.div].name)}</span><b>${esc(A.name)}</b><em>vs</em><b>${esc(B.name)}</b><span>${o.rounds} rounds, ${esc(VENUE_NAMES[o.venue])}</span></div>`, 2300);
+  overlay(`<div class="intro"><span>${esc(DIVS[L.div].name)}</span><b>${esc(A.name)}</b><em>vs</em><b>${esc(B.name)}</b><span>${o.rounds} rounds, ${esc(VENUE_NAMES[o.venue])}</span><span>Referee ${esc(F.ref.name)}</span></div>`, 2300);
+  feed(`Referee ${F.ref.name}: ${F.ref.style}. Judges: ${F.judges.map(j => `${j.name} (${j.taste})`).join(', ')}.`);
   rafId = requestAnimationFrame(loop);
 }
 function labBar(L) {
@@ -4337,7 +4339,8 @@ function resultScreen() {
   const row = (l, k) => `<div class="pr"><b>${A.tot.landed[k]}/${A.tot.thrown[k]}</b><span>${l}</span><b>${B.tot.landed[k]}/${B.tot.thrown[k]}</b></div>`;
   const keys = Object.keys(A.tot.landed);
   show(`<div class="screen">${labBar(L)}<h2>${who}</h2><p class="mute">${esc(how)}</p>
-    <div class="cards">${res.cards.map((c, i) => `<div><span>Judge ${i + 1}</span><b>${c[0]}-${c[1]}</b></div>`).join('')}</div>
+    <div class="cards">${res.cards.map((c, i) => `<div><span>${esc(F.judges[i].name)}</span><b>${c[0]}-${c[1]}</b><small>${esc(F.judges[i].taste)}</small></div>`).join('')}</div>
+    <p class="mute small">Referee ${esc(F.ref.name)}, ${esc(F.ref.style)}</p>
     <div class="pstats">${keys.map(k => row(k[0].toUpperCase() + k.slice(1), k)).join('')}</div></div>`, '');
 }
 const labCss = document.createElement('style');
