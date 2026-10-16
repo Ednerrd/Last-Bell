@@ -12,6 +12,7 @@ The only to-do list. When something is done, delete its line here and put the nu
 2. **Drama** (`docs/DRAMA.md`, Ed answered Oct 15: named officials, crowd look and sound only, build order there; metrics first, before L4 design): what a fight should feel like round to round. Mechanics that exist but don't do drama work yet: the clinch as a pacing device, refs and judges as characters with reputations (not random leans), a crowd mood across the fight, stakes, the 10-round shape.
 3. **L4 learning** (skills grow from fights and camp; style/stance know grows; opponent memory for rematches; scars like gun-shy after a KO). Before traits (Ed, Oct 15: the learning brain every fighter has is the heart of the game; some traits can grow out of it). Learn more from losses than wins (no snowball); per-opponent memory fades fast, style know slowly, skills only when unused; the fighter grows on his own, the player picks what camp drills.
    - The corner's lessons (`teach()`, `F.read.les`, `tests/teach.js`) only fed the old AI's plan: since Oct 16 nothing in the brain reads them (only the 'learned' commentary line). Wire them into the brain's plan here, or cut them.
+   - Scouting in camp (Ed, Oct 16): the player picks one. **Tape** (if there is any: a prospect or a short-notice man has little) pre-loads some of the other man's habits into the brain's opponent memory, but tape can be stale (new trainer, he changed) and point him at the wrong habits. **Spar a lookalike** (same style/stance/size) raises `sheet.know` for that style and stance before the fight (cuts the L3 never-seen penalty). **Nothing:** he walks in blind and reads him in the ring. Rematch memory (he remembers THIS man) lives here too.
    - Measure first: win % vs a continuous skill-point gap (`levels.js curve`), the side-A edge in even fights (audit gap 0 pooled ~42% vs ~47.5 expected), and what a well-timed KO call is worth (vs blanket KO 45%).
 4. **Fighter traits** (glass jaw, slow starter, dangerous when hurt, fades late), from the parking lot.
 5. **Merge `claude/brain-wire` into the main line.** Republish the fight lab only when Ed says (Oct 15: "when I say").
@@ -44,7 +45,6 @@ The only to-do list. When something is done, delete its line here and put the nu
 - Rope-a-dope commentary: the brain leans on the ropes on purpose (its own bait), but nothing emits the 'bait' event the commentary has lines for (the old AI did).
 - Corner: "fire him up" / "calm him down" / "tell him the truth"; cutman priority (cut, swelling, or breathing).
 - Mentality: confidence, composure, frustration that leads to fouls.
-- Opponent-specific camp: spar partners who copy his style, film study that reveals a habit to call.
 - Live read line during the round ("he's landing the right over your jab").
 - Call combos by number in corner talk; AI corner shouts; drill a combo in camp.
 - Mind knobs for named fighters (`research/mind_p4p_a.md`, `_b.md`), P4P data refresh (verify first: Opetaia, Nakatani at 122).
