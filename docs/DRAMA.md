@@ -46,6 +46,18 @@ New lines in the audit, with targets to agree on:
 - **Rounds with a "moment"** (KD, hurt spell, cut check, big swing): how many of 10.
 - **Dead rounds:** low output, nothing landing clean, no swing (keep few).
 
+**Measured (Oct 16, `tests/drama.js`, 2000 ten-rounders, audit field; "close" = the 500 gap-0 fights; hash d9fe6759):**
+| | all | close |
+|---|---|---|
+| fights with a lead change on the cards (2+) | 31.2% (10.5) | 34.8% (10.8); first run 38.8 |
+| a lead change in the last 3 rounds | 6.3% | 6.6% |
+| the man behind at halfway wins | 7.9% | 11.0%; first run 13.9 |
+| decisions: the winner lost 0 / 1 / 2 / 3+ rounds | 19.5 / 21.2 / 20.0 / 39.3% | 11.5 / 19.7 / 22.8 / 46.0% |
+| rounds with a moment | 3.0 per 10 (hurt 3895, kd 1346, stop 549, cut 470, doctor/RTD 97) | 3.0 per 10 |
+| dead rounds (no moment, both men under 80 thrown and 8 clean power) | 1.4% | 1.2% |
+Per round, both men: thrown 76 / 89 / 103 / 115 / 125 (10/25/50/75/90%), clean power landed 9 / 13 / 18 / 25 / 32.
+Read: the swings are there (1 in 3), the late drama is thin (few late lead changes, comebacks ~11% in close fights), and a stinker almost never happens: even the slowest rounds are busy.
+
 ## 7. How it feeds L4 learning
 What a fight felt like decides what a fighter takes from it: a man who got dropped and came back learns something different from one who coasted; a loss to a pressure fighter teaches him about pressure. The moments in section 2 are the natural "lessons" L4 should record.
 
@@ -73,4 +85,4 @@ Fictional characters. Each is a familiar *type* fans know (the quick-hook ref, t
 1. **Refs and judges:** yes, named and shown before the fight. Oct 16: fully made-up funny names, types only, no real officials (table above).
 2. **Crowd:** look and sound only (booing a stinker included). It never changes the fighters.
 3. **Comeback target:** no number yet. Measure what the sim does today, then Ed looks at it.
-4. **Build order:** whatever flow makes sense. Plan: (a) drama metrics in the audit (lead changes, comebacks, dead rounds, rounds with a moment): cheap, measures what we have; (b) refs and judges as characters (engine: stoppage and holding dials, fixed judge tastes; the fight screen shows the panel); (c) crowd mood and booing (render and audio only: no sims needed beyond the same.js hash); (d) the coach feedback line on the corner screen.
+4. **Build order:** whatever flow makes sense. Plan: (a) drama metrics (done Oct 16: `tests/drama.js`, numbers in section 6) (lead changes, comebacks, dead rounds, rounds with a moment): cheap, measures what we have; (b) refs and judges as characters (engine: stoppage and holding dials, fixed judge tastes; the fight screen shows the panel); (c) crowd mood and booing (render and audio only: no sims needed beyond the same.js hash); (d) the coach feedback line on the corner screen.
