@@ -774,3 +774,41 @@ Lessons:
 3. AI live shouts during the round: reuse the `smart` policy in `tests/shout.js` (scale: oracle 54.5 / none 51.1 / random 45.7 at 1200), gap ~8 s, both corners use it in the lab.
 4. Target: a smart AI corner beats silent by ~+5 in mirrors, and balance holds with both sides using it: styles 48–53, specials 48–54, guards 48–58, audit thrown ~52 / connect ~29 / stops 25–30 (full `check.sh`). Then hash, CLAUDE.md, ROADMAP, a handoff note.
 5. If time is left: pool the hurt vet's counter danger (ROADMAP 1, hurt brain) with `finish.js` 1200+.
+
+### AI corner reads the fight (Oct 16, ROADMAP 1)
+Branch `claude/ai-corner` (off brain-wire 0f5b463). Effort medium, then high for the pressure boxer dig (Ed's call). New test `tests/corner.js`: corner policies in mirrors @82, **sides swap every fight** (cancels the side-A edge). `node tests/corner.js 600 82 ai/ai,auto/ai [auto/none]` (policy = plan/live; TAG pools into /tmp/corner_TAG.txt).
+
+**Built:**
+- `aiStrategy` reads what the player's corner sees: cards, rounds left, gas both ways, last round's work (`F.rs.thrown`), hurt, ropes. New calls: Pick it up (behind with `AIC.plan.late` 3 rounds left and gas, the other man fading under .45 and well under mine, or outworked under .7x and not ahead), Slow down (gas under .4 with rounds to go and not behind by 2+). Pressure styles (`aggr` > `AIC.workAggr` 1.3: swarmer, volume) only under `workGas` .3.
+- `Fight.aiShout(F)`: the AI corner yells live. Every `AIC.look` .5 s it takes the best `shoutFit` over `AIC.bar` .55, then gives him `gap` 8 s with it. Both corners by default (`opts.aiCorner`, `f.aiCorner`); in the lab side 0's AI corner goes quiet `hold` 20 s after the player yells (`F.userT`). Commentary 'heard' line throttled to 12 s.
+- shoutRead fixes found on the way: the jab-on-style-alone fit .6 -> .5; Move when trapped .9 -> .7; **Counter no longer reads the other corner's plan** (`O.strategy`): a corner sees what the man does (pace), not the plan sheet.
+- Style re-tunes for the new corners: out-boxer output .48 -> .45, slugger .42 -> .44 (brain.js), pressure boxer `hit` 1.25 -> 1.35 (engine STYLES).
+
+**Baseline (sides swapped, 600 each, ±2.1):** the old corner was worth nothing. Its "+3" was the side-A edge.
+| vs a silent corner | win % |
+|---|---|
+| old aiStrategy plans | 49.4 |
+| blanket ko / pressure / body | 48.7 / 48.7 / 52.1 |
+| live smart (shout.js) / oracle | 48.7 / 52.5 |
+| new plans only | 49.7 (later 47.3) |
+| new live only (bar .5) | 53.0 |
+| new plans + live, bar .5 / .55 / .6 | 58.5 / 60.0 / 52.9 |
+| old plans + new live | 54.5 |
+| **final (all fixes), 1800** | **53.6 ±1.2** |
+The plans alone never beat silent (47–50 every read). All the value is live shouts. The 58–60 reads leaned on the two bad reads (Move .9 and the plan peek). +3.6 is short of the +5 aim; a perfect-call player was ~+3.4 (oracle, Oct 15), so the AI corner coaches about as well as the best player. Shipped at +3.6 (Ed: ship, flag it).
+
+**What broke balance and why (calls are not worth the same in the engine):** `defEdge` (Move, Hands) makes him harder to hit on every punch while the call lives; `atkEdge` (Jab, Body, Press, Counter) only on the matching punches; Up/Down carry no engine edge, only the brain's output. Mover corners had a call up ~52 s/rd vs ~41-45 for pressure men (`scratchpad edge.js`: order seconds and orderPow x dt by call).
+- Swarmer 46.9: his corner said Slow down 12x/fight (gas runs low by design). Fix: workAggr.
+- Out-boxer 56.2: Move off the ropes, the best call in the book. Trim .45.
+- Pressure boxer ~45.5 (no corners 47.9-49.8). E1 no Up/Down live 44.6; E2 his own corner silent 42.9; **E3 the other corner silent 49.9**. Blocking one call of the other corner vs him: Move 49.0, Counter 46.9, Jab/Body/Up 44.4-45.3. Per opponent the out-boxer swung it: 59 with his corner, 44 silent (Move ~7, Counter ~8). Move .9 -> .7 alone: no change for him (base styles tightened to 48.7-51.3). Move with no brain push (`call.move={}`): 46.2. Plan peek removed: out-boxer vs him 59 -> 51.7, pboxer 46.0 (spread over the field). `hit` 1.35: 49.8 (5 pairs, 300). Tries that did nothing: STYLE_PLANS pboxer pressure 3 -> 1 (45.9), AI_MAP output lean +.05 (44.9), Press mirrors Move (.9 trapped + .6 vs a mover; 45.9, reverted), workAggr 1.0 (body 53.7 -> 47.7, reverted).
+
+**Full check, final code (styles/specials pooled 2 passes):** styles 47.4-52.7 before the slugger nudge (slugger 49.4 after, 4 pairs x600), specials 47.6-54.1 (pboxer 48.1, jabgrab 48.8, switch 47.6, angle 54.1), guards 47.7-55.8, levels sk IvN 16.5 PvI 20.0 WvP 17.0 (600/pair), finish 26.8%, audit 51.1 / 15.1 / 29.5%, stops 28.2%.
+
+### Handoff (Oct 16, after the AI corner)
+**State:** `claude/brain-wire` = `claude/ai-corner`. Hash d9fe6759 (same.js 40 = 5f989e36). CLAUDE.md, ROADMAP current. Both AI corners are on in every sim and the lab.
+**Next (ROADMAP 1, what's left):** pool the hurt vet's counter danger (`finish.js` 1200+, the step-5 item this session didn't reach), then ROADMAP 2 Drama (`docs/DRAMA.md`).
+**Open from this step:**
+- The AI corner's plans are worth nothing alone (47–50 vs silent). If Ed wants a stronger corner, look there: a timed KO call (only when he's hurt or behind late), body when the body is really going. Measure with `tests/corner.js` (plan/none vs auto/none, 1200+).
+- Edges of the bands: switch-hitter 47.6, angle 54.1 (specials pooled). Guards peekaboo 47.7.
+- `tests/shout.js` runs with side 1's AI corner on (default `aiCorner`), so its numbers aren't comparable to the Oct 15 table; corner.js is the tool now.
+- The diagnostic scripts (calls by side, edge seconds by call, call attribution via PATCH on `aiShout`/`shoutFit`) lived in the session scratchpad; the PATCH pattern is in "AI corner reads the fight" above.

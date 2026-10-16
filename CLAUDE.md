@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **1de442e5**, the brain with skill levels L2 + traps + hurt brain by tier + the finish after a KD + coach calls + gas pacing + the L6 balance pass; still the same after the old AI was cut, Oct 16).
+- Render-only changes must keep the `same.js` hash (now **d9fe6759**, Oct 16: the AI corner reads the fight and yells live, both corners, with the style re-tunes that came with it; before it 1de442e5).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -36,21 +36,23 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 
 engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, divisions, gear, P4P stars) → render → audio → ui part 1 (helpers) → ui part 3 (fight loop, corner, replay) → the fight screen (`LAB`, `labNew`, `labFight`, `resultScreen`).
 - Ring: x ±146 (RING), z ±115 (ZR), MIN_D 30. `P3()` projection.
 - Fight loop: `brainTick()` every frame (`perceive()` → `F.brain.think()` → feet, hands, defense), `footwork()`, `spoil()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'. Bare `R()` calls are rolls the old AI made, kept so the seeded fights don't shift: drop them only on purpose (new hash).
-- Knobs: one marked block `TUNING` (TUNE combat, DMG damage, CUT cuts/doctor, STAM gas, BODY, EXT reach, AI the brain on this engine, SKL skill sheet, SHOUT_EDGE, TEACH, STYLE_* tricks). Content tables stay with their code: `PUNCH`, `STYLES`, `GUARDS`, `STRATS` (labels), `SHOUTS`. The brain's own knobs: `BoxerBrain.BR` in `brain/brain.js`.
+- Knobs: one marked block `TUNING` (TUNE combat, DMG damage, CUT cuts/doctor, STAM gas, BODY, EXT reach, AI the brain on this engine, SKL skill sheet, SHOUT_EDGE, AIC the AI corner, TEACH, STYLE_* tricks). Content tables stay with their code: `PUNCH`, `STYLES`, `GUARDS`, `STRATS` (labels), `SHOUTS`. The brain's own knobs: `BoxerBrain.BR` in `brain/brain.js`.
 - Skill sheet (L1): `sheet.sk` (mastery, the brain reads it if set), `sheet.know`, `levelOf`, `skillSheet`, `skFromRecord`, knobs `SKL`. What a level does (L2): `BoxerBrain.BR.lv` (tables N/I/P/W, neutral at Pro, `on` switches), engine side `F.brain.mast`, `offT`, `flinchT`, `AI.offDmg`. Familiarity (L3): `BR.fam` (on), `famSet`/`famUpd`, engine `famOf` (sheet.know about the other man; none = neutral).
 - Brain wiring: `brainInit`, `perceive` (the contract is typed in `brain/brain.js`: Perception, Action; `tsc -p .` checks it), `brainTick`, `bev` (events to both brains), `brainProfile`/`brainSkills` (stats or `sheet.sk` → skills). Opponent memory lives in the brain. Corner lessons: `teach()`/`teachK` (F.read.les: only the 'learned' commentary reads them now). Ring IQ: `ringIQ(sheet)`, `iqK`.
 - Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career.
 - Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `carry()`, `blendSnap`, `spreadView()`.
 - Corner talk: `roundNotes()`, `talkPrompt`, `ACT.talk`, `talkWords()` fallback, `FX.cornerCall` in `updShouts`.
+- AI corner: `aiStrategy(side)` between rounds (cards, gas, work rate, hurt; Pick it up / Slow down), `aiShout(F)` live (best `shoutFit` over `AIC.bar`; `f.aiCorner` per side, on for both; the player's yell quiets side 0 for `AIC.hold`). How right a call is: `shoutRead`; what it is worth in the engine: `orderPow`, `atkEdge`, `defEdge` (Move/Hands defend on every punch, the rest only on matching punches, Up/Down no engine edge).
 
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless (`sim.js` is the shared loader). `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
 - **`tests/check.sh TAG [s a l f sp g]`: the full check on 4 cores, resumable after a restart (rerun the same line); `tests/check.sh TAG report` prints it all.** Default parts s a l f (~25 min); sp (specials) adds ~20 min.
-- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 3e588522 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
+- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 5f989e36 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
 - `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials).
-- `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies.
+- `TAG=x node tests/shout.js 600 82 none,oracle,random,smart` then `node tests/shout.js agg x`: coach shout policies (side 0 only, side 1's AI corner on: use corner.js for corner values).
+- `TAG=x node tests/corner.js 600 82 ai/ai,auto/ai [auto/none]` then `node tests/corner.js agg x`: corner policies (plan/live) vs another, mirrors, sides swap every fight.
 - `node tests/brain.js [tempo|iq|adapt|pace|styles] N`: brain report. Baselines in `docs/BRAIN.md`.
 - `QUIET=3 node tests/teach.js 300 82 body 20`: corner-as-teacher log (control `PATCH="TEACH.max=0"`).
 - Brain: `node tests/bprobe.js 150` how punches end, defense, counters, distance. `node tests/ropes.js 40 [style]` time on the ropes and how he gets off. `SEED=7 node tests/scout.js 20 [style|random] [rating] [guard|roll]` scouting report: one new fighter, 20 fights vs a random field, record, strengths, weaknesses (no learning between fights yet). `TAG=x node tests/levels.js 75 [curve|split]` (x4) then `node tests/levels.js agg x`: skill levels, win % across a level gap and skill use by level; `sk` mode = same body, levels from `sheet.sk` (L1). `know` mode = two Pros, A unfamiliar with B's style/stance (L3). `node tests/sheet.js` prints the skill-sheet defaults (walk-in types, records).
@@ -61,7 +63,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain (default, after the L6 balance pass, Oct 15): ~51.5 thrown / ~15 landed / ~29.3% connect, stops ~26.6% (audit 500 x3 pooled; finish.js 600: 26.3%), styles 48.2–52.1 (pooled 2x300/pair), specials 48.3–53.3 vs base, guards 48.3–55.4. Skill levels: one level down wins 15–20% (`levels.js sk`; IvN reads ~14.4 at 900, watch it). History: `docs/BRAIN.md` "Balance pass L6". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58. Specials vs base styles 48–54%.
+- Brain (default, with both AI corners, Oct 16): ~51.1 thrown / ~15.1 landed / ~29.5% connect, stops ~28.2% (audit 500 x3; finish.js 600: 26.8%), styles 47.4–52.7 pooled 2 passes (slugger 49.4 after his nudge), specials 47.6–54.1, guards 47.7–55.8. Skill levels: one level down wins 16.5–20% (`levels.js sk`, 600/pair). AI corner vs a silent one +3.6 (53.6 over 1800). History: `docs/BRAIN.md` "AI corner reads the fight", "Balance pass L6". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58. Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
