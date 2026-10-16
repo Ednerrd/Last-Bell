@@ -802,13 +802,15 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 - Out-boxer 56.2: Move off the ropes, the best call in the book. Trim .45.
 - Pressure boxer ~45.5 (no corners 47.9-49.8). E1 no Up/Down live 44.6; E2 his own corner silent 42.9; **E3 the other corner silent 49.9**. Blocking one call of the other corner vs him: Move 49.0, Counter 46.9, Jab/Body/Up 44.4-45.3. Per opponent the out-boxer swung it: 59 with his corner, 44 silent (Move ~7, Counter ~8). Move .9 -> .7 alone: no change for him (base styles tightened to 48.7-51.3). Move with no brain push (`call.move={}`): 46.2. Plan peek removed: out-boxer vs him 59 -> 51.7, pboxer 46.0 (spread over the field). `hit` 1.35: 49.8 (5 pairs, 300). Tries that did nothing: STYLE_PLANS pboxer pressure 3 -> 1 (45.9), AI_MAP output lean +.05 (44.9), Press mirrors Move (.9 trapped + .6 vs a mover; 45.9, reverted), workAggr 1.0 (body 53.7 -> 47.7, reverted).
 
-**Full check, final code (styles/specials pooled 2 passes):** styles 47.4-52.7 before the slugger nudge (slugger 49.4 after, 4 pairs x600), specials 47.6-54.1 (pboxer 48.1, jabgrab 48.8, switch 47.6, angle 54.1), guards 47.7-55.8, levels sk IvN 16.5 PvI 20.0 WvP 17.0 (600/pair), finish 26.8%, audit 51.1 / 15.1 / 29.5%, stops 28.2%.
+**Confirmation on the final code (slugger .44, check.sh aicZ s a sp):** styles counter 52.2, swarmer 51.0, bp 49.8, outboxer 49.7, slugger 47.4 (pooled with the 600/pair read 48.4); specials awkward 55.3, angle 54.7, feinter 52.8, volume 52.0, spoiler 50.9, switch 50.8, body 50.3, pboxer 49.1, jabgrab 48.5; audit 51.2 / 15.1 / 29.5%, stops 26.7%.
+
+**Full check before the slugger nudge (styles/specials pooled 2 passes):** styles 47.4-52.7 before the slugger nudge (slugger 49.4 after, 4 pairs x600), specials 47.6-54.1 (pboxer 48.1, jabgrab 48.8, switch 47.6, angle 54.1), guards 47.7-55.8, levels sk IvN 16.5 PvI 20.0 WvP 17.0 (600/pair), finish 26.8%, audit 51.1 / 15.1 / 29.5%, stops 28.2%.
 
 ### Handoff (Oct 16, after the AI corner)
 **State:** `claude/brain-wire` = `claude/ai-corner`. Hash d9fe6759 (same.js 40 = 5f989e36). CLAUDE.md, ROADMAP current. Both AI corners are on in every sim and the lab.
 **Next (ROADMAP 1, what's left):** pool the hurt vet's counter danger (`finish.js` 1200+, the step-5 item this session didn't reach), then ROADMAP 2 Drama (`docs/DRAMA.md`).
 **Open from this step:**
 - The AI corner's plans are worth nothing alone (47–50 vs silent). If Ed wants a stronger corner, look there: a timed KO call (only when he's hurt or behind late), body when the body is really going. Measure with `tests/corner.js` (plan/none vs auto/none, 1200+).
-- Edges of the bands: switch-hitter 47.6, angle 54.1 (specials pooled). Guards peekaboo 47.7.
+- Edges of the bands: angle fighter ~54.3 pooled (54.1, 54.7: the one special at the ceiling with corners on), awkward ~53.0 pooled (51.9, 55.3), switch 47.6 then 50.8. Guards peekaboo 47.7. Slugger at .44: 49.4 (4 pairs x600) and 47.4 (2x300), pooled 48.4.
 - `tests/shout.js` runs with side 1's AI corner on (default `aiCorner`), so its numbers aren't comparable to the Oct 15 table; corner.js is the tool now.
 - The diagnostic scripts (calls by side, edge seconds by call, call attribution via PATCH on `aiShout`/`shoutFit`) lived in the session scratchpad; the PATCH pattern is in "AI corner reads the fight" above.
