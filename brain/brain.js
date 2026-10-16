@@ -7,10 +7,57 @@
    each frame:        const act = b.think(perception, dt)   // see README.md for both shapes
    between rounds:    const note = b.rest(info)
    Distances are in the engine's units (a jab reaches 78, a hook 60, ring ropes at +-146). */
+// @ts-check (tsconfig.json: `tsc -p .` checks this file, no build step)
+/**
+ * What the game tells him each frame (index.html perceive(), brain/ring.js). Distances in engine units.
+ * @typedef {Object} Perception
+ * @property {number} t          fight time (sim s)
+ * @property {number} clock      seconds into the round
+ * @property {number} roundLen   seconds in a round
+ * @property {number} round
+ * @property {number} rounds
+ * @property {number} dist       distance between the two men
+ * @property {{ me: number, him: number }} ropes  0 = center of the ring .. 1 = on the ropes
+ * @property {{ head: number, headMax: number, stam: number, stamMax: number, hurt: boolean, down: boolean, clinch: boolean, punching: boolean, busy: boolean,
+ *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number } }} me   his own body, the corner's plan and live shout
+ * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number }} him
+ * @property {Array<{ type: string, by: 'me' | 'him', [k: string]: any }>} events  what happened since last frame (landed, blocked, evaded, feinted, thrown...)
+ */
+/**
+ * A punch in the air, as it truly is (his eyes add the error).
+ * @typedef {Object} SeenPunch
+ * @property {number} id
+ * @property {string} type       PUNCHES key
+ * @property {number} t          seconds since it started
+ * @property {number} impactIn   seconds until it lands (99 for a feint)
+ * @property {boolean} feint
+ * @property {number} sell       how real the feint looks
+ * @property {?string} look      a changed ending (traps)
+ * @property {number} tell       how much it was telegraphed
+ */
+/**
+ * What he decides each frame (think()). The game turns it into feet, hands and a guard.
+ * @typedef {Object} Action
+ * @property {string} intent     his mode: feelout, work, pressure, hunt, survive, down...
+ * @property {{ range: number, lateral: number, cut: number, clinch: boolean }} move
+ * @property {number} guard      0..1 how high and tight the hands are
+ * @property {?Object} punch     { type, combo, counter, feint, tech, commit, tell, ... } or null
+ * @property {?{ kind: string, zone: string, vs: string, quality: number }} defend
+ * @property {string} why
+ * @property {?string} [hurt]    how he answers being hurt (survive mode)
+ */
+/**
+ * @typedef {Object} BrainOpts
+ * @property {() => number} [rng]   the game's dice (seeded fights stay seeded)
+ * @property {number} [pace]        game rounds that run faster than the clock squeeze the slow things (Last Bell: 3)
+ * @property {boolean} [thrownEv]   the game sends 'thrown' events for punches that really started
+ * @property {boolean} [debug]
+ * @property {?Object} [fam]        style/stance familiarity (L3)
+ */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BoxerBrain = factory();
-})(typeof self !== 'undefined' ? self : this, function () {
+})(/** @type {any} */ (typeof globalThis !== 'undefined' ? globalThis : this), function () {
 'use strict';
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -323,6 +370,7 @@ const COUNTER_BOOK = {
 const DEF_SKILL = { block: 'block', slip: 'slip', duck: 'slip', pull: 'footwork', roll: 'block' };
 
 class Brain {
+  /** @param {any} profile @param {BrainOpts} [opts] */
   constructor(profile, opts) {
     opts = opts || {};
     this.p = profile; this.R = opts.rng || Math.random; this.debug = !!opts.debug;
@@ -574,7 +622,7 @@ class Brain {
     // what does he think it is?
     let seenAs = T.as || T.type;
     const exp = this.expected();
-    if (T.as) ;
+    if (T.as) { /* already decided what it is */ }
     else if (exp && exp !== T.type && this.R() < this.predict(exp) * .6) seenAs = exp; // he was sure it was the other one
     else if (this.R() < BR.misread * (1 - k.read) * (1 + .5 * (1 - P.me.stam / (P.me.stamMax || 100))) * (1 + BR.blur.mis * this.blur) * (1 + BR.fam.mis * this.fx.u) * (1 - T.rd)) seenAs = PTYPES[Math.floor(this.R() * PTYPES.length)];
     if (seenAs !== T.type) this.tel.misreads++;
@@ -802,7 +850,8 @@ class Brain {
     const nd = this.nd;
     let ctrN = 0, mN = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctrN += e.c || 0; mN += e.n || 0; }
     const ctrRate = ctrN / Math.max(4, mN);
-    let best = null, bw = 0, tot = 0; const ws = [];
+    let best = null, bw = 0, tot = 0;
+    /** @type {[any, number][]} */ const ws = [];
     for (const c of COMBOS) {
       // range: the first punch has to reach (as far as he can tell)
       if (dSeen > c.max + 4 || dSeen < c.min - 12) { if (this.R() > .12 * (1 - k.range)) continue; }
@@ -952,6 +1001,7 @@ class Brain {
   }
 
   /* ---------- the one call: perception in, action out ---------- */
+  /** @param {Perception} P @param {number} dt @returns {Action} */
   think(P, dt) {
     this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist;
     if (P.events) for (const ev of P.events) this.hear(ev);
@@ -1044,6 +1094,7 @@ class Brain {
   state() { return { mode: this.mode, hurtResp: this.hurtResp, emo: Object.assign({}, this.emo), plan: Object.assign({}, this.plan), lead: this.sc.lead }; }
 }
 
+/** @param {ReturnType<typeof makeProfile>} profile @param {BrainOpts} [opts] @returns {Brain} */
 function create(profile, opts) { return new Brain(profile, opts); }
 return { create, makeProfile, tierOf, tierV, mulberry32, PUNCHES, COMBOS, SKILLS, SKILL_KEYS, TRAIT_KEYS, TIERS, STYLES, MODES, SURV, BR, DEF_THRU, kindOf };
 });
