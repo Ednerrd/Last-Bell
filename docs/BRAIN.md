@@ -814,3 +814,19 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 - Edges of the bands: angle fighter ~54.3 pooled (54.1, 54.7: the one special at the ceiling with corners on), awkward ~53.0 pooled (51.9, 55.3), switch 47.6 then 50.8. Guards peekaboo 47.7. Slugger at .44: 49.4 (4 pairs x600) and 47.4 (2x300), pooled 48.4.
 - `tests/shout.js` runs with side 1's AI corner on (default `aiCorner`), so its numbers aren't comparable to the Oct 15 table; corner.js is the tool now.
 - The diagnostic scripts (calls by side, edge seconds by call, call attribution via PATCH on `aiShout`/`shoutFit`) lived in the session scratchpad; the PATCH pattern is in "AI corner reads the fight" above.
+
+### The hurt man's danger, pooled (Oct 16, ROADMAP 1, closed)
+`tests/danger.js`: a Pro hunter (same body @78, levels from `sheet.sk`) against a hurt N / I / P / W man, `BR.hb.on.danger` on vs off, 1200 fights per row (4x300, `/tmp/danger_dg.txt`). Stung = the hunter walked onto a clean power counter in a hunt; caught = he got hurt or dropped going for the finish.
+| hurt man | hunts/fight on / off | stung/hunt on / off (±.6) | caught/hunt on / off (±.1-.2) | hurt man wins on / off |
+|---|---|---|---|---|
+| N | 4.89 / 4.75 | 17.0 / 15.7 | 0.3 / 0.3% | 3.6 / 4.1% |
+| I | 3.58 / 3.78 | 17.2 / 17.0 | 0.6 / 0.5% | 15.4 / 17.1% |
+| P | 2.43 / 2.62 | 17.2 / 15.6 | 1.1 / 0.6% | 45.7 / 46.5% |
+| W | 1.99 / 1.93 | 15.7 / 15.1 | 1.2 / 0.8% | 77.7 / 79.8% |
+- **The danger knob is inert.** P is neutral by definition (x1), yet P's on/off gap is as big as any: the rest is noise. N moves the wrong way. It only scales the fire/bait counter when the finisher's hands are down, a sliver of the stings.
+- **The design holds from skill alone:** caught (the rare fight-ending counter) climbs with the hurt man's level, N .3 / I .55 / P .85 / W 1.0% pooled, ~3x. Stung (a clean counter) is flat ~16% at every level. A Pro hunts a hurt World man half as often as a hurt Novice (2.0 vs 4.8 a fight).
+- Kept as is (no hash change, d9fe6759). If Ed wants a hurt vet scarier, the lever is his counter chance in a hunt itself, not this multiplier; measure with danger.js.
+
+### Handoff (Oct 16, ROADMAP 1 closed)
+**State:** `claude/brain-wire` = `claude/hurt-danger` (danger.js + docs, no engine change). Hash d9fe6759. ROADMAP item 1 (brain pieces) is done; the open AI-corner plan note moved to the parking lot.
+**Next: ROADMAP 1 is now Drama** (`docs/DRAMA.md`: metrics first, then the build order there). Effort: high for the drama build plan (CLAUDE.md), so ask Ed to switch first.

@@ -8,7 +8,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
-- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (66 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
+- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (68 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
 - Never publish to the live game without Ed's explicit OK.
 - Models (Ed, Oct 14): Opus for tuning, code and design; Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write). Sonnet subagents are fine for grunt work too (docs bookkeeping, sim runs and tables).
 - Effort (Ed, Oct 15, replaces Oct 14): **medium is the default.** Before a task that needs high, say so in one line and ask Ed to switch, then wait for his OK. High = debugging odd sim results, retiring or refactoring engine code that must keep the same.js hash, design plans (L4 learning, the drama build). Sim-driven knob tries, docs, roadmap edits, overviews, running sims and reading numbers stay at medium.
@@ -56,6 +56,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - `node tests/brain.js [tempo|iq|adapt|pace|styles] N`: brain report. Baselines in `docs/BRAIN.md`.
 - `QUIET=3 node tests/teach.js 300 82 body 20`: corner-as-teacher log (control `PATCH="TEACH.max=0"`).
 - Brain: `node tests/bprobe.js 150` how punches end, defense, counters, distance. `node tests/ropes.js 40 [style]` time on the ropes and how he gets off. `SEED=7 node tests/scout.js 20 [style|random] [rating] [guard|roll]` scouting report: one new fighter, 20 fights vs a random field, record, strengths, weaknesses (no learning between fights yet). `TAG=x node tests/levels.js 75 [curve|split]` (x4) then `node tests/levels.js agg x`: skill levels, win % across a level gap and skill use by level; `sk` mode = same body, levels from `sheet.sk` (L1). `know` mode = two Pros, A unfamiliar with B's style/stance (L3). `node tests/sheet.js` prints the skill-sheet defaults (walk-in types, records).
+- Hurt man's danger: `TAG=x node tests/danger.js 300 [on|off] [N,I,P,W]` then `node tests/danger.js agg x`: a Pro hunting a hurt man of each level, stung and caught per hunt.
 - Finishing: `TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
