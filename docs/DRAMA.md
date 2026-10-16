@@ -84,5 +84,6 @@ Fictional characters. Each is a familiar *type* fans know (the quick-hook ref, t
 ## Decided (Ed, Oct 15)
 1. **Refs and judges:** yes, named and shown before the fight. Oct 16: fully made-up funny names, types only, no real officials (table above).
 2. **Crowd:** look and sound only (booing a stinker included). It never changes the fighters.
-3. **Comeback target:** no number yet. Measure what the sim does today, then Ed looks at it.
+3. **Comeback target:** measured Oct 16 (~11% in close fights). Ed: research the real-world rate first (`research/comebacks.md`), then set it.
+5. **Booing trigger (Oct 16):** relative dull, not truly dead (that's ~1%): boo the slowest ~5-10% of rounds against the usual pace, lots of clinching, no moment. It should show up in some fights, mostly counter-puncher mirrors. Look and sound only.
 4. **Build order:** whatever flow makes sense. Plan: (a) drama metrics (done Oct 16: `tests/drama.js`, numbers in section 6) (lead changes, comebacks, dead rounds, rounds with a moment): cheap, measures what we have; (b) refs and judges as characters (engine: stoppage and holding dials, fixed judge tastes; the fight screen shows the panel); (c) crowd mood and booing (render and audio only: no sims needed beyond the same.js hash); (d) the coach feedback line on the corner screen.
