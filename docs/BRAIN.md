@@ -767,3 +767,10 @@ Lessons:
 ### Handoff (Oct 16, after the old AI)
 **State:** `claude/brain-wire` = `claude/retire-old-ai`. Hash 1de442e5 (no old-AI hash anymore). CLAUDE.md, ROADMAP current.
 **Next (ROADMAP 1–3):** the brain pieces still open (the AI corner is blind: `aiStrategy`), then Drama (`docs/DRAMA.md`), then L4. The measurements queued before L4 (above) still stand.
+
+**Plan for the next session: the AI corner reads the fight (ROADMAP 1, coach calls).** Effort: medium (knob tries and sims); ask for high only if the corner design gets bigger than below.
+1. Baseline (mirrors @82, both brains, 600+/arm through `tests/check.sh` or written to disk): `aiStrategy` vs a silent corner ('auto' every round) vs a fixed blanket plan. Today: plans beat silent by only ~3; blanket pressure ~48, body ~46, KO ~45.
+2. Between rounds, the AI corner reads what the player's corner sees (`roundNotes()` data: who landed what, gas both sides, the cards, hurt, time on the ropes, his guard leaks) and adds the calls it never makes: Pick it up (behind late / round slipping) and Slow down (his gas going, ahead). Keep `R()` draws in mind: a changed `aiStrategy` changes the hash (that's fine here, record the new one).
+3. AI live shouts during the round: reuse the `smart` policy in `tests/shout.js` (scale: oracle 54.5 / none 51.1 / random 45.7 at 1200), gap ~8 s, both corners use it in the lab.
+4. Target: a smart AI corner beats silent by ~+5 in mirrors, and balance holds with both sides using it: styles 48–53, specials 48–54, guards 48–58, audit thrown ~52 / connect ~29 / stops 25–30 (full `check.sh`). Then hash, CLAUDE.md, ROADMAP, a handoff note.
+5. If time is left: pool the hurt vet's counter danger (ROADMAP 1, hurt brain) with `finish.js` 1200+.
