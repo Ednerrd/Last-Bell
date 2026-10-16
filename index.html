@@ -2273,8 +2273,8 @@ class Fight {
         }
       }
     }
-    const stopAt = 5 - this.ref.stop; // a quick-hook ref stops it a punch sooner, a let-them-fight ref one later
-    if (D.unanswered >= stopAt && R() < .2 + (D.unanswered - stopAt) * .15) {
+    const stopAt = [7, 5, 4][this.ref.stop + 1]; // unanswered punches before he steps in: a let-them-fight ref waits two more, a quick hook one less
+    if (D.unanswered >= stopAt && R() < .2 + .1 * this.ref.stop + (D.unanswered - stopAt) * .15) {
       D.state = 'slump'; D.act = null; D.queue = []; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'unanswered' }); this.recAfter = 1.1;
       return;
     }
@@ -2365,7 +2365,7 @@ class Fight {
       if (K.getUp !== null && K.count >= K.getUp && !K.rising && !K.standing) { K.rising = true; this.emit('rising', { d: D.side, n: K.count }); }
       if (K.count >= 10 && !K.standing) { this.end(A.side, 'KO'); return; }
       if (K.standing && K.count >= 8) {
-        if (D.headMax < 22 + 4 * this.ref.stop || (D.kd >= 4 && R() < .6) || (D.head < 5 + 2 * this.ref.stop && R() < .4)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
+        if (D.headMax < 22 + 8 * this.ref.stop || (D.kd >= 4 && R() < .6) || (D.head < 5 + 6 * this.ref.stop && R() < .4 + .2 * this.ref.stop)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
         D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
         if (K.zone === 'body') D.body = Math.max(D.body, 22);
         D.stunT = 0;
