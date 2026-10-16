@@ -1530,7 +1530,7 @@ const SKL = {
 const SHOUT_LEN = 14;
 const SHOUT_EDGE = { atk: .6, def: .5, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit. Below bar the call hurts
 // the AI corner's live shouts (Fight.aiShout): a look every `look` sim s, yells the best-fitting call over `bar` (shoutFit), then waits `gap`; quiet `hold` s after the player yells
-const AIC = { on: 1, look: .5, bar: .5, gap: 8, hold: 20, workAggr: 1.3, workGas: .3, // workAggr: styles over this aggr are told to slow down only under workGas (Slow down killed the swarmer: 46.9)
+const AIC = { on: 1, look: .5, bar: .55, gap: 8, hold: 20, workAggr: 1.3, workGas: .3, // workAggr: styles over this aggr are told to slow down only under workGas (Slow down killed the swarmer: 46.9)
   // between rounds (aiStrategy): Pick it up when behind with `late` rounds left, he fades under fadeAt, or he outworks him (thrown < outwork x); Slow down under downGas. No up under upGas
   plan: { on: 1, late: 3, upGas: .45, downGas: .4, fadeAt: .45, outwork: .7 } };
 // the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
