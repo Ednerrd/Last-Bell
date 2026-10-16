@@ -3751,7 +3751,7 @@ const Comm = (() => {
       case 'home': if (ok('home' + e.a, t, 170) && ok('homeAny', t, 60)) { o.p = pn(e.p, fight.f[e.a]); L('home', 2); } break;
       case 'cutWorse': o.a = nm(1 - e.d); L('cutWorse', 3); break;
       case 'doctorLook': L('doctorLook', 3); break;
-      case 'heard': if (ok('heard', t, 4)) L('heard_' + e.k, 1); break;
+      case 'heard': if (ok('heard', t, 12)) L('heard_' + e.k, 1); break;
       case 'ignored': if (ok('ignored', t, 20)) L('ignored', 1); break;
       case 'learned': if (ok('learned', t, 30)) L('learned_' + e.k, 2); break;
       case 'stoppage': L(e.why === 'three' ? 'three' : 'tko', 5); break;
