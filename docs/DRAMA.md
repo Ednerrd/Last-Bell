@@ -27,13 +27,13 @@ Each of these exists as a mechanic. The step is giving them a face and a reputat
 - **The crowd.** Today: excitement spikes on big shots and fades. Make it: a mood across the whole fight (who they're behind, bored by a stinker, booing excess clinching, roaring the late rally). Look and sound only (Ed, Oct 15): the crowd never changes how the fighters fight.
   - **Booing a stinker (Ed, Oct 15):** a slow, boring fight (low output, lots of clinching, two counter-punchers staring at each other) and the crowd starts booing. Builds over a dead round, the commentary picks it up ("the crowd wants some action"), and a big exchange flips it to a roar. Look and sound only: the boos don't change the fighters. The "dead rounds" metric in section 6 is the trigger.
 - **The clinch.** Today: a hurt answer and a spoiler trick. Make it: a pacing device a tired or hurt man uses to steal 10–20 s, the ref breaking it, the crowd booing too much of it. The coach can call "tie him up" when his man is hurt.
-- **The other corner.** Today: the AI corner picks a plan with no read of the fight (only ~3 pts over a silent corner). Make it: a rival trainer with a known style (aggressive, cautious, adjusts fast). Being out-coached should feel like something.
+- **The other corner.** Since Oct 16 the AI corner reads the fight and yells live (+3.6 over a silent corner, `tests/corner.js`). Make it: a rival trainer with a known style (aggressive, cautious, adjusts fast). Being out-coached should feel like something.
 
 ## 4. What the coach does, and how he knows it mattered
 - **Information:** a live read line ("he drops his right when he jabs", "he's breathing hard") so a shout is a decision, not a guess. Better scouting and a smarter corner make better reads.
 - **Calls that show:** a shout should visibly change what the man does within a few seconds.
 - **Feedback:** the corner screen tells you if the plan worked ("Pressure: you won the round 10-9, he landed 12 power shots to 6").
-- **Weight:** coaching matters most in close fights, least in mismatches. A great coach with a weaker fighter still usually loses. Today: a good coach ~+3.5 pts, a bad one ~-5.5 pts (mirrors).
+- **Weight:** coaching matters most in close fights, least in mismatches. A great coach with a weaker fighter still usually loses. Oct 15 (before the AI corner yelled): a good coach ~+3.5 pts, a bad one ~-5.5 pts (mirrors); re-measure with `tests/corner.js`.
 
 ## 5. Stakes
 A tune-up and a title fight should not feel the same: the walkout, the commentary, the crowd size, the ref and judges assigned, maybe nerves for a man who's never been there. This lands with the career mode; the fight screen needs a hook for it now (a `stakes` field the commentary and crowd can read).
@@ -49,28 +49,28 @@ New lines in the audit, with targets to agree on:
 ## 7. How it feeds L4 learning
 What a fight felt like decides what a fighter takes from it: a man who got dropped and came back learns something different from one who coasted; a loss to a pressure fighter teaches him about pressure. The moments in section 2 are the natural "lessons" L4 should record.
 
-## The officials (Ed, Oct 15: modeled on today's well-known officials, made-up names)
-Each official is a fictional character whose reputation echoes a type fans know. The game shows only the made-up names. The "echoes" column is a design note for us, built only on reputations that are public record; it never appears in the game.
+## The officials (Ed, Oct 16: funny, fully made-up names)
+Fictional characters. Each is a familiar *type* fans know (the quick-hook ref, the judge who loves the busy man), but no name and no note points at a real official. Keep it that way when adding more.
 
 **Judges** (each has a fixed taste; the panel is shown before the fight):
-| Name | Taste | Echoes |
-|---|---|---|
-| Adela Byrne | Wide, hard-to-explain cards; loves the busier man even when he misses | the 118-110 Canelo-GGG I card (2017) that fans still bring up |
-| Dave Moretto | Steady veteran, scores clean punching, rarely an outlier | the long-serving Vegas judges on most big cards |
-| Julia Lederer | Data-minded, clean punches and effective defense | the punch-stat-minded judges of the modern era |
-| Glen Feldmann | Ring generalship and control, likes the man dictating where it happens | the old-school New York / New Jersey judging taste |
-| Max DeLucca | Rewards aggression and the man coming forward | the "effective aggression" camp |
+| Name | Taste |
+|---|---|
+| Wanda Wideman | Wide, hard-to-explain cards; loves the busier man even when he misses |
+| Walt Levelhead | Steady veteran, scores clean punching, rarely an outlier |
+| Priya Tallyworth | Counts everything: clean punches and effective defense |
+| Monty Command | Ring generalship, likes the man dictating where it happens |
+| Rocco Forward | Rewards aggression and the man coming forward |
 
 **Referees** (two dials: how early he stops a fight, how much holding he allows):
-| Name | Stops | Holding | Echoes |
-|---|---|---|---|
-| Kenny Bayliss | On time | Breaks fast | the respected Vegas big-fight ref |
-| Steve Smogan | Late (lets them fight) | Lets it go | the "let them fight" ref with the famous late stoppages |
-| Joe Cortés | On time | Strict, warns early | "I'm fair but firm" |
-| Russ Morales | Early (quick hook) | Average | the cautious, safety-first stoppage type |
+| Name | Stops | Holding |
+|---|---|---|
+| Clarence Breakwell | On time | Breaks fast |
+| Hank Lettum | Late (lets them fight) | Lets it go |
+| Norma Rulebrook | On time | Strict, warns early |
+| Teddy Quickhook | Early | Average |
 
 ## Decided (Ed, Oct 15)
-1. **Refs and judges:** yes, named and shown before the fight, modeled on today's popular officials with made-up names (table above).
+1. **Refs and judges:** yes, named and shown before the fight. Oct 16: fully made-up funny names, types only, no real officials (table above).
 2. **Crowd:** look and sound only (booing a stinker included). It never changes the fighters.
 3. **Comeback target:** no number yet. Measure what the sim does today, then Ed looks at it.
 4. **Build order:** whatever flow makes sense. Plan: (a) drama metrics in the audit (lead changes, comebacks, dead rounds, rounds with a moment): cheap, measures what we have; (b) refs and judges as characters (engine: stoppage and holding dials, fixed judge tastes; the fight screen shows the panel); (c) crowd mood and booing (render and audio only: no sims needed beyond the same.js hash); (d) the coach feedback line on the corner screen.
