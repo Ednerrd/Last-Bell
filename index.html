@@ -1530,7 +1530,7 @@ const SKL = {
 const SHOUT_LEN = 14;
 const SHOUT_EDGE = { atk: .6, def: .5, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit. Below bar the call hurts
 // the AI corner's live shouts (Fight.aiShout): a look every `look` sim s, yells the best-fitting call over `bar` (shoutFit), then waits `gap`; quiet `hold` s after the player yells
-const AIC = { on: 1, look: .5, bar: .5, gap: 8, hold: 20,
+const AIC = { on: 1, look: .5, bar: .5, gap: 8, hold: 20, workAggr: 1.3, workGas: .3, // workAggr: styles over this aggr are told to slow down only under workGas (Slow down killed the swarmer: 46.9)
   // between rounds (aiStrategy): Pick it up when behind with `late` rounds left, he fades under fadeAt, or he outworks him (thrown < outwork x); Slow down under downGas. No up under upGas
   plan: { on: 1, late: 3, upGas: .45, downGas: .4, fadeAt: .45, outwork: .7 } };
 // the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
@@ -2463,7 +2463,8 @@ class Fight {
       case 'counter': return clamp(Math.max((pace(O) - 60) / 30, /pressure|ko/.test(O.strategy) ? .7 : 0, /swarmer|slugger/.test(style(O)) ? .5 : 0), 0, 1);
       case 'move': return clamp(Math.max(this.trapped(F) ? .9 : 0, gas(F) < .45 ? .7 : 0, O.cutting ? .45 : 0, hurt(F) ? .5 : 0), 0, 1);
       case 'up': return clamp(Math.max(pace(O) - pace(F) > 12 ? .7 : 0, gas(O) < .45 && gas(F) > .6 ? .75 : 0, this.round > this.rounds - 3 && (F.side === 0 ? this.lead < 0 : this.lead > 0) ? .8 : 0) * (gas(F) < .35 ? .3 : 1), 0, 1); // he's being outworked, the other man is fading, or he's behind late
-      case 'down': return clamp(Math.max(gas(F) < .4 ? .9 : 0, gas(F) < .55 && this.round < this.rounds - 2 ? .6 : 0, pace(F) > 75 && F.rs.thrown > 2.6 * F.rs.landed + 20 ? .5 : 0), 0, 1); // he's emptying the tank, or throwing a lot and missing
+      case 'down': if (this.worker(F)) return gas(F) < AIC.workGas ? .9 : 0; // a pressure man is built to work tired: only when the tank is really empty
+        return clamp(Math.max(gas(F) < .4 ? .9 : 0, gas(F) < .55 && this.round < this.rounds - 2 ? .6 : 0, pace(F) > 75 && F.rs.thrown > 2.6 * F.rs.landed + 20 ? .5 : 0), 0, 1); // he's emptying the tank, or throwing a lot and missing
       case 'hands': return clamp(Math.max(hurt(F) ? 1 : 0, O.rs.landedPow / Math.max(30, this.clock) * ROUND_LEN > 12 ? .7 : 0, F.gi < .4 ? .4 : 0), 0, 1);
     }
     return 0;
@@ -2485,6 +2486,7 @@ class Fight {
     if (best && !(o && o.k === best && o.t > 6) && this.shout(F.side, best)) F.aiT = this.t + AIC.gap;
     else F.aiT = this.t + AIC.look;
   }
+  worker(F) { return ((STYLES[F.sk] || {}).aggr || 1) > AIC.workAggr; } // swarmer, volume puncher: output is the game
   // AI corner logic for any side: reads the fight like the player's corner does (cards, hurt, gas both ways, last round's work, the ropes)
   aiStrategy(side) {
     const F = this.f[side], O = F.op, A = AIC.plan;
@@ -2495,7 +2497,7 @@ class Fight {
     if (O.headMax < 50 || O.head < 40) return 'ko';
     if (A.on) {
       if (lead < 0 && left <= A.late && gas(F) > A.upGas) return 'up';                                  // behind late: let your hands go
-      if (gas(F) < A.downGas && left > 2 && lead > -2) return 'down';                                    // emptying the tank with rounds to go
+      if (gas(F) < (this.worker(F) ? AIC.workGas : A.downGas) && left > 2 && lead > -2) return 'down';                                    // emptying the tank with rounds to go
       if (gas(O) < A.fadeAt && gas(F) > gas(O) + .2) return 'up';                                        // he's fading: step on the gas
       if (F.rs.thrown < O.rs.thrown * A.outwork && gas(F) > A.upGas && lead <= 0) return 'up';            // he's outworking you
     }
