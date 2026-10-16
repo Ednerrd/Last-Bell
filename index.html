@@ -1529,6 +1529,10 @@ const SKL = {
 };
 const SHOUT_LEN = 14;
 const SHOUT_EDGE = { atk: .6, def: .5, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit. Below bar the call hurts
+// the AI corner's live shouts (Fight.aiShout): a look every `look` sim s, yells the best-fitting call over `bar` (shoutFit), then waits `gap`; quiet `hold` s after the player yells
+const AIC = { on: 1, look: .5, bar: .5, gap: 8, hold: 20,
+  // between rounds (aiStrategy): Pick it up when behind with `late` rounds left, he fades under fadeAt, or he outworks him (thrown < outwork x); Slow down under downGas. No up under upGas
+  plan: { on: 1, late: 3, upGas: .45, downGas: .4, fadeAt: .45, outwork: .7 } };
 // the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
 // Since the old AI went (Oct 16) the lessons (F.read.les) only feed the 'learned' commentary: nothing in the brain reads them yet.
 // step: how much one payoff teaches (times how well he took the call and teachK), keep: what survives the break
@@ -1693,6 +1697,7 @@ class Fight {
     opts = opts || {};
     this.rounds = opts.rounds || 10;
     this.cutman = [opts.cutmanA != null ? opts.cutmanA : .4, opts.cutmanB != null ? opts.cutmanB : .4];
+    this.aiCorner = opts.aiCorner || [1, 1]; // which corners the AI runs live (shouts); the lab turns side 0's off while the player yells
     this.f = [mkF(A, 0), mkF(B, 1)];
     this.f[0].op = this.f[1]; this.f[1].op = this.f[0];
     this.f.forEach(F => { F.gSkill = guardSkill(F.s, F.guard); });
@@ -1801,6 +1806,7 @@ class Fight {
           F.used = F.used || {}; F.used[o.k] = (F.used[o.k] || 0) + dt; // how long the other corner has been looking at this call
           if ((o.t -= dt) <= 0) { if (!o.ack) this.emit('ignored', { a: F.side, k: o.k }); F.order = null; }
         }
+        if (AIC.on) for (const F of this.f) if (this.aiCorner[F.side]) this.aiShout(F);
         if (this.clinchT > 0) this.updateClinch(dt);
         else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt);
           const q0 = this.quiet || 0; this.quiet = this.f.some(F => F.state === 'punch' || F.queue.length) ? 0 : q0 + dt;
@@ -2470,14 +2476,29 @@ class Fight {
   }
   // he does what the corner said (once per shout, for the commentary)
   ack(F, k) { const o = F.order; if (o && !o.ack && o.k === k && R() < o.q) { o.ack = true; this.emit('heard', { a: F.side, k }); } }
-  // AI corner logic for any side
+  // the AI corner yells: it looks every AIC.look s, calls the best-fitting look (shoutFit over AIC.bar), then gives him AIC.gap s with it
+  aiShout(F) {
+    if (this.t < (F.aiT || 3) || this.t - (F.userT || -99) < AIC.hold) return;
+    let best = null, bf = AIC.bar;
+    for (const k in SHOUTS) { const v = this.shoutFit(F, k); if (v > bf) { bf = v; best = k; } }
+    const o = F.order;
+    if (best && !(o && o.k === best && o.t > 6) && this.shout(F.side, best)) F.aiT = this.t + AIC.gap;
+    else F.aiT = this.t + AIC.look;
+  }
+  // AI corner logic for any side: reads the fight like the player's corner does (cards, hurt, gas both ways, last round's work, the ropes)
   aiStrategy(side) {
-    const F = this.f[side], O = F.op;
+    const F = this.f[side], O = F.op, A = AIC.plan;
     const tot = this.cardTotals(); const lead = tot.reduce((s, t) => s + (side === 0 ? t[0] - t[1] : t[1] - t[0]), 0) / 3;
-    const left = this.rounds - this.round;
+    const left = this.rounds - this.round, gas = X => X.stam / Math.max(1, X.stamMax);
     if (lead <= -3 && left <= 3) return 'ko';
     if (F.headMax < 45 || F.head < 35) return lead > 2 ? 'move' : 'survive';
     if (O.headMax < 50 || O.head < 40) return 'ko';
+    if (A.on) {
+      if (lead < 0 && left <= A.late && gas(F) > A.upGas) return 'up';                                  // behind late: let your hands go
+      if (gas(F) < A.downGas && left > 2 && lead > -2) return 'down';                                    // emptying the tank with rounds to go
+      if (gas(O) < A.fadeAt && gas(F) > gas(O) + .2) return 'up';                                        // he's fading: step on the gas
+      if (F.rs.thrown < O.rs.thrown * A.outwork && gas(F) > A.upGas && lead <= 0) return 'up';            // he's outworking you
+    }
     if (O.body < 45) return 'body';
     if (F.stam < F.stamMax * .5) return 'move';
     if (lead >= 4 && left <= 3) return 'move';
@@ -3813,13 +3834,14 @@ function yell(text) { const y = $('#yell'); if (!y) return; y.textContent = text
 ACT.shout = d => {
   if (!F || FX.mode !== 'live' || F.phase !== 'fight' || performance.now() < (FX.shoutLock || 0)) return;
   const o = F.shout(0, d.v); if (!o) return;
+  F.f[0].userT = F.t; // the coach has the floor: the AI corner on his side goes quiet a while
   FX.shoutLock = performance.now() + 900;
   const line = pick(YELLS[d.v]); yell(line); Comm.say({ text: line, kind: 'coach', pri: 4 });
   if (F.t - (FX.tuneT || -99) > 12 && (F.f[0].spam > 2.6 || o.q < .4)) { FX.tuneT = F.t; feed(F.f[0].spam > 2.6 ? "Easy, coach. He's tuning you out." : "He can barely hear you right now."); }
   else if ((o.fit >= .7 || o.fit < .2) && F.t - (FX.callT || -99) > 8) { FX.callT = F.t; feed(pick(o.fit >= .7 ? CALL_GOOD : CALL_BAD), o.fit >= .7); }
 };
 function updShouts() {
-  if (FX.cornerCall && FX.mode === 'live' && F.phase === 'fight') { const k = FX.cornerCall; FX.cornerCall = null; if (F.shout(0, k)) yell(pick(YELLS[k])); } // the first call the coach gave him in the corner
+  if (FX.cornerCall && FX.mode === 'live' && F.phase === 'fight') { const k = FX.cornerCall; FX.cornerCall = null; if (F.shout(0, k)) { F.f[0].userT = F.t; yell(pick(YELLS[k])); } } // the first call the coach gave him in the corner
   const box = $('#shouts'); if (!box) return;
   const live = FX.mode === 'live' && F.phase === 'fight', o = F.f[0].order;
   box.classList.toggle('off', !live);
