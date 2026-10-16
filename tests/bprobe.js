@@ -1,4 +1,4 @@
-// brain vs old AI fingerprint: node tests/bprobe.js N [rating]  (brain is the default; PATCH="AI.brain=0" for the old AI)
+// brain fingerprint: node tests/bprobe.js N [rating]
 // per fighter per round: thrown, how punches end (landed / blocked / evaded by defense / range / wild), active defenses, counters, feints, clinches, distance, time on the ropes
 const S = require('./sim.js');
 const N = +process.argv[2] || 100, RT = +process.argv[3] || 82, st = Object.keys(S.STYLES).filter(k => !S.STYLES[k].special);

@@ -7,7 +7,7 @@
 //                                             style (A knows no styles, both orthodox), stance (A orth never saw a southpaw, B south), both, south (orth v south, both default know: knowMake(KG, default .6))
 //                                             'fav' = side A. Also prints A's share of landed punches by rounds 1-2 / 3-4 / 5-7 / 8-10. KLO=.1 sets the low know
 //   node tests/levels.js agg x                pool every run with that TAG
-// Brain on by default (PATCH="AI.brain=0" for the old AI). Random styles (specials too) and rolled guards, 10 rounds, sides alternate.
+// Random styles (specials too) and rolled guards, 10 rounds, sides alternate.
 // Levels come from the brain's skill sheet (BoxerBrain.tierOf). With AI.skill -8 the level centers sit at ratings ~40 / 60 / 78 / 93 (LV overrides: LV=40,60,78,93).
 // "Bad technique" today = what the brain already models: a first punch thrown with tech < .5 (telegraphed, arm punch) and a feint sold under .35 (nobody buys it).
 const fs = require('fs');
@@ -84,7 +84,7 @@ function report(rows) {
 }
 if (process.argv[2] === 'agg') { report(fs.readFileSync(OUT(process.argv[3]), 'utf8').trim().split('\n').map(JSON.parse)); return; }
 
-if (process.env.PATCH == null) process.env.PATCH = 'AI.brain=1';
+if (process.env.PATCH == null) process.env.PATCH = '';
 // sheet.skillOff moves only the brain's skills (the body stays): the split test
 process.env.PATCH += ';globalThis.__BB=BoxerBrain;globalThis.__SKM=skMake;globalThis.__KM=knowMake;{ const bp = brainProfile; brainProfile = F => { const p = bp(F), o = F.sheet.skillOff; if (o) { for (const k in p.skills) p.skills[k] = Math.round(clamp(p.skills[k] + o, 5, 99)); p.tier = BoxerBrain.tierOf(p.skills); } return p; }; }';
 const S = require('./sim.js');

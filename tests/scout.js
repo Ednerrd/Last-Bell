@@ -1,8 +1,7 @@
 // scouting report: one new fighter, N fights against a random field, then what he's good at and where he leaks.
 //   node tests/scout.js [N=20] [style|random] [rating=82] [guard|roll] [field spread=5]
-//   brain on by default (PATCH="AI.brain=0" for the old AI). SEED=n for a repeatable fighter and field.
+//   SEED=n for a repeatable fighter and field.
 // He doesn't learn between fights yet (skill levels, ROADMAP item 2): fight 20 is the same man as fight 1. This is the scouting half.
-if (process.env.PATCH == null) process.env.PATCH = 'AI.brain=1';
 if (process.env.SEED) { let s = +process.env.SEED >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const S = require('./sim.js');
 const N = +process.argv[2] || 20, RT = +process.argv[4] || 82, SPREAD = +process.argv[6] || 5;
@@ -46,7 +45,7 @@ for (let i = 0; i < N; i++) {
 // ---------- the report ----------
 const pc = (a, b) => b ? (100 * a / b).toFixed(0) + '%' : '-', f1 = x => x.toFixed(1);
 const LEAGUE = .304, conn = W => (W.landJ + W.landP + W.landB) / Math.max(1, W.thr);
-console.log(`\nSCOUTING REPORT: ${S.STYLES[ST].label}, ${GD} guard, rating ${RT}, ${N} fights vs a random field (${RT - SPREAD}-${RT + SPREAD})${process.env.PATCH.includes('brain=1') ? ', brain on' : ''}`);
+console.log(`\nSCOUTING REPORT: ${S.STYLES[ST].label}, ${GD} guard, rating ${RT}, ${N} fights vs a random field (${RT - SPREAD}-${RT + SPREAD})`);
 console.log('stats:', Object.entries(me.stats).map(([k, v]) => k + ' ' + v).join(', '));
 console.log(`\nRECORD ${rec.w}-${rec.l}-${rec.d} (${rec.ko} KO/TKO wins, ${rec.lostKo} stopped)`);
 for (const l of fights) console.log('  ' + l);

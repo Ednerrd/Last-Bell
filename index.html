@@ -1596,14 +1596,14 @@ function mkF(sheet, side) {
     want: 64, spd: 60, circ: .5, circDir: R() < .5 ? 1 : -1, slideT: 0, cutting: false, inMul: 1,
     head: 100, headMax: 100, body: 100, stam: 100, stamMax: 100,
     state: 'idle', act: null, queue: [], def: null, defT: 0, defP: 0, pendingDef: null,
-    decT: .4 + R() * .4, stunT: 0, hitT: 0, hitZone: 'head', hitPow: 0,
+    oldR: R(), stunT: 0, hitT: 0, hitZone: 'head', hitPow: 0, // oldR: the retired old AI's first-decision roll, kept so the seeded fights (same.js hash) don't shift
     kdR: 0, kd: 0, cut: 0, unanswered: 0, unT: 0, counterWin: 0, downP: 0,
     strategy: 'auto', bob: R() * 6,
     tot: { thrown: { jab: 0, power: 0, body: 0 }, landed: { jab: 0, power: 0, body: 0 }, dmg: 0, taken: 0 },
     rs: null,
     // guard + ring IQ
     guard: GUARDS[sheet.guard] ? sheet.guard : 'standard', gSkill: 1, iq: ringIQ(sheet), gi: 1, giWarn: 0, defZ: 'head',
-    trapT: 0, bait: 0, fakeT: 0, spin: false, esc: null, exitAfter: false, resetT: 0, lastRes: null, lastCombo: null,
+    trapT: 0, bait: 0, spin: false, esc: null, resetT: 0, lastRes: null, lastCombo: null,
     // what he has learned about the other guy this fight: per punch kind thrown / avoided, per punch type thrown / landed
     read: newRead(), mem: newMem()
   };
@@ -1648,10 +1648,9 @@ function laneOf(A, P) {
   const hand = (P.arm === 'lead') !== (A.stance === 'southpaw') ? 'L' : 'R';
   return { hand, side: hand === 'L' ? 'R' : 'L', lane: P.kind === 'hook' ? 'outside' : P.kind === 'upper' ? 'under' : 'center' };
 }
-/* ---------- the boxer brain (brain/brain.js, inlined above): AI.brain = 1 hands decide(), react() and the counter rolls to BoxerBrain ----------
-   The engine keeps the body: footwork physics, hit math, rope escapes, the special styles' tricks. 0 = the old engine AI (same.js hash). */
+/* ---------- the boxer brain (brain/brain.js, inlined above): every man thinks with BoxerBrain (the old engine AI was retired Oct 16) ----------
+   The engine keeps the body: footwork physics, hit math, rope escapes, the special styles' tricks. */
 const AI = {
-  brain: 1,        // 1 = both men think with the brain, 0 = the old engine AI (opts.brain = [a, b] per side wins). Default 1 since Oct 14 (Ed)
   pace: CLOCK,     // the engine's rounds run 3x the sim clock: the brain squeezes moods, memory and intent modes to match
   reflexQ: .5,     // a passive block's guard, if the next shot comes inside .16 s
   defQ: 1.5,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
@@ -1768,17 +1767,17 @@ class Fight {
     if (R() < 0.02) { this.judgeBias[ri(0, 2)] = (R() < .5 ? 1 : -1) * 2.6; this.robbery = true; }
     this.kdState = null; this.clinchT = 0; this.rec = []; this.replay = null; this.recAfter = 0;
     this.roundLog = []; this.stepEv = [];
-    this.exP = 0; this.f.forEach(F => this.tempoStart(F, true));
-    { const on = opts.brain || [AI.brain, AI.brain]; this.f.forEach((F, i) => { F.pEnd = -9; if (on[i]) this.brainInit(F); }); }
+    this.exP = 0; R(); R(); // the retired old AI's feel-out rolls (one per man); every bare R() like this keeps the seeded fights (same.js hash) from shifting
+    this.f.forEach(F => this.brainInit(F));
   }
-  /* ---------- the brain's side of the fight (AI.brain): what he sees, what he does with it ---------- */
+  /* ---------- the brain's side of the fight: what he sees, what he does with it ---------- */
   brainInit(F) {
     if (!BoxerBrain.tuned) { Object.assign(BoxerBrain.BR, AI.br); BoxerBrain.tuned = 1; } // once: a PATCH on BoxerBrain.BR still wins
     F.prof = brainProfile(F); F.brain = BoxerBrain.create(F.prof, { rng: R, pace: AI.pace, thrownEv: 1, fam: famOf(F) }); F.bev = []; F.bg = .6; F.pEnd = -9; F.bLat = 0;
     F.brain.roundStart(this.round);
   }
   // what happened, for both brains (the one who did it and the one it happened to)
-  bev(A, D, type, x) { if (A.brain) A.bev.push(Object.assign({ type, by: 'me' }, x)); if (D.brain) D.bev.push(Object.assign({ type, by: 'him' }, x)); }
+  bev(A, D, type, x) { A.bev.push(Object.assign({ type, by: 'me' }, x)); D.bev.push(Object.assign({ type, by: 'him' }, x)); }
   perceive(F) {
     const O = F.op, a = O.act, live = O.state === 'punch' && a && (a.feint ? a.t < a.dur : !a.done);
     const busy = F.state === 'punch' || F.state === 'stun' || F.queue.length > 0 || F.beatT > 0 || !!F.pendingDef || (F.def && F.defD - F.defT < .3);
@@ -1788,7 +1787,7 @@ class Fight {
         strat: F.strategy, order: F.order ? { k: F.order.k, q: F.order.q, left: F.order.t / SHOUT_LEN, age: (SHOUT_LEN - F.order.t) * CLOCK } : null }, // the corner: this round's plan and the live shout (the brain reads them when BR.coach is on)
       him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, look: a.look || null, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0) } : null, // an awkward man's punches come from where you don't look: seen later
         recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
-        guard: (O.brain ? O.bg : .6) * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100 },
+        guard: O.bg * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100 },
       events: F.bev
     };
   }
@@ -1833,12 +1832,11 @@ class Fight {
   brainFeint(F, P) {
     const v = vec(F, F.op); F.act = { id: this.pid = (this.pid || 0) + 1, type: P.type, t: 0, dur: .24, done: true, feint: true, sell: P.sell, step: 4, ux: v.ux, uz: v.uz, start: this.t };
     F.state = 'punch'; F.def = null; F.queue = [];
-    if (!F.op.brain) { const was = F.op.pendingDef; this.react(F.op, F, PUNCH.jab, true); F.act.bit = !!F.op.pendingDef && F.op.pendingDef !== was; } // an old-AI man can buy it too
     this.emit('feint', { a: F.side, sell: P.sell });
   }
   // the feint is over: did he buy it?
   feintDone(F, a) {
-    const D = F.op, bit = D.brain ? (D.defAt || -9) >= a.start : !!a.bit;
+    const D = F.op, bit = (D.defAt || -9) >= a.start;
     if (bit) { D.read.feints++; if (F.st.bite) F.biteT = STYLE_BITE.t; }
     this.bev(F, D, 'feinted', { p: a.type, bit, def: bit ? D.pendingDef && D.pendingDef.kind || D.def : null });
   }
@@ -1868,7 +1866,7 @@ class Fight {
         if (this.clinchT > 0) this.updateClinch(dt);
         else { this.updateF(A, dt); if (this.phase === 'fight') this.updateF(B, dt); this.lull += dt; this.ringControl(dt);
           const q0 = this.quiet || 0; this.quiet = this.f.some(F => F.state === 'punch' || F.queue.length) ? 0 : q0 + dt;
-          if (this.quiet >= TEMPO.at && q0 < TEMPO.at && this.exP >= 2) { this.exP = 0; this.beat(); } } // an exchange just ended (nobody punching, nothing queued)
+          if (this.quiet >= TEMPO.at && q0 < TEMPO.at && this.exP >= 2) { this.exP = 0; R(); } } // the old AI's reset roll (same.js hash): an exchange just ended (nobody punching, nothing queued)
         this.physics();
         if (this.phase === 'fight') {
           this.clock += dt * CLOCK;
@@ -1987,7 +1985,6 @@ class Fight {
       if (e) {
         // escape run along the chosen lane; a fake first sells the opposite side
         let ex = e.x, ez = e.z, sp = F.spd * (F.spin ? 2.4 : 1.9);
-        if (F.fakeT > 0) { F.fakeT -= dt; const dp = ex * v.ux + ez * v.uz; ex = 2 * dp * v.ux - ex; ez = 2 * dp * v.uz - ez; sp *= .7; }
         this.feet(F, ex * sp, ez * sp, dt, 10 + 30 * (F.st.ret || .7) * (F.legs || 1)); F.state = 'move';
         if (F.slideT <= 0) { F.spin = false; F.esc = null; F.resetT = Math.max(F.resetT, .9); }
         return;
@@ -2041,8 +2038,6 @@ class Fight {
     if (F.lostT > 0) F.lostT -= dt;
     if (F.pullT > 0) F.pullT -= dt;
     if (F.ropeT > 0) F.ropeT -= dt; // the rope side lock runs on the clock, not only while footwork runs (it also lets the pair cross in physics)
-    if (F.feelT > 0) F.feelT -= dt; if (F.beatR > 0) F.beatR -= dt;
-    F.rq = (F.rq || 0) + ((F.beatR > 0 || F.feelT > 0 ? 1 : 0) - (F.rq || 0)) * (1 - Math.exp(-dt / 20)); // share of the last ~20 s spent resetting or feeling out
     if (F.biteT > 0) F.biteT -= dt;
     if (F.st.swap && F.state !== 'punch' && (F.swapT += dt) > STYLE_SWAP.every * rnd(.6, 1.4)) this.swapStance(F);
     if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
@@ -2056,149 +2051,45 @@ class Fight {
     if (F.state === 'stun') {
       F.stunT -= dt; { const v = vec(F, O); F.vx = -v.ux * 10; F.vz = -v.uz * 10; }
       if (F.liverT > 0 && (F.liverT -= dt) <= 0) { F.liverT = 0; this.knockdown(F, O, 'body', true); return; } // the delayed fold
-      if (F.stunT <= 0) { F.state = 'idle'; F.vx = F.vz = 0; F.decT = .15; }
+      if (F.stunT <= 0) { F.state = 'idle'; F.vx = F.vz = 0; }
     }
     if (F.pendingDef) {
       F.pendingDef.at -= dt;
       if (F.pendingDef.at <= 0) { F.def = F.pendingDef.kind; F.defT = F.pendingDef.dur; F.defD = F.defT; F.defP = 0; F.pendingDef = null; }
     }
     if (F.def) { F.defT -= dt; F.defP = Math.min(1, F.defP + dt * 10); if (F.defT <= 0) F.def = null; }
-    if (F.brain) this.brainTick(F, dt);
+    this.brainTick(F, dt);
     if (F.state === 'punch' && F.act) {
       const a = F.act; a.t += dt; const p = a.t / a.dur;
       if (!a.done && !a.feint && p >= 0.6) { a.done = true; this.resolve(F, O, a); if (this.phase !== 'fight') return; }
       if (F.state !== 'punch' || !F.act) { /* interrupted */ }
       else {
-        const ret = (F.st.ret || .7) * (!F.brain && (F.strategy === 'pressure' || F.strategy === 'ko') ? .6 : 1); // pressure/KO: an old-AI man stays in the pocket after a punch (the brain takes the plan through BR.coach; this on top cost a pressure fighter ~6 pts, L6)
+        const ret = F.st.ret || .7;
         const sp_ = p < 0.6 ? a.step / (a.dur * 0.6) * 1.5708 * Math.sin(Math.PI * p / .6) : -a.step * ret / (a.dur * 0.4) * 1.5708 * Math.sin(Math.PI * Math.min(1, (p - .6) / .4));
         F.vx = a.ux * sp_; F.vz = a.uz * sp_;
-        if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; if (F.brain || F.op.brain) this.feintDone(F, a); if (F.queue.length) this.nextInCombo(F); }
+        if (a.feint && p >= 1) { F.state = 'idle'; F.act = null; this.feintDone(F, a); if (F.queue.length) this.nextInCombo(F); }
         else if (p >= 1) { F.state = 'idle'; F.act = null; F.vx = F.vz = 0; if (F.queue.length && F.stam > 2) this.nextInCombo(F); else this.comboDone(F); }
         else if (a.done && F.queue.length && F.stam > 2 && F.queue[0] !== '~' && p >= .82) { F.act = null; F.state = 'idle'; this.nextInCombo(F); }
       }
     }
     if (F.beatT > 0 && (F.beatT -= dt) <= 0) { F.beatT = 0; if (F.state === 'idle' || F.state === 'move') { if (F.queue.length && F.stam > 2) { this.nextInCombo(F); if (F.state === 'punch') return; } else this.comboDone(F); } }
     if (F.state === 'idle' || F.state === 'move') {
-      if (F.brain) { // the brain already decided this frame; the style's reflexes are the body's
-        if (F.stickT > 0) F.stickT -= dt;
-        else if (!F.queue.length && (F.binfo = null, this.stickJab(F, dt))) return;
-        this.footwork(F, dt);
-      }
-      else {
-        if (F.stickT > 0) F.stickT -= dt;
-        else if (this.stickJab(F, dt)) return;
-        this.footwork(F, dt);
-        F.decT -= dt;
-        if (F.decT <= 0) this.decide(F);
-      }
+      // the brain already decided this frame; the style's reflexes are the body's
+      if (F.stickT > 0) F.stickT -= dt;
+      else if (!F.queue.length && (F.binfo = null, this.stickJab(F, dt))) return;
+      this.footwork(F, dt);
     }
     F.x += F.vx * dt; F.z += F.vz * dt;
     F.mv = Math.hypot(F.vx, F.vz); if (F.state === 'move' || F.state === 'idle') F.gait = (F.gait || 0) + F.mv * dt; // idle too: the feet keep stepping while he slows to a stop
   }
 
-  decide(F) {
-    const O = F.op, st = F.st, sg = sgOf(F);
-    const v = vec(F, O), d = v.d, k = iqK(F);
-    const sf = stamFac(F);
-    const hurtMe = F.head < F.headMax * 0.32;
-    const hurtOp = O.state === 'stun' || O.head < O.headMax * 0.3;
-    const trapped = this.trapped(F), oTrapped = this.trapped(O);
-    let aggr = st.aggr * sg.aggr * (0.5 + 0.5 * sf) * lerp(1, tankF(F), STAM.tankOut);
-    if (hurtOp) aggr *= (F.strategy === 'survive' ? 1.2 : 1.8);
-    if (hurtMe) aggr *= 0.55;
-    if (F.bait > 0) aggr *= .5; // lying on the ropes, waiting to counter
-    if (F.lostT > 0) aggr *= .3;  // he stepped off to the side: find him first
-    if (st.open) aggr *= lerp(1, STYLE_OPEN.idle + STYLE_OPEN.boost * this.opening(F), st.open);
-    if (st.ramp) aggr *= 1 + st.ramp * STYLE_RAMP * this.rampSig(F, oTrapped);
-    const nd = F.need = hurtMe ? Math.min(0, this.need(F)) : this.need(F); // hurt, he doesn't go looking for it
-    aggr *= nd > 0 ? 1 + NEED.aggr * nd : 1 + NEED.coast * nd;
-    const feel = F.feelT > 0 && !hurtOp ? clamp(F.feelT / 2, 0, 1) : 0, rst = F.beatR > 0 && !hurtOp && !oTrapped; // feeling him out, or resetting after an exchange
-    if (feel) aggr *= lerp(1, TEMPO.fAggr, feel);
-    if (rst) aggr *= TEMPO.rAggr; else aggr /= Math.max(.72, 1 - (F.rq || 0)); // the work he skipped in the resets comes in the bursts
-    // range intent
-    let want = st.range + sg.range + (hurtMe ? 16 : 0) + (sf < 0.6 ? 5 : 0) + TEMPO.fWant * feel + (rst ? TEMPO.rWant : 0);
-    if (hurtOp) want -= 14;
-    want -= NEED.want * nd;
-    if (oTrapped) want -= 5 + 4 * k;       // keep him pinned
-    // what's working decides where he wants to be: hooks landing, get inside; straights landing, stay long
-    { const pv = F.pv = this.punchVal(F); F.pvT = this.t; const avg = ks => ks.reduce((s, p) => s + pv[p], 0) / ks.length;
-      const sh = clamp(avg(MEM_IN) - avg(MEM_OUT), -1, 1); want -= MEMV.range * k * sh * (sh > 0 ? (st.out ? .3 : 1) : (st.cutK > .9 ? .3 : 1)); } // adjust inside his style: an out-boxer doesn't turn brawler, a pressure man doesn't start running
-    F.want = clamp(want + rnd(-4, 4), 40, 86);
-    F.spd = (34 + F.s.footwork * 0.6) * (0.7 + 0.3 * sf) * (hurtMe ? .85 : 1) * (1 - BODY.legs * (1 - clamp(F.body, 0, 100) / 100));
-    F.legs = st.legs || 1;
-    F.inMul = hurtOp ? 1.3 : 1;
-    // lateral intent
-    F.circ = st.circ * (sg.circ || 1) * (0.6 + F.s.footwork / 250) * (hurtMe ? 1.3 : 1);
-    F.cutK = st.cutK + (sg.cut || 0);
-    // pressure fighters cut the ring off; smart ones also do it when he is pinned and looking for the exit
-    F.cutting = !hurtMe && F.cutK > .55 && (O.circ > .35 || O.slideT > 0 || (oTrapped && k > .45)) && R() < .7 + .2 * k;
-    if (F.order && (F.cutting || oTrapped)) this.ack(F, 'press');
-    if (R() < .06) F.circDir *= -1;
-    // keep the action mostly side-on to the camera: if the pair is turning deep, circle back
-    if (F.slideT <= 0 && Math.abs(v.uz) > .8) {
-      const px = -v.uz, pz = v.ux, test = sg_ => Math.abs((O.z - (F.z + pz * sg_ * 10)) / Math.hypot(O.x - (F.x + px * sg_ * 10), O.z - (F.z + pz * sg_ * 10)));
-      F.circDir = test(1) < test(-1) ? 1 : -1;
-    }
-    // don't circle into the ropes
-    { const px = -v.uz, pz = v.ux; if (!inRing(F.x + px * F.circDir * 26, F.z + pz * F.circDir * 26, 4) && F.slideT <= 0) F.circDir *= -1; }
-    // clinch: hurt or gassed, or smothering a guy who has him pinned
-    let clP = 0;
-    if (d < 50 && (hurtMe || sf < 0.62)) clP = 0.28;
-    if (d < 52 && trapped && F.trapT > 1.4 && F.bait <= 0) clP = Math.max(clP, .08 + .1 * k);
-    if (clP && R() < clP * st.clinch * sg.clinch * (1.25 - F.s.heart / 200)) { this.startClinch(F); return; }
-    if (st.grab && d < STYLE_GRAB.at && !hurtOp && O.state !== 'stun' && R() < STYLE_GRAB.p * st.grab * (.5 + .5 * k)) { this.startClinch(F); return; } // inside his jab: grab and lean
-    // on the ropes: get out (or stay there on purpose)
-    if (trapped && d < 84 && F.slideT <= 0 && F.bait <= 0 && !this.tryBait(F, k, hurtMe)) {
-      const urge = .05 + F.s.footwork / 100 * .17 + k * .13 + F.trapT * (.15 + .24 * k) - (O.cutting ? .1 : 0) - (hurtMe ? .1 : 0);
-      if (R() < urge && this.escape(F, v, d, hurtMe, sf, sg)) return;
-    }
-    F.decT = (0.22 + R() * 0.42) * (1.25 - F.s.speed / 100 * 0.5) * TUNE.pace;
-    if (st.out && !hurtOp && d < F.want - STYLE_OUT.gap) {
-      aggr *= STYLE_OUT.aggr;                       // he doesn't want to trade in there
-      if (!trapped && F.slideT <= 0 && R() < st.out * STYLE_OUT.p * (.4 + .6 * k) * (.5 + F.s.footwork / 200) && this.stepOut(F, v)) return;
-    }
-    // a reset or a feel-out is jabs and feints, not silence: the jabbers keep touching him
-    if ((rst || feel > .5) && d < PUNCH.jab.max + 6 && R() < TEMPO.rJab * (.3 + (st.stick || 0) + .5 * (st.out || 0) + .5 * (st.pjab || 0)) * (sg.jab || 1)) {
-      F.queue = R() < .3 ? ['jab'] : []; this.startPunch(F, 'jab'); F.decT = (0.2 + R() * .3) * TUNE.pace; return;
-    }
-    if (d < 86 && R() < aggr * TUNE.vol) {
-      const combo = this.pickCombo(F, d, sg, hurtOp);
-      if (combo) { F.queue = combo.slice(1); this.startPunch(F, combo[0]); F.decT = (0.15 + R() * .3) * TUNE.pace; return; }
-    }
-    // feints: worth more against counter-happy guards and guys who bite on everything
-    const Rd = F.read, thT = Rd.th.straight + Rd.th.hook + Rd.th.upper + Rd.th.body;
-    const fv = lerp(1, (GUARD_FEINT[O.guard] || 1) * (1 + clamp(Rd.reacts / Math.max(6, thT) - .35, 0, .6)), k);
-    if (d < 86 && R() < 0.07 * st.feint * fv * (rst || feel ? TEMPO.feint : 1)) { this.startFeint(F); return; }
-    if (d < 86 && R() < (F.s.defense / 100) * 0.22 * sg.def * (F.bait > 0 ? 1.6 : 1)) { F.def = 'block'; F.defZ = 'head'; F.defT = .3 + R() * .4; F.defD = F.defT; F.defP = 0; }
-  }
-  // round awareness: > 0 he needs something (behind on the cards with the rounds running out, a close round about to go), < 0 he can protect what he has
-  need(F) {
-    const lead = F.side === 0 ? this.lead : -this.lead, left = this.rounds - this.round + 1;
-    let n = clamp(-lead / left * .6, -1, 1);                  // points per round he has to make up (or can give away)
-    const tl = this.clock - (ROUND_LEN - NEED.stealT);
-    if (tl > 0) { const m = rdScore(F) - rdScore(F.op); if (m < 2 && m > -6) n += NEED.steal * tl / NEED.stealT * (m > -3 ? 1 : .5); } // steal the round late
-    return clamp(n, -1, 1) * lerp(NEED.iqLo, 1, iqK(F));
-  }
-  // round start: feel him out first (a long look in the first round, a short one after)
-  tempoStart(F, first) { const r = first ? TEMPO.feel1 : TEMPO.feelN; F.feelT = rnd(r[0], r[1]) * clamp(1.4 - .5 * F.st.aggr, .4, 1.2); F.beatR = 0; }
-  // how much he wants a reset after an exchange: low-output, moving, careful men a lot; pressure men, swarmers and a man smelling blood hardly
-  rstP(F) {
-    const O = F.op, pr = F.strategy === 'pressure' || F.strategy === 'ko' ? .5 : F.strategy === 'move' || F.strategy === 'counter' ? 1.3 : 1;
-    const nd = F.need || 0;
-    return clamp(.7 - .25 * F.st.aggr - .25 * F.st.cutK, .05, .5) * pr * (nd > 0 ? 1 - NEED.rst * nd : 1 - .4 * nd) * (O.head < O.headMax * .3 || O.state === 'stun' ? .15 : 1) * (F.head < F.headMax * .32 ? 1.5 : 1);
-  }
-  // an exchange ended: both back off and reset (the hungrier man decides if it happens and comes again sooner)
-  beat() {
-    const [A, B] = this.f, pA = this.rstP(A), pB = this.rstP(B), pm = Math.max(pA, pB);
-    if (R() < Math.min(pA, pB) * 1.2) for (const [F, p] of [[A, pA], [B, pB]]) if (!F.brain) { F.beatR = rnd(TEMPO.reset[0], TEMPO.reset[1]) * clamp(p / pm, .7, 1); if (F.state !== 'punch') { F.queue = []; F.beatT = 0; } }
-  }
   // switch-hitter: flips stance; everything the other man had figured out is half wrong now
   swapStance(F) {
     F.swapT = 0; F.stance = F.stance === 'southpaw' ? 'orthodox' : 'southpaw';
     const Rd = F.op.read; for (const g of ['th', 'av']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
     for (const g of ['thr', 'land']) for (const k in Rd[g]) Rd[g][k] = Math.floor(Rd[g][k] / 2);
     F.op.lostT = Math.max(F.op.lostT, STYLE_SWAP.lost * F.st.swap);
-    if (F.op.brain) F.op.brain.famSet(famOf(F.op)); // L3: the new stance may be one he barely knows
+    F.op.brain.famSet(famOf(F.op)); // L3: the new stance may be one he barely knows
     this.emit('switch', { a: F.side, st: F.stance });
   }
   // angle fighter: combo done, step off to the side before he can answer
@@ -2209,7 +2100,7 @@ class Fight {
       const sc = Math.min(100, freeRun(F.x, F.z, dx, dz)) + R() * 15; if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
     }
     if (!best || bs < 40) return;
-    F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .26 + F.s.footwork / 500; F.decT = Math.min(F.decT, .3);
+    F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .26 + F.s.footwork / 500;
     O.lostT = Math.max(O.lostT, STYLE_ANGLE.lost * (F.st.angle || STYLE_ANGLE.check));
     this.emit('angle', { a: F.side, d: O.side });
   }
@@ -2222,7 +2113,7 @@ class Fight {
       if (sc > bs) { bs = sc; best = { x: dx, z: dz, s }; }
     }
     if (!best || bs < 60) return false;
-    F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .3 + F.s.footwork / 400; F.decT = .2;
+    F.esc = best; F.circDir = best.s; F.spin = false; F.slideT = .3 + F.s.footwork / 400;
     return true;
   }
   // how open the other guy is right now: just threw, just missed, gassed, guard breaking down
@@ -2234,15 +2125,6 @@ class Fight {
     if (O.gi < .45) o = Math.max(o, .55);
     return o;
   }
-  // when a boxer-puncher sits down and lets his hands go
-  rampSig(F, oTrapped) {
-    const O = F.op, lead = F.side === 0 ? this.lead : -this.lead;
-    let r = 0;
-    if (O.stam < O.stamMax * .45) r = .7;
-    if (O.gi < .45 || oTrapped) r = Math.max(r, .6);
-    if (lead < -1 && this.round > this.rounds / 2) r = Math.max(r, .8);
-    return r;
-  }
   // stick: he steps into range, eat a jab on the way in
   stickJab(F, dt) {
     const st = F.st; if (!st.stick || F.slideT > 0 || F.bait > 0) return false;
@@ -2250,59 +2132,23 @@ class Fight {
     if (appr < 18 || d > Math.min(F.want, PUNCH.jab.max + 4) || d < PUNCH.jab.min + 10 || O.state === 'stun' || O.state === 'clinch') return false;
     if (R() > st.stick * STYLE_STICK * (.5 + .5 * iqK(F)) * stamFac(F) * dt) return false;
     F.stickT = .7; F.queue = R() < .3 ? ['jab'] : [];
-    this.startPunch(F, 'jab'); if (F.act) F.act.stick = true; F.decT = .25 + R() * .2;
+    this.startPunch(F, 'jab'); if (F.act) F.act.stick = true; R(); // the old AI's next-decision roll (same.js hash)
     return true;
   }
-  // rope-a-dope: some fighters choose to stay on the ropes and counter
-  tryBait(F, k, hurtMe) {
-    if (hurtMe || F.gi < .6 || k < .45 || F.trapT > .9 || F.baitR) return false;
-    const g = { philly: 1.5, high: 1.3, cross: 1.3, peekaboo: .8 }[F.guard] || .5;
-    const p = .14 * k * g * (F.sk === 'counter' ? 1.8 : F.sk === 'boxerpuncher' ? 1 : .5);
-    if (R() < p) { F.bait = 2.2 + R() * 2.8; F.baitR = 1; F.cutting = false; this.emit('bait', { a: F.side }); return true; }
-    return false;
-  }
-  // get off the ropes: pivot out, roll under and spin, or punch his way out
-  escape(F, v, d, hurtMe, sf, sg) {
-    const O = F.op, k = iqK(F), st = F.st;
-    const w = {
-      pivot: .8 + F.s.footwork / 100,
-      spin: d < 62 ? (F.s.defense / 100) * (F.guard === 'peekaboo' ? 1.8 : 1) * (.35 + k) : 0,
-      punch: d < 76 && !hurtMe && sf > .5 ? st.aggr * sg.aggr * .9 : 0
-    };
-    const how = wpick(Object.keys(w), x => w[x]);
-    if (how === 'punch') {
-      const combo = this.pickCombo(F, d, sg, false);
-      if (!combo) return false;
-      F.queue = combo.slice(1); F.exitAfter = true; F.cutting = false;
-      this.startPunch(F, combo[0]); F.decT = .2;
-      this.emit('escape', { a: F.side, how }); return true;
-    }
-    const e = this.escDir(F, how === 'spin'); if (!e) return false;
-    F.esc = e; F.circDir = e.s; F.cutting = false; F.spin = how === 'spin';
-    F.slideT = (how === 'spin' ? .42 : .45) + F.s.footwork / 300;
-    if (how === 'pivot' && O.cutting && k > .55 && R() < .45) { F.fakeT = .14; F.slideT += .14; } // fake one way, go the other
-    F.decT = .25;
-    this.emit('escape', { a: F.side, how }); if (F.order) this.ack(F, 'move');
-    return true;
-  }
-  // combo finished: if he punched his way off the ropes, now slide out
+  // combo finished: the check hook pivot, the angle fighter steps off
   comboDone(F) {
-    if (F.brain && F.binfo && F.binfo.pivot && F.slideT <= 0 && !this.trapped(F) && F.state !== 'stun') { F.binfo.pivot = false; this.angleOff(F); } // check hook: pivot off the line
+    if (F.binfo && F.binfo.pivot && F.slideT <= 0 && !this.trapped(F) && F.state !== 'stun') { F.binfo.pivot = false; this.angleOff(F); } // check hook: pivot off the line
     if (F.st.angle && F.slideT <= 0 && !this.trapped(F) && F.state !== 'stun' && R() < F.st.angle * STYLE_ANGLE.p * (.4 + .6 * iqK(F))) this.angleOff(F);
-    { const D = F.op, op = D.st.open;
-      if (op && (D.state === 'idle' || D.state === 'move') && D.slideT <= 0 && R() < op * (.45 + .45 * iqK(D)))
-        D.decT = Math.min(D.decT, (.05 + (1 - D.s.speed / 100) * .14) * (1.25 - .45 * iqK(D))); }
-    if (F.exitAfter && this.trapped(F)) { const e = this.escDir(F, false); if (e) { F.esc = e; F.circDir = e.s; F.slideT = .4 + F.s.footwork / 300; F.spin = false; } }
-    F.exitAfter = false;
+    { const D = F.op; if (D.st.open && (D.state === 'idle' || D.state === 'move') && D.slideT <= 0) R(); } // the old AI's opportunist roll (same.js hash)
   }
   // next punch in the combo, adjusted to what just happened
   nextInCombo(F) {
     const O = F.op, k = iqK(F), last = F.lastRes, d = dist(F, O);
     let nx = F.queue.shift();
-    if (nx === '~') { F.beatT = .1 + R() * .12; F.decT = Math.max(F.decT, F.beatT + .3); return; } // a beat: touch, then the real one
+    if (nx === '~') { F.beatT = .1 + R() * .12; return; } // a beat: touch, then the real one
     // walked into a counter, or he is sitting on one: bail out
     if (last === 'countered' || (last === 'evaded' && O.counterWin > 0)) {
-      if (R() < .3 + .5 * k) { F.queue = []; F.decT = .1 + R() * .15; this.comboDone(F); return; }
+      if (R() < .3 + .5 * k) { F.queue = []; R(); this.comboDone(F); return; }
     }
     const lp = F.lastP && PUNCH[F.lastP];
     if (last === 'blocked' && lp && PUNCH[nx].zone === lp.zone && LEVEL_SWAP[nx] && R() < .6 * k) nx = LEVEL_SWAP[nx]; // he is covering that level: switch
@@ -2315,128 +2161,27 @@ class Fight {
       F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
     this.startPunch(F, nx);
   }
-  // what each punch is worth against this man right now, from memory (1 = his average punch)
-  punchVal(F) {
-    const M = F.mem, now = this.t, pool = {}, out = {}, inf = {};
-    let pn = 0; for (const K in M.def) { const e = memPeek(F, M.def, K, now); for (const d in e) if (d !== 'n') pool[d] = (pool[d] || 0) + e[d]; pn += e.n; }
-    let tn = 0, tl = 0, tc = 0; for (const p in M.mine) { const e = memPeek(F, M.mine, p, now); tn += e.n; tl += e.l || 0; tc += e.c || 0; }
-    const Lp = (tl + MEMV.prior * .3) / (tn + MEMV.prior), Cp = (tc + MEMV.prior * .05) / (tn + MEMV.prior);
-    let vbar = 0;
-    for (const p in PUNCH) {
-      const P = PUNCH[p], e = memPeek(F, M.def, defKind(P), now), en = e ? e.n : 0; let v = 0;
-      for (const dk in DEF_CLEAN) { const ps = ((pool[dk] || 0) + (dk === 'none' ? MEMV.prior : 0)) / (pn + MEMV.prior); v += ((e && e[dk] || 0) + MEMV.prior * ps) / (en + MEMV.prior) * DEF_CLEAN[dk](P, F.op); }
-      inf[p] = v; vbar += v;
-    }
-    vbar /= Object.keys(PUNCH).length;
-    for (const p in PUNCH) {
-      const e = memPeek(F, M.mine, p, now), n = e ? e.n : 0;
-      const l = ((e && e.l || 0) + MEMV.prior * Lp) / (n + MEMV.prior), c = ((e && e.c || 0) + MEMV.prior * Cp) / (n + MEMV.prior);
-      out[p] = clamp(Math.pow(inf[p] / Math.max(.05, vbar), MEMV.inf) * Math.pow(l / Lp, MEMV.emp) * (1 - MEMV.ctr * (c - Cp)), MEMV.lo, MEMV.hi);
-    }
-    return out;
-  }
-  pickCombo(F, d, sg, hurtOp) {
-    const O = F.op, k = iqK(F), Rd = F.read;
-    const ok = COMBOS.filter(c => { if (!comboW(F, c)) return false; const P = PUNCH[c.seq[0]]; const step = (P.kind === 'straight' ? 10 : 6) + (P.cat !== 'jab' ? F.st.leap || 0 : 0); return d <= P.max + step && d >= P.min - 6; });
-    if (!ok.length) return null;
-    const holes = GUARD_HOLES[O.guard] || {};
-    const nd = F.need || 0;
-    const softBody = O.stam < O.stamMax * .45 || O.body < 55, pv = F.pvT === this.t ? F.pv : this.punchVal(F), hf = {};
-    for (const p in PUNCH) { const e = memPeek(F, F.mem.def, defKind(PUNCH[p]), this.t), n = e ? e.n : 0; hf[p] = 1 - n / (n + MEMV.seen); }
-    const c = wpick(ok, c => {
-      const n = c.len; let w = comboW(F, c);
-      const rc = RANGE_C[c.r]; w *= .25 + Math.exp(-Math.pow((d - rc[0]) / rc[1], 2));
-      { let q = 1; for (const p of c.seq) q *= extFit(PUNCH[p], d); w *= lerp(1, Math.pow(q, EXT.ai / n), k); } // a smart man doesn't throw a right hand from too close: he'd only get half of it
-      for (const p of c.seq) { const P = PUNCH[p]; if (P.zone === 'body') w *= Math.pow(sg.body, 1 / n); if (P.cat === 'power') w *= Math.pow(sg.power * (hurtOp ? 1.8 : 1), 1 / n); if (p === 'jab') w *= Math.pow(sg.jab, 1 / n); }
-      if (hurtOp && n >= 3) w *= 1.5;
-      if (F.stam < 25 && n > 2) w *= .3; else if (F.stam < 40 && n > 3) w *= .5;
-      // the read: guard holes, what he keeps avoiding, what keeps landing, the scorecards
-      let read = 1;
-      for (const p of c.seq) {
-        let f = Math.pow(holes[p] || 1, hf[p] == null ? 1 : hf[p]) * (F.stance !== O.stance ? OPEN_W[p] || 1 : 1); // the scouting report counts until he has seen it for himself
-        f *= pv[p] || 1;
-        read *= Math.pow(f, 1 / n);
-      }
-      if (softBody) read *= 1 + c.body * .25;
-      if (nd < 0) read *= 1 - nd * NEED.safe * (!c.pow ? 1 : n <= 2 ? .3 : -1); // protecting a lead: jabs and short, safe work
-      if (nd > 0) read *= 1 + c.pow * NEED.pow * nd;          // needs something big
-      if (c.key === F.lastCombo) read *= .65;               // don't show him the same look twice
-      w *= lerp(1, read, k * (1 - STYLE_ODD.read * (O.st.odd || 0))); // an awkward man is hard to read
-      w *= 1 + (R() - .5) * (1 - k) * .8;                   // low IQ: noisy choices
-      return w;
-    });
-    F.lastCombo = c.key;
-    return c.q.slice();
-  }
   startPunch(F, type) {
     const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
     const v = vec(F, F.op);
     F.act = { id: this.pid = (this.pid || 0) + 1, type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf) * (1.5 - .5 * tankF(F)), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
-    if (F.brain) { const b = F.binfo, i = F.bi++, a = F.act; a.tech = !b ? .75 : Array.isArray(b.tech) ? b.tech[Math.min(i, b.tech.length - 1)] : b.tech; a.commit = b ? b.commit || 0 : 0; a.tell = b && !i ? b.tell || 0 : 0; a.look = b && b.look && i === b.combo.length - 1 ? b.look : null; a.dur += a.tell * AI.tell; F.stam = Math.max(0, F.stam - P.cost * AI.commit * a.commit * .5); if (b) { a.first = !i; F.bev.push({ type: 'thrown', by: 'me', p: type, first: !i }); } } // the brain hears it started
+    { const b = F.binfo, i = F.bi++, a = F.act; a.tech = !b ? .75 : Array.isArray(b.tech) ? b.tech[Math.min(i, b.tech.length - 1)] : b.tech; a.commit = b ? b.commit || 0 : 0; a.tell = b && !i ? b.tell || 0 : 0; a.look = b && b.look && i === b.combo.length - 1 ? b.look : null; a.dur += a.tell * AI.tell; F.stam = Math.max(0, F.stam - P.cost * AI.commit * a.commit * .5); if (b) { a.first = !i; F.bev.push({ type: 'thrown', by: 'me', p: type, first: !i }); } } // the brain hears it started
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
     if (F.st.pjab && type === 'jab') { const v2 = vec(F, F.op); if (F.vx * v2.ux + F.vz * v2.uz > 8 || F.cutting) F.act.stick = true; } // jab on the way in
     F.state = 'punch'; F.def = null; F.pendingDef = null; F.prevP = this.t - (F.lastPT || -9) < .8 ? F.lastP : null; F.lastP = type; F.lastPT = this.t; F.lastRes = null; this.lull = 0; this.exP++;
-    { const c = P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1) * (P.cat === 'jab' ? 1 : 1 + STAM.heavy * ((F.st.hit || 1) - 1)) * (F.brain ? F.brain.mast.gas[P.cat] : 1); F.stam = Math.max(0, F.stam - c); F.work = (F.work || 0) + c; }
+    { const c = P.cost * (1.3 - F.s.stamina / 100 * 0.5) * (F.st.eco || 1) * (P.cat === 'jab' ? 1 : 1 + STAM.heavy * ((F.st.hit || 1) - 1)) * F.brain.mast.gas[P.cat]; F.stam = Math.max(0, F.stam - c); F.work = (F.work || 0) + c; }
     F.tot.thrown[P.cat]++; F.rs.thrown++; if (P.cat !== 'jab') F.rs.thrownPow++;
     F.read.th[kindOf(type)]++; F.read.thr[type] = (F.read.thr[type] || 0) + 1;
     { const O = F.op, now = this.t; memAdd(F, F.mem.mine, type, now, { n: 1 }); memAdd(O, O.mem.his, type, now, { n: 1 }); if (F.prevP) memAdd(O, O.mem.after, F.prevP + '>' + type, now, { n: 1 }); else memAdd(O, O.mem.lead, type, now, { n: 1 }); }
-    this.react(F.op, F, P);
+    this.spoil(F.op, F);
     this.emit('throw', { a: F.side, p: type });
     if (F.order) this.ack(F, type === 'jab' ? 'jab' : P.zone === 'body' ? 'body' : '');
   }
-  startFeint(F) { // resetting, a feint is mostly just a look (no real one behind it)
-    { const v = vec(F, F.op); F.act = { type: 'jab', t: 0, dur: .24, done: true, feint: true, step: 4, ux: v.ux, uz: v.uz, start: this.t }; }
-    F.state = 'punch'; F.def = null;
-    const was = F.op.pendingDef; this.react(F.op, F, PUNCH.jab, true);
-    const bit = F.op.pendingDef && F.op.pendingDef !== was;
-    if (bit) F.op.read.feints++;
-    if (F.st.bite && bit) F.biteT = STYLE_BITE.t; // he bit: the real one is coming into whatever he opened
-    if (R() < (F.beatR > 0 ? .1 : .7)) { const holes = GUARD_HOLES[F.op.guard] || {}, k = iqK(F); F.queue = [wpick(['cross', 'hook', 'bodyHook', 'uppercut'], p => ({ cross: 2, hook: 1, bodyHook: 1, uppercut: .4 })[p] * lerp(1, holes[p] || 1, k))]; }
-    this.emit('feint', { a: F.side });
-  }
-  react(D, A, P, feint) {
-    if (D.state === 'stun' || D.state === 'down' || D.state === 'clinch') return;
-    if (D.state === 'punch' && D.act && D.act.t / D.act.dur > 0.25) return;
-    const sgD = sgOf(D);
-    let ch = ((D.s.defense * .6 + D.s.footwork * .2 + D.s.speed * .2) / 100) * TUNE.react * stamFac(D) * sgD.def;
-    if (this.atRopes(D)) ch *= D.bait > 0 ? 1.05 : .7;
-    if (D.head < D.headMax * .3) ch *= .75;
-    ch *= (1.15 - A.s.accuracy / 100 * .35);
-    ch *= .92 + .16 * iqK(D);
-    if (feint) ch *= 1 - Math.min(FEINT_READ.max, D.read.feints / FEINT_READ.per) * iqK(D) * (1 - FEINT_READ.master * (A.st.bite || 0)); // he has bitten on enough of those (a feint master's still look real)
-    ch *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
-    if (D.lostT > 0) ch *= STYLE_ANGLE.react;
-    if (A.st.odd) ch *= 1 - STYLE_ODD.react * A.st.odd;
-    if (D.st.spoil && A.queue.length && D.state !== 'punch' && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) { this.startClinch(D); return; } // sees the combo coming, ties him up
-    if (D.brain) return; // the brain sees punches itself
-    const rd = antRead(D, A, A.act ? A.act.type : 'jab', this.t); D.antic = rd > 0 ? { p: A.act ? A.act.type : 'jab', rd, t: this.t } : null;
-    ch *= 1 + ANT.react * rd;
-    if (R() > ch) return;
-    const best = gdw(D, 'block') > 1.5 ? 'block' : ANT_BEST[defKind(P)], bw = x => x === best ? 1 + ANT.pick * rd : 1; // a shell guy who reads it gets the gloves there
-    A.read.reacts++;
-    // which defense he reaches for depends on his guard
-    let kind;
-    if (P.zone === 'body') kind = wpick(['block', 'pull'], k => ({ block: 65 * gdw(D, 'block') * Math.min(1.2, gf(D, 'body')), pull: 35 * gdw(D, 'pull') })[k] * bw(k));
-    else if (P.kind === 'straight') kind = wpick(['slip', 'block', 'pull', 'duck', 'roll'], k => ({ slip: D.s.defense * gdw(D, 'slip'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), duck: D.s.defense * .4 * gdw(D, 'duck'), roll: 55 * gdw(D, 'roll') })[k] * bw(k));
-    else if (P.kind === 'hook') kind = wpick(['duck', 'block', 'pull', 'roll'], k => ({ duck: D.s.defense * gdw(D, 'duck'), block: 55 * gdw(D, 'block'), pull: D.s.footwork * .6 * gdw(D, 'pull'), roll: 22 * gdw(D, 'roll') })[k] * bw(k));
-    else kind = wpick(['block', 'pull'], k => ({ block: 60 * gdw(D, 'block'), pull: D.s.footwork * gdw(D, 'pull') })[k] * bw(k));
-    if (D.state === 'punch') { D.act = null; D.queue = []; D.state = 'idle'; }
-    D.pendingDef = { kind, at: 0.05 + (1 - D.s.speed / 100) * 0.13, dur: .34 }; D.defZ = P.zone;
-    if (D.order) this.ack(D, kind === 'block' || kind === 'roll' ? 'hands' : kind === 'pull' ? 'move' : '');
-    if (kind === 'pull') { const v = vec(D, A); D.vx = -v.ux * 55; D.vz = -v.uz * 55; D.pullX = -v.ux; D.pullZ = -v.uz; D.pullT = .22; }
-  }
-  // counter shot(s) fired off a miss or out of the guard
-  pickCounter(D, d, roll, def) {
-    const k = iqK(D);
-    if (roll) return d < 60 && R() < .35 ? ['cross', 'hook'] : ['cross'];
-    // the counter that fits the defense: slip the straight, right hand over it; duck the hook, come back up with one; pull back, step in behind a straight
-    if (def && R() < .35 + .5 * k) {
-      const c = def === 'slip' ? (d < 56 ? ['hook', 'cross'] : ['cross', 'hook']) : def === 'duck' ? (d < 50 ? ['uppercut', 'hook'] : ['hook', 'cross']) : def === 'pull' ? ['cross', 'hook'] : null;
-      if (c) return R() < .3 + .5 * k ? c : c.slice(0, 1);
-    }
-    if (d < 54) { const c = pick([['hook'], ['uppercut'], ['cross'], ['hook', 'cross'], ['uppercut', 'hook'], ['cross', 'hook']]); return R() < .4 + .4 * k ? c : c.slice(0, 1); }
-    return R() < .3 * k ? ['cross', 'hook'] : ['cross']; // slip, 2-3: the smart ones follow the counter up
+  // the spoiler sees the combo coming and ties him up (the brain does the rest of his defense)
+  spoil(D, A) {
+    if (!D.st.spoil || D.state === 'stun' || D.state === 'down' || D.state === 'clinch' || D.state === 'punch') return;
+    if (A.queue.length && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) this.startClinch(D);
   }
   resolve(A, D, a) {
     const P = PUNCH[a.type]; const d = dist(A, D);
@@ -2451,7 +2196,7 @@ class Fight {
     }
     let mult = 1, evaded = false, blocked = false, rolled = false;
     let def = D.def;
-    if (def && D.brain && D.state !== 'stun' && R() > D.defQ * AI.defQ) def = null; // late or sloppy: the brain's defense didn't come off
+    if (def && D.state !== 'stun' && R() > D.defQ * AI.defQ) def = null; // late or sloppy: the brain's defense didn't come off
     if (def === 'block' && a.look && D.defZ && D.defZ !== P.zone) def = null; // a changed ending (brain traps): he covered where it always went, it came somewhere else
     memAdd(A, A.mem.def, defKind(P), this.t, { n: 1, [D.state === 'stun' ? 'stun' : def || 'none']: 1 });
     if (def && D.state !== 'stun') {
@@ -2477,11 +2222,11 @@ class Fight {
       if (D.lostT > 0) ev *= STYLE_ANGLE.ev;
       if (P.cat !== 'jab') ev = Math.min(.7, ev + TUNE.reach * clamp((d - P.max + TUNE.reachIn) / TUNE.reachIn, 0, 1) * gf(D, 'ev')); // reaching for a power shot from the outside: he sees it coming
       ev *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
-      if (D.brain) ev *= 1 - AI.guardK * (D.bg - .6); // hands high: harder to slip, easier to catch
+      ev *= 1 - AI.guardK * (D.bg - .6); // hands high: harder to slip, easier to catch
       if (R() < ev) evaded = true;
-      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (D.brain ? 1 + AI.guardK * (D.bg - .6) : 1))) {
+      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 : 1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (1 + AI.guardK * (D.bg - .6)))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
-        D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; if (D.brain) D.defQ = AI.reflexQ; // show the guard catching it (a reflex guard on the next shot holds with chance reflexQ x defQ)
+        D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; D.defQ = AI.reflexQ; // show the guard catching it (a reflex guard on the next shot holds with chance reflexQ x defQ)
       }
     }
     if (evaded) { this.miss(A, D, a, 'evade', rolled ? 'roll' : def); return; }
@@ -2497,12 +2242,12 @@ class Fight {
     } else { A.read.land[a.type] = (A.read.land[a.type] || 0) + 1; if (A.order && orderOn(A, P)) this.teach(A); }
     let dmg = P.dmg * DMG * (0.5 + A.s.power / 100) * (0.6 + 0.4 * stamFac(A)) * lerp(1, tankF(A), STAM.tankDmg);
     if (P.cat !== 'jab') dmg *= A.st.hit || 1;
-    if (A.brain) dmg *= (1 + AI.tech * ((a.tech == null ? .75 : a.tech) - .75)) * (1 + AI.commit * ((a.commit || 0) - .4)) * A.brain.mast.force[P.cat]; // an arm punch vs one he sat down on; a novice's punch has less behind it (L2)
+    dmg *= (1 + AI.tech * ((a.tech == null ? .75 : a.tech) - .75)) * (1 + AI.commit * ((a.commit || 0) - .4)) * A.brain.mast.force[P.cat]; // an arm punch vs one he sat down on; a novice's punch has less behind it (L2)
     if (P.zone === 'body' && A.st.bodyX) dmg *= 1 + .25 * A.st.bodyX;
-    if (a.stick && !blocked && D.state !== 'stun') { D.stopT = .45; D.decT = Math.max(D.decT, .2); }
+    if (a.stick && !blocked && D.state !== 'stun') { D.stopT = .45; }
     const caught = D.state === 'punch' && !blocked;
     if (caught) dmg *= 1.3;
-    if (D.brain && !blocked) { const L = D.brain.mast; if (D.lastP && (caught || this.t - D.pEnd < .25)) dmg *= 1 + L.late[PUNCH[D.lastP].cat]; if (this.t < (D.offT || 0)) dmg *= 1 + AI.offDmg; } // his hands came back late, or he's off balance from a miss (L2)
+    if (!blocked) { const L = D.brain.mast; if (D.lastP && (caught || this.t - D.pEnd < .25)) dmg *= 1 + L.late[PUNCH[D.lastP].cat]; if (this.t < (D.offT || 0)) dmg *= 1 + AI.offDmg; } // his hands came back late, or he's off balance from a miss (L2)
     if (A.counterWin > 0 && !blocked) dmg *= 1.2;
     let crit = false;
     if (!blocked && R() < 0.05 + A.s.accuracy / 2000) { dmg *= 1.75; crit = true; }
@@ -2514,7 +2259,7 @@ class Fight {
     dmg /= tough;
     if (P.zone === 'head') { D.head -= dmg; D.headMax = Math.max(10, D.headMax - dmg * TUNE.wear); }
     else { D.body -= dmg * 1.1; D.stamMax = Math.max(30, D.stamMax - dmg * STAM.bodyHit); D.stam = Math.max(0, D.stam - dmg * .9); D.head -= dmg * .15; }
-    if (D.brain && !blocked && P.cat !== 'jab') { const fl = D.brain.mast.flinch; if (fl > 0 && R() < fl) D.flinchT = this.t + AI.flinchT; } // eyes shut on a hard one: the next one gets no defense (L2)
+    if (!blocked && P.cat !== 'jab') { const fl = D.brain.mast.flinch; if (fl > 0 && R() < fl) D.flinchT = this.t + AI.flinchT; } // eyes shut on a hard one: the next one gets no defense (L2)
     A.tot.dmg += dmg; D.tot.taken += dmg; A.rs.dmg += dmg;
     if (!blocked) memAdd(D, D.mem.hurt, a.type, this.t, { d: dmg });
     if (!blocked) {
@@ -2577,11 +2322,6 @@ class Fight {
       D.state = 'slump'; D.act = null; D.queue = []; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'unanswered' }); this.recAfter = 1.1;
       return;
     }
-    // fire back out of the guard (tap-block counter)
-    if (blocked && !D.brain && D.state !== 'punch' && D.state !== 'stun' && D.state !== 'down' && D.state !== 'clinch' && D.head > D.headMax * .3) {
-      const p = .08 * gf(D, 'ctr') * (.4 + D.s.speed / 100) * (.6 + .6 * iqK(D)) * (D.bait > 0 ? 1.7 : 1) * (.6 + D.st.counter) * ctrEdge(D) * (1 + ANT.ctr * antOn(D, a.type, this.t));
-      if (R() < p) { memAdd(A, A.mem.mine, a.type, this.t, { c: 1 }); const c = this.pickCounter(D, dist(A, D), false); D.counterWin = .4; D.def = null; D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter'); }
-    }
   }
   miss(A, D, a, why, def) {
     const P = PUNCH[a.type];
@@ -2593,23 +2333,10 @@ class Fight {
       this.emit('miss', { a: A.side, d: D.side, why, def, p: a.type, hand: ln.hand, side: ln.side, lane: ln.lane, mt });
     }
     A.lastRes = 'evaded'; A.lastDef = def || null;
-    if (A.brain) { const ob = A.brain.mast.off[P.cat]; if (ob > 0) { A.offT = this.t + ob; if (ob > .3) this.emit('offBalance', { a: A.side, p: a.type }); } } // a miss pulls a novice off his feet (L2)
+    { const ob = A.brain.mast.off[P.cat]; if (ob > 0) { A.offT = this.t + ob; if (ob > .3) this.emit('offBalance', { a: A.side, p: a.type }); } } // a miss pulls a novice off his feet (L2)
     this.bev(A, D, why === 'evade' ? 'evaded' : 'missed', { p: a.type, short: why === 'range' && dist(A, D) > P.max, def: why !== 'evade' ? null : def || (P.zone === 'head' && P.kind === 'straight' ? 'slip' : P.zone === 'head' && P.kind === 'hook' ? 'duck' : 'pull') });
     if (why === 'evade') { A.read.av[kindOf(a.type)]++; memAdd(A, A.mem.mine, a.type, this.t, { e: 1 }); if (D.order && D.order.k === 'move') this.teach(D); }
     if (why === 'evade') A.rs.made[a.type] = (A.rs.made[a.type] || 0) + 1;
-    if (why === 'evade' && !D.brain && D.state !== 'stun' && D.state !== 'down') {
-      const st = D.st, sg = sgOf(D);
-      const ch = st.counter * sg.counter * (.3 + D.s.defense / 200) * gf(D, 'ctr') * (D.bait > 0 ? 1.4 : 1) * (.85 + .3 * iqK(D)) * (def === 'roll' ? 1.15 : 1) * ctrEdge(D)
-        * (P.cat === 'jab' ? TUNE.jabCtr : 1) // a jab snaps back: much harder to counter than a missed hook
-        * (A.st.inside && dist(A, D) < STYLE_IN.at ? 1 - STYLE_IN.ctr * A.st.inside : 1); // no room to counter a man on your chest
-      const an = antOn(D, a.type, this.t); // he saw this one coming
-      if (R() < Math.min(.95, ch * (1 + ANT.ctr * an)) && D.state !== 'punch') {
-        D.counterWin = .6; D.def = null; D.pendingDef = null; memAdd(A, A.mem.mine, a.type, this.t, { c: 1 });
-        const c = this.pickCounter(D, dist(A, D), def === 'roll', def);
-        D.queue = c.slice(1); this.startPunch(D, c[0]); this.emit('counterTry', { a: D.side }); if (D.order) this.ack(D, 'counter');
-        A.lastRes = 'countered';
-      }
-    }
   }
   stun(D, quiet) {
     D.state = 'stun'; D.stunT = (.7 + R() * .9) * (1.3 - D.s.heart / 100 * .5); D.act = null; D.queue = []; D.def = null; D.pendingDef = null;
@@ -2633,7 +2360,7 @@ class Fight {
       if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt / (1 + F.warn * STYLE_SPOIL.cool * iqK(F))) this.dirtyShot(F, O);   // holding and hitting; a smart one eases off once the ref has warned him
     }
     if (this.clinchT <= 0) {
-      for (const F of this.f) { F.state = 'idle'; F.decT = .3 + R() * .3; F.resetT = 1.2; F.trapT *= .3; F.bait = 0; }
+      for (const F of this.f) { F.state = 'idle'; R(); F.resetT = 1.2; F.trapT *= .3; F.bait = 0; }
       // the ref pulls them apart and back toward the middle
       const cx = -mx * .18, cz = -mz * .18;
       A.x += cx - v.ux * 20; A.z += cz - v.uz * 20; B.x += cx + v.ux * 20; B.z += cz + v.uz * 20; this.emit('break');
@@ -2682,7 +2409,7 @@ class Fight {
         if (D.headMax < 22 || (D.kd >= 4 && R() < .6) || (D.head < 5 && R() < .4)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
         D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
         if (K.zone === 'body') D.body = Math.max(D.body, 22);
-        D.stunT = 0; D.decT = .3; A.decT = .3;
+        D.stunT = 0;
         const cm = clamp((D.x + A.x) / 2, -RING + 50, RING - 50), cz = clamp((D.z + A.z) / 2, -ZR + 30, ZR - 30), sg_ = this.f[0].x <= this.f[1].x ? 1 : -1;
         this.f[0].x = cm - 45 * sg_; this.f[1].x = cm + 45 * sg_; this.f[0].z = this.f[1].z = cz; this.ord = sg_; this.face();
         this.phase = 'fight'; this.phaseT = 0; this.kdState = null;
@@ -2735,8 +2462,8 @@ class Fight {
       F.cut = Math.max(0, F.cut - this.cutman[F.side] * CUT.cutman * rnd(.7, 1.2));
       if (F.cut < .4) F.cut = 0;
       F.kdR = 0; F.liverT = 0; F.rs = newRS(); F.hitT = 0; F.state = 'idle'; F.unanswered = 0; F.downP = 0;
-      F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.fakeT = 0; F.exitAfter = false; F.resetT = 0;
-      this.tempoStart(F, false); this.exP = 0;
+      F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.bait = 0; F.baitR = 0; F.slideT = 0; F.spin = false; F.esc = null; F.resetT = 0;
+      R(); this.exP = 0; // the old AI's feel-out roll (same.js hash)
       // memory fades a bit between rounds, the most recent round counts most
       const Rd = F.read; for (const g of [Rd.th, Rd.av, Rd.thr, Rd.land]) for (const k in g) g[k] *= .6; Rd.reacts *= .6; Rd.feints *= .6;
       for (const k in Rd.les) Rd.les[k] *= TEACH.keep; Rd.lv++;
@@ -2754,7 +2481,7 @@ class Fight {
     A.strategy = stratA || 'auto'; B.strategy = stratB || 'auto'; A.order = B.order = null;
     for (const F of this.f) for (const k in F.used) F.used[k] *= .6; // the other corner adjusts, but he forgets some of it over the break
     this.round++; this.clock = 0; this.phase = 'intro2'; this.phaseT = 0;
-    for (const F of this.f) if (F.brain) { F.brain.rest({ round: this.round - 1 }); F.brain.roundStart(this.round); F.bev = []; F.binfo = null; }
+    for (const F of this.f) { F.brain.rest({ round: this.round - 1 }); F.brain.roundStart(this.round); F.bev = []; F.binfo = null; }
     this.emit('nextRound');
     return true;
   }
@@ -4545,7 +4272,7 @@ ACT.nextRound = () => {
 };
 
 /* ---------- the fight: straight in, random or picked fighters ---------- */
-const LAB = { div: 'r', a: 'r', b: 'r', ga: 'auto', gb: 'auto', rounds: 6, last: null, open: false, ba: AI.brain, bb: AI.brain }; // ba/bb: the boxer brain (1) or the old engine AI (0) per side
+const LAB = { div: 'r', a: 'r', b: 'r', ga: 'auto', gb: 'auto', rounds: 6, last: null, open: false };
 const LAB_STYLE_KEYS = Object.keys(STYLES);
 function labPickOpts(sel) {
   return `<option value="r"${sel === 'r' ? ' selected' : ''}>Random</option>
@@ -4581,7 +4308,7 @@ function labFight(L) {
   if (rafId) cancelAnimationFrame(rafId);
   Comm.stop && Comm.stop();
   const A = labSheet(L.A), B = labSheet(L.B), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
-  F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6, brain: [LAB.ba, LAB.bb] });
+  F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6 });
   FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null };
   const ta = gearItem('trunks', A.look.trunks).c;
   if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
@@ -4617,7 +4344,6 @@ function labBar(L) {
       <div class="labf"><b>Rounds</b><select onchange="LAB.rounds=+this.value">${[4, 6, 8, 10, 12].map(n => `<option${LAB.rounds === n ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
       <div class="labf"><b>Left</b><select onchange="LAB.a=this.value">${labPickOpts(LAB.a)}</select><select onchange="LAB.ga=this.value">${labGuardOpts(LAB.ga)}</select></div>
       <div class="labf"><b>Right</b><select onchange="LAB.b=this.value">${labPickOpts(LAB.b)}</select><select onchange="LAB.gb=this.value">${labGuardOpts(LAB.gb)}</select></div>
-      <div class="labf"><b>AI</b>${['ba', 'bb'].map(k => `<select onchange="LAB.${k}=+this.value"><option value="0"${LAB[k] ? '' : ' selected'}>Old AI</option><option value="1"${LAB[k] ? ' selected' : ''}>Brain</option></select>`).join('')}</div>
       <p class="mute small">Pick, then New fight. Random keeps rolling new men; a P4P star brings his own weight class.</p>
     </div></div>`;
 }
