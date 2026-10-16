@@ -2459,7 +2459,7 @@ class Fight {
     switch (k) {
       case 'jab': return clamp(Math.max(((holes.jab || 1) - 1) * 2.5, /swarmer|slugger/.test(style(O)) ? .5 : 0, O.cutting ? .7 : 0, hurt(F) ? 0 : .1), 0, 1);
       case 'body': return clamp(Math.max(((holes.bodyHook || 1) - 1) * 1.4, O.body < 60 ? .8 : 0, gas(O) < .5 ? .7 : 0), 0, 1);
-      case 'press': return clamp(Math.max(hurt(O) ? 1 : 0, gas(O) < .45 ? .8 : 0, this.trapped(O) ? .9 : 0, O.headMax < 60 ? .6 : 0, this.worker(F, 1) && /outboxer|angle|jabgrab/.test(style(O)) ? .6 : 0) * (hurt(F) ? .3 : 1), 0, 1);
+      case 'press': return clamp(Math.max(hurt(O) ? 1 : 0, gas(O) < .45 ? .8 : 0, this.trapped(O) ? .6 : 0, O.headMax < 60 ? .6 : 0) * (hurt(F) ? .3 : 1), 0, 1);
       case 'counter': return clamp(Math.max((pace(O) - 60) / 30, /pressure|ko/.test(O.strategy) ? .7 : 0, /swarmer|slugger/.test(style(O)) ? .5 : 0), 0, 1);
       case 'move': return clamp(Math.max(this.trapped(F) ? .9 : 0, gas(F) < .45 ? .7 : 0, O.cutting ? .45 : 0, hurt(F) ? .5 : 0), 0, 1);
       case 'up': return clamp(Math.max(pace(O) - pace(F) > 12 ? .7 : 0, gas(O) < .45 && gas(F) > .6 ? .75 : 0, this.round > this.rounds - 3 && (F.side === 0 ? this.lead < 0 : this.lead > 0) ? .8 : 0) * (gas(F) < .35 ? .3 : 1), 0, 1); // he's being outworked, the other man is fading, or he's behind late
@@ -2486,7 +2486,7 @@ class Fight {
     if (best && !(o && o.k === best && o.t > 6) && this.shout(F.side, best)) F.aiT = this.t + AIC.gap;
     else F.aiT = this.t + AIC.look;
   }
-  worker(F, at) { return ((STYLES[F.sk] || {}).aggr || 1) > (at != null ? at : AIC.workAggr); } // a pressure man (over 1: cut off the mover; over workAggr: built to work tired)
+  worker(F) { return ((STYLES[F.sk] || {}).aggr || 1) > AIC.workAggr; } // swarmer, volume puncher: output is the game
   // AI corner logic for any side: reads the fight like the player's corner does (cards, hurt, gas both ways, last round's work, the ropes)
   aiStrategy(side) {
     const F = this.f[side], O = F.op, A = AIC.plan;
