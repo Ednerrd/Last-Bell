@@ -1468,6 +1468,72 @@ const STYLE_PLANS = {
   switch: { auto: 6, counter: 1, move: 1 }, body: { auto: 6, body: 3, pressure: 1 }, pboxer: { auto: 6, pressure: 3 },
   spoiler: { auto: 6, counter: 2, move: 1 }, jabgrab: { auto: 6, move: 2 }, feinter: { auto: 6, counter: 1, move: 1 }
 };
+// a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
+function orderPow(F) { const o = F.order; if (!o) return 0; const f = o.fit - SHOUT_EDGE.bar; return o.q * (f < 0 ? f * SHOUT_EDGE.bad : f) * Math.min(1, o.t / (SHOUT_LEN * .3)); }
+function orderOn(A, P) { const k = A.order.k; return k === 'jab' ? P.cat === 'jab' : k === 'body' ? P.zone === 'body' : k === 'press' ? P.cat === 'power' : k === 'counter' ? A.counterWin > 0 : false; }
+function atkEdge(A, P) { return A.order && orderOn(A, P) ? orderPow(A) * SHOUT_EDGE.atk : 0; }
+function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 'hands') ? orderPow(D) * SHOUT_EDGE.def : 0; }
+// who learns from the corner: ring IQ, and above all experience (a kid in his 3rd fight vs a man in his 25th)
+function teachK(F) { return clamp(.15 + .45 * iqK(F) + .4 * Math.min(1, Math.sqrt(F.sheet.exp || 0) / 5), 0, 1); }
+
+const rdScore = F => F.rs.landedPow * 1.0 + F.rs.landedJab * .45 + F.rs.landedBody * .75 + F.rs.dmg * .07 + F.rs.thrown * .025 + F.rs.ctrl * .015; // what the judges see in a round
+const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14; // XGAP: closest they get in x, so the left-right order holds
+
+/* ---------- TUNING: the balance knobs in one place (combat, damage, cuts, gas, body, the brain on this engine, skill sheet, corner, style tricks) ----------
+   Content tables live with their code: PUNCH, STYLES, GUARDS (+ GUARD_HOLES, STYLE_GUARDS), STRATS, SHOUTS, STYLE_PLANS. The brain's own knobs: BoxerBrain.BR in
+   brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
+const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
+let DMG = 0.38; // global tuning
+const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
+// gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
+// A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
+const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg: .5, heavy: .6 }; // bodyHit: tank lost per point of body damage. heavy: power shots with weight behind them (hit) cost more
+// body shots that end things. Liver: a shot to his right side (orthodox lead hook, southpaw straight left) folds him a beat later,
+// awake but he can't beat the count. Wind: a straight in the gut freezes him, hands down, the gas goes. Both need a real shot (danger
+// over a floor) and grow as the body wears and with a weak body stat; a counter or a man walking in doubles it.
+// Kill the body: a worn body slows his feet (legs) and drops his elbows, so head shots get through his guard more (elbows)
+const BODY = { legs: .2, elbows: 0, liver: .003, lAt: 1.2, delay: .35, up: .35, wind: .035, wAt: .8, windT: .9, gasHit: 25 };
+// how far out the arm is when it lands. Straights need the arm out: jammed or half out has no weight behind it, the sweet spot is
+// just short of locking out, reaching at the very end of his range loses a little again. Hooks and uppercuts are short punches
+// (the power comes from the turn, not the reach): only fully jammed or overreaching costs them. ext 0 = the punch's min range, 1 = its max
+const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, shortLo: .85, k: 1.047, swap: .25 };
+const AI = {
+  pace: CLOCK,     // the engine's rounds run 3x the sim clock: the brain squeezes moods, memory and intent modes to match
+  reflexQ: .5,     // a passive block's guard, if the next shot comes inside .16 s
+  defQ: 1.5,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
+  guardK: .3,      // how much the brain's hands (high/low) move passive block and evasion
+  tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
+  out: .5,         // per second, times the style's out: an out-boxer crowded inside slides out
+  odd: .5,         // how much later the brain sees an awkward man's punches (negative tell: odd .6 = ~.05 s)
+  offDmg: .2, flinchT: .35, // L2: off balance from a miss, he takes this much more; a flinch shuts his eyes this long (s)
+  esc: 2.2,        // per second: how often a man on the ropes with his feet working pivots out (times lateral and ropes skill)
+  escCut: .6,      // how much a man cutting the ring off (by his cutoff skill) takes the pivot away
+  escSync: 1,      // 1 = after a pivot off the ropes the brain keeps circling the way he pivoted (else his old direction can steer him back)
+  lean: .8,        // how much of the brain style's skill lean goes on top of the stats
+  skill: -8,       // added to every skill (rating 82 lands in Pro, not World class)
+  // the brain's own knobs for this engine (BoxerBrain.BR), set when a fight starts. The engine's punches land faster than the dummy ring's
+  // (a jab lands ~.15 s after it starts), so the eyes are quicker; the rounds are denser, so the hands go more
+  br: { react: [.2, .07], ctrP: [.04, .4], throwP: .12, feintP: .1 }
+};
+const SKL = {
+  noise: 6,                                   // how uneven one man's skills are around his level
+  walkIn: {                                   // c: level center; lean: skills he's better or worse at; know: how much he has seen
+    beginner:   { c: 34, know: .12 },                                                                                  // raw: Novice everywhere
+    journeyman: { c: 56, lean: { clinch: 14, ropes: 12, pacing: 12, block: 6, power: -4, cutoff: -4 }, know: .6 },      // Intermediate, Pro at surviving
+    veteran:    { c: 74, lean: { read: 8, adjust: 8, clinch: 8, pacing: 6, counter: 4, footwork: -8, angles: -4, slip: -4 }, know: .8 }, // Pro, the legs fading
+    ranked:     { c: 82, lean: { adjust: -10, read: -2 }, know: .65 }                                                  // Pro/World class, set in his ways
+  },
+  // from a record: fights teach (saturates), winning says he learned it, the body/rating a little (level comes from skills, not the body)
+  rec: { base: 30, exp: 34, expK: 15, win: 36, rating: .5, rMid: 78, lo: 20, hi: 92 },
+  knowK: 12, rare: .6, south: .55             // fights to see most styles; specials and southpaws are seen less (scarcity is the edge)
+};
+const SHOUT_LEN = 14;
+const SHOUT_EDGE = { atk: .6, def: .5, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit. Below bar the call hurts
+// the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
+// Since the old AI went (Oct 16) the lessons (F.read.les) only feed the 'learned' commentary: nothing in the brain reads them yet.
+// step: how much one payoff teaches (times how well he took the call and teachK), keep: what survives the break
+const TEACH = { step: .18, keep: .7 };
+const TEMPO = { at: .3 }; // an exchange is over when the ring has been quiet this long (sim s)
 const STYLE_IN = { at: 54, ev: .4, ctr: .65 };
 const STYLE_ANGLE = { check: .5, p: .17, lost: .32, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
 const STYLE_SWAP = { every: 22, lost: .15 };                                // switch-hitter: ~every 16 sim-s (48s of clock), read halved
@@ -1475,24 +1541,9 @@ const STYLE_SPOIL = { tie: .07, dirty: .5, foul: .07, lean: 2, wear: 6, cool: 1.
 const STYLE_GRAB = { lean: 5.5 };                                             // jab-and-grab: stamina drain/s on the man held
 const STYLE_BITE = { t: 1.2, edge: 1.5 };                                     // feint master: he bit, the next real shot finds him committed
 const STYLE_OUT = { gap: 10, p: 1.6 };
-const TEMPO = { at: .3 }; // an exchange is over when the ring has been quiet this long (sim s)
 const STYLE_OPEN = { edge: .45 }, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
-const SHOUT_LEN = 14;
-const SHOUT_EDGE = { atk: .6, def: .5, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit. Below bar the call hurts
-// a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
-function orderPow(F) { const o = F.order; if (!o) return 0; const f = o.fit - SHOUT_EDGE.bar; return o.q * (f < 0 ? f * SHOUT_EDGE.bad : f) * Math.min(1, o.t / (SHOUT_LEN * .3)); }
-function orderOn(A, P) { const k = A.order.k; return k === 'jab' ? P.cat === 'jab' : k === 'body' ? P.zone === 'body' : k === 'press' ? P.cat === 'power' : k === 'counter' ? A.counterWin > 0 : false; }
-function atkEdge(A, P) { return A.order && orderOn(A, P) ? orderPow(A) * SHOUT_EDGE.atk : 0; }
-function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 'hands') ? orderPow(D) * SHOUT_EDGE.def : 0; }
-// the corner as a teacher: a call that pays off while he is doing it sticks after the shout fades.
-// Since the old AI went (Oct 16) the lessons (F.read.les) only feed the 'learned' commentary: nothing in the brain reads them yet.
-// step: how much one payoff teaches (times how well he took the call and teachK), keep: what survives the break
-const TEACH = { step: .18, keep: .7 };
-// who learns from the corner: ring IQ, and above all experience (a kid in his 3rd fight vs a man in his 25th)
-function teachK(F) { return clamp(.15 + .45 * iqK(F) + .4 * Math.min(1, Math.sqrt(F.sheet.exp || 0) / 5), 0, 1); }
+/* ---------- end TUNING ---------- */
 
-const rdScore = F => F.rs.landedPow * 1.0 + F.rs.landedJab * .45 + F.rs.landedBody * .75 + F.rs.dmg * .07 + F.rs.thrown * .025 + F.rs.ctrl * .015; // what the judges see in a round
-const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14; // XGAP: closest they get in x, so the left-right order holds
 // 2D ring: x is left/right on screen, z is depth (+ toward camera)
 function vec(F, O) { const dx = O.x - F.x, dz = O.z - F.z, d = Math.hypot(dx, dz) || 1; return { ux: dx / d, uz: dz / d, d }; }
 function dist(A, B) { return Math.hypot(B.x - A.x, B.z - A.z); }
@@ -1504,10 +1555,7 @@ function freeRun(x, z, dx, dz) {
   if (dz > 1e-3) t = Math.min(t, (ZR - z) / dz); else if (dz < -1e-3) t = Math.min(t, (-ZR - z) / dz);
   return Math.max(0, t);
 }
-let DMG = 0.38; // global tuning
-const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
 
-const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
 function cutChance(D, dmg, crit) {
   const size = dmg / 4, wear = 1 - D.headMax / 100;
   let p = (CUT.fresh + CUT.worn * Math.pow(wear, CUT.wearPow)) * size * size;
@@ -1516,10 +1564,6 @@ function cutChance(D, dmg, crit) {
   return Math.min(.35, p);
 }
 function effChin(F) { return Math.max(15, F.s.chin - (F.sheet.wear || 0) * 0.1); }
-// how far out the arm is when it lands. Straights need the arm out: jammed or half out has no weight behind it, the sweet spot is
-// just short of locking out, reaching at the very end of his range loses a little again. Hooks and uppercuts are short punches
-// (the power comes from the turn, not the reach): only fully jammed or overreaching costs them. ext 0 = the punch's min range, 1 = its max
-const EXT = { on: 1, lo: .75, peak: 1.1, at: .85, end: .92, shortLo: .85, k: 1.047, swap: .25 };
 function extRaw(P, d) {
   const e = (d - P.min) / (P.max - P.min);
   if (P.kind !== 'straight') return e <= 0 ? EXT.shortLo : e > 1 ? EXT.end : 1;
@@ -1528,14 +1572,6 @@ function extRaw(P, d) {
 // how well a punch fits the distance, against its own best (1 = sweet spot): the AI reads this before he throws
 const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
-// gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
-// A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
-const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg: .5, heavy: .6 }; // bodyHit: tank lost per point of body damage. heavy: power shots with weight behind them (hit) cost more
-// body shots that end things. Liver: a shot to his right side (orthodox lead hook, southpaw straight left) folds him a beat later,
-// awake but he can't beat the count. Wind: a straight in the gut freezes him, hands down, the gas goes. Both need a real shot (danger
-// over a floor) and grow as the body wears and with a weak body stat; a counter or a man walking in doubles it.
-// Kill the body: a worn body slows his feet (legs) and drops his elbows, so head shots get through his guard more (elbows)
-const BODY = { legs: .2, elbows: 0, liver: .003, lAt: 1.2, delay: .35, up: .35, wind: .035, wAt: .8, windT: .9, gasHit: 25 };
 function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
 // a worn tank: less on his punches, slower hands, less output (his defense rides the gas he has right now, stamFac)
 function tankF(F) { return 1 - STAM.tank * (1 - F.stamMax / 100); }
@@ -1582,24 +1618,6 @@ function laneOf(A, P) {
 }
 /* ---------- the boxer brain (brain/brain.js, inlined above): every man thinks with BoxerBrain (the old engine AI was retired Oct 16) ----------
    The engine keeps the body: footwork physics, hit math, rope escapes, the special styles' tricks. */
-const AI = {
-  pace: CLOCK,     // the engine's rounds run 3x the sim clock: the brain squeezes moods, memory and intent modes to match
-  reflexQ: .5,     // a passive block's guard, if the next shot comes inside .16 s
-  defQ: 1.5,       // a brain defense works with chance quality x this (else it is botched and the passive guard is all he has)
-  guardK: .3,      // how much the brain's hands (high/low) move passive block and evasion
-  tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
-  out: .5,         // per second, times the style's out: an out-boxer crowded inside slides out
-  odd: .5,         // how much later the brain sees an awkward man's punches (negative tell: odd .6 = ~.05 s)
-  offDmg: .2, flinchT: .35, // L2: off balance from a miss, he takes this much more; a flinch shuts his eyes this long (s)
-  esc: 2.2,        // per second: how often a man on the ropes with his feet working pivots out (times lateral and ropes skill)
-  escCut: .6,      // how much a man cutting the ring off (by his cutoff skill) takes the pivot away
-  escSync: 1,      // 1 = after a pivot off the ropes the brain keeps circling the way he pivoted (else his old direction can steer him back)
-  lean: .8,        // how much of the brain style's skill lean goes on top of the stats
-  skill: -8,       // added to every skill (rating 82 lands in Pro, not World class)
-  // the brain's own knobs for this engine (BoxerBrain.BR), set when a fight starts. The engine's punches land faster than the dummy ring's
-  // (a jab lands ~.15 s after it starts), so the eyes are quicker; the rounds are denser, so the hands go more
-  br: { react: [.2, .07], ctrP: [.04, .4], throwP: .12, feintP: .1 }
-};
 // special styles think like the nearest base style, with their own taste on top (the engine keeps their tricks)
 // [base, trait lean, skill lean]. Volume works in bunches from mid range (chest to chest his light hands lose the trades);
 // the body snatcher waits for the dig instead of walking onto counters (both Oct 14: volume 46 -> 53.5, body 44 -> ~50).
@@ -1634,18 +1652,6 @@ function brainProfile(F) {
    sheet.sk:   mastery per brain skill, 0..100 on the brain's scale (BoxerBrain.TIERS: Novice under 46, Intermediate 46+, Pro 66+, World class 84+)
    sheet.know: familiarity 0..1, { style: {outboxer: .6, ...every STYLES key}, stance: {orthodox, southpaw} }. The brain reads it about the other man (L3, famOf, BoxerBrain.BR.fam)
    The level is read off sheet.sk (levelOf). A sheet without sk fights as before: the brain reads his skills off the body */
-const SKL = {
-  noise: 6,                                   // how uneven one man's skills are around his level
-  walkIn: {                                   // c: level center; lean: skills he's better or worse at; know: how much he has seen
-    beginner:   { c: 34, know: .12 },                                                                                  // raw: Novice everywhere
-    journeyman: { c: 56, lean: { clinch: 14, ropes: 12, pacing: 12, block: 6, power: -4, cutoff: -4 }, know: .6 },      // Intermediate, Pro at surviving
-    veteran:    { c: 74, lean: { read: 8, adjust: 8, clinch: 8, pacing: 6, counter: 4, footwork: -8, angles: -4, slip: -4 }, know: .8 }, // Pro, the legs fading
-    ranked:     { c: 82, lean: { adjust: -10, read: -2 }, know: .65 }                                                  // Pro/World class, set in his ways
-  },
-  // from a record: fights teach (saturates), winning says he learned it, the body/rating a little (level comes from skills, not the body)
-  rec: { base: 30, exp: 34, expK: 15, win: 36, rating: .5, rMid: 78, lo: 20, hi: 92 },
-  knowK: 12, rare: .6, south: .55             // fights to see most styles; specials and southpaws are seen less (scarcity is the edge)
-};
 const gaussW = rng => { const u = Math.max(1e-9, rng()), v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * v); };
 // mastery per skill around a level center: his style's strengths and holes, a walk-in type's leans, a little noise
 function skMake(c, style, rng, lean) {
