@@ -1468,6 +1468,22 @@ const STYLE_PLANS = {
   switch: { auto: 6, counter: 1, move: 1 }, body: { auto: 6, body: 3, pressure: 1 }, pboxer: { auto: 6, pressure: 3 },
   spoiler: { auto: 6, counter: 2, move: 1 }, jabgrab: { auto: 6, move: 2 }, feinter: { auto: 6, counter: 1, move: 1 }
 };
+// the officials (docs/DRAMA.md): made-up characters, types fans know, no real officials. Three judges and a ref per fight.
+// A judge's taste re-weighs what he sees in a round (judgeScore: pow, jab, body, thrown, ctrl = ring generalship, def = his misses the man slipped, fwd = time the man had him on the ropes); noise: how far off his own cards wander.
+// A ref's stop dial: +1 early, 0 on time, -1 late (the unanswered-punches stop and the check after the count). hold: how long he lets a clinch go; holdN: clinches started in a round before he warns for holding.
+const JUDGES = [
+  { name: 'Wanda Wideman', taste: 'loves the busier man', w: { thrown: 3, jab: 1.2 }, noise: 1.5 },
+  { name: 'Walt Levelhead', taste: 'steady, scores clean punching', w: {}, noise: .7 },
+  { name: 'Priya Tallyworth', taste: 'counts clean punches and defense', w: { thrown: .3, def: 1 }, noise: .9 },
+  { name: 'Monty Command', taste: 'ring generalship', w: { ctrl: 4 }, noise: 1 },
+  { name: 'Rocco Forward', taste: 'rewards the man coming forward', w: { fwd: 1, thrown: 1.5 }, noise: 1 }
+];
+const REFS = [
+  { name: 'Clarence Breakwell', style: 'on time, breaks fast', stop: 0, hold: .75, holdN: 8, dirty: 1 },
+  { name: 'Hank Lettum', style: 'lets them fight', stop: -1, hold: 1.35, holdN: 99, dirty: .6 },
+  { name: 'Norma Rulebrook', style: 'strict, warns early', stop: 0, hold: 1, holdN: 4, dirty: 1.6 },
+  { name: 'Teddy Quickhook', style: 'quick to stop it', stop: 1, hold: 1, holdN: 8, dirty: 1 }
+];
 // a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
 function orderPow(F) { const o = F.order; if (!o) return 0; const f = o.fit - SHOUT_EDGE.bar; return o.q * (f < 0 ? f * SHOUT_EDGE.bad : f) * Math.min(1, o.t / (SHOUT_LEN * .3)); }
 function orderOn(A, P) { const k = A.order.k; return k === 'jab' ? P.cat === 'jab' : k === 'body' ? P.zone === 'body' : k === 'press' ? P.cat === 'power' : k === 'counter' ? A.counterWin > 0 : false; }
@@ -1476,13 +1492,15 @@ function defEdge(D) { const o = D.order; return o && (o.k === 'move' || o.k === 
 // who learns from the corner: ring IQ, and above all experience (a kid in his 3rd fight vs a man in his 25th)
 function teachK(F) { return clamp(.15 + .45 * iqK(F) + .4 * Math.min(1, Math.sqrt(F.sheet.exp || 0) / 5), 0, 1); }
 
-const rdScore = F => F.rs.landedPow * 1.0 + F.rs.landedJab * .45 + F.rs.landedBody * .75 + F.rs.dmg * .07 + F.rs.thrown * .025 + F.rs.ctrl * .015; // what the judges see in a round
+// what a judge sees in a round, through his taste (JUDGES w: x on a part; w {} = the plain score; def and fwd only count for judges who look for them)
+const judgeScore = (F, w) => F.rs.landedPow * (w.pow || 1) + F.rs.landedJab * .45 * (w.jab || 1) + F.rs.landedBody * .75 * (w.body || 1) + F.rs.dmg * .07 + F.rs.thrown * .025 * (w.thrown != null ? w.thrown : 1) + F.rs.ctrl * .015 * (w.ctrl || 1)
+  + (w.def || 0) * .12 * Object.values(F.op.rs.made).reduce((a, b) => a + b, 0) + (w.fwd || 0) * .12 * F.op.rs.trap;
 const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30, XGAP = 14; // XGAP: closest they get in x, so the left-right order holds
 
 /* ---------- TUNING: the balance knobs in one place (combat, damage, cuts, gas, body, the brain on this engine, skill sheet, corner, style tricks) ----------
    Content tables live with their code: PUNCH, STYLES, GUARDS (+ GUARD_HOLES, STYLE_GUARDS), STRATS, SHOUTS, STYLE_PLANS. The brain's own knobs: BoxerBrain.BR in
    brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
-const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, jLean: .7, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
+const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
 let DMG = 0.38; // global tuning
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
@@ -1612,7 +1630,7 @@ function mkF(sheet, side) {
     read: { les: {}, lv: 0 } // les: what the corner taught him this fight (teach()), lv: lessons counter
   };
 }
-function newRS() { return { ded: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
+function newRS() { return { ded: 0, cl: 0, thrown: 0, landedJab: 0, landedPow: 0, landedBody: 0, dmg: 0, kd: 0, thrownPow: 0, ctrl: 0, trap: 0, home: {}, homeSaid: {}, over: {}, ctrL: 0, made: {} }; } // over: what he landed while the other man was punching (keyed by the other man's punch); made: his misses the other man slipped, by punch
 
 // where a punch comes from and where it arrives, for the render (3D) and the commentary. Recording only: no dice
 // hand: the attacker's L/R. side: the defender's side it arrives on. lane: center (straights), outside (hooks), under (uppercuts)
@@ -1706,7 +1724,9 @@ class Fight {
     this.round = 1; this.clock = 0; this.phase = 'intro'; this.phaseT = 0; this.t = 0;
     this.events = []; this.result = null; this.cards = [[], [], []];
     this.judgeBias = [0, 0, 0]; this.robbery = false;
-    this.judgeLean = [0, 1, 2].map(() => gauss() * TUNE.jLean); // each judge's taste: some like pressure, some like clean boxing
+    // the officials: three judges off the list and a ref (opts.judges [i,i,i] / opts.ref i pin them, for tests and the card)
+    const jx = JUDGES.map((_, i) => i); this.judges = opts.judges ? opts.judges.map(i => JUDGES[i]) : [0, 1, 2].map(() => JUDGES[jx.splice(ri(0, jx.length - 1), 1)[0]]);
+    this.ref = REFS[opts.ref != null ? opts.ref : ri(0, REFS.length - 1)];
     if (R() < 0.02) { this.judgeBias[ri(0, 2)] = (R() < .5 ? 1 : -1) * 2.6; this.robbery = true; }
     this.kdState = null; this.clinchT = 0; this.rec = []; this.replay = null; this.recAfter = 0;
     this.roundLog = []; this.stepEv = [];
@@ -2253,7 +2273,8 @@ class Fight {
         }
       }
     }
-    if (D.unanswered >= 5 && R() < .2 + (D.unanswered - 5) * .15) {
+    const stopAt = 5 - this.ref.stop; // a quick-hook ref stops it a punch sooner, a let-them-fight ref one later
+    if (D.unanswered >= stopAt && R() < .2 + (D.unanswered - stopAt) * .15) {
       D.state = 'slump'; D.act = null; D.queue = []; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'unanswered' }); this.recAfter = 1.1;
       return;
     }
@@ -2280,7 +2301,8 @@ class Fight {
   startClinch(F) {
     const O = F.op; if (O.state === 'down') return;
     for (const X of this.f) { X.state = 'clinch'; X.act = null; X.queue = []; X.def = null; X.pendingDef = null; X.vx = X.vz = 0; X.slideT = 0; X.esc = null; X.spin = false; X.liverT = 0; }
-    this.clinchT = 1.1 + R() * 1.2; this.clinchBy = F.side; this.emit('clinch', { c: F.side, lean: !!F.st.grab });
+    this.clinchT = (1.1 + R() * 1.2) * this.ref.hold; this.clinchBy = F.side; this.emit('clinch', { c: F.side, lean: !!F.st.grab });
+    if (++F.rs.cl >= this.ref.holdN && F.rs.cl % this.ref.holdN === 0) this.foul(F, F.op, 'hold'); // too much holding: a strict ref has words
   }
   updateClinch(dt) {
     const [A, B] = this.f; this.clinchT -= dt;
@@ -2292,7 +2314,7 @@ class Fight {
       const lean = (F.st.grab && this.clinchBy === F.side ? STYLE_GRAB.lean * F.st.grab : 0) + (F.st.spoil ? STYLE_SPOIL.lean * F.st.spoil : 0);
       if (lean) O.stam = Math.max(0, O.stam - lean * dt);                                   // leaning his weight on him
       if (F.st.spoil) O.work = (O.work || 0) + STYLE_SPOIL.lean * STYLE_SPOIL.wear * F.st.spoil * dt; // carrying a veteran's weight wears the tank
-      if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt / (1 + F.warn * STYLE_SPOIL.cool * iqK(F))) this.dirtyShot(F, O);   // holding and hitting; a smart one eases off once the ref has warned him
+      if (F.st.spoil && R() < STYLE_SPOIL.dirty * F.st.spoil * dt / (1 + F.warn * STYLE_SPOIL.cool * this.ref.dirty * iqK(F))) this.dirtyShot(F, O);   // holding and hitting; a smart one eases off once the ref has warned him
     }
     if (this.clinchT <= 0) {
       for (const F of this.f) { F.state = 'idle'; R(); F.resetT = 1.2; F.trapT *= .3; }
@@ -2305,12 +2327,14 @@ class Fight {
   dirtyShot(F, O) {
     const dmg = PUNCH.hook.dmg * DMG * .35 * (0.5 + F.s.power / 100) * rnd(.7, 1.2) / (0.55 + effChin(O) / 100 * .9);
     O.head = Math.max(1, O.head - dmg); F.rs.dmg += dmg; F.rs.landedPow++; F.tot.landed.power++; F.tot.thrown.power++; F.rs.thrown++; F.rs.thrownPow++; O.hitT = .6; O.hitZone = 'head'; O.hitKind = 'hook'; O.hitPow = .3; O.hitQ = 'smothered';
-    if (R() < STYLE_SPOIL.foul) {
-      F.warn++;
-      const ded = F.warn >= 3 && R() < .5;
-      if (ded) F.rs.ded++;
-      this.emit('foul', { a: F.side, d: O.side, ded });
-    }
+    if (R() < STYLE_SPOIL.foul * this.ref.dirty) this.foul(F, O, 'dirty');
+  }
+  // the ref warns him (holding and hitting, or just holding); the third warning on can cost a point
+  foul(F, O, why) {
+    F.warn++;
+    const ded = F.warn >= 3 && R() < .5;
+    if (ded) F.rs.ded++;
+    this.emit('foul', { a: F.side, d: O.side, ded, why });
   }
   knockdown(D, A, zone, liver) {
     D.state = 'down'; D.downP = 0; D.act = null; D.queue = []; D.def = null; D.pendingDef = null; D.vx = D.vz = 0; D.stunT = 0; D.slideT = 0; D.esc = null; D.spin = false;
@@ -2341,7 +2365,7 @@ class Fight {
       if (K.getUp !== null && K.count >= K.getUp && !K.rising && !K.standing) { K.rising = true; this.emit('rising', { d: D.side, n: K.count }); }
       if (K.count >= 10 && !K.standing) { this.end(A.side, 'KO'); return; }
       if (K.standing && K.count >= 8) {
-        if (D.headMax < 22 || (D.kd >= 4 && R() < .6) || (D.head < 5 && R() < .4)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
+        if (D.headMax < 22 + 4 * this.ref.stop || (D.kd >= 4 && R() < .6) || (D.head < 5 + 2 * this.ref.stop && R() < .4)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
         D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
         if (K.zone === 'body') D.body = Math.max(D.body, 22);
         D.stunT = 0;
@@ -2365,11 +2389,11 @@ class Fight {
   scoreRound() {
     const [A, B] = this.f;
     // ring generalship (controlling where the fight happens) is a small nod, not a round-winner on its own
-    const sa = rdScore(A), sb = rdScore(B);
+    const J = this.judges;
     const log = { r: this.round, a: Object.assign({}, A.rs), b: Object.assign({}, B.rs), cards: [] };
     const shared = gauss() * TUNE.jNoise * TUNE.jShare;
     for (let j = 0; j < 3; j++) {
-      const diff = sa - sb + shared + gauss() * TUNE.jNoise * (1 - TUNE.jShare) + this.judgeBias[j] + this.judgeLean[j];
+      const diff = judgeScore(A, J[j].w) - judgeScore(B, J[j].w) + shared + gauss() * TUNE.jNoise * (1 - TUNE.jShare) * J[j].noise + this.judgeBias[j];
       let pa = 10, pb = 10;
       if (Math.abs(diff) < TUNE.evenAt && R() < TUNE.even) { /* even */ }
       else if (diff > 0) pb = 9; else pa = 9;

@@ -34,7 +34,7 @@ for (let i = 0; i < N; i++) {
   rds.forEach((x, j) => { if (x.partial) return; lead += x.d; const s = Math.sign(Math.round(lead * 3)); if (s && sgn && s !== sgn) { ch++; if (j >= ROUNDS - 3) chLate++; } if (s) sgn = s; if (j + 1 === H) half = lead; });
   let lost = null; // rounds the winner lost, the judges' average (decisions)
   if (r.decision && r.winner >= 0) lost = rds.filter(x => !x.partial).reduce((s, x) => s + x.cards.filter(c => (r.winner === 0 ? c[1] > c[0] : c[0] > c[1])).length / 3, 0);
-  out.push({ gap, dec: r.decision ? 1 : 0, rd: rds.length, ch, chLate, half: half == null ? null : Math.round(half * 3) / 3, win: r.winner, lost,
+  out.push({ ref: f.ref ? f.ref.name : '', judges: f.judges ? f.judges.map(j => j.name.split(' ')[0]).join(',') : '', gap, dec: r.decision ? 1 : 0, rd: rds.length, ch, chLate, half: half == null ? null : Math.round(half * 3) / 3, win: r.winner, lost,
     mom: rds.map((x, j) => mom[j + 1] ? Object.keys(mom[j + 1]).join('') : ''), thr: rds.map(x => x.thr), pow: rds.map(x => x.pow) });
 }
 if (process.env.TAG) fs.appendFileSync(OUT(process.env.TAG), JSON.stringify({ fights: out }) + '\n');
@@ -53,6 +53,8 @@ function report(L, only) {
   let mr = 0, dead = 0; const kinds = {};
   for (const f of L) f.mom.forEach((m, j) => { if (m) { mr++; for (const c of m.match(/kd|hurt|cut|doc|stop/g) || []) kinds[c] = (kinds[c] || 0) + 1; } else if (f.thr[j] < DEAD.thr && f.pow[j] < DEAD.pow) dead++; });
   console.log(`rounds with a moment ${p(mr, rounds)} (${(10 * mr / rounds).toFixed(1)} per 10 rounds; ${Object.entries(kinds).map(([k, v]) => k + ' ' + v).join(', ')}) | dead rounds ${p(dead, rounds)} (thrown < ${DEAD.thr} and power landed < ${DEAD.pow}, both men)`);
+  const R = {}; for (const f of L) if (f.ref) { const o = R[f.ref] = R[f.ref] || { n: 0, stop: 0 }; o.n++; if (!f.dec) o.stop++; }
+  if (Object.keys(R).length) console.log('stoppages by ref: ' + Object.entries(R).map(([k, o]) => k + ' ' + p(o.stop, o.n) + ' (' + o.n + ')').join(' | '));
   const q = a => { a = a.slice().sort((x, y) => x - y); return [.1, .25, .5, .75, .9].map(z => a[Math.floor(z * (a.length - 1))]).join(' / '); };
   console.log(`per round, both men (10/25/50/75/90%): thrown ${q(L.flatMap(f => f.thr))} | power landed ${q(L.flatMap(f => f.pow))}`);
 }
