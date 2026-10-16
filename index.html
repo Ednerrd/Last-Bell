@@ -331,7 +331,7 @@ function tierOf(skills) { const v = SKILL_KEYS.reduce((s, k) => s + (skills[k] |
    ring:     range (0 lives inside, 1 lives at the end of the jab), circle (moves laterally) */
 const TRAIT_KEYS = ['output', 'jab', 'power', 'body', 'combo', 'initiative', 'patience', 'shell', 'slip', 'legs', 'clinch', 'composure', 'risk', 'killer', 'range', 'circle'];
 const STYLES = {
-  outboxer:     { label: 'Out-boxer',       t: { output: .48, jab: .85, power: .35, body: .25, combo: .4, initiative: .55, patience: .6, shell: .3, slip: .5, legs: .85, clinch: .35, composure: .6, risk: .3, killer: .4, range: .9, circle: .8 },
+  outboxer:     { label: 'Out-boxer',       t: { output: .45, jab: .85, power: .35, body: .25, combo: .4, initiative: .55, patience: .6, shell: .3, slip: .5, legs: .85, clinch: .35, composure: .6, risk: .3, killer: .4, range: .9, circle: .8 },
                   sk: { jab: 10, footwork: 2, range: 4, angles: 2, power: -6, cutoff: -8, clinch: -2 } },
   slugger:      { label: 'Slugger',         t: { output: .42, jab: .3, power: .9, body: .45, combo: .35, initiative: .75, patience: .35, shell: .75, slip: .25, legs: .2, clinch: .4, composure: .5, risk: .8, killer: .9, range: .3, circle: .2 },
                   sk: { power: 12, cutoff: 6, slip: -8, footwork: -8, jab: -6, angles: -4 } },
