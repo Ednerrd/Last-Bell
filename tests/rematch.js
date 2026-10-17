@@ -1,5 +1,6 @@
 // L4c rematch check (docs/LEARN.md 4): two Pros fight, then fight again three ways from the same starting sheets:
 //   none = no memory (the base: how often the better man wins twice), mem = both remember (sheet.opp -> the brain's prior), full = memory + growth (learn applied)
+//   wmem / lmem = only the first winner / only the loser remembers (what the memory is worth on its own). ARMS=none,wmem,lmem to pick
 //   TAG=x node tests/rematch.js 150     (x4; one line per run to /tmp/rematch_x.txt)   node tests/rematch.js agg x
 // Target: the first fight's loser gains a few points with memory (+3-6 vs none), the first winner still takes most rematches that weren't close.
 const fs = require('fs'), OUT = t => '/tmp/rematch_' + t + '.txt', ARMS = (process.env.ARMS || 'none,mem,full').split(',');
@@ -16,7 +17,8 @@ for (let i = 0; i < N; i++) {
   const cards = f1.cardTotals().map(t => t[w] - t[1 - w]), close = f1.result.decision && cards.reduce((x, y) => x + y, 0) / 3 <= 2 ? 'close' : 'clear';
   for (const arm of ARMS) {
     const x = s0.map(clone);
-    if (arm !== 'none') for (let s = 0; s < 2; s++) { const d = S.learn(arm === 'full' ? x[s] : clone(s0[s]), f1, s); if (arm === 'full') S.applyLearn(x[s], d); else x[s].opp = d.opp; }
+    if (arm === 'wmem' || arm === 'lmem') { const s = arm === 'wmem' ? w : 1 - w; x[s].opp = S.learn(clone(s0[s]), f1, s).opp; } // only the winner / only the loser remembers
+    else if (arm !== 'none') for (let s = 0; s < 2; s++) { const d = S.learn(arm === 'full' ? x[s] : clone(s0[s]), f1, s); if (arm === 'full') S.applyLearn(x[s], d); else x[s].opp = d.opp; }
     const f2 = S.run(x[0], x[1], { rounds: 10 }), r = f2.result.winner;
     add(arm, close, r === w ? 1 : r === 1 - w ? 0 : .5);
   }
