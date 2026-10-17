@@ -245,8 +245,8 @@ const BR = {
   // plan / planShy: his game plan (pv) shifted by these x v all fight: caution backs off and boxes long, gun-shy won't commit
   // tuned Oct 17 (tests/scar.js, 1,200 pairs): less initiative was a buff here (boxing long beats leading in this engine), so caution = less power + long, gun-shy = output
   scar: { on: 1, plan: { range: 40, power: -.6 }, planShy: { power: -1 }, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 4, shyIni: 1.5, shyPow: 1, shyKill: 2 },
-  cl: { on: 1, norm: 1.5, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
-  body: { on: 1, k: .75, norm: .6, min: 4, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
+  cl: { on: 1, norm: 4, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
+  body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
@@ -505,7 +505,7 @@ class Brain {
       else { this.sc.him += 3; E.fear = clamp(E.fear + .4 * (1.25 - comp), 0, 1); E.conf = clamp(E.conf - .3, -1, 1); this.h.kdMe = this.ct; this.h.kdR = 1; this.h.kdUp = 1; this.kds++; const L = this.rep.lastHit; if (L) this.rep.kdBy[L] = (this.rep.kdBy[L] || 0) + 1; } // he gets up hurt, whatever the legs say, and picks again
       return;
     }
-    if (ev.type === 'clinch') { if (ev.by === 'him') this.madd(this.mem.def, 'clinch', { n: 1 }); return; } // he grabbed me
+    if (ev.type === 'clinch') { if (ev.by === 'him' && !this.hisHurt && this.mode !== 'survive') this.madd(this.mem.def, 'clinch', { n: 1 }); return; } // he grabbed me (a hurt man holding on, or me hurt, isn't a grabber's habit)
     if (!PUNCHES[ev.p]) return;
     if (ev.by === 'me') {
       const p = ev.p, kd = kindOf(p);
@@ -596,7 +596,7 @@ class Brain {
   // how much he lives downstairs: his body share over the usual, as far as I've noticed it (0 = normal)
   bodyRead() {
     if (!BR.body.on) return 0; let b = 0, t = 0;
-    for (const p of PTYPES) { const e = this.mpeek(this.mem.his, p); if (!e || !e.n) continue; t += e.n; if (PUNCHES[p].zone === 'body') b += e.n; }
+    const H = this.memT.his; for (const p of PTYPES) { const e = H[p]; if (!e || !e.n) continue; t += e.n; if (PUNCHES[p].zone === 'body') b += e.n; } // his diet all night, not the last flurry: a man digging to finish a sinking body isn't a body-only fighter
     return t < BR.body.min ? 0 : clamp((b / t - BR.body.norm) / (1 - BR.body.norm), 0, 1) * BR.body.k; // anyone sees a man who only goes downstairs: no ring-IQ scaling (it widened the level gap)
   }
   clRead() { if (!BR.cl.on) return 0; const e = this.mpeek(this.mem.def, 'clinch'), n = e ? e.n || 0 : 0; return clamp((n - BR.cl.norm) / BR.cl.span, 0, 1) * lerp(.4, 1, this.k.read); } // a man who grabs every time he's close
@@ -1067,7 +1067,7 @@ class Brain {
   /* ---------- the one call: perception in, action out ---------- */
   /** @param {Perception} P @param {number} dt @returns {Action} */
   think(P, dt) {
-    this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist;
+    this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist; this.hisHurt = !!P.him.hurt;
     if (P.events) for (const ev of P.events) this.hear(ev);
     const E = this.emo, comp = this.tr.composure;
     const sdt = dt * this.pace; // slow time: moods and intent
