@@ -4546,6 +4546,25 @@ ACT.labNew = () => labNew(false);
 ACT.labRe = () => labNew(true);
 ACT.labSet = (d, b) => { LAB.open = !LAB.open; const s = document.querySelector('.labset'); if (s) s.hidden = !LAB.open; b.textContent = LAB.open ? 'Hide' : 'Pick'; };
 // the result: who won and how, the punch stats, then go again
+// L4f: what he takes from this one (docs/LEARN.md 7). The lab doesn't keep fighters, so this is the read on a copy of his sheet: the biggest gains, a level up,
+// the answer to what beat him, a new style seen, a scar, the man he'll remember
+const LEARN_LINE = { jab: 'His jab is getting sharper.', power: "He's sitting down on his power shots more.", combos: 'His combinations are flowing better.', body: "He's learning to dig to the body.",
+  feints: "He's selling his feints better.", block: 'His guard is getting tighter.', slip: "He's slipping shots he used to eat.", footwork: 'His feet are getting him out of trouble quicker.',
+  clinch: "He's learning to tie up when it gets hot.", cutoff: "He's cutting off the ring better.", ropes: "He's getting off the ropes faster.", range: "He's finding his range.",
+  angles: "He's taking better angles.", counter: 'His counters are coming quicker.', read: "He's reading what's coming.", pacing: "He's learning to pace himself.", adjust: "He's adjusting quicker between rounds." };
+function learnedLines() {
+  try {
+    const me = JSON.parse(JSON.stringify(F.f[0].sheet)), lines = [];
+    learnInit(me); const before = JSON.parse(JSON.stringify(me)), d = learn(me, F, 0), O = F.f[1], K = BoxerBrain.SKILL_KEYS;
+    for (const [k, t] of d.cross) lines.push(`Level up: his ${k} is ${BoxerBrain.TIERS.find(x => x.key === t).label} now.`);
+    K.filter(k => d.sk[k] > .3 && !d.cross.some(c => c[0] === k)).sort((a, b) => d.sk[b] - d.sk[a]).slice(0, 2).forEach(k => lines.push(LEARN_LINE[k]));
+    const top = d.rep.won < 0 && (d.rep.beat.kd[0] || d.rep.beat.hurt[0]); if (top) lines.push(`He'll see that ${pName(top[0])} coming next time.`);
+    const st = domStyle(O.sheet); if ((d.know.style[st] || 0) - (before.know.style[st] || 0) > .05 && (before.know.style[st] || 0) < .5) { const lb = STYLES[st].label.toLowerCase(); lines.push(`He's seen ${/^[aeiou]/.test(lb) ? 'an' : 'a'} ${lb} up close now.`); }
+    if (d.scar && d.scar.n === 0) lines.push(d.scar.kind === 'gunShy' ? 'That knockout shook him. He might hesitate to let his hands go for a while.' : "That knockout's still in his head. He'll be careful for a fight or two.");
+    lines.push(`He'll remember ${O.sheet.name}.`);
+    return lines.slice(0, 5);
+  } catch (e) { return []; }
+}
 function resultScreen() {
   if (!F || !F.result) return;
   Comm.stop();
@@ -4558,10 +4577,12 @@ function resultScreen() {
   show(`<div class="screen">${labBar(L)}<h2>${who}</h2><p class="mute">${esc(how)}</p>
     <div class="cards">${res.cards.map((c, i) => `<div><span>${esc(F.judges[i].name)}</span><b>${c[0]}-${c[1]}</b><small>${esc(F.judges[i].taste)}</small></div>`).join('')}</div>
     <p class="mute small">Referee ${esc(F.ref.name)}, ${esc(F.ref.style)}</p>
-    <div class="pstats">${keys.map(k => row(k[0].toUpperCase() + k.slice(1), k)).join('')}</div></div>`, '');
+    <div class="pstats">${keys.map(k => row(k[0].toUpperCase() + k.slice(1), k)).join('')}</div>
+    ${(() => { const ln = learnedLines(); return ln.length ? `<div class="learned"><h3>What ${esc(L.A.name)} takes from this one</h3><ul>${ln.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''; })()}</div>`, '');
 }
 const labCss = document.createElement('style');
-labCss.textContent = `.lab{margin:0 0 6px}.labrow{display:flex;gap:6px}.labrow .btn{flex:1;padding:8px 6px;font-size:15px}
+labCss.textContent = `.learned{text-align:left;margin:14px 0 4px;padding:10px 12px;border-left:3px solid var(--gold,#f0b85a);background:rgba(240,184,90,.08);border-radius:4px}.learned h3{margin:0 0 6px;font-size:15px}.learned ul{margin:0;padding-left:18px;font-size:14px;line-height:1.4}
+.lab{margin:0 0 6px}.labrow{display:flex;gap:6px}.labrow .btn{flex:1;padding:8px 6px;font-size:15px}
 .labwho{font-size:12.5px;line-height:1.35;color:var(--mute,#999);margin:6px 2px}.labA,.labB{color:var(--ink,#2a2018);font-weight:700}
 .labset[hidden]{display:none}.labset{display:grid;gap:6px;margin:6px 0;font-size:13px}.labf{display:flex;gap:6px;align-items:center}.labf b{width:56px;flex:none;text-align:left}.labf select{flex:1;min-width:0;font:inherit;padding:6px;border-radius:8px;background:#fffaf2;color:#2a2018;border:1px solid #c9bba5}`;
 document.head.appendChild(labCss);
