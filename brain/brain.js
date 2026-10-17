@@ -53,7 +53,7 @@
  * @property {boolean} [thrownEv]   the game sends 'thrown' events for punches that really started
  * @property {boolean} [debug]
  * @property {?Object} [fam]        style/stance familiarity (L3)
- * @property {?{tbl: Object, w?: number, lost?: boolean}} [prior]  what he remembers of this man (L4c): a memo() from their last fight, its weight, did he lose it
+ * @property {?{tbl: Object, w?: number, lost?: boolean, won?: boolean}} [prior]  what he remembers of this man (L4c): a memo() from their last fight, its weight, did he lose it
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -237,7 +237,9 @@ const BR = {
   // Tuned to research/mind_southpaw.md (Oct 14): a Pro who never saw the stance wins ~46%, default know vs a southpaw ~47%, never saw the style ~48%
   // L4c, a man he fought before (priorSet): k = how much of a live read the memory is worth at full weight; a lead the memory gives under odd / punch types costs drop x read
   // trust, a lead it called earns back x back; adjust = the loser walks in with one change made
-  prior: { on: 1, k: .6, odd: .5, drop: .08, back: .25, adjust: 1 },
+  // won / lost: x k when he won / lost that fight (losses teach more: the loser studies the tape, the winner gets comfortable; measured Oct 17, rematch.js: one-sided memory
+  // is worth ~+6 to whoever has it, both remembering cancels out)
+  prior: { on: 1, k: .6, won: 1, lost: 1, odd: .5, drop: .08, back: .25, adjust: 1 },
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
     weapon: .22,            // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top
@@ -441,7 +443,7 @@ class Brain {
      times how much of it is left (w) and how much he still trusts it. A lead the prior says he never throws costs trust (a reader drops a stale read fast). The loser walks in with one change made ---------- */
   priorSet(pr) {
     if (!pr || !pr.tbl || !BR.prior.on) return;
-    this.pri = new Map(); this.priW = pr.w == null ? 1 : pr.w; this.trust = 1;
+    this.pri = new Map(); this.priW = (pr.w == null ? 1 : pr.w) * (pr.lost ? BR.prior.lost : pr.won ? BR.prior.won : 1); this.trust = 1;
     for (const nm in pr.tbl) { const tbl = this.mem[nm]; if (!tbl || typeof tbl !== 'object') continue; this.pri.set(tbl, pr.tbl[nm]);
       for (const key in pr.tbl[nm]) if (!tbl[key]) { const z = { t: 0 }; for (const x in pr.tbl[nm][key]) z[x] = 0; tbl[key] = z; } } // so the readers that walk the table see what he remembers
     if (pr.lost && BR.prior.adjust) { const o = this.adjOpts().reduce((a, b) => b[1] > a[1] ? b : a); if (o[1] > .05) { o[2](); this.note('remembers losing to him: ' + o[0]); } }
