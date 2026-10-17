@@ -397,6 +397,8 @@ class Brain {
     this.rangeJit = 0; this.nd = 0; this.fat = 0; this.lat = (this.R() < .5 ? 1 : -1);
     this.sc = { me: 0, him: 0, lead: 0, rounds: [] }; // his own guess at the cards
     this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {}, mThr: {}, mLand: {}, chg: 0, chgRight: 0, chgPay: 0, chgL: 0, baits: 0, bitL: 0, armed: 0, sprung: 0, trapN: 0, trapL: 0, trapR: [] };
+    // the fight report (L4 learning reads it after the bell): my punches by type [thrown, landed], his at me and how they ended, combos [started, punches, landed], feints that bit, counter punches [thrown, landed], what hurt and dropped me. Counts only, nothing reads them in the fight
+    this.rep = { p: {}, at: { n: 0, blk: 0, ev: 0, land: 0, short: 0 }, combo: [0, 0, 0], inC: 0, feintBit: 0, ctr: [0, 0], inCtr: 0, hurtBy: {}, kdBy: {}, lastHit: null };
     this.log = [];
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
@@ -454,14 +456,15 @@ class Brain {
     const guess = x => x * Math.max(0, 1 + this.g() * (1 - this.k.pacing) * .5); // his eye for the score
     if (ev.type === 'kd') {
       if (ev.by === 'me') { this.sc.me += 3; E.conf = clamp(E.conf + .3, -1, 1); this.h.kdBy = this.ct; }
-      else { this.sc.him += 3; E.fear = clamp(E.fear + .4 * (1.25 - comp), 0, 1); E.conf = clamp(E.conf - .3, -1, 1); this.h.kdMe = this.ct; this.h.kdR = 1; this.h.kdUp = 1; this.kds++; } // he gets up hurt, whatever the legs say, and picks again
+      else { this.sc.him += 3; E.fear = clamp(E.fear + .4 * (1.25 - comp), 0, 1); E.conf = clamp(E.conf - .3, -1, 1); this.h.kdMe = this.ct; this.h.kdR = 1; this.h.kdUp = 1; this.kds++; const L = this.rep.lastHit; if (L) this.rep.kdBy[L] = (this.rep.kdBy[L] || 0) + 1; } // he gets up hurt, whatever the legs say, and picks again
       return;
     }
     if (!PUNCHES[ev.p]) return;
     if (ev.by === 'me') {
       const p = ev.p, kd = kindOf(p);
       if (ev.type === 'thrown' || ev.type === 'pulled') { const n = ev.type === 'thrown' ? 1 : -1; if (ev.first) this.tel.throws += n; this.tmode(n); return; } // the engine started it (or he pulled it back before it was a punch)
-      if (ev.type === 'feinted') { if (ev.bit) this.madd(this.mem.def, 'feint', { n: 1, bit: 1 }); else this.madd(this.mem.def, 'feint', { n: 1 }); if (ev.bit && this.setup && this.setup.onBite) this.setup.bit = ev.def || 'block'; return; }
+      if (ev.type === 'feinted') { if (ev.bit) this.rep.feintBit++; if (ev.bit) this.madd(this.mem.def, 'feint', { n: 1, bit: 1 }); else this.madd(this.mem.def, 'feint', { n: 1 }); if (ev.bit && this.setup && this.setup.onBite) this.setup.bit = ev.def || 'block'; return; }
+      { const Rp = this.rep, e = Rp.p[p] || (Rp.p[p] = [0, 0]), l = ev.type === 'landed' ? 1 : 0; e[0]++; e[1] += l; if (Rp.inCtr > 0) { Rp.inCtr--; Rp.ctr[0]++; Rp.ctr[1] += l; } if (Rp.inC > 0) { Rp.inC--; Rp.combo[1]++; Rp.combo[2] += l; } }
       this.madd(this.mem.mine, p, { n: 1, l: ev.type === 'landed' ? 1 : 0, b: ev.type === 'blocked' ? 1 : 0, e: ev.type === 'evaded' ? 1 : 0 });
       if (ev.def) this.madd(this.mem.def, kd, { n: 1, [ev.def]: 1 }); else if (ev.type === 'landed') this.madd(this.mem.def, kd, { n: 1, none: 1 });
       this.lastMine = { p, t: this.t };
@@ -478,6 +481,7 @@ class Brain {
     } else {
       const p = ev.p;
       if (ev.type === 'feinted') { if (ev.bit) this.tel.bites++; this.mem.feints = this.mem.feints * .9 + 1; return; }
+      { const A = this.rep.at; A.n++; if (ev.type === 'blocked') A.blk++; else if (ev.type === 'evaded') A.ev++; else if (ev.type === 'missed') A.short++; else if (ev.type === 'landed') { A.land++; this.rep.hurtBy[p] = (this.rep.hurtBy[p] || 0) + (ev.dmg || 2); this.rep.lastHit = p; } }
       if (ev.type === 'landed') {
         const dmg = ev.dmg || 2;
         this.madd(this.mem.hurt, p, { d: dmg });
@@ -964,6 +968,7 @@ class Brain {
     if (this.mode === 'hunt' || this.mode === 'huntSafe') { const H = this.h; H.n += ps.length; if (H.n >= H.goal) { H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = this.t + this.rnd(BR.fin.look[0], BR.fin.look[1]); } } // the flurry, then a look
     const tell = clamp(clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1) + lvV('tell', skillM(ps[0])), 0, 2); // loading up shows it; a novice shows it from the parking lot
     this.tel.techSum += tech[0]; this.tel.techN++;
+    if (ps.length > 1) { this.rep.combo[0]++; this.rep.inC = ps.length; } else this.rep.inC = 0; this.rep.inCtr = ctr ? ps.length : 0;
     if (!this.thrownEv) { this.tel.throws++; this.tmode(ps.length); } // no word from the game: count what he decided
     const id = ps.map(p => PUNCHES[p].num).join('-');
     this.hist.push(id); if (this.hist.length > 6) this.hist.shift();
