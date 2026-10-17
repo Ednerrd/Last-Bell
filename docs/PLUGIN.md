@@ -56,6 +56,14 @@ A "player" who repeats one exploit all fight, run on the Last Bell engine (the r
 ## 3. Fix what the cheese finds (P3)
 Each hole is a brain change with sims before and after (the usual balance checks: styles, audit, levels, the hash moves on purpose).
 
+### Target the damage (Ed, Oct 17: "if his eye is damaged, go more to his eye")
+What the engine tracks on a man: the head meter (and its wear, `headMax`), the body meter (no in-fight regen, little between rounds), cuts (`D.cut`, `CUT.onEye`: an eye cut can bring the doctor), arm wear (`gi`: blocked shots break the guard down), the liver (right-side body hooks and rear-hand body shots, `BODY.liver`) and the wind (straights to the body, `BODY.wind`). No temple or swelling zone.
+What the brain sees of the other man today: his head meter, gas, guard (height x arm wear), hurt. Not his body meter, not his cut.
+- Pass `him.body` and `him.cut` in Perception (what's on screen: a cut bleeds, a man folding over his stomach shows it).
+- The brain weights its picks toward the damage: a cut, go upstairs (straights and hooks to that side; a better ring IQ more surely); a sinking body meter, dig (the fuse code already digs when he's tired); worn arms, more power through the guard.
+- The corner's side of it: a cut man's corner tells him to cover that side and move off it.
+- Measure: stoppages by cut and body KDs before and after; the audit's cut stops and body KD share must stay in range.
+
 ## 4. The drop-in guide (P4)
 `brain/README.md` gets a "Plug it into your game" section: the minimal host loop (from `ring.js`), the Perception fields a host must fill and which can be faked, the events to send, presets, what to save between fights (`memo()`, the skill sheet), the per-frame cost (`think()` time on a phone), and the knobs a host should leave alone.
 
