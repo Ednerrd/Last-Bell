@@ -241,7 +241,8 @@ const BR = {
   // won / lost: x k when he won / lost that fight (losses teach more: the loser studies the tape, the winner gets comfortable; measured Oct 17, rematch.js: one-sided memory
   // is worth ~+6 to whoever has it, both remembering cancels out)
   // L4e scars (scarSet): x v (the game sends ~.15 fresh after a KO loss). caution: risk x(1 - risk v), shell / clinch + v, initiative - ini v, killer x(1 - kill v); gunShy: output, initiative, power, killer
-  scar: { on: 1, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 1.5, shyIni: 1.5, shyPow: 1, shyKill: 2 },
+  // plan / planShy: his game plan (pv) shifted by these x v all fight: caution backs off and boxes long, gun-shy won't commit
+  scar: { on: 1, plan: { initiative: -1.2, range: 40, power: -.6 }, planShy: { initiative: -1.5, power: -2 }, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 1.5, shyIni: 1.5, shyPow: 1, shyKill: 2 },
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
@@ -409,7 +410,7 @@ class Brain {
     this.sc = { me: 0, him: 0, lead: 0, rounds: [] }; // his own guess at the cards
     this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {}, mThr: {}, mLand: {}, chg: 0, chgRight: 0, chgPay: 0, chgL: 0, baits: 0, bitL: 0, armed: 0, sprung: 0, trapN: 0, trapL: 0, trapR: [] };
     // the fight report (L4 learning reads it after the bell): my punches by type [thrown, landed], his at me and how they ended, combos [started, punches, landed], feints that bit, counter punches [thrown, landed], what hurt and dropped me. Counts only, nothing reads them in the fight
-    this.pri = null; this.trust = 1; this.priW = 0;
+    this.pri = null; this.trust = 1; this.priW = 0; this.sp = this.sp || null;
     this.rep = { p: {}, at: { n: 0, blk: 0, ev: 0, land: 0, short: 0 }, combo: [0, 0, 0], inC: 0, feintBit: 0, ctr: [0, 0], inCtr: 0, hurtBy: {}, kdBy: {}, lastHit: null };
     this.log = [];
     this.priorSet(opts.prior);
@@ -458,6 +459,7 @@ class Brain {
     if (!sc || !sc.v || !BR.scar.on) return; const t = this.tr, v = sc.v, cl = x => clamp(x, 0, 1), S = BR.scar;
     if (sc.kind === 'gunShy') { t.output = cl(t.output * (1 - S.shyOut * v)); t.initiative = cl(t.initiative - S.shyIni * v); t.power = cl(t.power - S.shyPow * v); t.killer = cl(t.killer * (1 - S.shyKill * v)); }
     else { t.risk = cl(t.risk * (1 - S.risk * v)); t.shell = cl(t.shell + S.shell * v); t.clinch = cl(t.clinch + S.clinch * v); t.initiative = cl(t.initiative - S.ini * v); t.killer = cl(t.killer * (1 - S.kill * v)); }
+    const P = sc.kind === 'gunShy' ? S.planShy : S.plan; this.sp = {}; for (const x in P) this.sp[x] = P[x] * v; // the game plan he walks in with, all night
     this.scar = sc.kind;
   }
   priorCheck(type) {
@@ -771,7 +773,7 @@ class Brain {
     if (P.round <= G.rushR) v += tierV(this.m.pacing, G.rush); // a novice comes out too hot
     return v;
   }
-  pv(x) { return this.plan[x] + (this.cc ? this.cc[x] : 0); } // his plan plus what the corner told him
+  pv(x) { return this.plan[x] + (this.cc ? this.cc[x] : 0) + (this.sp ? this.sp[x] || 0 : 0); } // his plan plus what the corner told him, plus what a KO loss left (L4e: it doesn't fade in the fight)
   finM() { return (this.m.read + this.m.pacing) / 2; } // finishing mastery: reading the hurt, and knowing when to spend it
   wobbly(P) { if (P.him.hurt) this.h.seen = this.ct; return P.him.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
   // the hunt: check, then commit (all-out or behind a guard); flurries with a look in between; capped, and it costs gas
