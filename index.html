@@ -1602,6 +1602,9 @@ const LRN = {
   idleUse: .2, idleN: 5, idleLoss: 1,
   capBase: 80, capMid: 78, capK: 1, capOwn: .4, capNoise: 5, capLo: 50, capHi: 98,
   know: { gain: .2, fade: .98, floor: .5 },
+  // L4d camp (camp()): drill = points into one skill x headroom x age; spar = know of his style and stance + spar x what's left;
+  // tape = tapeN of his fights watched (sims vs men of his level, tapeRd rounds), what the other corner filed on him, noise x (1 - tapeQ), weight tapeW (a prior, like a rematch)
+  camp: { drill: 4, spar: .25, tapeN: 3, tapeRd: 8, tapeQ: .7, tapeW: .6 },
   opp: { fade: .85, floor: .3, drop: .05 } // L4c, the men he fought (sheet.opp): weight x fade per fight since, gone under drop; a man who stopped him never under floor
 };
 const SHOUT_LEN = 14;
@@ -1763,7 +1766,10 @@ function skFromRecord(sheet, rec, rating, rng) {
   return sheet;
 }
 // L4c: what he remembers of the other man from a fight before (sheet.opp), for the brain. Never fought him = null (neutral)
-function priorOf(F) { const O = F.op, m = F.sheet.opp && O.sheet.id && F.sheet.opp[O.sheet.id]; return m && m.tbl ? { tbl: m.tbl, w: m.w, lost: m.res < 0, won: m.res > 0 } : null; }
+function priorOf(F) {
+  const O = F.op, id = O.sheet.id, m = id && ((F.sheet.opp && F.sheet.opp[id]) || (F.sheet.tape && F.sheet.tape.id === id && F.sheet.tape)); // he fought him before, else the tape (L4d)
+  return m && m.tbl ? { tbl: m.tbl, w: m.w, lost: m.res < 0, won: m.res > 0 } : null;
+}
 // L3: how well he knows the other man's style and stance (sheet.know), for the brain. No know = null (neutral)
 function famOf(F) { const k = F.sheet.know, O = F.op; if (!k) return null; return { style: k.style && k.style[O.sk], stance: k.stance && k.stance[O.stance] }; }
 // his level: off the skill sheet, or (no sheet) off the skills the brain reads from his body
@@ -1835,13 +1841,38 @@ function learn(sheet, f, side, rng) {
   const opp = {}, prev = sheet.opp && sheet.opp[O.sheet.id];
   for (const id in sheet.opp || {}) { if (id === O.sheet.id) continue; const m = sheet.opp[id], w = Math.max(m.ko ? L.opp.floor : 0, m.w * L.opp.fade); if (w >= L.opp.drop) opp[id] = Object.assign({}, m, { w: +w.toFixed(3) }); }
   opp[O.sheet.id] = { name: O.sheet.name, tbl: Br && Br.memo ? Br.memo() : {}, w: 1, res: Rp.won, ko: Rp.ko || (prev && prev.ko) ? 1 : 0, how: Rp.method, rd: Rp.rounds, n: (prev ? prev.n : 0) + 1 };
-  out.opp = opp;
+  out.opp = opp; out.tape = sheet.tape && sheet.tape.id === O.sheet.id ? null : sheet.tape; // the tape is used up: he has his own memory of the man now
   for (const k of K) { const a = BoxerBrain.TIERS.filter(t => sk[k] >= t.min).length, b = BoxerBrain.TIERS.filter(t => sk[k] + out.sk[k] >= t.min).length; if (b > a) out.cross.push([k, BoxerBrain.TIERS[b - 1].key]); }
   return out;
 }
+// L4d: camp before a fight. pick: { kind: 'drill', skill } | { kind: 'spar' } | { kind: 'tape' } | { kind: 'none' }; opp = the next man's sheet. Writes the sheet, returns what it did
+function simFight(A, B, opts) { const f = new Fight(A, B, opts || {}); let n = 0; while (f.phase !== 'over' && n < 600000) { f.step(); n++; if (f.phase === 'corner') f.nextRound(f.aiStrategy(0), f.aiStrategy(1)); f.events = []; } return f; }
+function tapeOf(opp, n, rng) {
+  rng = rng || R; const C = LRN.camp, sum = {}, K = Object.keys(STYLES).filter(k => !STYLES[k].special); let got = 0;
+  const lv = opp.sk ? BoxerBrain.SKILL_KEYS.reduce((t, k) => t + opp.sk[k], 0) / BoxerBrain.SKILL_KEYS.length : 70;
+  for (let i = 0; i < n; i++) {
+    const st = K[Math.floor(rng() * K.length)], w = { name: 'tape', style: st, guard: rollGuard(st), stance: rng() < .2 ? 'southpaw' : 'orthodox', stats: genStats(ovr(opp.stats), st), wear: 0, exp: 20, sk: skMake(lv, st, rng) };
+    const f = simFight(opp, w, { rounds: C.tapeRd }), memo = f.f[1].brain && f.f[1].brain.memo ? f.f[1].brain.memo() : null; if (!memo) continue; got++;
+    for (const t in memo) { const S = sum[t] = sum[t] || {}; for (const k in memo[t]) { const o = S[k] = S[k] || {}; for (const x in memo[t][k]) o[x] = (o[x] || 0) + memo[t][k][x]; } }
+  }
+  if (!got) return null;
+  for (const t in sum) for (const k in sum[t]) for (const x in sum[t][k]) sum[t][k][x] = +(sum[t][k][x] / got * Math.max(0, 1 + gaussW(rng) * (1 - C.tapeQ) * .3)).toPrecision(3); // the film is grainy
+  return { tbl: sum, n: got, style: opp.style };
+}
+function camp(sheet, pick, opp, rng) {
+  rng = rng || R; learnInit(sheet, rng); const C = LRN.camp, kind = pick && pick.kind || 'none';
+  if (!opp.id) opp.id = 'f' + Math.floor(rng() * 2176782336).toString(36);
+  if (kind === 'drill' && sheet.sk[pick.skill] != null) {
+    const k = pick.skill, age = sheet.age || 27, ageX = age < 24 ? 1.2 : age > 32 ? .6 : 1, g = C.drill * Math.max(0, 1 - Math.pow(sheet.sk[k] / (sheet.cap[k] || 80), LRN.headP)) * ageX;
+    sheet.sk[k] = +clamp(sheet.sk[k] + g, 5, 99).toFixed(2); return { kind, skill: k, gain: g };
+  }
+  if (kind === 'spar') { const o = {}; for (const [g, x] of [['style', domStyle(opp)], ['stance', opp.stance]]) { const v = sheet.know[g][x] || 0; sheet.know[g][x] = +(v + C.spar * (1 - v)).toFixed(3); o[g] = sheet.know[g][x]; } return { kind, know: o }; }
+  if (kind === 'tape') { const t = tapeOf(opp, C.tapeN, rng); if (!t) return { kind, none: 1 }; sheet.tape = Object.assign({ id: opp.id, w: C.tapeW * Math.min(1, t.n / C.tapeN) }, t); return { kind, n: t.n }; }
+  return { kind: 'none' };
+}
 function applyLearn(sheet, d) {
   for (const k in d.sk) sheet.sk[k] = +clamp(sheet.sk[k] + d.sk[k], 5, 99).toFixed(2);
-  sheet.idle = d.idle; sheet.know = d.know; sheet.knowPk = d.knowPk; if (d.opp) sheet.opp = d.opp; sheet.exp = (sheet.exp || 0) + 1;
+  sheet.idle = d.idle; sheet.know = d.know; sheet.knowPk = d.knowPk; if (d.opp) sheet.opp = d.opp; if ('tape' in d) { if (d.tape) sheet.tape = d.tape; else delete sheet.tape; } sheet.exp = (sheet.exp || 0) + 1;
   return sheet;
 }
 function levelOf(sheet) { return BoxerBrain.tierOf(sheet.sk || brainSkills(sheet.stats, ringIQ(sheet), domStyle(sheet))); }
