@@ -447,7 +447,7 @@ const BR = {
   // plan / planShy: his game plan (pv) shifted by these x v all fight: caution backs off and boxes long, gun-shy won't commit
   // tuned Oct 17 (tests/scar.js, 1,200 pairs): less initiative was a buff here (boxing long beats leading in this engine), so caution = less power + long, gun-shy = output
   scar: { on: 1, plan: { range: 40, power: -.6 }, planShy: { power: -1 }, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 4, shyIni: 1.5, shyPow: 1, shyKill: 2 },
-  cl: { on: 0, norm: 1.5, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
+  cl: { on: 1, norm: 1.5, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
   body: { on: 1, k: .75, norm: .6, min: 4, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
@@ -1565,7 +1565,7 @@ const JUDGES = [
 ];
 const REFS = [
   { name: 'Clarence Breakwell', style: 'on time, breaks fast', stop: 0, hold: .75, holdN: 8, dirty: 1 },
-  { name: 'Hank Lettum', style: 'lets them fight', stop: -1, hold: 1.35, holdN: 99, dirty: .6 },
+  { name: 'Hank Lettum', style: 'lets them fight', stop: -1, hold: 1.35, holdN: 12, dirty: .6 },
   { name: 'Norma Rulebrook', style: 'strict, warns early', stop: 0, hold: 1, holdN: 4, dirty: 1.6 },
   { name: 'Teddy Quickhook', style: 'quick to stop it', stop: 1, hold: 1, holdN: 8, dirty: 1 }
 ];
@@ -2558,7 +2558,7 @@ class Fight {
   // the ref warns him (holding and hitting, or just holding); the third warning on can cost a point
   foul(F, O, why) {
     F.warn++;
-    const ded = F.warn >= 3 && R() < .5;
+    const ded = F.warn >= 3 && (why === 'hold' || R() < .5); // holding: warned twice, the third costs a point for sure (Ed, Oct 17: the ref is the fix for a grabber); a dirty shot is the ref's call
     if (ded) F.rs.ded++;
     this.emit('foul', { a: F.side, d: O.side, ded, why });
   }
