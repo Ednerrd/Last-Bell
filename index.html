@@ -160,7 +160,7 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .cornerbox{display:none}.cornerbox.show{display:block}.corner{background:#0e0a08;color:#ece4d6;border-radius:5px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;text-align:left}
 .corner .ch{font-family:var(--disp);font-size:20px;color:#f0b85a}
 .cst{display:grid;grid-template-columns:1fr 3.5em 3.5em;gap:2px 8px;font-size:15px}.cst b{text-align:right}.cst span{color:#a09280}
-.corner .cut{color:#cfc4ad;font-size:15px;margin:0}.corner .adv{margin:0;font-size:16px}
+.corner .cut{color:#cfc4ad;font-size:15px;margin:0}.corner .pv{margin:0;font-size:15px;padding-left:8px;border-left:3px solid #a09280}.corner .pv.ok{border-color:#6fbf73}.corner .pv.no{border-color:#d9644a}.corner .adv{margin:0;font-size:16px}
 .corner .notes{margin:0;padding-left:18px;font-size:14px;color:#cfc4ad}.corner .notes li{margin:1px 0}
 .corner .talk{display:flex;gap:6px}.corner .talk input{flex:1;min-width:0;background:#1c1510;color:#ece4d6;border:1px solid rgba(236,228,214,.3);border-radius:4px;padding:8px;font:inherit;font-size:16px}
 .corner .say{margin:0;font-size:16px}.corner .say b{color:#f0b85a}.corner .plan{margin:0;font-size:14px;color:#a09280}.corner .mute{opacity:.7}
@@ -3862,13 +3862,14 @@ ACT.shout = d => {
   if (!F || FX.mode !== 'live' || F.phase !== 'fight' || performance.now() < (FX.shoutLock || 0)) return;
   const o = F.shout(0, d.v); if (!o) return;
   F.f[0].userT = F.t; // the coach has the floor: the AI corner on his side goes quiet a while
+  FX.calls.push({ r: F.round, fit: o.fit });
   FX.shoutLock = performance.now() + 900;
   const line = pick(YELLS[d.v]); yell(line); Comm.say({ text: line, kind: 'coach', pri: 4 });
   if (F.t - (FX.tuneT || -99) > 12 && (F.f[0].spam > 2.6 || o.q < .4)) { FX.tuneT = F.t; feed(F.f[0].spam > 2.6 ? "Easy, coach. He's tuning you out." : "He can barely hear you right now."); }
   else if ((o.fit >= .7 || o.fit < .2) && F.t - (FX.callT || -99) > 8) { FX.callT = F.t; feed(pick(o.fit >= .7 ? CALL_GOOD : CALL_BAD), o.fit >= .7); }
 };
 function updShouts() {
-  if (FX.cornerCall && FX.mode === 'live' && F.phase === 'fight') { const k = FX.cornerCall; FX.cornerCall = null; if (F.shout(0, k)) { F.f[0].userT = F.t; yell(pick(YELLS[k])); } } // the first call the coach gave him in the corner
+  if (FX.cornerCall && FX.mode === 'live' && F.phase === 'fight') { const k = FX.cornerCall; FX.cornerCall = null; const o = F.shout(0, k); if (o) { F.f[0].userT = F.t; FX.calls.push({ r: F.round, fit: o.fit }); yell(pick(YELLS[k])); } } // the first call the coach gave him in the corner
   const box = $('#shouts'); if (!box) return;
   const live = FX.mode === 'live' && F.phase === 'fight', o = F.f[0].order;
   box.classList.toggle('off', !live);
@@ -4109,6 +4110,31 @@ function roundNotes() {
   if (me.body < 60) out.push('The body shots are getting to you.');
   return out;
 }
+// coach feedback (Drama step d): did the plan he fought the round on work, how the judges saw it, how the coach's calls landed
+function planVerdict() {
+  const me = F.f[0], op = F.f[1], rl = F.roundLog[F.roundLog.length - 1]; if (!rl) return null;
+  const a = rl.a, b = rl.b, s = me.strategy || 'auto', sec = x => Math.round(x * CLOCK), sum = o => Object.values(o || {}).reduce((t, v) => t + v, 0);
+  const pw = a.landedPow + a.landedBody, hp = b.landedPow + b.landedBody, myL = a.landedJab + pw, hisL = b.landedJab + hp, gas = Math.round(100 * me.stam / Math.max(1, me.stamMax));
+  const P = {
+    pressure: () => [pw > hp || sec(b.trap) >= 20, `You landed ${pw} power shots to his ${hp}` + (sec(b.trap) >= 10 ? `, had him on the ropes ${sec(b.trap)} seconds.` : '.')],
+    move: () => [sec(a.trap) < 15 && hisL <= myL, `He landed ${hisL} to your ${myL}` + (sec(a.trap) >= 5 ? `, you spent ${sec(a.trap)} seconds on the ropes.` : '.')],
+    body: () => [a.landedBody >= 5, `${a.landedBody} body shots landed. His body's at ${Math.round(op.body)}%.`],
+    counter: () => [a.ctrL >= 3 || (a.ctrL >= 1 && sum(a.made) >= 5), `${a.ctrL} counters landed, he missed ${sum(a.made)} times.`],
+    ko: () => [b.kd > 0 || op.head < 40, b.kd ? `He went down ${b.kd > 1 ? b.kd + ' times' : ''}.`.replace(' .', '.') : `You landed ${pw} power shots to his ${hp}.`],
+    survive: () => [a.kd === 0, a.kd ? `You went down ${a.kd > 1 ? a.kd + ' times' : ''}.`.replace(' .', '.') : 'You got through it on your feet.'],
+    up: () => [a.thrown > b.thrown, `You threw ${a.thrown} to his ${b.thrown}.`],
+    down: () => [gas >= Math.min(50, FX.gas0 * 100 - 15), `Gas at ${gas}%, you threw ${a.thrown}.`]
+  };
+  const won = rl.cards.filter(c => c[0] > c[1]).length, lost = rl.cards.filter(c => c[1] > c[0]).length;
+  const cards = won === 3 ? 'You won the round on all three cards.' : lost === 3 ? 'He took the round on all three cards.'
+    : won > lost ? `You won the round on ${won} of 3 cards.` : lost > won ? `He took the round on ${lost} of 3 cards.` : 'The judges split on the round.';
+  const calls = FX.calls.filter(c => c.r === F.round), good = calls.filter(c => c.fit >= AIC.bar).length;
+  const callLine = calls.length ? `Your calls: ${calls.length}, ${good ? good + ' on time' : 'none of them on time'}.` : '';
+  if (!P[s]) return { ok: won > lost, text: cards + (callLine ? ' ' + callLine : '') };
+  const [ok, why] = P[s]();
+  const tag = ok ? (lost > won ? 'it did its job' : 'it worked') : (won > lost ? "it didn't work, you won it anyway" : "it didn't work");
+  return { ok, text: `${STRATS[s].label}: ${tag}. ${why} ${cards}` + (callLine ? ' ' + callLine : '') };
+}
 // the coach talks in his own words. Claude turns them into a round plan + a first call from the same menu as the buttons,
 // so words can't buy anything the buttons can't: the call is still scored against the moment (shoutFit)
 let sampleP = null;
@@ -4211,11 +4237,12 @@ ACT.talk = async () => {
 };
 ACT.talkHold = () => { FX.cornerHold = true; const bar = $('#ctbar'); if (bar) bar.parentNode.style.visibility = 'hidden'; };
 function openCorner() {
-  FX.mode = 'corner'; FX.cornerHold = false; FX.cornerCall = null; FX.talkBusy = null; const rl = F.roundLog[F.roundLog.length - 1]; const [adv] = cornerAdvice(); const notes = roundNotes().slice(0, 4);
+  FX.mode = 'corner'; FX.cornerHold = false; FX.cornerCall = null; FX.talkBusy = null; const rl = F.roundLog[F.roundLog.length - 1]; const [adv] = cornerAdvice(); const notes = roundNotes().slice(0, 4); const pv = planVerdict();
   const a = rl.a, b = rl.b; const ln = (x) => `${x.landedJab + x.landedPow + x.landedBody}/${x.thrown}`;
   showCorner(`<div class="corner">
     <div class="ch">After round ${F.round} of ${F.rounds}</div>
     <div class="cst"><span></span><b>You</b><b>Him</b><span>Landed</span><b>${ln(a)}</b><b>${ln(b)}</b><span>Power</span><b>${a.landedPow + a.landedBody}</b><b>${b.landedPow + b.landedBody}</b><span>Knockdowns</span><b>${a.kd}</b><b>${b.kd}</b></div>
+    ${pv ? `<p class="pv ${pv.ok ? 'ok' : 'no'}">${esc(pv.text)}</p>` : ''}
     <p class="cut">${esc(cutmanLine())}</p>
     <p class="adv">Trainer: “${esc(adv)}”</p>
     ${notes.length ? `<ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
@@ -4238,6 +4265,7 @@ ACT.nextRound = () => {
   if (FX.talkBusy) { FX.talkBusy.abort(); FX.talkBusy = null; const w = talkWords(FX.talkTxt || ''); FX.strat = w.plan; FX.cornerCall = w.call; } // no time for an answer: he goes with what he heard
   hideCorner(); FX.mode = 'live';
   const ok = F.nextRound(FX.strat === 'auto' ? F.aiStrategy(0) : FX.strat, F.aiStrategy(1)); // corner's call: the corner reads the fight and his style
+  FX.gas0 = F.f[0].stam / Math.max(1, F.f[0].stamMax);
   handleEvents();
   if (!ok) {
     const res = F.result; const w = F.f[res.winner];
@@ -4286,7 +4314,7 @@ function labFight(L) {
   Comm.stop && Comm.stop();
   const A = labSheet(L.A), B = labSheet(L.B), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
   F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6 });
-  FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null };
+  FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null, calls: [], gas0: 1 };
   const ta = gearItem('trunks', A.look.trunks).c;
   if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
   const ga = gearItem('gloves', A.look.gloves).c;
