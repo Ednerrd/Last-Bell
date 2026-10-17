@@ -1163,5 +1163,18 @@ class Brain {
 
 /** @param {ReturnType<typeof makeProfile>} profile @param {BrainOpts} [opts] @returns {Brain} */
 function create(profile, opts) { return new Brain(profile, opts); }
-return { create, makeProfile, tierOf, tierV, mulberry32, PUNCHES, COMBOS, SKILLS, SKILL_KEYS, TRAIT_KEYS, TIERS, STYLES, MODES, SURV, BR, DEF_THRU, kindOf };
+
+// difficulty presets (P2, docs/PLUGIN.md): a level is the skill sheet, no extra knobs. easy = Intermediate, hard = Pro (the default game AI), expert = World class (and keeps a memory of you across fights)
+const PRESETS = { easy: { tier: 'intermediate', mem: 0 }, hard: { tier: 'pro', mem: 0 }, expert: { tier: 'world', mem: 1 } };
+/** @param {'easy'|'hard'|'expert'} level @param {{style?: string, seed?: number, name?: string, memo?: Object, lost?: boolean, won?: boolean}} [o]  memo: his memo() from the last fight with this player (expert only reads it) @returns {{profile: ReturnType<typeof makeProfile>, opts: BrainOpts}} */
+function preset(level, o) {
+  o = o || {}; const P = PRESETS[level] || PRESETS.hard;
+  const profile = makeProfile({ style: o.style, tier: P.tier, seed: o.seed, name: o.name }), c = TIERS.find(t => t.key === P.tier).center;
+  const off = c - SKILL_KEYS.reduce((t, k) => t + profile.skills[k], 0) / SKILL_KEYS.length; // a preset is a promise: recenter on the tier, keep his style's shape and jitter
+  for (const k of SKILL_KEYS) profile.skills[k] = Math.round(clamp(profile.skills[k] + off, 5, 99));
+  profile.tier = tierOf(profile.skills);
+  const opts = {}; if (P.mem && o.memo) opts.prior = { tbl: o.memo, lost: !!o.lost, won: !!o.won };
+  return { profile, opts };
+}
+return { create, preset, PRESETS, makeProfile, tierOf, tierV, mulberry32, PUNCHES, COMBOS, SKILLS, SKILL_KEYS, TRAIT_KEYS, TIERS, STYLES, MODES, SURV, BR, DEF_THRU, kindOf };
 });
