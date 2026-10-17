@@ -143,3 +143,19 @@ After L4: the **plug-in brain** milestone (ROADMAP).
 - **For L4d:** tape is one-sided by nature, so it's worth real points (up to the ~+6 a full memory gives), scaled down by noise and staleness.
 - Open: a loser's lesson that works would need a targeted change from what beat him (the punch that hurt him read earlier, a plan that holds 3+ rounds), not more weight on the same notes.
 
+### L4d: camp (Oct 17, hash holds: nothing in a normal fight calls it)
+- `camp(sheet, pick, opp)`, knobs `LRN.camp`: **drill** (`drill` 4 points x headroom x age into one skill), **spar** (know of his style and stance + .25 x what's left), **tape** (`tapeOf`: 3 of his fights simmed, 8 rounds, vs men of his level and body; what the other corner's brain filed on him, averaged, grainy noise x (1 - `tapeQ` .7); kept as `sheet.tape` with weight `tapeW` .6 and handed to the brain as a prior by `priorOf` unless he has his own memory of the man; `learn` uses it up), **none**. `simFight` is the headless loop.
+- `TAG=x node tests/camp.js 75` (x4, x4 runs) then `agg`: two Pros (sk ~74, rating 78), A gets the pick, B nothing, same pair every arm, 1,200 pairs, A's win % (±1.5):
+
+| Camp | A wins | |
+|---|---|---|
+| none | 47.5 | |
+| tape | 49.5 | +2.0 |
+| blind (never saw his style or stance) | 45.4 | -2.1 |
+| blind, then spar a lookalike | 47.6 | +2.2 over blind: the hole closes |
+| drill the jab | 48.8 | +1.3 (one camp, one skill: small) |
+| B changed style, no tape (control) | 53.2 | a man in the wrong style for his body is weaker |
+| B changed style, A watched the old tape (stale) | 53.1 | -0.1: stale tape costs nothing |
+
+- Tape is worth about a third of a full rematch memory (+6), right for film of him against other men. Stale film is harmless: trust drops fast when his leads don't match and live reads take over. The design wanted it to mislead a dumb man a little; it doesn't yet (open, small).
+

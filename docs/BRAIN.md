@@ -851,3 +851,7 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **Next:** L4d camp: drill a skill, spar a lookalike (know +.25), tape (a noisy, possibly stale prior through `priorSet`, worth up to ~+6 for a Pro reader), nothing. `rematch.js`-style test: tape vs no tape. Then L4e scars, L4f the learned card.
 **Lessons:** `pkill -f`/`pgrep -f ... | xargs kill` kills the calling shell (exit 144): kill by PID from `ps`. A trailing `&` on a `&&` chain backgrounds the whole chain, hash check included.
 
+### Handoff (Oct 17, L4d)
+**State:** `claude/brain-wire` = `claude/l4-learning`, hash **1a66d14e** holds. L4d camp built and measured (`docs/LEARN.md` "L4d"): tape +2, spar closes the never-seen hole (+2.2), drill small, stale tape harmless. Roadmap artifact (https://claude.ai/artifact/69yaqziTyqhMXSD58isXUg) updated Oct 17, source in the old scratchpad: rebuild from ROADMAP.md if lost.
+**Next:** L4e scars: after a KO loss, caution (guard up, fewer risks, more clinch) for 2-4 fights, half fades; low composure -> gun-shy (slower trigger). Lever: the brain's emotions/plan at the bell, from `sheet.scar` written by `learn`. Test: grow-style careers or a before/after pair test. Then L4f, the learned card (UI).
+
