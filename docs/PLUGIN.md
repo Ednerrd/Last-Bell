@@ -56,6 +56,17 @@ A "player" who repeats one exploit all fight, run on the Last Bell engine (the r
 ## 3. Fix what the cheese finds (P3)
 Each hole is a brain change with sims before and after (the usual balance checks: styles, audit, levels, the hash moves on purpose).
 
+### P3 body: first tries (Oct 17, `claude/plugin-body`, not shipped)
+Baseline to hold (hash 1a66d14e): styles 48.1-51.5, specials 48.0-54.3, one level down wins 15.8-18.0, stops ~25-28%, body KDs 5-8% of KDs.
+
+| Try | hard vs bodyOnly | stops (audit / finish) | body KDs | styles | specials | one level down | hash |
+|---|---|---|---|---|---|---|---|
+| dip .9/.5, lowEv 1 | 70% (expert 95%) | 39.9 / 39.3 | 2.3% | 43.7-56.5 | 44.3-54.3 | 13.3-20.3 | fe02b0a8 |
+| dip .35/.3, lowEv 2 | 74% (n80) | 31.3 / 29.0 | 4.4% | 46.3-54.9 | 44.4-56.5 | 11.7-12.7 | 84d0bd78 |
+
+- Both fail. Losers: swarmer, volume, body (they live downstairs more than .25 of the time, so the read and the dip hit them too); winners: counter, awkward, angle. The level gap widened (the read scales with ring IQ).
+- Next try: dip 0 (`BODY.over=0`), and the read only for a real digger: `BR.body.norm` .25 -> ~.45 (a bodyOnly man sits at ~.95, so he's still read hard). Check bodyOnly first (cheese.js, 160), then the full check. If the level gap stays wide, take `k.read` out of the read's strength.
+
 ### The eyes: read the whole fighter (Ed, Oct 17)
 Ed: from the boxer's POV, stance up, analyzing his whole body, not telegraphing, deciding (a double jab to get inside?). The engine shows it, the brain reads it, together. Today the brain sees of the other man only his head meter, gas, guard and hurt. The eyes come first, then targeting the damage (below) reads off them.
 - What's on screen goes into Perception: the face (cut, swelling, blood in the eye), the body (folding after a body shot, elbows clamping, breathing), the hands (dropping when tired, a guard breaking down), the feet (weight back = loading up, flat = gassed, set = about to punch).
