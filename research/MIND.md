@@ -59,3 +59,8 @@ The order lives in `ROADMAP.md`. Steps 1 and 3 are built (BRAIN B1 + B3); step 6
 - `P4P_2026` matches the Ring list exactly (latest Ring update 2026-09-08, top 10 unchanged since June). ESPN differs: Opetaia in at No. 9, Collazo out.
 - Candidates: add Opetaia (cruiser), move Nakatani to feather (he's at 122 now), maybe nudge Usyk down (behind on two cards vs Verhoeven before the R11 stop).
 - Retired: Crawford (Dec 2025, 42-0), Lomachenko (June 2025). Legends material.
+
+## Other games (Oct 17, search summaries only: claims tagged by source)
+- `games_arcade.md`: Punch-Out, Ready 2 Rumble, Knockout Kings, Creed games, Ippo, Boxing Star, Real Boxing 2. Punch-Out's flaw ramp is the model for easy-mode planted flaws.
+- `games_manager.md`: Title Bout, WCBM, Punch Club, Prizefighters, MMA managers, Football Manager. Calls that fade, shouts by temperament, a visible reaction line, towel, key-moment timeline.
+- `games_ai.md`: KI Shadows, Tekken Ghost, VF4, SF6, UFC, MK, Drivatar, GT Sophy. Players hate input reading and stat boosts; difficulty from deck size, execution, fragility under pressure; reaction floor ~.25 s.
