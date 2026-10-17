@@ -102,3 +102,24 @@ After L4: the **plug-in brain** milestone (ROADMAP).
 1. **The lab shows the learned card only, no Run it back button.** Rematch memory (L4c) is still built and measured headless (`tests/rematch.js`); it shows in the game when the career comes back.
 2. **Realistic pace:** Novice → Intermediate ~8–15 fights, Intermediate → Pro ~15–30 more, World class only with the talent.
 3. **Corner lessons:** no preference from Ed, so the recommendation stands: `teach()` stays and feeds growth as the teacher bonus.
+
+## Built
+### L4a: the fight report (Oct 17, hash 1a66d14e holds)
+- Brain: `this.rep` (per fight, never decays, nothing in the fight reads it): my punches by type [thrown, landed], his punches at me and how they ended (blocked, evaded, short, landed), combos [started, punches, landed], feints that bit, counter punches [thrown, landed], damage and knockdowns by his punch type. The round log keeps the gas at the bell (`log.gas`).
+- `fightReport(f, side)`: per skill `[use, rate]` (table in section 1; counter = counter punches landed / thrown, read = 1 - (never saw it + misread) / seen, footwork = his punches that fell short), what beat him (`hurt`, `kd`, `outworked`, `trapped`, `outlanded`), the result, the corner's lessons, the other man's style and stance.
+- `node tests/report.js 200`: use / rate by level. Rates climb with level on jab, power, body, block, slip, footwork, range, read, pacing; feints and counters are used more by better men. Weak signals: cutoff, angles, clinch, ropes (ring skills grow mostly from use).
+
+### L4b: growth (Oct 17, hash holds: nothing in a fight calls it)
+- `learnInit` (skills off the body if no `sk`, know, talent `cap` per skill from the body: `capBase` 80 + (rating - 78), the style's strengths, noise 5), `learn(sheet, f, side)` returns the change, `applyLearn` writes it. Knobs `LRN` (TUNING block). `base` 2, headroom `1 - (m / cap)^3`.
+- `TAG=x node tests/grow.js 10 80` (x4) then `node tests/grow.js agg x`: prospects from raw beginners (rating 70-89, age 20-23) through 80 fights against a field matched to their level (the field doesn't learn; 4 to 10 rounders), a year per 8 fights for the first 40, then per 3.
+
+| Rating | Intermediate | Pro | World class | Skill at the end (cap) |
+|---|---|---|---|---|
+| 70-75 (n16) | fight 10 | 33 | never | 71 (75) |
+| 76-83 (n11) | 8 | 28 | never | 75 (81) |
+| 84-89 (n13) | 8 | 23 | 57 (6 of 13) | 82 (88) |
+
+- Snowball: in the same talent band, the early winners (first 10 fights) end only 0.4-1.1 points closer to their cap than the early losers. Know at the end: ~.71 for the base styles, ~.70 southpaw.
+- Harness quirk: a learner wins ~55-65% against a field "matched" on average skill. His learned skills sit where he uses them, a generated man's are spread by style, so the average undersells him.
+- Tried: base 1.4 linear headroom (Intermediate at ~25 fights, too slow); base 3 linear (Pro late, no World class: the linear ceiling closes too early); cubic headroom with base 1.8 (World class 1 of 6) / 2.2 (6 of 8 by 57, Intermediate at 8-9).
+

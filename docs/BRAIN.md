@@ -841,3 +841,8 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **Next:** ROADMAP item 1, L4 learning. It is a design plan: high effort, ask Ed to switch first. Open with Ed: the "plug-in brain" milestone (anti-cheese test, easy/hard/expert presets, drop-in guide, after L4) is not on the roadmap yet: he hasn't said.
 **Watch:** a volume man can sit near empty after round 1 (gas 3% seen in the lab, 26% in sims); the angle fighter at 54.3.
 
+### Handoff (Oct 17, L4a-b)
+**State:** `claude/brain-wire` = `claude/l4-learning`. Hash **1a66d14e** holds (same.js 40 = 63a19c0). L4 design in `docs/LEARN.md` (Ed decided: the lab shows a "what he learned" card only, no Run it back button; realistic pace; corner lessons feed growth). L4a (fight report) and L4b (growth: `learn`, `LRN`, `tests/grow.js`) built, numbers in LEARN.md "Built". The plug-in brain milestone is ROADMAP item 2.
+**Next:** L4c, opponent memory: `sheet.opp[id]` from the brain's memory after a fight, and a prior table in the brain (doesn't decay with fight time, live reads blend in, trust drops when it lies), both men; `tests/rematch.js` (loser +3-6, first winner 70-80%). Brain change, neutral without a prior: hash must hold. High effort.
+**Watch:** a learner beats a field matched on average skill ~60% (his skills sit where he uses them); `report.js` ring-skill signals (cutoff, angles) are weak.
+
