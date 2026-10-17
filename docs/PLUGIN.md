@@ -63,9 +63,15 @@ Baseline to hold (hash 1a66d14e): styles 48.1-51.5, specials 48.0-54.3, one leve
 |---|---|---|---|---|---|---|---|
 | dip .9/.5, lowEv 1 | 70% (expert 95%) | 39.9 / 39.3 | 2.3% | 43.7-56.5 | 44.3-54.3 | 13.3-20.3 | fe02b0a8 |
 | dip .35/.3, lowEv 2 | 74% (n80) | 31.3 / 29.0 | 4.4% | 46.3-54.9 | 44.4-56.5 | 11.7-12.7 | 84d0bd78 |
+| dip 0, norm .45, read x ring IQ | 60.5% | 26.1 / 26.3 | 4.3% | 46.9-52.6 | - | 13.0-17.7 | - |
+| dip 0, norm .45, k .75 flat, lowLeak .35 | 56.5% | 25.0 / 25.7 | 4.2% | 47.1-52.2 | 47.4-54.3 | 18.0-19.3 | - |
+| **dip 0, norm .6 (shipped on the branch)** | **51% (expert 73%)** | 27.1 / 26.2 | 4.0% | 47.4-52.9 | (as above) | 13.3-18.3 | 98938548 (same.js 40) |
 
 - Both fail. Losers: swarmer, volume, body (they live downstairs more than .25 of the time, so the read and the dip hit them too); winners: counter, awkward, angle. The level gap widened (the read scales with ring IQ).
 - Next try: dip 0 (`BODY.over=0`), and the read only for a real digger: `BR.body.norm` .25 -> ~.45 (a bodyOnly man sits at ~.95, so he's still read hard). Check bodyOnly first (cheese.js, 160), then the full check. If the level gap stays wide, take `k.read` out of the read's strength.
+
+- **Shipped: norm .6.** The read fires only against a real digger: 17 reads in 20 normal fights, so normal balance is the old engine's (with the read off, same.js 40 is the old 63a19c0; on, the hash moves only by those few rolls). What's left off the baseline (out-boxer ~47, PvI 13.3, body KDs 4.0) is noise: the same runs with the read off land body KDs at 7.1%. bodyOnly: hard 6 -> 51%, expert 19 -> 73% (targets 65 / 80: short, but the trick no longer wins). A stronger read for a digger (lower norm) bled into swarmer, volume and the body special; any more needs the eyes (him.body in Perception: dig only when the body's really going).
+- Fair check (`cheese.js`, Oct 17): expert's mean reaction is ~.09 s (World's base .14; a read punch is seen up to 60% sooner, floor .04). Ed: smart, not psychic. Next: a floor ~.10 for a read punch, its own full check.
 
 ### The eyes: read the whole fighter (Ed, Oct 17)
 Ed: from the boxer's POV, stance up, analyzing his whole body, not telegraphing, deciding (a double jab to get inside?). The engine shows it, the brain reads it, together. Today the brain sees of the other man only his head meter, gas, guard and hurt. The eyes come first, then targeting the damage (below) reads off them.
