@@ -53,6 +53,7 @@
  * @property {boolean} [thrownEv]   the game sends 'thrown' events for punches that really started
  * @property {boolean} [debug]
  * @property {?Object} [fam]        style/stance familiarity (L3)
+ * @property {?{tbl: Object, w?: number, lost?: boolean}} [prior]  what he remembers of this man (L4c): a memo() from their last fight, its weight, did he lose it
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -234,6 +235,9 @@ const BR = {
   // skill levels L3: style and stance familiarity (research/mind_learn.md 4b). opts.fam = { style, stance }: how well he knows THIS man's style and stance (0..1, sheet.know).
   // No fam = neutral. Unfamiliar = under `at`, all the way at 0. It fades over the first rounds (`full` rounds at full size, gone by `gone`, a reader adapts sooner)
   // Tuned to research/mind_southpaw.md (Oct 14): a Pro who never saw the stance wins ~46%, default know vs a southpaw ~47%, never saw the style ~48%
+  // L4c, a man he fought before (priorSet): k = how much of a live read the memory is worth at full weight; a lead the memory gives under odd / punch types costs drop x read
+  // trust, a lead it called earns back x back; adjust = the loser walks in with one change made
+  prior: { on: 1, k: .6, odd: .5, drop: .08, back: .25, adjust: 1 },
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
     weapon: .22,            // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top
@@ -389,6 +393,7 @@ class Brain {
     this.ct = 0; this.desp = 0; this.wary = null; this.blur = 0; this.kds = 0; // clock time (s), late desperation, range kept after a hurt
     this.h = { t0: -99, end: -99, n: 0, goal: 4, look: -9, kdBy: -99, kdMe: -99, ctrd: -99, chk: 0, falseA: 0, unans: 0, flip: 0, second: 0, freezeEnd: 0, kdR: 0 }; // the hunt and the hurt
     this.mem = { mine: {}, his: {}, lead: {}, after: {}, def: {}, hurt: {}, feints: 0 };
+    this.memT = {}; this.memN = new Map(); for (const nm in this.mem) if (typeof this.mem[nm] === 'object') { this.memN.set(this.mem[nm], nm); this.memT[nm] = {}; } // the same tables, whole fight, never fading: what he takes home (memo)
     this.emo = { conf: 0, frus: 0, fear: 0 };
     this.plan = { jab: 0, power: 0, body: 0, range: 0, initiative: 0 }; // between-round changes
     this.queue = null; this.setup = null; this.hist = [];
@@ -398,8 +403,10 @@ class Brain {
     this.sc = { me: 0, him: 0, lead: 0, rounds: [] }; // his own guess at the cards
     this.tel = { decisions: 0, holds: 0, throws: 0, feints: 0, setups: 0, counters: 0, seen: 0, late: 0, noTry: 0, misreads: 0, bites: 0, feintsRead: 0, antic: 0, reactSum: 0, reactN: 0, modeT: {}, techSum: 0, techN: 0, hunts: 0, hurts: 0, caught: 0, hurtR: {}, mThr: {}, mLand: {}, chg: 0, chgRight: 0, chgPay: 0, chgL: 0, baits: 0, bitL: 0, armed: 0, sprung: 0, trapN: 0, trapL: 0, trapR: [] };
     // the fight report (L4 learning reads it after the bell): my punches by type [thrown, landed], his at me and how they ended, combos [started, punches, landed], feints that bit, counter punches [thrown, landed], what hurt and dropped me. Counts only, nothing reads them in the fight
+    this.pri = null; this.trust = 1; this.priW = 0;
     this.rep = { p: {}, at: { n: 0, blk: 0, ev: 0, land: 0, short: 0 }, combo: [0, 0, 0], inC: 0, feintBit: 0, ctr: [0, 0], inCtr: 0, hurtBy: {}, kdBy: {}, lastHit: null };
     this.log = [];
+    this.priorSet(opts.prior);
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
   // what his mastery does to the body of his punches, for the game to read (BR.lv): per punch skill, and his defense habits
@@ -424,8 +431,27 @@ class Brain {
   /* ---------- memory: what he has seen of the other man. Everything fades; read skill sets how much he notices and how long it sticks ---------- */
   tau() { return lerp(BR.memTau[0], BR.memTau[1], this.k.read) / this.pace; }
   mget(tbl, key) { const e = tbl[key] || (tbl[key] = { t: this.t }), f = Math.exp(-(this.t - e.t) / this.tau()); if (f < 1) for (const x in e) if (x !== 't') e[x] *= f; e.t = this.t; return e; }
-  madd(tbl, key, fields) { const e = this.mget(tbl, key), w = lerp(BR.memNotice[0], BR.memNotice[1], this.k.read) * (1 - BR.fam.mem * this.fx.u); for (const x in fields) e[x] = (e[x] || 0) + fields[x] * w; return e; }
-  mpeek(tbl, key) { const e = tbl[key]; if (!e) return null; const f = Math.exp(-(this.t - e.t) / this.tau()), o = {}; for (const x in e) if (x !== 't') o[x] = e[x] * f; return o; }
+  madd(tbl, key, fields) { const e = this.mget(tbl, key), w = lerp(BR.memNotice[0], BR.memNotice[1], this.k.read) * (1 - BR.fam.mem * this.fx.u); for (const x in fields) e[x] = (e[x] || 0) + fields[x] * w;
+    const nm = this.memN.get(tbl); if (nm) { const T = this.memT[nm][key] || (this.memT[nm][key] = {}); for (const x in fields) T[x] = (T[x] || 0) + fields[x] * w; }
+    return e; }
+  mpeek(tbl, key) { const e = tbl[key]; if (!e) return null; const f = Math.exp(-(this.t - e.t) / this.tau()), o = {}; for (const x in e) if (x !== 't') o[x] = e[x] * f;
+    if (this.pri) { const P = this.pri.get(tbl), q = P && P[key]; if (q) { const sc = this.tau() * BR.prior.k * this.priW * this.trust; for (const x in q) o[x] = (o[x] || 0) + q[x] * sc; } } // what he remembers of this man (L4c)
+    return o; }
+  /* ---------- L4c: a man he has fought before. The memo (rates per second of what he filed, whole fight) comes back as a prior: as if he had been watching him `k` of a live read,
+     times how much of it is left (w) and how much he still trusts it. A lead the prior says he never throws costs trust (a reader drops a stale read fast). The loser walks in with one change made ---------- */
+  priorSet(pr) {
+    if (!pr || !pr.tbl || !BR.prior.on) return;
+    this.pri = new Map(); this.priW = pr.w == null ? 1 : pr.w; this.trust = 1;
+    for (const nm in pr.tbl) { const tbl = this.mem[nm]; if (!tbl || typeof tbl !== 'object') continue; this.pri.set(tbl, pr.tbl[nm]);
+      for (const key in pr.tbl[nm]) if (!tbl[key]) { const z = { t: 0 }; for (const x in pr.tbl[nm][key]) z[x] = 0; tbl[key] = z; } } // so the readers that walk the table see what he remembers
+    if (pr.lost && BR.prior.adjust) { const o = this.adjOpts().reduce((a, b) => b[1] > a[1] ? b : a); if (o[1] > .05) { o[2](); this.note('remembers losing to him: ' + o[0]); } }
+  }
+  priorCheck(type) {
+    const P = this.pri && this.pri.get(this.mem.lead); if (!P) return; let tot = 0; for (const x in P) tot += P[x].n || 0; if (!tot) return;
+    const sh = (P[type] ? P[type].n || 0 : 0) / tot, B = BR.prior, rd = .2 + .8 * this.k.read;
+    if (sh < B.odd / PTYPES.length) this.trust = Math.max(0, this.trust - B.drop * rd); else if (sh > 1.5 / PTYPES.length) this.trust = Math.min(1, this.trust + B.drop * B.back * rd);
+  }
+  memo() { const out = {}, T = Math.max(1, this.t); for (const nm in this.memT) { out[nm] = {}; for (const key in this.memT[nm]) { const o = {}; for (const x in this.memT[nm][key]) o[x] = +(this.memT[nm][key][x] / T).toPrecision(3); out[nm][key] = o; } } return out; }
   // how good my punch p has been against this man: what lands, what gets countered, and what his defense habits leave open
   punchVal(p) {
     const m = this.mpeek(this.mem.mine, p), pr = BR.memPrior;
@@ -599,7 +625,7 @@ class Brain {
         // he files it: what this man throws, what he opens with, what follows what
         this.madd(this.mem.his, H.type, { n: 1 });
         if (this.lastHisP && this.t - this.lastHisT < 1.2) this.madd(this.mem.after, this.lastHisP + '>' + H.type, { n: 1 });
-        else { this.madd(this.mem.lead, H.type, { n: 1 }); if (BR.trap.on.draw && this.t < this.dl.win) this.dlBit(H); }
+        else { this.madd(this.mem.lead, H.type, { n: 1 }); this.priorCheck(H.type); if (BR.trap.on.draw && this.t < this.dl.win) this.dlBit(H); }
         this.lastHisP = H.type; this.lastHisT = this.t;
       }
       this.tel.seen++;
@@ -1069,19 +1095,7 @@ class Brain {
     if (TD) { let st = 0; for (let i = this.sc.rounds.length - 1; i >= 0 && this.sc.rounds[i] < 0; i--) st++; ch *= clamp((st - trV('delay', this.m.adjust) + 1) / 2, .15, 1.2); } // the shared way they lose: waiting too long (a world-class man sees it in a round or two)
     let change = null;
     if (this.R() < ch) {
-      const cat = c => { let v = 0, n = 0; for (const p of PTYPES) if (PUNCHES[p].cat === c) { v += this.punchVal(p); n++; } return v / n; };
-      const vals = { jab: cat('jab'), power: cat('power'), body: cat('body') };
-      const bestC = Object.keys(vals).reduce((a, b) => vals[a] > vals[b] ? a : b), worstC = Object.keys(vals).reduce((a, b) => vals[a] < vals[b] ? a : b);
-      let ctr = 0, n = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctr += e.c || 0; n += e.n || 0; }
-      let hurtIn = 0, hurtOut = 0; for (const p in this.mem.hurt) { const e = this.mpeek(this.mem.hurt, p); if (['jab', 'cross', 'bodyJab', 'bodyCross'].includes(p)) hurtOut += e.d; else hurtIn += e.d; }
-      const opts = [
-        ['more ' + bestC, vals[bestC] - 1, () => { this.plan[bestC] = clamp(this.plan[bestC] + .2, -.4, .4); }],
-        ['less ' + worstC, BR.trap.on.bank && worstC === 'body' && this.bank > 2 ? 0 : 1 - vals[worstC], () => { this.plan[worstC] = clamp(this.plan[worstC] - .2, -.4, .4); }],
-        ['stop leading, make him miss and pay', ctr / Math.max(4, n) * 3, () => { this.plan.initiative = clamp(this.plan.initiative - .25, -.4, .4); }],
-        ['get inside, he is killing me at range', hurtOut > hurtIn * 1.5 ? .5 : 0, () => { this.plan.range = clamp(this.plan.range - 8, -16, 16); }],
-        ['stay long, he is killing me inside', hurtIn > hurtOut * 1.5 ? .5 : 0, () => { this.plan.range = clamp(this.plan.range + 8, -16, 16); }],
-        ['go to work, I am waiting too long', this.sc.lead < 0 ? .4 : 0, () => { this.plan.initiative = clamp(this.plan.initiative + .25, -.4, .4); }]
-      ];
+      const opts = this.adjOpts();
       const menu = TD ? [0, 5, 1, 2, 3, 4].slice(0, Math.round(trV('menu', this.m.adjust))).map(i => opts[i]) : opts; // a man with one plan has 'more of the same' and 'go to work'
       const o = wpickR(this.R, menu, x => x[1] + .05 * this.R());
       if (o && o[1] > .05) { o[2](); change = o[0]; if (this.tel.adj1 == null) this.tel.adj1 = info.round || 0; }
@@ -1094,6 +1108,24 @@ class Brain {
     this.mode = 'feelout'; this.modeT = this.rnd(2, 6) * (1.3 - tr.initiative);
     this.note('round ' + (info.round || '?') + ' ' + (r > 0 ? 'won' : r < 0 ? 'lost' : 'even') + ' (he thinks)' + (change ? ', change: ' + change : ''));
     return { thinks: r, lead: this.sc.lead, change };
+  }
+  // the between-round changes he can make, each scored by what he has seen (live memory + the prior)
+  adjOpts() {
+    const cat = c => { let v = 0, n = 0; for (const p of PTYPES) if (PUNCHES[p].cat === c) { v += this.punchVal(p); n++; } return v / n; };
+    const vals = { jab: cat('jab'), power: cat('power'), body: cat('body') };
+    const bestC = Object.keys(vals).reduce((a, b) => vals[a] > vals[b] ? a : b), worstC = Object.keys(vals).reduce((a, b) => vals[a] < vals[b] ? a : b);
+    let ctr = 0, n = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctr += e.c || 0; n += e.n || 0; }
+    let hurtIn = 0, hurtOut = 0; for (const p in this.mem.hurt) { const e = this.mpeek(this.mem.hurt, p); if (['jab', 'cross', 'bodyJab', 'bodyCross'].includes(p)) hurtOut += e.d; else hurtIn += e.d; }
+    /** @type {Array<[string, number, () => void]>} */
+    const opts = [
+      ['more ' + bestC, vals[bestC] - 1, () => { this.plan[bestC] = clamp(this.plan[bestC] + .2, -.4, .4); }],
+      ['less ' + worstC, BR.trap.on.bank && worstC === 'body' && this.bank > 2 ? 0 : 1 - vals[worstC], () => { this.plan[worstC] = clamp(this.plan[worstC] - .2, -.4, .4); }],
+      ['stop leading, make him miss and pay', ctr / Math.max(4, n) * 3, () => { this.plan.initiative = clamp(this.plan.initiative - .25, -.4, .4); }],
+      ['get inside, he is killing me at range', hurtOut > hurtIn * 1.5 ? .5 : 0, () => { this.plan.range = clamp(this.plan.range - 8, -16, 16); }],
+      ['stay long, he is killing me inside', hurtIn > hurtOut * 1.5 ? .5 : 0, () => { this.plan.range = clamp(this.plan.range + 8, -16, 16); }],
+      ['go to work, I am waiting too long', this.sc.lead < 0 ? .4 : 0, () => { this.plan.initiative = clamp(this.plan.initiative + .25, -.4, .4); }]
+    ];
+    return opts;
   }
   roundStart(round) { this.mode = 'feelout'; this.modeT = (round === 1 ? this.rnd(15, 40) : this.rnd(2, 6)) * (1.3 - this.tr.initiative); }
   state() { return { mode: this.mode, hurtResp: this.hurtResp, emo: Object.assign({}, this.emo), plan: Object.assign({}, this.plan), lead: this.sc.lead }; }
