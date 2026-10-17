@@ -865,3 +865,8 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **State:** `claude/brain-wire` = `claude/plugin-brain`, hash **1a66d14e** (unchanged: `tests/cheese.js` is a test only). Design in `docs/PLUGIN.md`; the P1 baseline table is there.
 **Found:** bodyOnly beats the brain 94% at hard, 81% at expert (body meter to 11, gas .47, 1.27 KDs a fight against him). Clinch at hard 55% (target 65). Every other cheese loses 77-100%.
 **Next:** P3 bodyOnly (read the body habit, guard low, counter over the top; check whether the engine's body damage is part of it with `bodykd.js` first). High effort: debugging odd sim results. Then clinch, then P2 presets, P4 guide.
+
+### Handoff (Oct 17, P3 body, check pending)
+**State:** `claude/plugin-body` (from `claude/plugin-brain`, not yet on `claude/brain-wire`). Engine: `BODY.over/overT/overEv` (a head shot on a man bent over his own body punch), `BODY.low*` (the brain's elbows-in when he reads a body digger: `F.low` from Action `low`), knobs `BODY.elbow` and `BODY.gas` (1 and .9 = unchanged). Brain: `BR.body` (`bodyRead()` his body share over .25, counters upstairs, trades, more defense tries, range +8, output +.3).
+**Numbers:** hard vs bodyOnly 6% -> 74% (soft dip .35/.3, lowEv 2, n80). The first try (dip .9/.5, lowEv 1: hard 70%, expert 95%) failed the full check: stops 39.9%, body KDs 2.3%, swarmer 43.7, body 44.3, counter 56.5. The soft version's full check (`tests/check.sh p3b`) was running at handoff; results go into `docs/PLUGIN.md`. If it fails the same way, the dip goes to 0 and the read carries it.
+**Next:** review the roadmap with Ed (he asked, Oct 17), then finish P3 body (check p3b), the clinch hole, P2, P4. Ed's new ideas are in `docs/PLUGIN.md`: the eyes, target the damage.
