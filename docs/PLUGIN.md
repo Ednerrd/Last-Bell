@@ -34,6 +34,25 @@ A "player" who repeats one exploit all fight, run on the Last Bell engine (the r
 - Metrics, per cheese x preset (hard, expert): the brain's win %, and the cheese's share of landed punches in rounds 1-3 vs 8-10 (the brain should take the trick away as it reads it).
 - Targets: expert wins 80%+ against every cheese, hard 65%+, and the cheese's landed share falls from early to late. A cheese that holds or climbs is a hole to fix (P3).
 
+### P1 baseline (Oct 17, `cheese.js`, 160 fights per row, both sides rating 78, the cheese man a Pro)
+| Cheese | hard wins | expert wins | cheese landed share R1-3 -> R8-10 (hard / expert) |
+|---|---|---|---|
+| none (control) | 52.3 | 84.1 | 50 -> 50 / 44 -> 36 |
+| jabSpam | 89.2 | 97.4 | 54 -> 53 / 49 -> 48 |
+| oneTwo | 77.0 | 93.0 | 51 -> 45 / 46 -> 36 |
+| pullCounter | 99.4 | 100 | 16 -> 17 / 9 -> 10 |
+| shell | 99.4 | 100 | 19 -> 23 / 11 -> 13 |
+| **bodyOnly** | **6.3** | **19.1** | **59 -> 70 / 51 -> 58** |
+| haymaker | 79.4 | 90.0 | 34 -> 32 / 30 -> 28 |
+| runner | 100 | 100 | 31 -> 35 / 27 -> 31 |
+| **clinch** | **55.4** | 83.7 | 50 -> 51 / 47 -> 46 |
+
+- The control lands where the presets plan says: hard vs a Pro ~50%, expert ~84%.
+- Most cheeses lose worse than playing straight (one trick is easy to read). The ones that climb late (shell, runner, pullCounter) climb from tiny shares and lose every fight anyway.
+- **Hole 1, bodyOnly (big):** the brain's own picks, every punch moved to the body, beats a Pro brain 94% at hard and 81% at expert. Probe (hard, 30 fights): the cheese lands 18.1 a round vs 10.7 (straight: 14.9 vs 16.1), the brain throws 38.9 (straight 53), ends with his body meter at 11 (straight 78) and gas at .47, and goes down 1.27 times a fight (straight .13). Wins: 11 KO, 5 TKO, 11 UD. So the brain neither guards low when it's all body nor makes the man pay upstairs for bending in, and body damage then drains the gas and the legs. Part brain (P3: read the body habit, guard low, counter over the top), maybe part engine (body work that never gets punished may be too strong: check with the body tests before tuning).
+- **Hole 2, clinch at hard (small):** 55% (target 65). Tying up every time costs the cheese nothing; the brain doesn't punish the way in (uppercuts, short shots, turning off). Expert passes.
+- Next: P3 for bodyOnly first (it's a real exploit, and the coach's Body call leans the same way), then clinch, then P2 presets.
+
 ## 3. Fix what the cheese finds (P3)
 Each hole is a brain change with sims before and after (the usual balance checks: styles, audit, levels, the hash moves on purpose).
 

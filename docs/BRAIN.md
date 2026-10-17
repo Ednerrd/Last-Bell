@@ -860,3 +860,8 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **Next:** the plug-in brain (ROADMAP 1): difficulty presets (easy / hard / expert) on top of the skill levels, an anti-cheese test (a scripted player who repeats one thing: the brain should read and punish it), the drop-in guide (`brain/README.md`). Design first: high effort.
 **Open with Ed:** a simple vs expanded info toggle for the corner and result screens (proposed Oct 17, his answer pending). Parking lot: the brain may lead too much (scar.js finding).
 
+
+### Handoff (Oct 17, plug-in brain P1)
+**State:** `claude/brain-wire` = `claude/plugin-brain`, hash **1a66d14e** (unchanged: `tests/cheese.js` is a test only). Design in `docs/PLUGIN.md`; the P1 baseline table is there.
+**Found:** bodyOnly beats the brain 94% at hard, 81% at expert (body meter to 11, gas .47, 1.27 KDs a fight against him). Clinch at hard 55% (target 65). Every other cheese loses 77-100%.
+**Next:** P3 bodyOnly (read the body habit, guard low, counter over the top; check whether the engine's body damage is part of it with `bodykd.js` first). High effort: debugging odd sim results. Then clinch, then P2 presets, P4 guide.
