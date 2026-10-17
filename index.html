@@ -1550,6 +1550,24 @@ const SKL = {
   rec: { base: 30, exp: 34, expK: 15, win: 36, rating: .5, rMid: 78, lo: 20, hi: 92 },
   knowK: 12, rare: .6, south: .55             // fights to see most styles; specials and southpaws are seen less (scarcity is the edge)
 };
+// L4 learning between fights (docs/LEARN.md 2-3; learn()): gain per skill = base x sqrt(rounds / rdRef) x use x success x teacher x headroom x age x result
+//   headroom: 1 - (m / cap)^headP, wide open early, closing hard near his ceiling
+//   use: his use vs `use` per round (a Pro's, tests/report.js), capped at useMax; success: .5 + .5 x his rate / `rate` (a Pro's), .5..1.5
+//   cap: talent per skill, rolled once: capBase + (rating - capMid) x capK, his style's strengths + capOwn x lean, noise. Most men top out in Pro; World class needs the body
+//   result: losses teach more (no snowball), and the answer to what beat him most (`answer` on those skills). teach: a corner lesson that paid (F.read.les) x(1 + teach x lesson)
+//   idle: a skill he hasn't used (use under idleUse) for idleN fights loses idleLoss a fight, never under his level's floor. legs: after legsAt the legs slide each fight
+//   know: the style and stance he just saw grow by `gain` x what's left; the rest fade x`fade`, never under `floor` x the most he ever had
+const LRN = {
+  base: 2, rdRef: 8, useMax: 1.5, headP: 3,
+  use: { jab: 20, power: 23.5, combos: 17, body: 11, feints: 4.8, block: 48, slip: 48, footwork: 48, clinch: .35, cutoff: 1, ropes: .045, range: 1, angles: 1, counter: 7.4, read: 55, pacing: .87, adjust: .22 },
+  rate: { jab: .28, power: .33, combos: .33, body: .39, feints: .42, block: .26, slip: .3, footwork: .13, clinch: .8, cutoff: .05, ropes: .94, range: .5, angles: .17, counter: .38, read: .8, pacing: .84, adjust: .4 },
+  res: { win: .8, draw: 1, loss: 1.3 }, answer: 1.6, teach: .5,
+  call: { jab: ['jab'], body: ['body'], counter: ['counter'], move: ['footwork', 'angles'], press: ['cutoff'], hands: ['block'], up: ['pacing'], down: ['pacing'] }, // a corner lesson grows these
+  age: [[23, 1.2], [30, 1], [33, .6]], legsAt: 32, legs: .13, legSk: ['footwork', 'slip', 'range'],
+  idleUse: .2, idleN: 5, idleLoss: 1,
+  capBase: 80, capMid: 78, capK: 1, capOwn: .4, capNoise: 5, capLo: 50, capHi: 98,
+  know: { gain: .2, fade: .98, floor: .5 }
+};
 const SHOUT_LEN = 14;
 const SHOUT_EDGE = { atk: .6, def: .5, bar: .35, bad: .6 }; // what a good call is worth: his shots get through / he is harder to hit. Below bar the call hurts
 // the AI corner's live shouts (Fight.aiShout): a look every `look` sim s, yells the best-fitting call over `bar` (shoutFit), then waits `gap`; quiet `hold` s after the player yells
@@ -1733,6 +1751,54 @@ function fightReport(f, side) {
   const top = o => Object.entries(o).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([p, v]) => [p, Math.round(v)]);
   const beat = { hurt: top(Rp.hurtBy), kd: top(Rp.kdBy), outworked: sum(os, 'thrown') > sum(rs, 'thrown') * 1.3, trapped: sum(rs, 'trap') / (n * rlen) > .25, outlanded: hisL > myL * 1.3 };
   return { side, rounds: n, won, method: res.method || '', ko: won < 0 && !res.decision, sk, beat, kds: B.kds || 0, les: Object.assign({}, F.read && F.read.les), opp: { style: O.sk, stance: O.stance, name: O.sheet && O.sheet.name } };
+}
+// L4b: what one fight taught him (docs/LEARN.md 2-3). Reads fightReport; returns the change, applyLearn writes it.
+// A sheet that has never learned gets its start here (learnInit): skills off the body if it has no sk, know, talent caps, idle counters
+function learnInit(sheet, rng) {
+  rng = rng || R;
+  if (!sheet.sk) { const b = brainSkills(sheet.stats, ringIQ(sheet), domStyle(sheet)); sheet.sk = {}; for (const k of BoxerBrain.SKILL_KEYS) sheet.sk[k] = Math.round(b[k]); }
+  if (!sheet.know) sheet.know = knowMake(clamp(.12 + .78 * (1 - Math.exp(-(sheet.exp || 0) / SKL.knowK)), 0, 1), rng);
+  if (!sheet.knowPk) sheet.knowPk = JSON.parse(JSON.stringify(sheet.know));
+  if (!sheet.cap) { const [, S] = brainStyle(domStyle(sheet)), c0 = LRN.capBase + (ovr(sheet.stats) - LRN.capMid) * LRN.capK; sheet.cap = {};
+    for (const k of BoxerBrain.SKILL_KEYS) sheet.cap[k] = Math.round(clamp(c0 + (S.sk[k] || 0) * LRN.capOwn + gaussW(rng) * LRN.capNoise, LRN.capLo, LRN.capHi)); }
+  if (!sheet.idle) sheet.idle = {};
+  return sheet;
+}
+function learn(sheet, f, side, rng) {
+  learnInit(sheet, rng);
+  const Rp = fightReport(f, side), L = LRN, K = BoxerBrain.SKILL_KEYS, sk = sheet.sk, out = { sk: {}, idle: {}, know: null, knowPk: null, cross: [], rep: Rp };
+  const age = sheet.age || 27, ageX = age <= L.age[0][0] ? L.age[0][1] : age <= L.age[1][0] ? lerp(L.age[0][1], L.age[1][1], (age - L.age[0][0]) / (L.age[1][0] - L.age[0][0])) : age >= L.age[2][0] ? L.age[2][1] : lerp(L.age[1][1], L.age[2][1], (age - L.age[1][0]) / (L.age[2][0] - L.age[1][0]));
+  const resX = Rp.won > 0 ? L.res.win : Rp.won < 0 ? L.res.loss : L.res.draw, rdX = Math.sqrt(Rp.rounds / L.rdRef);
+  // the answer to what beat him: hurt or dropped by power upstairs -> block, slip (and the clinch after a KO); downstairs -> block; outworked -> pacing, range; trapped -> ropes, footwork; outlanded -> range, read
+  const ans = {}; if (Rp.won < 0) { const B = Rp.beat, top = (B.kd[0] || B.hurt[0] || [])[0];
+    if (top) { if (BoxerBrain.PUNCHES[top] && BoxerBrain.PUNCHES[top].zone === 'body') ans.block = 1; else { ans.block = ans.slip = 1; } }
+    if (Rp.ko) ans.clinch = 1; if (B.outworked) ans.pacing = ans.range = 1; if (B.trapped) ans.ropes = ans.footwork = 1; if (B.outlanded) ans.range = ans.read = 1; }
+  const les = {}; for (const c in Rp.les) for (const k of L.call[c] || []) les[k] = Math.max(les[k] || 0, Rp.les[c]);
+  const tier = BoxerBrain.TIERS.find(t => t.key === levelOf(sheet).key) || BoxerBrain.TIERS[0];
+  for (const k of K) {
+    const [use, rate] = Rp.sk[k], u = clamp(use / Math.max(1e-6, L.use[k] * Rp.rounds), 0, L.useMax), sc = clamp(.5 + .5 * rate / L.rate[k], .5, 1.5);
+    const head = Math.max(0, 1 - Math.pow(Math.max(0, sk[k]) / (sheet.cap[k] || 80), L.headP));
+    let g = L.base * rdX * u * sc * (1 + L.teach * (les[k] || 0)) * head * ageX * resX * (ans[k] ? L.answer : 1);
+    const idle = u < L.idleUse ? (sheet.idle[k] || 0) + 1 : 0; out.idle[k] = idle;
+    if (idle >= L.idleN && sk[k] > tier.min) g -= Math.min(L.idleLoss, sk[k] - tier.min);
+    if (age > L.legsAt && L.legSk.includes(k)) g -= L.legs * (age - L.legsAt);
+    out.sk[k] = g;
+  }
+  // style and stance know: what he just saw grows, the rest fades slowly
+  const kn = JSON.parse(JSON.stringify(sheet.know)), pk = JSON.parse(JSON.stringify(sheet.knowPk)), see = { style: Rp.opp.style, stance: Rp.opp.stance };
+  for (const g of ['style', 'stance']) for (const x in kn[g]) {
+    const v = kn[g][x] || 0;
+    kn[g][x] = +(x === see[g] ? v + L.know.gain * (1 - v) : Math.max(v * L.know.fade, Math.min(v, L.know.floor * (pk[g][x] || 0)))).toFixed(3);
+    pk[g][x] = Math.max(pk[g][x] || 0, kn[g][x]);
+  }
+  out.know = kn; out.knowPk = pk;
+  for (const k of K) { const a = BoxerBrain.TIERS.filter(t => sk[k] >= t.min).length, b = BoxerBrain.TIERS.filter(t => sk[k] + out.sk[k] >= t.min).length; if (b > a) out.cross.push([k, BoxerBrain.TIERS[b - 1].key]); }
+  return out;
+}
+function applyLearn(sheet, d) {
+  for (const k in d.sk) sheet.sk[k] = +clamp(sheet.sk[k] + d.sk[k], 5, 99).toFixed(2);
+  sheet.idle = d.idle; sheet.know = d.know; sheet.knowPk = d.knowPk; sheet.exp = (sheet.exp || 0) + 1;
+  return sheet;
 }
 function levelOf(sheet) { return BoxerBrain.tierOf(sheet.sk || brainSkills(sheet.stats, ringIQ(sheet), domStyle(sheet))); }
 const hurtNow = F => F.state === 'stun' || F.head < F.headMax * .3;
