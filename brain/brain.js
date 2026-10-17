@@ -53,6 +53,7 @@
  * @property {boolean} [thrownEv]   the game sends 'thrown' events for punches that really started
  * @property {boolean} [debug]
  * @property {?Object} [fam]        style/stance familiarity (L3)
+ * @property {?{kind: string, v: number}} [scar]  what a KO loss left (L4e): 'caution' or 'gunShy', how much
  * @property {?{tbl: Object, w?: number, lost?: boolean, won?: boolean}} [prior]  what he remembers of this man (L4c): a memo() from their last fight, its weight, did he lose it
  */
 (function (root, factory) {
@@ -239,6 +240,8 @@ const BR = {
   // trust, a lead it called earns back x back; adjust = the loser walks in with one change made
   // won / lost: x k when he won / lost that fight (losses teach more: the loser studies the tape, the winner gets comfortable; measured Oct 17, rematch.js: one-sided memory
   // is worth ~+6 to whoever has it, both remembering cancels out)
+  // L4e scars (scarSet): x v (the game sends ~.15 fresh after a KO loss). caution: risk x(1 - risk v), shell / clinch + v, initiative - ini v, killer x(1 - kill v); gunShy: output, initiative, power, killer
+  scar: { on: 1, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 1.5, shyIni: 1.5, shyPow: 1, shyKill: 2 },
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
@@ -389,6 +392,7 @@ class Brain {
     this.lvUpd();
     this.famSet(opts.fam); this.fx = { u: 0, s: 0 };
     this.tr = Object.assign({}, STYLES.boxerpuncher.t, profile.traits);
+    this.scarSet(opts.scar);
     const k = this.k;
     this.iq = (k.read + k.counter + k.pacing + k.adjust) / 4;
     this.t = 0; this.mode = 'feelout'; this.modeT = 0; this.decT = .3; this.hurtResp = null;
@@ -447,6 +451,14 @@ class Brain {
     for (const nm in pr.tbl) { const tbl = this.mem[nm]; if (!tbl || typeof tbl !== 'object') continue; this.pri.set(tbl, pr.tbl[nm]);
       for (const key in pr.tbl[nm]) if (!tbl[key]) { const z = { t: 0 }; for (const x in pr.tbl[nm][key]) z[x] = 0; tbl[key] = z; } } // so the readers that walk the table see what he remembers
     if (pr.lost && BR.prior.adjust) { const o = this.adjOpts().reduce((a, b) => b[1] > a[1] ? b : a); if (o[1] > .05) { for (let i = 0; i < BR.prior.adjust; i++) o[2](); this.note('remembers losing to him: ' + o[0]); } }
+  }
+  // L4e: what a knockout loss left (opts.scar, written between fights by the game). Caution: guard up, fewer risks, more clinch, waits more. Gun-shy (a man without the composure):
+  // the trigger sticks, he throws less and doesn't sit down on it. v = how much is left (BR.scar x v at full)
+  scarSet(sc) {
+    if (!sc || !sc.v || !BR.scar.on) return; const t = this.tr, v = sc.v, cl = x => clamp(x, 0, 1), S = BR.scar;
+    if (sc.kind === 'gunShy') { t.output = cl(t.output * (1 - S.shyOut * v)); t.initiative = cl(t.initiative - S.shyIni * v); t.power = cl(t.power - S.shyPow * v); t.killer = cl(t.killer * (1 - S.shyKill * v)); }
+    else { t.risk = cl(t.risk * (1 - S.risk * v)); t.shell = cl(t.shell + S.shell * v); t.clinch = cl(t.clinch + S.clinch * v); t.initiative = cl(t.initiative - S.ini * v); t.killer = cl(t.killer * (1 - S.kill * v)); }
+    this.scar = sc.kind;
   }
   priorCheck(type) {
     const P = this.pri && this.pri.get(this.mem.lead); if (!P) return; let tot = 0; for (const x in P) tot += P[x].n || 0; if (!tot) return;
