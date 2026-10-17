@@ -19,6 +19,7 @@ for (let i = 0; i < N; i++) {
     const x = s0.map(clone);
     if (arm === 'wmem' || arm === 'lmem') { const s = arm === 'wmem' ? w : 1 - w; x[s].opp = S.learn(clone(s0[s]), f1, s).opp; } // only the winner / only the loser remembers
     else if (arm !== 'none') for (let s = 0; s < 2; s++) { const d = S.learn(arm === 'full' ? x[s] : clone(s0[s]), f1, s); if (arm === 'full') S.applyLearn(x[s], d); else x[s].opp = d.opp; }
+    if (process.env.SKIP) for (const y of x) for (const id in y.opp || {}) for (const t of process.env.SKIP.split(',')) delete y.opp[id].tbl[t]; // SKIP=mine,def: leave tables out of the memory
     const f2 = S.run(x[0], x[1], { rounds: 10 }), r = f2.result.winner;
     add(arm, close, r === w ? 1 : r === 1 - w ? 0 : .5);
   }
