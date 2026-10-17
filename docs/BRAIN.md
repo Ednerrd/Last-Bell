@@ -855,3 +855,8 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **State:** `claude/brain-wire` = `claude/l4-learning`, hash **1a66d14e** holds. L4d camp built and measured (`docs/LEARN.md` "L4d"): tape +2, spar closes the never-seen hole (+2.2), drill small, stale tape harmless. Roadmap artifact (https://claude.ai/artifact/69yaqziTyqhMXSD58isXUg) updated Oct 17, source in the old scratchpad: rebuild from ROADMAP.md if lost.
 **Next:** L4e scars: after a KO loss, caution (guard up, fewer risks, more clinch) for 2-4 fights, half fades; low composure -> gun-shy (slower trigger). Lever: the brain's emotions/plan at the bell, from `sheet.scar` written by `learn`. Test: grow-style careers or a before/after pair test. Then L4f, the learned card (UI).
 
+### Handoff (Oct 17, L4 done)
+**State:** `claude/brain-wire` = `claude/l4-learning`, hash **1a66d14e** (same.js 40 = 63a19c0). L4 a-f all built (`docs/LEARN.md`, "L4 status"). Roadmap item 1 is now the plug-in brain.
+**Next:** the plug-in brain (ROADMAP 1): difficulty presets (easy / hard / expert) on top of the skill levels, an anti-cheese test (a scripted player who repeats one thing: the brain should read and punish it), the drop-in guide (`brain/README.md`). Design first: high effort.
+**Open with Ed:** a simple vs expanded info toggle for the corner and result screens (proposed Oct 17, his answer pending). Parking lot: the brain may lead too much (scar.js finding).
+

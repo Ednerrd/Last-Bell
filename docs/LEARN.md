@@ -159,3 +159,27 @@ After L4: the **plug-in brain** milestone (ROADMAP).
 
 - Tape is worth about a third of a full rematch memory (+6), right for film of him against other men. Stale film is harmless: trust drops fast when his leads don't match and live reads take over. The design wanted it to mislead a dumb man a little; it doesn't yet (open, small).
 
+### L4e: scars (Oct 17, hash holds: no scar = neutral)
+- `learn` writes `sheet.scar` after a knockout loss: `caution`, or `gunShy` when his composure is under `LRN.scar.shyAt` .4. `v` .15 (stacks to .3 with another KO loss), full for 2 fights, then x.6 a fight, gone under .03. `brainInit` sends it; the brain's `scarSet` bends his traits (caution: risk, shell, clinch, initiative, killer; gun-shy: output x(1 - 4v), initiative, power, killer) and adds a game-plan offset that doesn't fade in the fight (`this.sp` through `pv`; `BR.scar.plan` / `planShy`).
+- `TAG=x node tests/scar.js 75` (x4, x4 runs) then `agg`: two Pros, A scarred at v .15 or not, same pair, 1,200 pairs a row:
+
+| Scar | A wins | Thrown/rd | Gets stopped |
+|---|---|---|---|
+| none | 47.5-52.8 (runs) | 52.0-52.4 | 9.1-11.8% |
+| traits only | +1 | -0.5 / -2.4 | -1.3 / -1.9 |
+| caution: less initiative, long, less power | **+8.8** (a buff: leading costs in this engine) | -0.9 | -2.7 |
+| caution: power -1.5 only | -3.2 | -0.7 | +0.7 |
+| **caution (default): power -.6, range +6** | +3.2 | -0.4 | 11.8 -> **7.6%** |
+| caution: power -1, range +6 | +7.6 | -0.3 | -3.2 |
+| gun-shy: power -2, jab -1, output x.78 | +1.9 | -3.5 | -0.6 |
+| **gun-shy (default): power -.15, output x.4** | **-3.7** | **-7.1 (-14%)** | -2.1 |
+
+- Caution = safer (stopped a third less), and a little better: Wlad after Steward. Gun-shy = throws less and loses more: Wilder vs Parker. The win shifts carry ±2 of noise per pair of rows.
+- **Side finding:** less initiative + longer range made a man win ~9 points more against the same opponent. The brain's default may lead too much (parking lot).
+
+### L4f: the learned card (Oct 17, UI only)
+- `learnedLines()` on the result screen: "What <your man> takes from this one", up to five lines read off `learn` on a copy of his sheet (the lab keeps no fighters): a level up, his two biggest gains (`LEARN_LINE`), "He'll see that right hand coming next time" after a loss, a new style seen, a fresh scar, the man he'll remember.
+
+## L4 status (Oct 17)
+All six steps built. Open, small: the loser's rematch lesson (~+1.5 vs +3-6), stale tape doesn't mislead, caution is a slight buff.
+
