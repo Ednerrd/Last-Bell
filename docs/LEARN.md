@@ -83,7 +83,7 @@ Before a fight, pick one (Ed, Oct 16: scouting in camp):
 
 ## 7. In the game (L4f, visual, its own commit)
 
-The lab has no career, so: **Run it back** on the result screen (the same two men, both remembering, the loser adjusted), and an optional **"what he learned"** card after a fight ("He's finally sitting down on that right hand", "He'll see that hook coming next time", "That knockout's still in his head"). The camp pick shows before a run-back. The full career and the skill-sheet screen (L5) come later and call the same functions.
+The lab has no career, so: a **"what he learned"** card after a fight ("He's finally sitting down on that right hand", "He'll see that hook coming next time", "That knockout's still in his head"). The camp pick and rematches show when the career is back. The full career and the skill-sheet screen (L5) come later and call the same functions.
 
 ## Build order (each a commit, sims before and after)
 
@@ -94,11 +94,11 @@ The lab has no career, so: **Run it back** on the result screen (the same two me
 | L4c | opponent memory + the brain's prior, both men | holds (neutral) | `tests/rematch.js`: loser +3–6, first winner 70–80% |
 | L4d | camp: drill, spar, tape (stale chance), nothing | holds | `rematch.js` variants: tape worth ~1 round for a Pro, ~0 for a Novice |
 | L4e | scars: caution, gun-shy | holds | `grow.js`: KO losers' guard and risk shift, fades in 2–4 fights |
-| L4f | lab: Run it back, the learned card, the camp pick | holds (UI) | browser check |
+| L4f | lab: the learned card | holds (UI) | browser check |
 
 After L4: the **plug-in brain** milestone (ROADMAP).
 
-## Open for Ed
-1. Before the career is back, is **Run it back plus the learned card** enough to see L4 in the lab, or should the lab keep "your fighter" across fights (a career-lite that remembers your guy)?
-2. Growth pace: **realistic** (Novice → Intermediate in ~8–15 fights), or **game-fast** (about half that)?
-3. Corner lessons: **wire them into growth as the teacher bonus** (recommended), or cut `teach()`?
+## Decided (Ed, Oct 17)
+1. **The lab shows the learned card only, no Run it back button.** Rematch memory (L4c) is still built and measured headless (`tests/rematch.js`); it shows in the game when the career comes back.
+2. **Realistic pace:** Novice → Intermediate ~8–15 fights, Intermediate → Pro ~15–30 more, World class only with the talent.
+3. **Corner lessons:** no preference from Ed, so the recommendation stands: `teach()` stays and feeds growth as the teacher bonus.
