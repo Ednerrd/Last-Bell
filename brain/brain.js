@@ -41,6 +41,7 @@
  * @property {string} intent     his mode: feelout, work, pressure, hunt, survive, down...
  * @property {{ range: number, lateral: number, cut: number, clinch: boolean }} move
  * @property {number} guard      0..1 how high and tight the hands are
+ * @property {number} [low]      0..1 elbows down over the body (he's read a body digger): the body's covered, the head less
  * @property {?Object} punch     { type, combo, counter, feint, tech, commit, tell, ... } or null
  * @property {?{ kind: string, zone: string, vs: string, quality: number }} defend
  * @property {string} why
@@ -244,6 +245,7 @@ const BR = {
   // plan / planShy: his game plan (pv) shifted by these x v all fight: caution backs off and boxes long, gun-shy won't commit
   // tuned Oct 17 (tests/scar.js, 1,200 pairs): less initiative was a buff here (boxing long beats leading in this engine), so caution = less power + long, gun-shy = output
   scar: { on: 1, plan: { range: 40, power: -.6 }, planShy: { power: -1 }, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 4, shyIni: 1.5, shyPow: 1, shyKill: 2 },
+  body: { on: 1, norm: .25, min: 4, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
@@ -536,6 +538,7 @@ class Brain {
         if (BR.trap.on.vary && this.lastDef && this.t - this.lastDef.t < BR.trap.burnWin) this.burn = (this.burn || 0) + 1; // my answer got me hit
         if (ev.counter && this.lastMine && this.t - this.lastMine.t < 1.5) { this.madd(this.mem.mine, this.lastMine.p, { c: 1 }); E.frus = clamp(E.frus + .04 * (1 - comp * .5), 0, 1); }
       }
+      if (ev.type === 'landed' && PUNCHES[p].zone === 'body' && this.mode !== 'survive') { const e = this.bodyRead(); if (e && this.R() < BR.body.trade * e) this.tryCounter('trade', p); } // take it on the elbow and hit him while he's down there
       if (ev.type === 'evaded' || ev.type === 'blocked') { if (ev.def) this.lastDef = { def: ev.def, p, t: this.t }; this.tryCounter(ev.def, p); }
       else if (ev.type === 'missed' && ev.short && this.R() < BR.shortCtr) this.tryCounter('short', p); // he fell short: he's reaching, and coming back slow
     }
@@ -588,6 +591,12 @@ class Brain {
     this.tel.baits++; D.win = this.t + .3 + T.drawWin; D.back = this.t + .3 + T.drawBackT; D.next = this.t + 2;
     return this.fire(['jab'], 'bait: show the jab' + (D.armed ? ' (armed)' : ''), dSeen);
   }
+  // how much he lives downstairs: his body share over the usual, as far as I've noticed it (0 = normal)
+  bodyRead() {
+    if (!BR.body.on) return 0; let b = 0, t = 0;
+    for (const p of PTYPES) { const e = this.mpeek(this.mem.his, p); if (!e || !e.n) continue; t += e.n; if (PUNCHES[p].zone === 'body') b += e.n; }
+    return t < BR.body.min ? 0 : clamp((b / t - BR.body.norm) / (1 - BR.body.norm), 0, 1) * lerp(.4, 1, this.k.read);
+  }
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
     if (this.queue && this.queue.trap) return; // the trap's counter is already on its way
@@ -596,6 +605,7 @@ class Brain {
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
     if (this.t < this.ctrReady) ch *= BR.trap.ctrUp;   // I showed him half of it to draw his counter: mine is waiting
     if (BR.trap.on.draw && !this.dl.armed && this.t < this.dl.win + .6) ch *= BR.trap.drawHide;              // building the trap: don't show him the counter yet
+    if (p && PUNCHES[p].zone === 'body') ch *= 1 + BR.body.ctr * this.bodyRead(); // he keeps bending to dig: the head comes with it
     if (p && PUNCHES[p].cat === 'jab' || p === 'bodyJab') ch *= BR.jabCtr; // a jab snaps back: much harder to counter than a missed hook
     if (this.mode === 'survive') {
       const r = this.hurtResp; ch *= { shell: .3, run: .4, clinch: .3, freeze: .1 }[r] || 1;
@@ -665,6 +675,7 @@ class Brain {
     else if (this.mode === 'huntSafe') tryP *= .9;
     if (this.mode === 'survive' && this.hurtResp === 'freeze') tryP *= .4;
     if (P.me.punching) tryP *= .3 + .45 * this.tr.slip; // a head-mover still moves his head mid-combo
+    if (PUNCHES[T.type].zone === 'body') tryP = Math.min(1, tryP * (1 + BR.body.def * this.bodyRead())); // he's been going downstairs: the elbows are already there
     if (this.R() > tryP) { this.tel.noTry++; return; }
     // what does he think it is?
     let seenAs = T.as || T.type;
@@ -852,7 +863,7 @@ class Brain {
     if (this.t < this.h.look) return null; // between flurries: a look (is he still there?)
     const open = this.opening(P);
     // a quick thinker decides more often, not more: the work rate is his nature, the timing is his skill
-    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace * (this.cc ? this.cc.out : 1) * (this.gp || 1);
+    let p = BR.throwP * (.5 + 1.0 * tr.output) * m.aggr * (1 + open * (1.2 + (m.ctr ? 1 : 0))) * (this.decBase || .4) / .4 * this.pace * (this.cc ? this.cc.out : 1) * (this.gp || 1) * (1 + BR.body.out * (this.bRd || 0)); // he never comes upstairs: let the hands go
     // when NOT to: he keeps getting countered, he's gassed (a smart man paces it), he's scared, the other man is loaded and waiting
     let ctr = 0, n = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctr += e.c || 0; n += e.n || 0; }
     p *= 1 - clamp(ctr / Math.max(4, n) * 2.5, 0, .6) * k.read * (1 - tr.risk * .5);
@@ -1027,6 +1038,7 @@ class Brain {
     let po = 0; for (const p of ['jab', 'cross', 'bodyJab']) po += this.punchVal(p);
     const shift = clamp(pv / n - po / 3, -1, 1) * 10 * k.range * (tr.range > .7 ? .4 : 1); // what's working decides where he wants to be, inside his style
     let range = lerp(50, 76, tr.range) + md.range + this.pv('range') - shift + fat * 5 + E.fear * 10 + this.rangeJit + (this.wary && P.round <= this.wary.until ? this.wary.v : 0);
+    if (BR.body.on) { if (!(this.t < this.bRdT)) { this.bRd = this.bodyRead(); this.bRdT = this.t + .5; } range += BR.body.range * this.bRd; } // he digs from close: make him reach
     if (this.t < this.dl.back) range += BR.trap.drawBack; // the step back after the bait
     if (sv === 'clinch') range = 30;
     if (sv === 'fire') range = 50;
@@ -1093,6 +1105,7 @@ class Brain {
     const md = this.mm();
     this.out.intent = this.mode; this.out.hurt = this.mode === 'survive' ? this.hurtResp : null;
     this.out.guard = clamp(md.guard * lerp(.7, 1.2, this.tr.shell) * (1 - .35 * this.fat) * (this.mode === 'survive' && this.hurtResp === 'shell' ? 1.3 : 1) + (this.cc ? this.cc.guard : 0), .1, 1);
+    this.out.low = BR.body.on ? clamp((this.bRd || 0) * lerp(.6, 1.2, this.k.block), 0, 1) : 0; // he's read a body digger: elbows in
     return this.out;
   }
 
