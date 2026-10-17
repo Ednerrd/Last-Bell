@@ -246,7 +246,7 @@ const BR = {
   // tuned Oct 17 (tests/scar.js, 1,200 pairs): less initiative was a buff here (boxing long beats leading in this engine), so caution = less power + long, gun-shy = output
   scar: { on: 1, plan: { range: 40, power: -.6 }, planShy: { power: -1 }, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 4, shyIni: 1.5, shyPow: 1, shyKill: 2 },
   cl: { on: 0, norm: 1.5, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
-  body: { on: 1, k: .75, norm: .45, min: 4, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
+  body: { on: 1, k: .75, norm: .6, min: 4, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
