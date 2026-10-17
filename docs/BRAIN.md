@@ -835,3 +835,9 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **State:** `claude/brain-wire` = `claude/drama-metrics`. Hash **1a66d14e** (same.js 40 = 63a19c0). Drama step a (`tests/drama.js`, comeback target ~11%) and step b (the officials) done, details in `docs/DRAMA.md` sections 6 and 8. `research/comebacks.md`: no published real-world comeback rate; coin-flip rounds give ~12.7%.
 **Next:** Drama step c, crowd mood and booing (render and audio only, keep the hash), then d, the coach feedback line on the corner screen.
 **Watch:** audit stops read 24.7% on one pass (finish 25.8%); the angle fighter at 54.3.
+
+### Handoff (Oct 17, Drama done)
+**State:** `claude/brain-wire` = `claude/drama-metrics`. Hash **1a66d14e** (same.js 40 = 63a19c0), unchanged by step d. Drama is done: a (metrics), b (officials), d (the coach feedback line, `planVerdict()`, `docs/DRAMA.md` section 9); c (crowd mood, booing) parked.
+**Next:** ROADMAP item 1, L4 learning. It is a design plan: high effort, ask Ed to switch first. Open with Ed: the "plug-in brain" milestone (anti-cheese test, easy/hard/expert presets, drop-in guide, after L4) is not on the roadmap yet: he hasn't said.
+**Watch:** a volume man can sit near empty after round 1 (gas 3% seen in the lab, 26% in sims); the angle fighter at 54.3.
+

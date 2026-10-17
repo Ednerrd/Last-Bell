@@ -32,7 +32,7 @@ Each of these exists as a mechanic. The step is giving them a face and a reputat
 ## 4. What the coach does, and how he knows it mattered
 - **Information:** a live read line ("he drops his right when he jabs", "he's breathing hard") so a shout is a decision, not a guess. Better scouting and a smarter corner make better reads.
 - **Calls that show:** a shout should visibly change what the man does within a few seconds.
-- **Feedback:** the corner screen tells you if the plan worked ("Pressure: you won the round 10-9, he landed 12 power shots to 6").
+- **Feedback:** the corner screen tells you if the plan worked ("Pressure: you won the round 10-9, he landed 12 power shots to 6"). Built Oct 17 (step d, section 9).
 - **Weight:** coaching matters most in close fights, least in mismatches. A great coach with a weaker fighter still usually loses. Oct 15 (before the AI corner yelled): a good coach ~+3.5 pts, a bad one ~-5.5 pts (mirrors); re-measure with `tests/corner.js`.
 
 ## 5. Stakes
@@ -86,7 +86,7 @@ Fictional characters. Each is a familiar *type* fans know (the quick-hook ref, t
 2. **Crowd:** look and sound only (booing a stinker included). It never changes the fighters.
 3. **Comeback target (Ed, Oct 16): ~11% (8–14%)** for close 10-rounders: the man behind at halfway wins. No published real-world figure exists; coin-flip rounds give ~12.7% (`research/comebacks.md`). Today's sim is on it. Late drama (lead changes in the last 3 rounds, ~7%) is the thin part: it should come from the crisis rounds, not more comebacks.
 5. **Booing trigger (Oct 16):** relative dull, not truly dead (that's ~1%): boo the slowest ~5-10% of rounds against the usual pace, lots of clinching, no moment. It should show up in some fights, mostly counter-puncher mirrors. Look and sound only.
-4. **Build order:** whatever flow makes sense. Plan: (a) drama metrics (done Oct 16: `tests/drama.js`, numbers in section 6) (lead changes, comebacks, dead rounds, rounds with a moment): cheap, measures what we have; (b) refs and judges as characters (done Oct 16, see section 8); (c) crowd mood and booing (render and audio only: no sims needed beyond the same.js hash); (d) the coach feedback line on the corner screen.
+4. **Build order:** whatever flow makes sense. Plan: (a) drama metrics (done Oct 16: `tests/drama.js`, numbers in section 6) (lead changes, comebacks, dead rounds, rounds with a moment): cheap, measures what we have; (b) refs and judges as characters (done Oct 16, see section 8); (c) crowd mood and booing (render and audio only: no sims needed beyond the same.js hash); (d) the coach feedback line on the corner screen (done Oct 17, section 9). (c) parked (Ed, Oct 16).
 
 ## 8. Built: the officials (Oct 16, step b; hash 1a66d14e)
 - **Judges** (`JUDGES`, `judgeScore`): each sees the round through a taste (weights on clean power, jabs, body, output, ring control, defense = the other man's misses he slipped, coming forward = time the other man spent on the ropes) plus his own noise (Wanda wide 1.5, Walt steady .7). Three of five per fight. The old random per-fight lean (`judgeLean`, `TUNE.jLean`) is gone; the rare robbery card stays.
@@ -95,3 +95,10 @@ Fictional characters. Each is a familiar *type* fans know (the quick-hook ref, t
 - **On screen:** the ref in the intro, the crew and their tastes in the feed, judges by name and taste on the result card, holding warnings in the commentary.
 - **Full check:** styles 48.1–51.5, specials pooled 48.0–54.3, levels 15.8–18.0, audit 51.2 / 15.1 / 29.6%, stops 24.7% (finish 25.8%). Drama: lead change 32.9% of fights (close 41.2%), comebacks 8.3% (close 11.5%).
 - Next (step c): crowd mood and booing (look and sound only; the dullest ~5-10% of rounds by the fight's own pace, heavy clinching, no moment).
+
+## 9. Built: the coach feedback line (Oct 17, step d; UI only, hash 1a66d14e)
+`planVerdict()` (next to `roundNotes()`), shown under the stat grid on the corner screen, green edge if the plan worked, red if not. It judges the plan he fought the round on (`F.f[0].strategy`: the coach's pick, or the AI corner's when the coach left it on Corner's call) by the stat that plan is about:
+- Pressure: more power landed than him, or him on the ropes 20 s+. Box & move: under 15 s on the ropes and out-landed no worse. Body: 5+ body shots (and his body %). Counter: 3+ counters, or 1+ with 5+ misses made. KO: he went down or his head is under 40. Survive: no knockdown. Pick it up: out-threw him. Slow down: gas held (at least 50%, or within 15 points of where he started the round).
+- Then the cards ("You won the round on 2 of 3 cards") and the coach's live calls that round ("Your calls: 4, 3 on time": on time = shoutFit at or over `AIC.bar`).
+- Tone: "it worked", "it did its job" (worked, lost the round), "it didn't work, you won it anyway", "it didn't work". No plan on record (Corner's call held all round): cards and calls only.
+
