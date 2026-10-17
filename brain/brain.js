@@ -245,6 +245,7 @@ const BR = {
   // plan / planShy: his game plan (pv) shifted by these x v all fight: caution backs off and boxes long, gun-shy won't commit
   // tuned Oct 17 (tests/scar.js, 1,200 pairs): less initiative was a buff here (boxing long beats leading in this engine), so caution = less power + long, gun-shy = output
   scar: { on: 1, plan: { range: 40, power: -.6 }, planShy: { power: -1 }, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 4, shyIni: 1.5, shyPow: 1, shyKill: 2 },
+  cl: { on: 1, norm: 1.5, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
   body: { on: 1, norm: .25, min: 4, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
@@ -504,6 +505,7 @@ class Brain {
       else { this.sc.him += 3; E.fear = clamp(E.fear + .4 * (1.25 - comp), 0, 1); E.conf = clamp(E.conf - .3, -1, 1); this.h.kdMe = this.ct; this.h.kdR = 1; this.h.kdUp = 1; this.kds++; const L = this.rep.lastHit; if (L) this.rep.kdBy[L] = (this.rep.kdBy[L] || 0) + 1; } // he gets up hurt, whatever the legs say, and picks again
       return;
     }
+    if (ev.type === 'clinch') { if (ev.by === 'him') this.madd(this.mem.def, 'clinch', { n: 1 }); return; } // he grabbed me
     if (!PUNCHES[ev.p]) return;
     if (ev.by === 'me') {
       const p = ev.p, kd = kindOf(p);
@@ -597,6 +599,7 @@ class Brain {
     for (const p of PTYPES) { const e = this.mpeek(this.mem.his, p); if (!e || !e.n) continue; t += e.n; if (PUNCHES[p].zone === 'body') b += e.n; }
     return t < BR.body.min ? 0 : clamp((b / t - BR.body.norm) / (1 - BR.body.norm), 0, 1) * lerp(.4, 1, this.k.read);
   }
+  clRead() { if (!BR.cl.on) return 0; const e = this.mpeek(this.mem.def, 'clinch'), n = e ? e.n || 0 : 0; return clamp((n - BR.cl.norm) / BR.cl.span, 0, 1) * lerp(.4, 1, this.k.read); } // a man who grabs every time he's close
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
     if (this.queue && this.queue.trap) return; // the trap's counter is already on its way
@@ -1039,6 +1042,7 @@ class Brain {
     const shift = clamp(pv / n - po / 3, -1, 1) * 10 * k.range * (tr.range > .7 ? .4 : 1); // what's working decides where he wants to be, inside his style
     let range = lerp(50, 76, tr.range) + md.range + this.pv('range') - shift + fat * 5 + E.fear * 10 + this.rangeJit + (this.wary && P.round <= this.wary.until ? this.wary.v : 0);
     if (BR.body.on) { if (!(this.t < this.bRdT)) { this.bRd = this.bodyRead(); this.bRdT = this.t + .5; } range += BR.body.range * this.bRd; } // he digs from close: make him reach
+    if (BR.cl.on) { if (!(this.t < this.clT)) { this.clR = this.clRead(); this.clT = this.t + .5; } range += BR.cl.range * this.clR; } // he grabs when it's close: box him at the end of the jab
     if (this.t < this.dl.back) range += BR.trap.drawBack; // the step back after the bait
     if (sv === 'clinch') range = 30;
     if (sv === 'fire') range = 50;
@@ -1077,8 +1081,9 @@ class Brain {
     this.updMode(P, sdt);
     this.see(P);
     // he's rushing in head first: a counterpuncher meets him with the check hook and pivots off the line (Mayweather vs Hatton)
-    if (P.him.closing > BR.rushV && P.dist < 66 && P.dist > 40 && !this.queue && !P.me.busy && !P.him.punch && this.mode !== 'survive'
-      && this.R() < BR.rushP * this.k.counter * (1.3 - clamp(this.tr.initiative, 0, 1)) * dt) {
+    const clr = this.clR || 0; // a grabber walking in to tie up: meet him on the way
+    if (P.him.closing > BR.rushV * (clr ? BR.cl.rushV : 1) && P.dist < 66 && P.dist > 40 && !this.queue && !P.me.busy && !P.him.punch && this.mode !== 'survive'
+      && this.R() < BR.rushP * this.k.counter * (1.3 - clamp(this.tr.initiative, 0, 1)) * (1 + BR.cl.rush * clr) * dt) {
       const o = this.counterFor('rush', 'jab'); this.queue = { ps: o[0].slice(), why: 'counter: ' + o[2], ctr: 1, at: this.t, pivot: o[2] === 'check hook' };
     }
     this.decT -= dt;

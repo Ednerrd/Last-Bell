@@ -2522,7 +2522,7 @@ class Fight {
   startClinch(F) {
     const O = F.op; if (O.state === 'down') return;
     for (const X of this.f) { X.state = 'clinch'; X.act = null; X.queue = []; X.def = null; X.pendingDef = null; X.vx = X.vz = 0; X.slideT = 0; X.esc = null; X.spin = false; X.liverT = 0; }
-    this.clinchT = (1.1 + R() * 1.2) * this.ref.hold; this.clinchBy = F.side; this.emit('clinch', { c: F.side, lean: !!F.st.grab });
+    this.clinchT = (1.1 + R() * 1.2) * this.ref.hold; this.clinchBy = F.side; this.emit('clinch', { c: F.side, lean: !!F.st.grab }); this.bev(F, O, 'clinch', {});
     if (++F.rs.cl >= this.ref.holdN && F.rs.cl % this.ref.holdN === 0) this.foul(F, F.op, 'hold'); // too much holding: a strict ref has words
   }
   updateClinch(dt) {
