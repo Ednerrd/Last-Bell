@@ -123,3 +123,23 @@ After L4: the **plug-in brain** milestone (ROADMAP).
 - Harness quirk: a learner wins ~55-65% against a field "matched" on average skill. His learned skills sit where he uses them, a generated man's are spread by style, so the average undersells him.
 - Tried: base 1.4 linear headroom (Intermediate at ~25 fights, too slow); base 3 linear (Pro late, no World class: the linear ceiling closes too early); cubic headroom with base 1.8 (World class 1 of 6) / 2.2 (6 of 8 by 57, Intermediate at 8-9).
 
+### L4c: opponent memory (Oct 17, hash holds: no prior = neutral)
+- Brain: `memT` (the memory tables, whole fight, never fading), `memo()` (rates per second), `priorSet(opts.prior)`: every memory read (`mpeek`) adds the remembered rates x `tau` x `BR.prior.k` .6 x weight x trust. Prior-only keys are seeded as empty live entries so the readers that walk a table see them. `priorCheck` on each lead: a lead the memory gives under half a fair share costs `drop` .08 x read in trust, a common one earns a quarter of that back. The loser walks in with his best between-round change made (`adjOpts`, the round-end menu, now a method). Weight x `won` .6 / `lost` 1.6.
+- Engine: `learn` keeps `sheet.opp[id]` (memo, result, KO, how, rounds, times fought; the others fade x.85 a fight, gone under .05, a man who stopped him never under .3) and gives the other man an `id` if he has none. `priorOf(F)` hands it to `brainInit`.
+- `TAG=x node tests/rematch.js 300` (x4) then `agg`: two Pros (sk ~74, rating 78) fight, then the rematch from the same sheets several ways; `ARMS=none,mem,full,wmem,lmem`, `SKIP=mine,def` leaves tables out. 1,100+ decided rematches per row, first winner's share (±1.5):
+
+| Rematch | First winner wins | vs none |
+|---|---|---|
+| none (5 runs) | 51.9-55.0 | |
+| both remember (k 1/1) | 52.9 | -0.6 |
+| both remember + growth | 52.0 | -1.5 |
+| only the winner remembers | 57.7 | **+5.8** |
+| only the loser remembers | 53.4 | +1.5 (his notes don't help him) |
+| loser, no pre-loaded change / no notes on his own punches | 54.7 / 53.0 | +1.8 / +1.1 |
+| both, won .6 / lost 1.6 (**default**) | 51.2 (growth 51.4) | -1.4 |
+| both, won .6 / lost 1.6, the change made twice | 54.1 | -0.9 |
+
+- **What it means:** memory is a real edge when one man has it (the winner doubles down on what worked: +6). When both have it, the loser's notes predict exactly that, and it cancels. The design target (loser +3-6) is **not met**: with equal Pros, nothing tried gets the loser past ~+1.5. The real-world gap (first winner 70-80%) is mostly talent, which equal Pros don't have (the base here is ~53%).
+- **For L4d:** tape is one-sided by nature, so it's worth real points (up to the ~+6 a full memory gives), scaled down by noise and staleness.
+- Open: a loser's lesson that works would need a targeted change from what beat him (the punch that hurt him read earlier, a plan that holds 3+ rounds), not more weight on the same notes.
+

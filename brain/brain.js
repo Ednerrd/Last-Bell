@@ -239,7 +239,7 @@ const BR = {
   // trust, a lead it called earns back x back; adjust = the loser walks in with one change made
   // won / lost: x k when he won / lost that fight (losses teach more: the loser studies the tape, the winner gets comfortable; measured Oct 17, rematch.js: one-sided memory
   // is worth ~+6 to whoever has it, both remembering cancels out)
-  prior: { on: 1, k: .6, won: 1, lost: 1, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
+  prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
     react: .2,              // he sees everything later (x(1 + react) at full unfamiliarity)
     weapon: .22,            // the opposite stance's main weapon (the southpaw's straight left, the lead hook) comes from where he doesn't look: seen this much later on top

@@ -846,3 +846,8 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **Next:** L4c, opponent memory: `sheet.opp[id]` from the brain's memory after a fight, and a prior table in the brain (doesn't decay with fight time, live reads blend in, trust drops when it lies), both men; `tests/rematch.js` (loser +3-6, first winner 70-80%). Brain change, neutral without a prior: hash must hold. High effort.
 **Watch:** a learner beats a field matched on average skill ~60% (his skills sit where he uses them); `report.js` ring-skill signals (cutoff, angles) are weak.
 
+### Handoff (Oct 17, L4c)
+**State:** `claude/brain-wire` = `claude/l4-learning`. Hash **1a66d14e** holds. L4c built: rematch memory (numbers and the full table in `docs/LEARN.md` "L4c"). One-sided memory is worth ~+6; both sides cancel; the loser's lesson lands ~+1.5 at best (target +3-6 not met, noted as open).
+**Next:** L4d camp: drill a skill, spar a lookalike (know +.25), tape (a noisy, possibly stale prior through `priorSet`, worth up to ~+6 for a Pro reader), nothing. `rematch.js`-style test: tape vs no tape. Then L4e scars, L4f the learned card.
+**Lessons:** `pkill -f`/`pgrep -f ... | xargs kill` kills the calling shell (exit 144): kill by PID from `ps`. A trailing `&` on a `&&` chain backgrounds the whole chain, hash check included.
+
