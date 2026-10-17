@@ -61,6 +61,44 @@ Passing the truth is on purpose: reaction time, misreads and feint bites live in
 - `commit`: how much he sits down on it (more damage, more gas).
 - `debug: true` keeps a readable log in `brain.log` ("defends slip vs jab (it was a hook)", "-> survive (hurt: clinch)"). Commentary hooks for free.
 
+## Plug it into your game (P4, `docs/PLUGIN.md`)
+The short way: pick a difficulty, wire one loop, send events. `ring.js` is the whole thing in ~250 lines.
+
+```js
+const B = BoxerBrain;
+const { profile, opts } = B.preset('hard', { style: 'counter', seed: 7 });   // easy | hard | expert
+const brain = B.create(profile, Object.assign({ rng: B.mulberry32(42), pace: 1 }, opts));
+brain.roundStart(1);
+// each frame: build the perception from your game's truth, apply the action, clear the events
+const act = brain.think(perceive(me, him), dt);
+//   act.move.range / lateral / cut  -> your footwork      act.punch -> start the combo (tech, tell, commit scale it)
+//   act.defend -> your defense (it arrives on time; the brain already added his reaction time)   act.guard, act.low -> your block odds
+//   act.move.clinch -> tie up if you have clinches
+// between rounds:
+brain.rest({ round }); brain.roundStart(round + 1);
+// after the fight, for a rematch (expert reads it): save brain.memo(), pass it back as preset(..., { memo, lost, won })
+```
+
+**Presets.** `easy` = Intermediate (skills centered on 56), `hard` = Pro (74, the Last Bell default AI), `expert` = World class (90, and remembers you across fights from `memo`). The level is the skill sheet: no hidden cheats, no extra damage. One level apart wins ~16-18% of fights on the Last Bell engine.
+
+**What a host must fill** (the rest can be faked):
+| Field | Must | If you don't have it |
+|---|---|---|
+| `t`, `clock`, `roundLen`, `round`, `rounds` | yes | |
+| `dist` | yes | in Last Bell units: a jab reaches ~78, inside ~40. Scale yours |
+| `me.head/headMax`, `me.stam/stamMax`, `me.hurt`, `me.down`, `me.busy` | yes | |
+| `him.punch` (type, t, impactIn) | yes | without it he can't defend. Pass the truth: his eyes add the delay and the misreads |
+| `him.guard`, `him.gas`, `him.hurt`, `him.head` | should | .6 / 1 / false / 1 makes him blind to openings and to a hurt man |
+| `ropes.me/him` | should | 0: he never works the ropes |
+| `him.punch.feint/sell/tell`, `him.recover`, `him.lastRes`, `me.clinch` | nice | null / 0 |
+| `events` | yes | below |
+
+**Events** (push to both sides, `by: 'me'` for the one who did it, `by: 'him'` for the other): `landed`, `blocked`, `evaded`, `missed` (`short: true` if out of range), `feinted` (`bit`), `kd`, `clinch` (he tied me up), and `thrown` / `pulled` if your engine can tell a punch that really started from one he pulled back. Every punch event carries `p` (the punch id) and `def` (the defense that met it). His memory, his reads, the anti-cheese reads (a body digger, a grabber) all run on these.
+
+**Cost.** `think()` is ~6 µs on a server core (a 12-round Pro fight: ~108k calls); on a phone allow ~10x. Two brains at 60 fps are well under 1% of a frame.
+
+**Leave alone.** `BR` is tuned against the Last Bell engine (styles 48-53%, level gaps, the cheese test). Change it only with that test bench. Scale your engine to the brain (punch times, ranges), not the other way.
+
 ## What's inside
 - **Intent modes** that last seconds: feel-out, work, press, burst, reset, wait-to-counter, hunt (he's hurt), survive (I'm hurt). Traits, the cards, gas, fear and openings push the transitions.
 - **When to throw / when not to:** a work rate from his nature, openings (he just missed, on the ropes, hurt, gassed, hands down), and brakes (I keep getting countered, I'm gassed and smart enough to pace, I'm scared, he's punching).
