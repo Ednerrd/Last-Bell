@@ -56,6 +56,13 @@ A "player" who repeats one exploit all fight, run on the Last Bell engine (the r
 ## 3. Fix what the cheese finds (P3)
 Each hole is a brain change with sims before and after (the usual balance checks: styles, audit, levels, the hash moves on purpose).
 
+### The eyes: read the whole fighter (Ed, Oct 17)
+Ed: from the boxer's POV, stance up, analyzing his whole body, not telegraphing, deciding (a double jab to get inside?). The engine shows it, the brain reads it, together. Today the brain sees of the other man only his head meter, gas, guard and hurt. The eyes come first, then targeting the damage (below) reads off them.
+- What's on screen goes into Perception: the face (cut, swelling, blood in the eye), the body (folding after a body shot, elbows clamping, breathing), the hands (dropping when tired, a guard breaking down), the feet (weight back = loading up, flat = gassed, set = about to punch).
+- The brain notices by skill and state: where he looks (a novice watches the gloves, a vet the chest and shoulders: sees more, sooner), what the blur and the fear take away. A man can miss a cut he isn't looking for.
+- Then he decides from it: get inside (double jab, step in behind it), go to the cut, dig the body, reset. The plan, the read and the body language in one loop.
+- Measure: how often each cue is noticed by level, and what it's worth (win % with the cue on vs off, levels.js-style).
+
 ### Target the damage (Ed, Oct 17: "if his eye is damaged, go more to his eye")
 What the engine tracks on a man: the head meter (and its wear, `headMax`), the body meter (no in-fight regen, little between rounds), cuts (`D.cut`, `CUT.onEye`: an eye cut can bring the doctor), arm wear (`gi`: blocked shots break the guard down), the liver (right-side body hooks and rear-hand body shots, `BODY.liver`) and the wind (straights to the body, `BODY.wind`). No temple or swelling zone.
 What the brain sees of the other man today: his head meter, gas, guard (height x arm wear), hurt. Not his body meter, not his cut.
