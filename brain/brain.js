@@ -194,7 +194,7 @@ const BR = {
   tgt: { on: 1, eye: 2, body: .8, arms: .6, cut: [.1, .45], swell: [.25, .7], bodyAt: [.3, .75], armsAt: [.3, .75] },
   // his own bad eye (1e): cover it and move off it. at .. full: how bad (P.me.eye.v) before he bothers .. in full; self: how much before the corner's told him (at the break), lo: a novice's share of it
   cover: { on: 1, at: .3, full: .8, self: .3, lo: .4 },
-  eyeShut: .12,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
+  eyeShut: .09,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
 

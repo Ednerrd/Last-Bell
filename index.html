@@ -396,7 +396,7 @@ const BR = {
   tgt: { on: 1, eye: 2, body: .8, arms: .6, cut: [.1, .45], swell: [.25, .7], bodyAt: [.3, .75], armsAt: [.3, .75] },
   // his own bad eye (1e): cover it and move off it. at .. full: how bad (P.me.eye.v) before he bothers .. in full; self: how much before the corner's told him (at the break), lo: a novice's share of it
   cover: { on: 1, at: .3, full: .8, self: .3, lo: .4 },
-  eyeShut: .12,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
+  eyeShut: .09,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
 
@@ -1672,13 +1672,13 @@ const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30,
    brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
 const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
 let DMG = 0.38; // global tuning
-const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .12, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
+const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .11, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
   off: .5 }; // off: a cut sits over one eye (the side the punch came in on); shots to the other eye open it this much as often (an uppercut up the middle: half way)
 // swelling (1e): each eye swells from clean head shots to that side (the jab and the hook close eyes), faster on a worn face. at .. full: the eye half shut to shut,
 // and the punches on that side come from where he can't see (BR.eyeShut). ice: the cutman takes this much down between rounds (x his skill). doc / docSpan: the doctor on a shut eye
 // covering a bad eye (1e): blk more blocks on that side at full cover, move more when he's circling off it, cost fewer on the other side; feet: cover past this and he moves off it, circ at least this much
 const COV = { blk: .5, cost: .2, move: .3, feet: .2, circ: .35 };
-const SW = { on: 1, k: .075, jab: 1.3, hook: 1.15, up: .5, wear: 1.5, at: 4, full: 8.5, ice: 1.5, doc: 9, docSpan: 2.5 };
+const SW = { on: 1, k: .06, jab: 1.3, hook: 1.15, up: .5, wear: 1.5, at: 4, full: 8.5, ice: 1.5, doc: 9, docSpan: 2.5 };
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
 // A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
 const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg: .5, heavy: .6 }; // bodyHit: tank lost per point of body damage. heavy: power shots with weight behind them (hit) cost more
