@@ -180,7 +180,8 @@ const BR = {
   // thr: how much there has to be before it's there to see (salience = v / thr, capped 1.5); tau: how long a sighting holds once it stops being seen (s of clock); big: a moment worth a line (E3)
   eye: { on: 1, rate: { cut: .1, body: .05, arms: .35, fold: 2.5, legs: .08, wobble: 1.2 }, nov: { cut: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
     thr: { cut: .1, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, body: .5, legs: .6, wobble: .9 },
-    blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5 },
+    blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5,
+    e4: 1, hold: 6 }, // e4: he fights on what he saw, not the truth (hurt from a wobble he caught, held hold s of clock; his gas from the legs; the arm wear in the guard). 0 = the truth (A/B)
   reactMin: .1,           // the fastest he ever sees a punch, read or not (s; was .04: expert averaged .09)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
@@ -637,6 +638,15 @@ class Brain {
       }
     }
   }
+  // E4: what he believes about the other man, from his eyes (BR.eye.e4) or the truth
+  perc(P) {
+    const H = P.him, L = H.look, B = BR.eye;
+    if (!B.e4 || !L) return { hurt: !!H.hurt, gas: H.gas, guard: H.guard };
+    const w = this.eye.wobble, hurt = !!H.hurt && !!w && this.ct - w.ct < B.hold; // hurt only if he caught the legs dip (and it's still on)
+    const lg = this.seen('legs'), gas = lg > 0 ? clamp(.6 - lg, 0, 1) : 1; // the tank as the feet show it; nothing seen = he looks fresh
+    const bg = L.arms != null ? H.guard / (.5 + .5 * L.arms) : H.guard, guard = L.arms != null ? bg * (.5 + .5 * (1 - this.seen('arms'))) : H.guard; // the hands he sees; the wear only if he's noticed it
+    return { hurt, gas, guard };
+  }
   /** what he believes about a cue right now (0 = he hasn't seen it, or it's been a while) @param {string} c */
   seen(c) { const e = this.eye[c]; return e ? e.v * Math.exp(-(this.ct - e.ct) / BR.eye.tau[c]) : 0; }
   // a defense worked: does he make him pay?
@@ -785,7 +795,7 @@ class Brain {
   }
   updMode(P, dt) {
     const tr = this.tr, H = this.h, hunting = HUNTS[this.mode];
-    if (P.him.hurt) H.seen = this.ct;
+    if (this.ph.hurt) H.seen = this.ct;
     this.modeT -= dt; this.tel.modeT[this.mode] = (this.tel.modeT[this.mode] || 0) + dt;
     if (H.kdUp) { H.kdUp = 0; if (hunting) this.tel.caught++; this.survStart(P); return; } // off the floor
     if (P.me.hurt && this.mode !== 'survive') {
@@ -795,7 +805,7 @@ class Brain {
     }
     if (this.mode === 'survive') { this.survUpd(P); return; }
     const offFloor = this.ct - H.kdBy < BR.fin.kdWob;
-    if ((P.him.hurt || H.falseA || offFloor) && !hunting && P.me.stam / (P.me.stamMax || 100) > BR.fin.gasOut && this.ct - H.end > .5) {
+    if ((this.ph.hurt || H.falseA || offFloor) && !hunting && P.me.stam / (P.me.stamMax || 100) > BR.fin.gasOut && this.ct - H.end > .5) {
       // he smells it. A killer goes; a careful man checks the other man can still punch
       const late = P.roundLen - P.clock < BR.fin.late;
       let go = tr.killer * lerp(.5, 1, this.k.read) * (1 - .4 * this.emo.fear) * (late ? BR.fin.lateX : 1) * (1 + BR.desp.hunt * this.desp);
@@ -823,13 +833,13 @@ class Brain {
     const R = Math.max(2, P.rounds), line = 1 - (1 - G.end) * (P.round - 1) / (R - 1);
     v += clamp((mx / this.tank0 - line) * G.adj, -G.max, G.max) * kn; // ahead of the line: spend it; behind: save it
     if (P.round === P.rounds) v += G.last * kn;
-    if (P.him.gas < G.fadeAt && gas > P.him.gas + .2) v += G.fade * kn * this.k.read; // he's fading: go
+    if (this.ph.gas < G.fadeAt && gas > this.ph.gas + .2) v += G.fade * kn * this.k.read; // he's fading: go
     if (P.round <= G.rushR) v += tierV(this.m.pacing, G.rush); // a novice comes out too hot
     return v;
   }
   pv(x) { return this.plan[x] + (this.cc ? this.cc[x] : 0) + (this.sp ? this.sp[x] || 0 : 0); } // his plan plus what the corner told him, plus what a KO loss left (L4e: it doesn't fade in the fight)
   finM() { return (this.m.read + this.m.pacing) / 2; } // finishing mastery: reading the hurt, and knowing when to spend it
-  wobbly(P) { if (P.him.hurt) this.h.seen = this.ct; return P.him.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
+  wobbly(P) { if (this.ph.hurt) this.h.seen = this.ct; return this.ph.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
   // the hunt: check, then commit (all-out or behind a guard); flurries with a look in between; capped, and it costs gas
   huntStart(P, late) {
     const tr = this.tr, H = this.h;
@@ -1040,7 +1050,7 @@ class Brain {
       // he bit: punish where he went
       st = S.bit === 'slip' || S.bit === 'roll' ? ['hook'] : S.bit === 'duck' ? ['uppercut', 'hook'] : S.bit === 'pull' ? ['jab', 'cross'] : ['bodyHook', 'hook'];
     }
-    if (S.name === 'body then head' && S.i === 2 && P.him.guard > .5 && !S.blocked) { S.steps[2] = ['bodyHook']; } // the hands haven't dropped yet: one more downstairs
+    if (S.name === 'body then head' && S.i === 2 && this.ph.guard > .5 && !S.blocked) { S.steps[2] = ['bodyHook']; } // the hands haven't dropped yet: one more downstairs
     S.i++; S.next = this.t + S.gap;
     if (S.i >= S.steps.length) this.setup = null;
     const ps = this.fitReach(st.slice(), dSeen); return ps ? this.fire(ps, 'setup: ' + S.name, dSeen) : 'wait';
@@ -1106,17 +1116,17 @@ class Brain {
   /* ---------- the one call: perception in, action out ---------- */
   /** @param {Perception} P @param {number} dt @returns {Action} */
   think(P, dt) {
-    this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist; this.hisHurt = !!P.him.hurt;
+    this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist; this.hisHurt = this.ph ? this.ph.hurt : !!P.him.hurt;
     if (P.events) for (const ev of P.events) this.hear(ev);
     const E = this.emo, comp = this.tr.composure;
     const sdt = dt * this.pace; // slow time: moods and intent
     E.conf *= 1 - .02 * sdt; E.frus *= 1 - (.03 + .05 * comp) * sdt; E.fear *= 1 - (.02 + .08 * comp) * sdt * (P.me.hurt ? .2 : 1);
     this.fat = 1 - P.me.stam / (P.me.stamMax || 100);
-    this.ct += sdt; this.hisG = P.him.guard;
+    this.ct += sdt; this.hisG = this.ph ? this.ph.guard : P.him.guard;
     { const B = BR.blur, cur = Math.max(0, 1 - P.me.head / Math.max(1, P.me.headMax) - B.at) / (1 - B.at); // only real damage counts: a jab here and there doesn't blur anything
       this.blur = clamp((cur * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + (P.round - 1) / Math.max(1, P.rounds - 1) * B.late + this.kds * B.kd) * (1.3 - .6 * this.tr.composure), 0, 1); }
     this.famUpd(P);
-    this.look(P, sdt);
+    this.look(P, sdt); this.ph = this.perc(P); this.hisG = this.ph.guard; // E4: he fights on what he sees
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
     this.updMode(P, sdt);
     this.see(P);
