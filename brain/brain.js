@@ -166,6 +166,7 @@ const BR = {
   spread: .6,             // squeezes how much a skill point is worth (1 = as is; lower = closer tiers, more upsets)
   react: [.34, .14],      // reaction time to a punch, novice .. world class (s)
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
+  reactMin: .1,           // the fastest he ever sees a punch, read or not (s; was .04: expert averaged .09)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
 
@@ -648,7 +649,7 @@ class Brain {
       const rd = H.feint ? this.predict(H.type) * .5 : this.predict(H.type);
       d *= 1 - BR.antic * rd;
       d -= BR.tellSee * (H.tell || 0);
-      d = Math.max(.04, d);
+      d = Math.max(BR.reactMin, d); // even a punch he's read needs a beat: no psychic blocks (Ed, Oct 17: smart, not psychic)
       const start = this.t - (H.t || 0), deadline = H.feint ? start + .3 : this.t + (H.impactIn != null ? H.impactIn : .25);
       this.threat = { id: H.id, type: H.type, feint: !!H.feint, sell: H.sell || 0, look: H.look || null, start, at: start + d, deadline, rd, done: false };
       if (!H.feint) {
