@@ -2022,7 +2022,7 @@ class Fight {
         strat: F.strategy, order: F.order ? { k: F.order.k, q: F.order.q, left: F.order.t / SHOUT_LEN, age: (SHOUT_LEN - F.order.t) * CLOCK } : null }, // the corner: this round's plan and the live shout (the brain reads them when BR.coach is on)
       him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, look: a.look || null, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0) } : null, // an awkward man's punches come from where you don't look: seen later
         recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
-        guard: O.bg * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100,
+        guard: O.bg * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100, body: clamp(O.body, 0, 100) / 100, cut: O.cut / 10, // 1e: what's damaged (for targeting the damage)
         look: { cut: O.cut / 10, body: clamp(O.body, 0, 100) / 100, arms: O.gi, // what's on screen (the eyes, E1): the face, the body meter, worn arms
           fold: O.liverT > 0 || (O.state === 'stun' && O.hitZone === 'body') ? 1 : O.hitZone === 'body' && O.hitKind !== 'block' ? O.hitT * clamp(O.hitPow, 0, 1) : 0, // bent over a body shot
           legs: clamp(1 - O.stam / Math.max(1, O.stamMax) - .4, 0, .6) / .6 * .6 + (1 - clamp(O.body, 0, 100) / 100) * BODY.legs * 2, // heavy, flat feet: the tank and a sinking body

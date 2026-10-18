@@ -641,11 +641,12 @@ class Brain {
   // E4: what he believes about the other man, from his eyes (BR.eye.e4) or the truth
   perc(P) {
     const H = P.him, L = H.look, B = BR.eye;
-    if (!B.e4 || !L) return { hurt: !!H.hurt, gas: H.gas, guard: H.guard };
+    if (!B.e4 || !L) return { hurt: !!H.hurt, gas: H.gas, guard: H.guard, body: H.body, cut: H.cut };
     const w = this.eye.wobble, f = this.eye.fold, hurt = !!H.hurt && (!!w && this.ct - w.ct < B.hold || !!f && this.ct - f.ct < B.hold); // hurt only if he caught it (and it still shows): a head shot wobbles him, a body shot folds him
     const lg = this.seen('legs'), gas = lg > 0 ? clamp(.6 - lg, 0, 1) : 1; // the tank as the feet show it; nothing seen = he looks fresh
     const bg = L.arms != null ? H.guard / (.5 + .5 * L.arms) : H.guard, guard = L.arms != null ? bg * (.5 + .5 * (1 - this.seen('arms'))) : H.guard; // the hands he sees; the wear only if he's noticed it
-    return { hurt, gas, guard };
+    const body = H.body, cut = this.seen('cut') > 0 ? H.cut : 0; // 1e: go to the cut only if he's seen it; the whole body meter always available (what he sees on screen)
+    return { hurt, gas, guard, body, cut };
   }
   /** what he believes about a cue right now (0 = he hasn't seen it, or it's been a while) @param {string} c */
   seen(c) { const e = this.eye[c]; return e ? e.v * Math.exp(-(this.ct - e.ct) / BR.eye.tau[c]) : 0; }
@@ -992,6 +993,8 @@ class Brain {
       if (H.guard < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
       if (H.guard > .8) w *= 1 + c.body * k.read;               // shell up high: go to the body
       if (H.gas < BR.fuse.gas && !HUNTS[md]) w *= 1 + (c.body + (c.ps.includes('bodyHook') ? BR.fuse.liver : 0)) * (BR.fuse.gas - H.gas) / BR.fuse.gas * BR.fuse.w * k.read; // he's tired: the body is the slow fuse, dig to the liver
+      if (H.cut > 0) w *= 1 + c.up * H.cut * 1.5 * k.read;      // 1e: he's cut: go upstairs to that side (more sure if ring IQ is high)
+      if (H.body < .5) w *= 1 + c.body * (1 - H.body) * 1.2 * k.read; // 1e: his body is sinking: dig harder
       // the situation (a smart man sees it, a novice throws his favourites)
       let sit = 1;
       if (H.guard > .7 && c.lowHigh) sit *= 1.3;                          // lift then dig, or dig then lift: a high guard can't cover both
