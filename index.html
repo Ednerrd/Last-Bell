@@ -844,7 +844,7 @@ class Brain {
   perc(P) {
     const H = P.him, L = H.look, B = BR.eye;
     if (!B.e4 || !L) return { hurt: !!H.hurt, gas: H.gas, guard: H.guard };
-    const w = this.eye.wobble, f = this.eye.fold, hurt = !!H.hurt && (!!w && this.ct - w.ct < B.hold || !!f && this.ct - f.ct < B.hold); // a head shot shows as a wobble, a body shot as the fold // hurt only if he caught the legs dip (and it's still on)
+    const w = this.eye.wobble, f = this.eye.fold, hurt = !!H.hurt && (!!w && this.ct - w.ct < B.hold || !!f && this.ct - f.ct < B.hold); // hurt only if he caught it (and it still shows): a head shot wobbles him, a body shot folds him
     const lg = this.seen('legs'), gas = lg > 0 ? clamp(.6 - lg, 0, 1) : 1; // the tank as the feet show it; nothing seen = he looks fresh
     const bg = L.arms != null ? H.guard / (.5 + .5 * L.arms) : H.guard, guard = L.arms != null ? bg * (.5 + .5 * (1 - this.seen('arms'))) : H.guard; // the hands he sees; the wear only if he's noticed it
     return { hurt, gas, guard };
