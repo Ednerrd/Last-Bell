@@ -19,7 +19,7 @@
  * @property {number} dist       distance between the two men
  * @property {{ me: number, him: number }} ropes  0 = center of the ring .. 1 = on the ropes
  * @property {{ head: number, headMax: number, stam: number, stamMax: number, hurt: boolean, down: boolean, clinch: boolean, punching: boolean, busy: boolean,
- *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean }} me   his own body, the corner's plan and live shout, his stance (south: a southpaw)
+ *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean, eye?: ?{ s: string, v: number } }} me   his own body, the corner's plan and live shout, his stance (south: a southpaw), his worse eye (a cut or a swelling: side, 0..1)
  * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number, look?: Look }} him
  * @property {Array<{ type: string, by: 'me' | 'him', [k: string]: any }>} events  what happened since last frame (landed, blocked, evaded, feinted, thrown...)
  */
@@ -60,6 +60,7 @@
  * @property {?{ kind: string, zone: string, vs: string, quality: number }} defend
  * @property {string} why
  * @property {?string} [hurt]    how he answers being hurt (survive mode)
+ * @property {?{ s: string, k: number }} [cover]  his bad eye covered (1e): the side, and how much (the glove stays up there, he moves off it)
  */
 /**
  * @typedef {Object} BrainOpts
@@ -191,6 +192,8 @@ const BR = {
   // target the damage (1e): what he's spotted pulls his picks, times his read. eye: straights and hooks onto a seen cut or swelling; body: dig on a seen sinking body; arms: power through a seen worn guard.
   // cut / swell / body / arms: [where it starts to count, where it counts in full] of the cue as he saw it
   tgt: { on: 1, eye: 2, body: .8, arms: .6, cut: [.1, .45], swell: [.25, .7], bodyAt: [.3, .75], armsAt: [.3, .75] },
+  // his own bad eye (1e): cover it and move off it. at .. full: how bad (P.me.eye.v) before he bothers .. in full; self: how much before the corner's told him (at the break), lo: a novice's share of it
+  cover: { on: 1, at: .3, full: .8, self: .3, lo: .4 },
   eyeShut: .12,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
@@ -664,6 +667,12 @@ class Brain {
     const eye = Math.max(ec, es), side = eye <= 0 ? null : ec >= es ? c && c.s : w && w.s;
     const body = at(this.seen('body'), T.bodyAt), arms = at(this.seen('arms'), T.armsAt);
     return eye > 0 && side || body > 0 || arms > 0 ? { eye: side ? eye : 0, side, body, arms } : null;
+  }
+  // 1e: his own cut or closing eye: cover that side and move off it. The corner tells him at the break; before that, a smart man thinks of it himself
+  coverOf(P) {
+    const e = P.me.eye, C = BR.cover; if (!C.on || !e || !e.s || e.v < C.at) return null;
+    const k = clamp((e.v - C.at) / (C.full - C.at), 0, 1) * lerp(C.self, 1, this.told === e.s ? 1 : 0) * lerp(C.lo, 1, this.k.read);
+    return k > .02 ? { s: e.s, k } : null;
   }
   /** what he believes about a cue right now (0 = he hasn't seen it, or it's been a while) @param {string} c */
   seen(c) { const e = this.eye[c]; return e ? e.v * Math.exp(-(this.ct - e.ct) / BR.eye.tau[c]) : 0; }
@@ -1184,6 +1193,7 @@ class Brain {
     const md = this.mm();
     this.out.intent = this.mode; this.out.hurt = this.mode === 'survive' ? this.hurtResp : null;
     this.out.guard = clamp(md.guard * lerp(.7, 1.2, this.tr.shell) * (1 - .35 * this.fat) * (this.mode === 'survive' && this.hurtResp === 'shell' ? 1.3 : 1) + (this.cc ? this.cc.guard : 0), .1, 1);
+    this.out.cover = this.coverOf(P);
     this.out.low = BR.body.on ? clamp((this.bRd || 0) * lerp(.6, 1.2, this.k.block), 0, 1) : 0; // he's read a body digger: elbows in
     return this.out;
   }
@@ -1191,6 +1201,7 @@ class Brain {
   /* ---------- between rounds: his own read of the round, and whether he changes anything ---------- */
   rest(info) {
     info = info || {};
+    if (info.eye) this.told = info.eye; // the cutman: cover that eye
     const k = this.k, tr = this.tr, E = this.emo, won = this.sc.me - this.sc.him;
     const r = won > 1 ? 1 : won < -1 ? -1 : 0;
     this.sc.rounds.push(r); this.sc.lead += r; this.sc.me = 0; this.sc.him = 0;

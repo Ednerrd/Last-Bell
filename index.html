@@ -221,7 +221,7 @@ const BoxerBrain = (() => { const module = { exports: {} };
  * @property {number} dist       distance between the two men
  * @property {{ me: number, him: number }} ropes  0 = center of the ring .. 1 = on the ropes
  * @property {{ head: number, headMax: number, stam: number, stamMax: number, hurt: boolean, down: boolean, clinch: boolean, punching: boolean, busy: boolean,
- *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean }} me   his own body, the corner's plan and live shout, his stance (south: a southpaw)
+ *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean, eye?: ?{ s: string, v: number } }} me   his own body, the corner's plan and live shout, his stance (south: a southpaw), his worse eye (a cut or a swelling: side, 0..1)
  * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number, look?: Look }} him
  * @property {Array<{ type: string, by: 'me' | 'him', [k: string]: any }>} events  what happened since last frame (landed, blocked, evaded, feinted, thrown...)
  */
@@ -262,6 +262,7 @@ const BoxerBrain = (() => { const module = { exports: {} };
  * @property {?{ kind: string, zone: string, vs: string, quality: number }} defend
  * @property {string} why
  * @property {?string} [hurt]    how he answers being hurt (survive mode)
+ * @property {?{ s: string, k: number }} [cover]  his bad eye covered (1e): the side, and how much (the glove stays up there, he moves off it)
  */
 /**
  * @typedef {Object} BrainOpts
@@ -393,6 +394,8 @@ const BR = {
   // target the damage (1e): what he's spotted pulls his picks, times his read. eye: straights and hooks onto a seen cut or swelling; body: dig on a seen sinking body; arms: power through a seen worn guard.
   // cut / swell / body / arms: [where it starts to count, where it counts in full] of the cue as he saw it
   tgt: { on: 1, eye: 2, body: .8, arms: .6, cut: [.1, .45], swell: [.25, .7], bodyAt: [.3, .75], armsAt: [.3, .75] },
+  // his own bad eye (1e): cover it and move off it. at .. full: how bad (P.me.eye.v) before he bothers .. in full; self: how much before the corner's told him (at the break), lo: a novice's share of it
+  cover: { on: 1, at: .3, full: .8, self: .3, lo: .4 },
   eyeShut: .12,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
@@ -866,6 +869,12 @@ class Brain {
     const eye = Math.max(ec, es), side = eye <= 0 ? null : ec >= es ? c && c.s : w && w.s;
     const body = at(this.seen('body'), T.bodyAt), arms = at(this.seen('arms'), T.armsAt);
     return eye > 0 && side || body > 0 || arms > 0 ? { eye: side ? eye : 0, side, body, arms } : null;
+  }
+  // 1e: his own cut or closing eye: cover that side and move off it. The corner tells him at the break; before that, a smart man thinks of it himself
+  coverOf(P) {
+    const e = P.me.eye, C = BR.cover; if (!C.on || !e || !e.s || e.v < C.at) return null;
+    const k = clamp((e.v - C.at) / (C.full - C.at), 0, 1) * lerp(C.self, 1, this.told === e.s ? 1 : 0) * lerp(C.lo, 1, this.k.read);
+    return k > .02 ? { s: e.s, k } : null;
   }
   /** what he believes about a cue right now (0 = he hasn't seen it, or it's been a while) @param {string} c */
   seen(c) { const e = this.eye[c]; return e ? e.v * Math.exp(-(this.ct - e.ct) / BR.eye.tau[c]) : 0; }
@@ -1386,6 +1395,7 @@ class Brain {
     const md = this.mm();
     this.out.intent = this.mode; this.out.hurt = this.mode === 'survive' ? this.hurtResp : null;
     this.out.guard = clamp(md.guard * lerp(.7, 1.2, this.tr.shell) * (1 - .35 * this.fat) * (this.mode === 'survive' && this.hurtResp === 'shell' ? 1.3 : 1) + (this.cc ? this.cc.guard : 0), .1, 1);
+    this.out.cover = this.coverOf(P);
     this.out.low = BR.body.on ? clamp((this.bRd || 0) * lerp(.6, 1.2, this.k.block), 0, 1) : 0; // he's read a body digger: elbows in
     return this.out;
   }
@@ -1393,6 +1403,7 @@ class Brain {
   /* ---------- between rounds: his own read of the round, and whether he changes anything ---------- */
   rest(info) {
     info = info || {};
+    if (info.eye) this.told = info.eye; // the cutman: cover that eye
     const k = this.k, tr = this.tr, E = this.emo, won = this.sc.me - this.sc.him;
     const r = won > 1 ? 1 : won < -1 ? -1 : 0;
     this.sc.rounds.push(r); this.sc.lead += r; this.sc.me = 0; this.sc.him = 0;
@@ -1665,6 +1676,8 @@ const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, wid
   off: .4 }; // off: a cut sits over one eye (the side the punch came in on); shots to the other eye open it this much as often (an uppercut up the middle: half way)
 // swelling (1e): each eye swells from clean head shots to that side (the jab and the hook close eyes), faster on a worn face. at .. full: the eye half shut to shut,
 // and the punches on that side come from where he can't see (BR.eyeShut). ice: the cutman takes this much down between rounds (x his skill). doc / docSpan: the doctor on a shut eye
+// covering a bad eye (1e): blk more blocks on that side at full cover, move more when he's circling off it, cost fewer on the other side; feet: cover past this and he moves off it, circ at least this much
+const COV = { blk: .5, cost: .2, move: .3, feet: .2, circ: .35 };
 const SW = { on: 1, k: .075, jab: 1.3, hook: 1.15, up: .5, wear: 1.5, at: 4, full: 8.5, ice: 1.5, doc: 9, docSpan: 2.5 };
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
 // A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
@@ -2010,6 +2023,18 @@ function levelOf(sheet) { return BoxerBrain.tierOf(sheet.sk || brainSkills(sheet
 const hurtNow = F => F.state === 'stun' || F.head < F.headMax * .3;
 // how shut the eye is on the side a punch comes in on (1e: 0 open .. 1 shut; an uppercut comes up the middle, half of the worse eye)
 const eyeShut = (F, s) => clamp((F.sw[s] - SW.at) / (SW.full - SW.at), 0, 1);
+// his worse eye (1e): a cut (against the doctor's line) or a swelling (against shut), its side and 0..1
+function eyeOf(F) {
+  const c = F.cutS ? F.cut / CUT.doc : 0, l = Math.max(F.sw.L / SW.full, F.cutS === 'L' ? c : 0), r = Math.max(F.sw.R / SW.full, F.cutS === 'R' ? c : 0);
+  return l > 0 || r > 0 ? { s: l >= r ? 'L' : 'R', v: Math.min(1, Math.max(l, r)) } : null;
+}
+// a covered eye (1e, the brain's Action.cover): that side's glove stays up, more so when he moves off it; the other side pays a little
+function coverEye(D, A, P) {
+  const c = D.cover; if (!c || P.zone !== 'head') return 1;
+  const ln = laneOf(A, P); if (ln.lane === 'under') return 1;
+  return ln.side === c.s ? 1 + c.k * (COV.blk + (D.circDir === offEye(c.s) ? COV.move * D.circ : 0)) : 1 - COV.cost * c.k;
+}
+const offEye = s => s === 'R' ? -1 : 1; // the way off a bad eye (circDir -1 = to his left: a right eye is hit by the other man's left hand, so he moves to his left, away from it)
 const blindTo = (F, ln) => ln.lane === 'under' ? .5 * Math.max(eyeShut(F, 'L'), eyeShut(F, 'R')) : eyeShut(F, ln.side);
 function ropesK(F) { const v = vec(F, F.op); return clamp(1 - (freeRun(F.x, F.z, -v.ux, -v.uz) - 6) / 30, 0, 1); }
 
@@ -2050,7 +2075,7 @@ class Fight {
     return {
       t: this.t, clock: this.clock, roundLen: ROUND_LEN, round: this.round, rounds: this.rounds, dist: dist(F, O), ropes: { me: ropesK(F), him: ropesK(O) },
       me: { head: F.head, headMax: F.headMax, stam: F.stam, stamMax: F.stamMax, hurt: hurtNow(F), down: F.state === 'down', clinch: F.state === 'clinch', punching: F.state === 'punch', busy,
-        south: F.stance === 'southpaw', strat: F.strategy, order: F.order ? { k: F.order.k, q: F.order.q, left: F.order.t / SHOUT_LEN, age: (SHOUT_LEN - F.order.t) * CLOCK } : null }, // the corner: this round's plan and the live shout (the brain reads them when BR.coach is on)
+        south: F.stance === 'southpaw', eye: eyeOf(F), strat: F.strategy, order: F.order ? { k: F.order.k, q: F.order.q, left: F.order.t / SHOUT_LEN, age: (SHOUT_LEN - F.order.t) * CLOCK } : null }, // the corner: this round's plan and the live shout (the brain reads them when BR.coach is on)
       him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, look: a.look || null, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0), blind: blindTo(F, laneOf(O, PUNCH[a.type])) } : null, // an awkward man's punches come from where you don't look: seen later
         recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
         guard: O.bg * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100,
@@ -2065,7 +2090,7 @@ class Fight {
   brainTick(F, dt) {
     const O = F.op;
     for (const X of this.f) { if (X.state === 'punch') X.pOn = 1; else if (X.pOn) { X.pOn = 0; X.pEnd = this.t; } }
-    const o = F.brain.think(this.perceive(F), dt); F.bev = []; F.bg = o.guard; F.low = o.low || 0;
+    const o = F.brain.think(this.perceive(F), dt); F.bev = []; F.bg = o.guard; F.low = o.low || 0; F.cover = o.cover || null;
     { const EL = F.brain.eyeLog; F.eyeN = F.eyeN || 0; while (F.eyeN < EL.length) { const x = EL[F.eyeN++]; this.emit('saw', { a: F.side, d: F.op.side, cue: x.c, big: x.big, first: x.first }); } } // what his eyes caught (E3): first sightings and big moments, for the commentary
     if (F.state === 'stun' || F.state === 'down' || F.state === 'clinch') return;
     // defense: committed past a third of his own punch, he can't
@@ -2084,6 +2109,7 @@ class Fight {
     const push = Math.sqrt(m.push || 1); F.inMul = clamp(push, .6, 1.5); F.legs = (F.st.legs || 1) * clamp(push, .7, 1.4);
     F.circ = Math.abs(m.lateral);
     { const sg = Math.sign(m.lateral); if (sg && sg !== F.bLat) { F.bLat = sg; F.circDir = sg; } } // he changed his mind: the engine's own steering (ropes, camera) keeps it otherwise
+    if (F.cover && F.cover.k > COV.feet && F.slideT <= 0) { const off = offEye(F.cover.s); if (F.circDir !== off) { F.circDir = F.bLat = off; F.brain.lat = off; } F.circ = Math.max(F.circ, COV.circ * F.cover.k); } // 1e: move off the bad eye
     F.cutK = .3 + .9 * (m.cut || 0); F.cutting = !hurt && m.cut > .25 && (O.circ > .3 || O.slideT > 0 || this.trapped(O));
     if (F.state !== 'idle' && F.state !== 'move') return;
     if (m.clinch && d < 50) { this.startClinch(F); return; }
@@ -2493,7 +2519,7 @@ class Fight {
       ev *= (1 - atkEdge(A, P)) * (1 + defEdge(D));
       ev *= 1 - AI.guardK * (D.bg - .6); // hands high: harder to slip, easier to catch
       if (R() < ev) evaded = true;
-      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 * (1 + BODY.lowBlk * (D.low || 0)) : (1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * (1 - BODY.lowHead * (D.low || 0))) * stamFac(D) * coverF(D, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (1 + AI.guardK * (D.bg - .6)))) {
+      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 * (1 + BODY.lowBlk * (D.low || 0)) : (1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * (1 - BODY.lowHead * (D.low || 0))) * stamFac(D) * coverF(D, P) * coverEye(D, A, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (1 + AI.guardK * (D.bg - .6)))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 * BODY.elbow * (1 - BODY.lowLeak * (D.low || 0)) : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
         D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; D.defQ = AI.reflexQ; // show the guard catching it (a reflex guard on the next shot holds with chance reflexQ x defQ)
       }
@@ -2768,7 +2794,7 @@ class Fight {
     A.strategy = stratA || 'auto'; B.strategy = stratB || 'auto'; A.order = B.order = null;
     for (const F of this.f) for (const k in F.used) F.used[k] *= .6; // the other corner adjusts, but he forgets some of it over the break
     this.round++; this.clock = 0; this.phase = 'intro2'; this.phaseT = 0;
-    for (const F of this.f) { F.brain.rest({ round: this.round - 1 }); F.brain.roundStart(this.round); F.bev = []; F.binfo = null; }
+    for (const F of this.f) { const e = eyeOf(F); F.brain.rest({ round: this.round - 1, eye: e && e.v >= BoxerBrain.BR.cover.at ? e.s : null }); F.brain.roundStart(this.round); F.bev = []; F.binfo = null; }
     this.emit('nextRound');
     return true;
   }
@@ -4426,13 +4452,16 @@ function cornerAdvice() {
   return ['Good round. Stay behind the jab, keep doing what you do.', 'auto'];
 }
 function cutmanLine() {
-  const me = F.f[0]; const c = me.cut, d = 1 - me.headMax / 100;
-  if (c >= CUT.doc - 1) return "Cutman: Doc's this close to stopping it. Keep your hands up and win this round, or it's over.";
-  if (c >= 5) return "Cutman: That cut's ugly. I can slow it, can't stop it. Every clean shot opens it more.";
-  if (c > 2.5) return "Cutman: The cut's still open. Vaseline and pressure, but it'll bleed again. Don't let him hit that eye.";
-  if (c > .3) return "Cutman: Cut over the eye. Closed it up best I could.";
-  if (d > .45) return 'Cutman: Eye is swelling up. Iced it, but it is closing.';
-  if (d > .2) return 'Cutman: Some swelling. Nothing we can not handle.';
+  const me = F.f[0], c = me.cut, e = eyeOf(me), nm = x => x === 'L' ? 'left' : 'right', sd = e && nm(e.s), oth = sd === 'right' ? 'left' : 'right';
+  const tip = e && e.v >= BoxerBrain.BR.cover.at ? ` Keep that ${sd} glove glued to the eye and move to your ${oth}, off his ${oth} hand.` : ''; // 1e: a right eye is hit by his left hand: move left, away from it
+  const at = me.cutS ? ` over the ${nm(me.cutS)} eye` : ' over the eye', sw = Math.max(me.sw.L, me.sw.R), ws = nm(me.sw.L > me.sw.R ? 'L' : 'R');
+  if (c >= CUT.doc - 1) return "Cutman: Doc's this close to stopping it. Keep your hands up and win this round, or it's over." + tip;
+  if (sw >= SW.full) return `Cutman: The ${ws} eye is shut. Doc's watching it. You can't see his ${ws === 'right' ? 'left' : 'right'} hand coming.` + tip;
+  if (c >= 5) return `Cutman: That cut${at}'s ugly. I can slow it, can't stop it. Every clean shot opens it more.` + tip;
+  if (c > 2.5) return `Cutman: The cut${at}'s still open. Vaseline and pressure, but it'll bleed again.` + tip;
+  if (sw >= SW.at) return `Cutman: The ${ws} eye is swelling. Iced it, but it is closing.` + tip;
+  if (c > .3) return `Cutman: Cut${at}. Closed it up best I could.` + tip;
+  if (sw > 2) return `Cutman: Some swelling by the ${ws} eye. Nothing we can not handle.`;
   return 'Cutman: Face is clean. Keep it that way.';
 }
 /* ---------- talk to your fighter (corner) ---------- */
@@ -4518,7 +4547,8 @@ function talkPrompt(txt) {
   const cond = [];
   if (me.head < me.headMax * .4 || me.headMax < 45) cond.push('you are hurt');
   if (me.stam < me.stamMax * .5) cond.push('you are tired');
-  if (me.cut > .3) cond.push('you have a cut' + (me.cut > 4 ? ' that is bad' : ''));
+  if (me.cut > .3) cond.push('you have a cut' + (me.cutS ? ' over the ' + (me.cutS === 'L' ? 'left' : 'right') + ' eye' : '') + (me.cut > 4 ? ' that is bad' : ''));
+  { const w = Math.max(me.sw.L, me.sw.R); if (w >= SW.at) cond.push('your ' + (me.sw.L > me.sw.R ? 'left' : 'right') + ' eye is ' + (w >= SW.full ? 'shut' : 'swelling')); }
   if (op.head < op.headMax * .4 || op.headMax < 50) cond.push('he is hurt');
   if (op.stam < op.stamMax * .5) cond.push('he is tired');
   const lead = F.lead > .7 ? 'You are probably ahead' : F.lead < -.7 ? 'You are probably behind' : 'It is close';
