@@ -20,8 +20,18 @@
  * @property {{ me: number, him: number }} ropes  0 = center of the ring .. 1 = on the ropes
  * @property {{ head: number, headMax: number, stam: number, stamMax: number, hurt: boolean, down: boolean, clinch: boolean, punching: boolean, busy: boolean,
  *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number } }} me   his own body, the corner's plan and live shout
- * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number }} him
+ * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number, look?: Look }} him
  * @property {Array<{ type: string, by: 'me' | 'him', [k: string]: any }>} events  what happened since last frame (landed, blocked, evaded, feinted, thrown...)
+ */
+/**
+ * What's on screen about the other man (the eyes, E1: the truth; his eyes decide what he notices). All 0..1, optional: a host without one leaves it out.
+ * @typedef {Object} Look
+ * @property {number} [cut]     how bad the cut is (0 none .. 1 the doctor's looking)
+ * @property {number} [body]    his body meter (1 fresh .. 0 gone)
+ * @property {number} [arms]    arm wear (1 fresh .. 0 the guard's breaking down)
+ * @property {number} [fold]    bent over a body shot right now
+ * @property {number} [legs]    heavy, flat feet (tired, a sinking body)
+ * @property {number} [wobble]  the legs going (stunned 1, hurt .6)
  */
 /**
  * A punch in the air, as it truly is (his eyes add the error).

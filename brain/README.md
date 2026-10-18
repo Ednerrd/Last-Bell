@@ -38,7 +38,8 @@ const note = brain.rest({ round });          // { thinks: 1|0|-1, lead, change: 
   ropes: { me, him },                         // 0 open ring .. 1 back on the ropes
   me:  { head, headMax, stam, stamMax, hurt, down, clinch, punching, busy },
   him: { punch: null | { id, type, t, impactIn, feint, sell, tell },   // the truth; the brain decides how fast and how well it sees it
-         recover, lastRes, guard, gas, hurt, head },
+         recover, lastRes, guard, gas, hurt, head,
+         look: { cut, body, arms, fold, legs, wobble } },   // what's on screen about him, 0..1 (the eyes; optional)
   events: [ { type: 'landed'|'blocked'|'evaded'|'missed'|'feinted'|'kd', by: 'me'|'him', p, def, dmg, counter, hurt, bit } ]
 }
 ```

@@ -885,3 +885,6 @@ Ladder vs a Pro: easy 21.7, hard 54.0, expert 87.7 (n160; `docs/PLUGIN.md`). No 
 
 ### Handoff (Oct 18, merged)
 `claude/plugin-body` fast-forwarded into `claude/brain-wire` (hash 4cdff551). Work continues on `claude/brain-wire`. **Next:** ROADMAP 1 (d) the eyes (design in `docs/PLUGIN.md`; a design plan = high effort, ask Ed).
+
+### Handoff (Oct 18, eyes E1 done)
+`perceive()` sends `him.look` (cut, body, arms, fold, legs, wobble; typedef `Look`), unread, hash 44b4f117 holds. Plan and Ed's calls in `docs/PLUGIN.md` ("The eyes: the build"). **Next:** E2 the eye (noticing by skill, own dice so the hash holds, `tests/eyes.js`).

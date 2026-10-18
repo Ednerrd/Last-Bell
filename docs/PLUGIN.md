@@ -90,6 +90,13 @@ Ed: from the boxer's POV, stance up, analyzing his whole body, not telegraphing,
 - Then he decides from it: get inside (double jab, step in behind it), go to the cut, dig the body, reset. The plan, the read and the body language in one loop.
 - Measure: how often each cue is noticed by level, and what it's worth (win % with the cue on vs off, levels.js-style).
 
+#### The eyes: the build (Ed OK'd Oct 18; his calls: E4 yes, the line on first sight per cue + big moments)
+- **E1 (done Oct 18, hash holds 44b4f117):** `perceive()` sends `him.look` = { cut, body, arms, fold, legs, wobble }, all 0..1 (typedef `Look` in `brain/brain.js`, README Perception). Nothing reads it yet. In normal fights (12 fights sampled): cut > 0 14% of the time (p99 .56), body p10 .60, arms p10 .71, legs p50 .08 / p90 .40, fold and wobble flash ~2% (fold peaks are small: only a big body shot folds him).
+- **E2 the eye:** what he notices per cue, by skill (a novice watches the gloves: catches the hands, misses the feet and body, sees a cut late; a vet watches the chest: more, sooner), cut by hurt, gas, fear and the hunt's tunnel vision. A noticed cue is remembered and fades if it stops. Own dice (no draw from the shared rng) so the hash holds. `tests/eyes.js`: noticed % and delay per cue by level.
+- **E3 show it (UI only):** "He's seen the cut." in the simple view the first time per cue a fight and on big moments (a bad cut, the legs going); the full read in More.
+- **E4 swap truth for sight:** what he already reacts to (him.hurt, him.gas, him.guard) goes through the eye: a novice can miss that you're hurt, a vet sees the hands drop before the gas would tell him. Hash moves, full check, expect the level gap to widen (tune).
+- Then target the damage (below) reads the noticed cues.
+
 ### Target the damage (Ed, Oct 17: "if his eye is damaged, go more to his eye")
 What the engine tracks on a man: the head meter (and its wear, `headMax`), the body meter (no in-fight regen, little between rounds), cuts (`D.cut`, `CUT.onEye`: an eye cut can bring the doctor), arm wear (`gi`: blocked shots break the guard down), the liver (right-side body hooks and rear-hand body shots, `BODY.liver`) and the wind (straights to the body, `BODY.wind`). No temple or swelling zone.
 What the brain sees of the other man today: his head meter, gas, guard (height x arm wear), hurt. Not his body meter, not his cut.
