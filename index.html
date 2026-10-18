@@ -1672,8 +1672,8 @@ const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30,
    brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
 const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
 let DMG = 0.38; // global tuning
-const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
-  off: .4 }; // off: a cut sits over one eye (the side the punch came in on); shots to the other eye open it this much as often (an uppercut up the middle: half way)
+const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .12, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
+  off: .5 }; // off: a cut sits over one eye (the side the punch came in on); shots to the other eye open it this much as often (an uppercut up the middle: half way)
 // swelling (1e): each eye swells from clean head shots to that side (the jab and the hook close eyes), faster on a worn face. at .. full: the eye half shut to shut,
 // and the punches on that side come from where he can't see (BR.eyeShut). ice: the cutman takes this much down between rounds (x his skill). doc / docSpan: the doctor on a shut eye
 // covering a bad eye (1e): blk more blocks on that side at full cover, move more when he's circling off it, cost fewer on the other side; feet: cover past this and he moves off it, circ at least this much
