@@ -92,7 +92,14 @@ Ed: from the boxer's POV, stance up, analyzing his whole body, not telegraphing,
 
 #### The eyes: the build (Ed OK'd Oct 18; his calls: E4 yes, the line on first sight per cue + big moments)
 - **E1 (done Oct 18, hash holds 44b4f117):** `perceive()` sends `him.look` = { cut, body, arms, fold, legs, wobble }, all 0..1 (typedef `Look` in `brain/brain.js`, README Perception). Nothing reads it yet. In normal fights (12 fights sampled): cut > 0 14% of the time (p99 .56), body p10 .60, arms p10 .71, legs p50 .08 / p90 .40, fold and wobble flash ~2% (fold peaks are small: only a big body shot folds him).
-- **E2 the eye:** what he notices per cue, by skill (a novice watches the gloves: catches the hands, misses the feet and body, sees a cut late; a vet watches the chest: more, sooner), cut by hurt, gas, fear and the hunt's tunnel vision. A noticed cue is remembered and fades if it stops. Own dice (no draw from the shared rng) so the hash holds. `tests/eyes.js`: noticed % and delay per cue by level.
+- **E2 the eye (done Oct 18, hash holds 44b4f117):** `Brain.look(P, sdt)` each think: per cue a chance a second of clock = `BR.eye.rate` x where he looks (lerp `nov` -> `vet` by gaze = his read mastery, (m.read - .3) / .6) x salience (v / `thr`, cap 1.5) x state (blur, fear, hurt, gas, the hunt's tunnel on all but wobble and legs). A sighting is held in `this.eye[c]` ({ v, t, first, big }); `seen(c)` fades it by `tau`. `this.eyeLog`: first sightings and big moments (for E3). Own dice (`this.eR`, seeded from the profile): no draw from the fight's rng. `tests/eyes.js` (160 fights a level, seen % of episodes / median delay s of clock):
+  | | cut | body | arms | fold | legs | wobble |
+  |---|---|---|---|---|---|---|
+  | Novice | 83% 17s | 92% 95s | 83% 2s | 38% | 40% 23s | 84% 1.2s |
+  | Intermediate | 100% 10s | 98% 31s | 84% 2s | 50% | 64% 15s | 89% .6s |
+  | Pro | 96% 9s | 99% 21s | 86% 2s | 63% | 84% 12s | 92% .5s |
+  | World class | 95% 8s | 95% 20s | 86% 2s | 71% | 87% 9s | 99% .4s |
+  A novice watches the gloves (arms flat across levels), misses the body and the legs, and about 1 hurt moment in 6. First try used the squeezed `k.read` (Novice .4 .. World .74): too flat. Cut episodes are few at low levels (n5-12).
 - **E3 show it (UI only):** "He's seen the cut." in the simple view the first time per cue a fight and on big moments (a bad cut, the legs going); the full read in More.
 - **E4 swap truth for sight:** what he already reacts to (him.hurt, him.gas, him.guard) goes through the eye: a novice can miss that you're hurt, a vet sees the hands drop before the gas would tell him. Hash moves, full check, expect the level gap to widen (tune).
 - Then target the damage (below) reads the noticed cues.

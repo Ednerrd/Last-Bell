@@ -888,3 +888,6 @@ Ladder vs a Pro: easy 21.7, hard 54.0, expert 87.7 (n160; `docs/PLUGIN.md`). No 
 
 ### Handoff (Oct 18, eyes E1 done)
 `perceive()` sends `him.look` (cut, body, arms, fold, legs, wobble; typedef `Look`), unread, hash 44b4f117 holds. Plan and Ed's calls in `docs/PLUGIN.md` ("The eyes: the build"). **Next:** E2 the eye (noticing by skill, own dice so the hash holds, `tests/eyes.js`).
+
+### Handoff (Oct 18, eyes E2 done)
+`Brain.look()` notices `him.look` cues by gaze (read mastery), salience and state, own dice (`eR`), hash 44b4f117 holds. `this.eye`, `seen(c)`, `this.eyeLog` (first sightings, big moments). Knobs `BR.eye`. `tests/eyes.js` table in `docs/PLUGIN.md`. **Next:** E3 show it (UI only: the line on first sight + big moments in the simple view, the full read in More; read `F.brain.eyeLog`).

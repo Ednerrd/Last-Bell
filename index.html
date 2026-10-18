@@ -378,6 +378,11 @@ const BR = {
   spread: .6,             // squeezes how much a skill point is worth (1 = as is; lower = closer tiers, more upsets)
   react: [.34, .14],      // reaction time to a punch, novice .. world class (s)
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
+  // the eyes (E2): what he notices about the other man (P.him.look). rate: sightings a second of clock at full salience; nov / vet: where he looks (a novice watches the gloves, a vet the chest: gaze = his read);
+  // thr: how much there has to be before it's there to see (salience = v / thr, capped 1.5); tau: how long a sighting holds once it stops being seen (s of clock); big: a moment worth a line (E3)
+  eye: { on: 1, rate: { cut: .1, body: .05, arms: .35, fold: 2.5, legs: .08, wobble: 1.2 }, nov: { cut: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
+    thr: { cut: .1, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, body: .5, legs: .6, wobble: .9 },
+    blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5 },
   reactMin: .1,           // the fastest he ever sees a punch, read or not (s; was .04: expert averaged .09)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
@@ -630,6 +635,9 @@ class Brain {
     this.pri = null; this.trust = 1; this.priW = 0; this.sp = this.sp || null;
     this.rep = { p: {}, at: { n: 0, blk: 0, ev: 0, land: 0, short: 0 }, combo: [0, 0, 0], inC: 0, feintBit: 0, ctr: [0, 0], inCtr: 0, hurtBy: {}, kdBy: {}, lastHit: null };
     this.log = [];
+    { let h = 7; for (const s of SKILL_KEYS) h = Math.imul(h ^ (profile.skills[s] || 0), 0x9E3779B1) + 1; for (const c of String(profile.name || '')) h = Math.imul(h ^ c.charCodeAt(0), 0x85EBCA77);
+      this.eR = mulberry32(h); } // the eyes roll their own dice: noticing never moves the fight's rng
+    this.eye = {}; this.eyeLog = []; // what he's seen of the other man: cue -> { v, t, first }; eyeLog: first sightings and big moments, for the game to show (E3)
     this.priorSet(opts.prior);
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
@@ -813,6 +821,26 @@ class Brain {
     return t < BR.body.min ? 0 : clamp((b / t - BR.body.norm) / (1 - BR.body.norm), 0, 1) * BR.body.k; // anyone sees a man who only goes downstairs: no ring-IQ scaling (it widened the level gap)
   }
   clRead() { if (!BR.cl.on) return 0; const e = this.mpeek(this.mem.def, 'clinch'), n = e ? e.n || 0 : 0; return clamp((n - BR.cl.norm) / BR.cl.span, 0, 1) * lerp(.4, 1, this.k.read); } // a man who grabs every time he's close
+  // the eyes (E2): each cue on screen has a chance a second to be noticed, by where he looks (his read), how much there is, and his state (blur, fear, hurt, gas, the hunt's tunnel vision)
+  look(P, sdt) { // gaze from his mastery (the level tables' read), not the squeezed k: a Novice watches the gloves, World class the chest
+    const L = P.him.look, B = BR.eye; if (!B.on || !L) return;
+    const val = { cut: L.cut, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
+    const gaze = clamp((this.m.read - .3) / .6, 0, 1), tun = HUNTS[this.mode] ? B.tunnel : 0;
+    const st = (1 - B.blur * this.blur) * (1 - B.fear * this.emo.fear) * (P.me.hurt ? 1 - B.hurt : 1) * (1 - B.fat * this.fat);
+    for (const c in val) {
+      const v = val[c]; if (v == null || v < B.thr[c] * .5) continue;
+      const w = lerp(B.nov[c], B.vet[c], gaze) * st * (tun && c !== 'wobble' && c !== 'legs' ? 1 - tun : 1), sal = Math.min(1.5, v / B.thr[c]);
+      if (this.eR() < 1 - Math.exp(-B.rate[c] * w * sal * sdt)) {
+        const e = this.eye[c], first = !e;
+        if (first || this.t - e.t > 1) this.note('sees ' + c + ' ' + v.toFixed(2));
+        const big = B.big[c] != null && v >= B.big[c] && !(e && e.big);
+        this.eye[c] = { v, t: this.t, ct: this.ct, first: e ? e.first : this.t, big: big || !!(e && e.big) };
+        if ((first || big) && this.eyeLog.length < 40) this.eyeLog.push({ c, v, t: this.t, round: P.round, clock: P.clock, first, big });
+      }
+    }
+  }
+  /** what he believes about a cue right now (0 = he hasn't seen it, or it's been a while) @param {string} c */
+  seen(c) { const e = this.eye[c]; return e ? e.v * Math.exp(-(this.ct - e.ct) / BR.eye.tau[c]) : 0; }
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
     if (this.queue && this.queue.trap) return; // the trap's counter is already on its way
@@ -1290,6 +1318,7 @@ class Brain {
     { const B = BR.blur, cur = Math.max(0, 1 - P.me.head / Math.max(1, P.me.headMax) - B.at) / (1 - B.at); // only real damage counts: a jab here and there doesn't blur anything
       this.blur = clamp((cur * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + (P.round - 1) / Math.max(1, P.rounds - 1) * B.late + this.kds * B.kd) * (1.3 - .6 * this.tr.composure), 0, 1); }
     this.famUpd(P);
+    this.look(P, sdt);
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
     this.updMode(P, sdt);
     this.see(P);
