@@ -49,7 +49,7 @@ engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, di
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless (`sim.js` is the shared loader). `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
 - **`tests/check.sh TAG [s a l f sp g]`: the full check on 4 cores, resumable after a restart (rerun the same line); `tests/check.sh TAG report` prints it all.** Default parts s a l f (~25 min); sp (specials) adds ~20 min.
-- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 63a19c0 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
+- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 44b4f117 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
 - `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials).
