@@ -2,7 +2,7 @@
 // (the truth goes over the cue's threshold until it drops under half of it) counts as seen if he noticed it before it ended, with the delay in clock seconds.
 //   TAG=x node tests/eyes.js 40     (x4)     node tests/eyes.js agg x
 const fs = require('fs'), OUT = t => '/tmp/eyes_' + t + '.txt';
-const CUES = ['cut', 'body', 'arms', 'fold', 'legs', 'wobble'], LV = { N: 34, I: 56, P: 74, W: 90 };
+const CUES = ['cut', 'swell', 'body', 'arms', 'fold', 'legs', 'wobble'], LV = { N: 34, I: 56, P: 74, W: 90 };
 if (process.argv[2] === 'agg') { const L = fs.readFileSync(OUT(process.argv[3]), 'utf8').trim().split('\n').map(JSON.parse), A = {};
   for (const o of L) { const a = A[o.lv] = A[o.lv] || {}; for (const c of CUES) { const x = a[c] = a[c] || { ep: 0, seen: 0, d: [] }, y = o[c]; x.ep += y.ep; x.seen += y.seen; x.d.push(...y.d); } } report(A); return; }
 process.env.PATCH = (process.env.PATCH || '') + ';globalThis.__BB=BoxerBrain;';
@@ -14,7 +14,7 @@ for (const lv in LV) {
     const side = i & 1, st = pick(ALL), os = pick(ALL), me = S.sheet(82, st, S.rollGuard(st)), op = S.sheet(82, os, S.rollGuard(os)); me.sk = S.skMake(LV[lv], st); op.sk = S.skMake(74, os);
     const f = new S.Fight(side ? op : me, side ? me : op, { rounds: 10 }), Bn = f.f[side].brain, real = Bn.think.bind(Bn), ep = {};
     Bn.think = (P, dt) => { const out = real(P, dt), L = P.him.look; if (!L) return out;
-      const v = { cut: L.cut, body: 1 - L.body, arms: 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
+      const v = { cut: L.cut, swell: L.swell, body: 1 - L.body, arms: 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
       for (const c of CUES) { const e = ep[c], s = Bn.eye[c];
         if (!e && v[c] >= B.thr[c]) ep[c] = { t0: Bn.ct, seen: null };
         else if (e) { if (e.seen == null && s && s.ct >= e.t0) e.seen = s.ct - e.t0; if (v[c] < B.thr[c] * .5) { close(c, e); ep[c] = null; } } }

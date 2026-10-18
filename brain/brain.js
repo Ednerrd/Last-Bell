@@ -19,7 +19,7 @@
  * @property {number} dist       distance between the two men
  * @property {{ me: number, him: number }} ropes  0 = center of the ring .. 1 = on the ropes
  * @property {{ head: number, headMax: number, stam: number, stamMax: number, hurt: boolean, down: boolean, clinch: boolean, punching: boolean, busy: boolean,
- *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number } }} me   his own body, the corner's plan and live shout
+ *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean }} me   his own body, the corner's plan and live shout, his stance (south: a southpaw)
  * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number, look?: Look }} him
  * @property {Array<{ type: string, by: 'me' | 'him', [k: string]: any }>} events  what happened since last frame (landed, blocked, evaded, feinted, thrown...)
  */
@@ -119,7 +119,8 @@ const COMBOS = BOOK.map(s => {
     lowHigh: ps.some((p, i) => i < n - 1 && (!head(p) || PUNCHES[p].kind === 'upper')) && head(last), // lift or dig first, then upstairs
     inside: PUNCHES[ps[0]].max <= 60,
     str: ps.filter(p => PUNCHES[p].kind === 'straight').length / n, up: ps.filter(p => PUNCHES[p].kind === 'upper').length / n, // straight down the pipe vs the uppercut through a shell
-    wide: ps.filter(p => p === 'rhook').length / n, hook: ps.filter(p => p === 'hook' || p === 'rhook').length / n };
+    wide: ps.filter(p => p === 'rhook').length / n, hook: ps.filter(p => p === 'hook' || p === 'rhook').length / n,
+    lead: ps.filter(p => PUNCHES[p].zone === 'head' && PUNCHES[p].kind !== 'upper' && PUNCHES[p].arm === 'lead').length / n, rear: ps.filter(p => PUNCHES[p].zone === 'head' && PUNCHES[p].kind !== 'upper' && PUNCHES[p].arm === 'rear').length / n }; // 1e: head straights and hooks by hand: the lead lands on his right eye (orthodox), the rear on his left
 });
 
 /* ---------- skills: what he knows how to do (0..100). The tier is read off them ---------- */
@@ -187,6 +188,9 @@ const BR = {
     blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5,
     e4: 1, hold: 6 }, // e4: he fights on what he saw, not the truth (hurt from a wobble he caught, held hold s of clock; his gas from the legs; the arm wear in the guard). 0 = the truth (A/B)
   reactMin: .1,           // the fastest he ever sees a punch, read or not (s; was .04: expert averaged .09)
+  // target the damage (1e): what he's spotted pulls his picks, times his read. eye: straights and hooks onto a seen cut or swelling; body: dig on a seen sinking body; arms: power through a seen worn guard.
+  // cut / swell / body / arms: [where it starts to count, where it counts in full] of the cue as he saw it
+  tgt: { on: 1, eye: 2, body: .8, arms: .6, cut: [.1, .45], swell: [.25, .7], bodyAt: [.3, .75], armsAt: [.3, .75] },
   eyeShut: .12,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
@@ -646,11 +650,20 @@ class Brain {
   // E4: what he believes about the other man, from his eyes (BR.eye.e4) or the truth
   perc(P) {
     const H = P.him, L = H.look, B = BR.eye;
-    if (!B.e4 || !L) return { hurt: !!H.hurt, gas: H.gas, guard: H.guard };
+    if (!B.e4 || !L) return { hurt: !!H.hurt, gas: H.gas, guard: H.guard, tgt: this.target() };
     const w = this.eye.wobble, f = this.eye.fold, hurt = !!H.hurt && (!!w && this.ct - w.ct < B.hold || !!f && this.ct - f.ct < B.hold); // hurt only if he caught it (and it still shows): a head shot wobbles him, a body shot folds him
     const lg = this.seen('legs'), gas = lg > 0 ? clamp(.6 - lg, 0, 1) : 1; // the tank as the feet show it; nothing seen = he looks fresh
     const bg = L.arms != null ? H.guard / (.5 + .5 * L.arms) : H.guard, guard = L.arms != null ? bg * (.5 + .5 * (1 - this.seen('arms'))) : H.guard; // the hands he sees; the wear only if he's noticed it
-    return { hurt, gas, guard };
+    return { hurt, gas, guard, tgt: this.target() };
+  }
+  // 1e: the damage he's spotted, to go after: the worse eye (a cut or a swelling, with its side), a sinking body, worn arms (0..1 each, as he saw them)
+  target() {
+    const T = BR.tgt; if (!T.on || !BR.eye.on) return null;
+    const at = (v, r) => clamp((v - r[0]) / (r[1] - r[0]), 0, 1), c = this.eye.cut, w = this.eye.swell;
+    const ec = c ? at(this.seen('cut'), T.cut) : 0, es = w ? at(this.seen('swell'), T.swell) : 0;
+    const eye = Math.max(ec, es), side = eye <= 0 ? null : ec >= es ? c && c.s : w && w.s;
+    const body = at(this.seen('body'), T.bodyAt), arms = at(this.seen('arms'), T.armsAt);
+    return eye > 0 && side || body > 0 || arms > 0 ? { eye: side ? eye : 0, side, body, arms } : null;
   }
   /** what he believes about a cue right now (0 = he hasn't seen it, or it's been a while) @param {string} c */
   seen(c) { const e = this.eye[c]; return e ? e.v * Math.exp(-(this.ct - e.ct) / BR.eye.tau[c]) : 0; }
@@ -963,7 +976,7 @@ class Brain {
     const k = this.k, tr = this.tr, E = this.emo, md = this.mode, H = P.him, fat = 1 - P.me.stam / (P.me.stamMax || 100);
     const maxLen = Math.min(1 + Math.round(1 + 3 * k.combos * (.6 + .5 * tr.combo)), BR.lv.on.len ? Math.round(lvV('len', this.m.combos)) : 9);
     const last = this.hist[this.hist.length - 1], noise = lerp(.75, .3, (k.read + k.combos) / 2) * (1 + .8 * fat) * (1 + .6 * E.frus);
-    const nd = this.nd;
+    const nd = this.nd, tg = this.ph && this.ph.tgt, south = !!P.me.south;
     let ctrN = 0, mN = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctrN += e.c || 0; mN += e.n || 0; }
     const ctrRate = ctrN / Math.max(4, mN);
     let best = null, bw = 0, tot = 0;
@@ -998,6 +1011,11 @@ class Brain {
       if (H.guard < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
       if (H.guard > .8) w *= 1 + c.body * k.read;               // shell up high: go to the body
       if (H.gas < BR.fuse.gas && !HUNTS[md]) w *= 1 + (c.body + (c.ps.includes('bodyHook') ? BR.fuse.liver : 0)) * (BR.fuse.gas - H.gas) / BR.fuse.gas * BR.fuse.w * k.read; // he's tired: the body is the slow fuse, dig to the liver
+      if (tg) { // 1e: go to the damage he's spotted (a smart man more surely)
+        if (tg.eye) { const on = (tg.side === 'R') !== south; w *= Math.exp(BR.tgt.eye * tg.eye * ((on ? c.lead : c.rear) - (on ? c.rear : c.lead)) * k.read); } // the eye: straights and hooks that land on that side, fewer to the other
+        if (tg.body) w *= 1 + BR.tgt.body * tg.body * c.body * k.read;                                      // the body's going: dig
+        if (tg.arms) w *= 1 + BR.tgt.arms * tg.arms * (c.power - .5 * c.jab) * k.read;                      // the arms are gone: sit down on it, through the guard
+      }
       // the situation (a smart man sees it, a novice throws his favourites)
       let sit = 1;
       if (H.guard > .7 && c.lowHigh) sit *= 1.3;                          // lift then dig, or dig then lift: a high guard can't cover both
