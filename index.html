@@ -4488,7 +4488,7 @@ function roundNotes() {
   if (gas(op) < .5) out.push("He's breathing hard.");
   if (op.body < 60) out.push('His body is softening up.');
   if (me.body < 60) out.push('The body shots are getting to you.');
-  const thr = BoxerBrain.BR.eye.thr, EYE = { cut: ['his cut', 'your cut'], body: ['his body going', 'your body going'], arms: ['his arms getting heavy', 'your arms getting heavy'], fold: ['him folding on body shots', 'you folding on body shots'], legs: ['his legs slowing', 'your legs slowing'], wobble: ['him hurt', 'you hurt'] };
+  const thr = BoxerBrain.BR.eye.thr, EYE = { cut: ['his cut', 'your cut'], swell: ['his eye closing', 'your eye closing'], body: ['his body going', 'your body going'], arms: ['his arms getting heavy', 'your arms getting heavy'], fold: ['him folding on body shots', 'you folding on body shots'], legs: ['his legs slowing', 'your legs slowing'], wobble: ['him hurt', 'you hurt'] };
   const read = (X, i) => Object.keys(EYE).filter(c => X.brain.seen(c) >= thr[c] * .75).map(c => EYE[c][i]), list = a => a.length < 2 ? a[0] : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; // the eyes (E3): what each man has seen and still believes
   const mine = read(me, 0), his = read(op, 1);
   if (mine.length) out.push(`You've spotted ${list(mine)}.`);
