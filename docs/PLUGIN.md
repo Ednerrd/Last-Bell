@@ -100,7 +100,7 @@ Ed: from the boxer's POV, stance up, analyzing his whole body, not telegraphing,
   | Pro | 96% 9s | 99% 21s | 86% 2s | 63% | 84% 12s | 92% .5s |
   | World class | 95% 8s | 95% 20s | 86% 2s | 71% | 87% 9s | 99% .4s |
   A novice watches the gloves (arms flat across levels), misses the body and the legs, and about 1 hurt moment in 6. First try used the squeezed `k.read` (Novice .4 .. World .74): too flat. Cut episodes are few at low levels (n5-12).
-- **E3 show it (UI only):** "He's seen the cut." in the simple view the first time per cue a fight and on big moments (a bad cut, the legs going); the full read in More.
+- **E3 show it (done Oct 18, UI only, hash holds 44b4f117):** `brainTick` drains `F.brain.eyeLog` into a `saw` event (`a` the man who saw, `d` the other, `cue`, `first`, `big`). Commentary `saw_<cue>` / `saw_<cue>Big` lines: once per man per line a fight (`once` in Comm, reset per fight), 20 s apart (6 s for a big one): ~6 a 10-round fight. Corner notes (`roundNotes`): "You've spotted his body going." / "He's seen your cut and your legs slowing." from `seen(c)` over .75 x thr (the stand-in for More until the info toggle exists). Note: the event field is `cue`, not `c` (Comm reads `c` as a fighter: crashed the page in the first try).
 - **E4 swap truth for sight:** what he already reacts to (him.hurt, him.gas, him.guard) goes through the eye: a novice can miss that you're hurt, a vet sees the hands drop before the gas would tell him. Hash moves, full check, expect the level gap to widen (tune).
 - Then target the damage (below) reads the noticed cues.
 

@@ -2025,6 +2025,7 @@ class Fight {
     const O = F.op;
     for (const X of this.f) { if (X.state === 'punch') X.pOn = 1; else if (X.pOn) { X.pOn = 0; X.pEnd = this.t; } }
     const o = F.brain.think(this.perceive(F), dt); F.bev = []; F.bg = o.guard; F.low = o.low || 0;
+    { const EL = F.brain.eyeLog; F.eyeN = F.eyeN || 0; while (F.eyeN < EL.length) { const x = EL[F.eyeN++]; this.emit('saw', { a: F.side, d: F.op.side, cue: x.c, big: x.big, first: x.first }); } } // what his eyes caught (E3): first sightings and big moments, for the commentary
     if (F.state === 'stun' || F.state === 'down' || F.state === 'clinch') return;
     // defense: committed past a third of his own punch, he can't
     if (o.defend && this.t >= (F.flinchT || 0) && this.t >= (F.offT || 0) && !(F.state === 'punch' && F.act && F.act.t / F.act.dur > .3)) { // eyes shut after a hard one, or off balance from a miss: no defense (L2)
@@ -3986,6 +3987,16 @@ const Comm = (() => {
     heard_counter: ['{a} sits back and makes him pay.', 'There it is. {a} is countering now.', '{a} lets him come and fires back.'],
     heard_move: ['{a} is using the ring now.', '{a} gets on his bike.', '{a} moves his feet, like the corner asked.'],
     heard_hands: ['{a} tightens up the guard.', 'Hands up now for {a}.', '{a} shells up and takes it on the gloves.'],
+    saw_cut: ['{a} has seen the cut. Watch him go looking for it.', "{a}'s eyes went straight to that cut.", '{a} knows that cut is there now.'],
+    saw_cutBig: ['{a} sees the blood. He is going right at that cut.', 'That cut is all {a} is looking at now.'],
+    saw_body: ['{a} has noticed {d} is feeling the body shots.', "{a} sees it: {d}'s body is going."],
+    saw_bodyBig: ["{d}'s body is breaking down, and {a} knows it.", '{a} can see {d} wincing every time he gets hit downstairs.'],
+    saw_arms: ["{a} sees {d}'s guard getting heavy.", "{a} has noticed those arms aren't coming back up as fast."],
+    saw_fold: ['{a} saw that one bend him over.', '{a} saw {d} fold on that body shot. He will remember it.'],
+    saw_legs: ["{a} sees {d}'s feet getting heavy.", "{a} has spotted it: {d}'s legs are slowing down."],
+    saw_legsBig: ["{d} is flat-footed now, and {a} can see it.", "{a} knows the legs are gone on {d}."],
+    saw_wobble: ['{a} sees it. He knows {d} is hurt.', "{a}'s eyes light up. He saw {d}'s legs dip."],
+    saw_wobbleBig: ['{a} smells blood. {d} is in real trouble and he knows it.'],
     learned_jab: ['{a} has bought into that jab. He will keep it now.', 'The corner told him jab, and the jab is working. {a} will remember that.'],
     learned_body: ['{a} has found something downstairs. He will go back there.', 'The body work is paying off, and {a} knows it.'],
     learned_press: ['{a} likes what happens when he walks him down.', 'Every time {a} steps in, it works. He is learning this fight.'],
@@ -4007,8 +4018,8 @@ const Comm = (() => {
   const PN = { jab: 'jab', cross: 'right hand', hook: 'left hook', uppercut: 'uppercut', bodyJab: 'jab to the body', bodyHook: 'body hook', rhook: 'right hook', lupper: 'left uppercut', bodyCross: 'right hand to the body' };
   const pn = (p, F) => { const s = PN[p] || p; return F && F.stance === 'southpaw' ? s.replace(/\b(left|right)\b/, m => m === 'left' ? 'right' : 'left') : s; }; // a southpaw's power hand is the left
   const fill = (s, o) => s.replace(/\{(\w)\}/g, (m, k) => o[k] != null ? o[k] : '');
-  let cd = {}, lastColor = 0, voice = true, voices = [], speaking = false;
-  function reset() { cd = {}; lastColor = 0; }
+  let cd = {}, once = {}, lastColor = 0, voice = true, voices = [], speaking = false;
+  function reset() { cd = {}; once = {}; lastColor = 0; }
   function ok(k, t, gap) { if ((cd[k] || -99) + gap > t) return false; cd[k] = t; return true; }
   function short(n) { return (n || '').split(' ').slice(-1)[0]; }
   // returns [{text, kind:'pbp'|'color', pri}]
@@ -4048,6 +4059,7 @@ const Comm = (() => {
       case 'guardCrack': if (ok('guardCrack', t, 20)) L('guardCrack', 2); break;
       case 'home': if (ok('home' + e.a, t, 170) && ok('homeAny', t, 60)) { o.p = pn(e.p, fight.f[e.a]); L('home', 2); } break;
       case 'cutWorse': o.a = nm(1 - e.d); L('cutWorse', 3); break;
+      case 'saw': { const k = 'saw_' + e.cue + (e.big && PBP['saw_' + e.cue + 'Big'] ? 'Big' : ''); if ((e.first || e.big) && PBP[k] && !once[e.a + k] && ok('sawAny', t, e.big ? 6 : 20)) { once[e.a + k] = 1; L(k, e.big ? 2 : 1); } break; } // the eyes (E3): first sight per cue, and the big moments
       case 'doctorLook': L('doctorLook', 3); break;
       case 'heard': if (ok('heard', t, 12)) L('heard_' + e.k, 1); break;
       case 'ignored': if (ok('ignored', t, 20)) L('ignored', 1); break;
@@ -4379,6 +4391,11 @@ function roundNotes() {
   if (gas(op) < .5) out.push("He's breathing hard.");
   if (op.body < 60) out.push('His body is softening up.');
   if (me.body < 60) out.push('The body shots are getting to you.');
+  const thr = BoxerBrain.BR.eye.thr, EYE = { cut: ['his cut', 'your cut'], body: ['his body going', 'your body going'], arms: ['his arms getting heavy', 'your arms getting heavy'], fold: ['him folding on body shots', 'you folding on body shots'], legs: ['his legs slowing', 'your legs slowing'], wobble: ['him hurt', 'you hurt'] };
+  const read = (X, i) => Object.keys(EYE).filter(c => X.brain.seen(c) >= thr[c] * .75).map(c => EYE[c][i]), list = a => a.length < 2 ? a[0] : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; // the eyes (E3): what each man has seen and still believes
+  const mine = read(me, 0), his = read(op, 1);
+  if (mine.length) out.push(`You've spotted ${list(mine)}.`);
+  if (his.length) out.push(`He's seen ${list(his)}.`);
   return out;
 }
 // coach feedback (Drama step d): did the plan he fought the round on work, how the judges saw it, how the coach's calls landed
