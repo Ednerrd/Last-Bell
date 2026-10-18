@@ -229,6 +229,9 @@ const BoxerBrain = (() => { const module = { exports: {} };
  * What's on screen about the other man (the eyes, E1: the truth; his eyes decide what he notices). All 0..1, optional: a host without one leaves it out.
  * @typedef {Object} Look
  * @property {number} [cut]     how bad the cut is (0 none .. 1 the doctor's looking)
+ * @property {?string} [cutS]   which eye it's over ('L' / 'R', his own left or right)
+ * @property {number} [swell]   the worse eye's swelling (0 none .. .4 half shut .. .85 shut)
+ * @property {string} [swS]     which eye that is ('L' / 'R')
  * @property {number} [body]    his body meter (1 fresh .. 0 gone)
  * @property {number} [arms]    arm wear (1 fresh .. 0 the guard's breaking down)
  * @property {number} [fold]    bent over a body shot right now
@@ -246,6 +249,7 @@ const BoxerBrain = (() => { const module = { exports: {} };
  * @property {number} sell       how real the feint looks
  * @property {?string} look      a changed ending (traps)
  * @property {number} tell       how much it was telegraphed
+ * @property {number} [blind]    how shut his own eye is on the side it comes in on (0 open .. 1 shut: he can't see it coming)
  */
 /**
  * What he decides each frame (think()). The game turns it into feet, hands and a guard.
@@ -380,11 +384,12 @@ const BR = {
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
   // the eyes (E2): what he notices about the other man (P.him.look). rate: sightings a second of clock at full salience; nov / vet: where he looks (a novice watches the gloves, a vet the chest: gaze = his read);
   // thr: how much there has to be before it's there to see (salience = v / thr, capped 1.5); tau: how long a sighting holds once it stops being seen (s of clock); big: a moment worth a line (E3)
-  eye: { on: 1, rate: { cut: .1, body: .05, arms: .35, fold: 2.5, legs: .16, wobble: 2.4 }, nov: { cut: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
-    thr: { cut: .1, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, body: .5, legs: .6, wobble: .9 },
+  eye: { on: 1, rate: { cut: .1, swell: .1, body: .05, arms: .35, fold: 2.5, legs: .16, wobble: 2.4 }, nov: { cut: .2, swell: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, swell: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
+    thr: { cut: .1, swell: .3, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, swell: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, swell: .8, body: .5, legs: .6, wobble: .9 },
     blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5,
     e4: 1, hold: 6 }, // e4: he fights on what he saw, not the truth (hurt from a wobble he caught, held hold s of clock; his gas from the legs; the arm wear in the guard). 0 = the truth (A/B)
   reactMin: .1,           // the fastest he ever sees a punch, read or not (s; was .04: expert averaged .09)
+  eyeShut: .12,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
 
@@ -825,7 +830,7 @@ class Brain {
   // the eyes (E2): each cue on screen has a chance a second to be noticed, by where he looks (his read), how much there is, and his state (blur, fear, hurt, gas, the hunt's tunnel vision)
   look(P, sdt) { // gaze from his mastery (the level tables' read), not the squeezed k: a Novice watches the gloves, World class the chest
     const L = P.him.look, B = BR.eye; if (!B.on || !L) return;
-    const val = { cut: L.cut, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
+    const val = { cut: L.cut, swell: L.swell, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
     const gaze = clamp((this.m.read - .3) / .6, 0, 1), tun = HUNTS[this.mode] ? B.tunnel : 0;
     const st = (1 - B.blur * this.blur) * (1 - B.fear * this.emo.fear) * (P.me.hurt ? 1 - B.hurt : 1) * (1 - B.fat * this.fat);
     for (const c in val) {
@@ -835,7 +840,7 @@ class Brain {
         const e = this.eye[c], first = !e;
         if (first || this.t - e.t > 1) this.note('sees ' + c + ' ' + v.toFixed(2));
         const big = B.big[c] != null && v >= B.big[c] && !(e && e.big);
-        this.eye[c] = { v, t: this.t, ct: this.ct, first: e ? e.first : this.t, big: big || !!(e && e.big) };
+        this.eye[c] = { v, t: this.t, ct: this.ct, first: e ? e.first : this.t, big: big || !!(e && e.big), s: c === 'cut' ? L.cutS : c === 'swell' ? L.swS : null }; // s: the side of the face it's on
         if ((first || big) && this.eyeLog.length < 40) this.eyeLog.push({ c, v, t: this.t, round: P.round, clock: P.clock, first, big });
       }
     }
@@ -900,6 +905,7 @@ class Brain {
       d *= 1 - BR.antic * rd;
       d -= BR.tellSee * (H.tell || 0);
       d = Math.max(BR.reactMin, d); // even a punch he's read needs a beat: no psychic blocks (Ed, Oct 17: smart, not psychic)
+      d += BR.eyeShut * (H.blind || 0); // his eye's shut on that side
       const start = this.t - (H.t || 0), deadline = H.feint ? start + .3 : this.t + (H.impactIn != null ? H.impactIn : .25);
       this.threat = { id: H.id, type: H.type, feint: !!H.feint, sell: H.sell || 0, look: H.look || null, start, at: start + d, deadline, rd, done: false };
       if (!H.feint) {
@@ -1637,7 +1643,11 @@ const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30,
    brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
 const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
 let DMG = 0.38; // global tuning
-const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4 };
+const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .085, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
+  off: .4 }; // off: a cut sits over one eye (the side the punch came in on); shots to the other eye open it this much as often (an uppercut up the middle: half way)
+// swelling (1e): each eye swells from clean head shots to that side (the jab and the hook close eyes), faster on a worn face. at .. full: the eye half shut to shut,
+// and the punches on that side come from where he can't see (BR.eyeShut). ice: the cutman takes this much down between rounds (x his skill). doc / docSpan: the doctor on a shut eye
+const SW = { on: 1, k: .075, jab: 1.3, hook: 1.15, up: .5, wear: 1.5, at: 4, full: 8.5, ice: 1.5, doc: 9, docSpan: 2.5 };
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
 // A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
 const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg: .5, heavy: .6 }; // bodyHit: tank lost per point of body damage. heavy: power shots with weight behind them (hit) cost more
@@ -1780,7 +1790,7 @@ function mkF(sheet, side) {
     head: 100, headMax: 100, body: 100, stam: 100, stamMax: 100,
     state: 'idle', act: null, queue: [], def: null, defT: 0, defP: 0, pendingDef: null,
     oldR: R(), stunT: 0, hitT: 0, hitZone: 'head', hitPow: 0, // oldR: the retired old AI's first-decision roll, kept so the seeded fights (same.js hash) don't shift
-    kdR: 0, kd: 0, cut: 0, unanswered: 0, unT: 0, counterWin: 0, downP: 0,
+    kdR: 0, kd: 0, cut: 0, cutS: null, sw: { L: 0, R: 0 }, unanswered: 0, unT: 0, counterWin: 0, downP: 0,
     strategy: 'auto', bob: R() * 6,
     tot: { thrown: { jab: 0, power: 0, body: 0 }, landed: { jab: 0, power: 0, body: 0 }, dmg: 0, taken: 0 },
     rs: null,
@@ -1980,6 +1990,9 @@ function applyLearn(sheet, d) {
 }
 function levelOf(sheet) { return BoxerBrain.tierOf(sheet.sk || brainSkills(sheet.stats, ringIQ(sheet), domStyle(sheet))); }
 const hurtNow = F => F.state === 'stun' || F.head < F.headMax * .3;
+// how shut the eye is on the side a punch comes in on (1e: 0 open .. 1 shut; an uppercut comes up the middle, half of the worse eye)
+const eyeShut = (F, s) => clamp((F.sw[s] - SW.at) / (SW.full - SW.at), 0, 1);
+const blindTo = (F, ln) => ln.lane === 'under' ? .5 * Math.max(eyeShut(F, 'L'), eyeShut(F, 'R')) : eyeShut(F, ln.side);
 function ropesK(F) { const v = vec(F, F.op); return clamp(1 - (freeRun(F.x, F.z, -v.ux, -v.uz) - 6) / 30, 0, 1); }
 
 class Fight {
@@ -2020,10 +2033,10 @@ class Fight {
       t: this.t, clock: this.clock, roundLen: ROUND_LEN, round: this.round, rounds: this.rounds, dist: dist(F, O), ropes: { me: ropesK(F), him: ropesK(O) },
       me: { head: F.head, headMax: F.headMax, stam: F.stam, stamMax: F.stamMax, hurt: hurtNow(F), down: F.state === 'down', clinch: F.state === 'clinch', punching: F.state === 'punch', busy,
         strat: F.strategy, order: F.order ? { k: F.order.k, q: F.order.q, left: F.order.t / SHOUT_LEN, age: (SHOUT_LEN - F.order.t) * CLOCK } : null }, // the corner: this round's plan and the live shout (the brain reads them when BR.coach is on)
-      him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, look: a.look || null, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0) } : null, // an awkward man's punches come from where you don't look: seen later
+      him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, look: a.look || null, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0), blind: blindTo(F, laneOf(O, PUNCH[a.type])) } : null, // an awkward man's punches come from where you don't look: seen later
         recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
         guard: O.bg * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100,
-        look: { cut: O.cut / 10, body: clamp(O.body, 0, 100) / 100, arms: O.gi, // what's on screen (the eyes, E1): the face, the body meter, worn arms
+        look: { cut: O.cut / 10, cutS: O.cutS, swell: Math.max(O.sw.L, O.sw.R) / 10, swS: O.sw.L > O.sw.R ? 'L' : 'R', body: clamp(O.body, 0, 100) / 100, arms: O.gi, // what's on screen (the eyes, E1): the face (the cut and the worse eye, each with its side), the body meter, worn arms
           fold: O.liverT > 0 || (O.state === 'stun' && O.hitZone === 'body') ? 1 : O.hitZone === 'body' && O.hitKind !== 'block' ? O.hitT * clamp(O.hitPow, 0, 1) : 0, // bent over a body shot
           legs: clamp(1 - O.stam / Math.max(1, O.stamMax) - .4, 0, .6) / .6 * .6 + (1 - clamp(O.body, 0, 100) / 100) * BODY.legs * 2, // heavy, flat feet: the tank and a sinking body
           wobble: O.state === 'stun' ? 1 : hurtNow(O) ? .6 : 0 } }, // the legs going
@@ -2517,15 +2530,25 @@ class Fight {
       D.hitQ = q; D.hitGlove = glove; a.q = q; // for the render: how it landed
     }
     this.bev(A, D, blocked ? 'blocked' : 'landed', { p: a.type, dmg, def: blocked ? (def === 'roll' ? 'roll' : 'block') : def || null, counter: caught || A.counterWin > 0, hurt: hurtNow(D) });
-    // cuts: shot size x accumulated damage. Fresh face + regular shot = very slim; beat-up face + big shot = real risk
-    if (P.zone === 'head' && !blocked && dmg > 1.5 && R() < cutChance(D, dmg, crit)) {
+    // cuts: shot size x accumulated damage. Fresh face + regular shot = very slim; beat-up face + big shot = real risk. The cut sits over one eye: shots to that side open it (1e)
+    const eyeL = P.zone === 'head' && !blocked ? laneOf(A, P) : null, onEye = s => !s ? 1 : eyeL.lane === 'under' ? (1 + CUT.off) / 2 : s === eyeL.side ? 1 : CUT.off;
+    if (P.zone === 'head' && !blocked && dmg > 1.5 && R() < cutChance(D, dmg, crit) * (D.cut > .5 ? onEye(D.cutS) : 1)) {
       const was = D.cut; D.cut = Math.min(10, D.cut + 1 + R() * 2);
-      this.emit('cut', { d: D.side, sev: D.cut, fresh: was < 0.5 });
+      if (was < .5) D.cutS = eyeL.side;
+      this.emit('cut', { d: D.side, sev: D.cut, fresh: was < 0.5, side: D.cutS });
       if (was < 5 && D.cut >= 5) this.emit('cutWorse', { d: D.side, sev: D.cut });
-    } else if (P.zone === 'head' && !blocked && D.cut > .5 && dmg > 1.2 && R() < CUT.onEye) {
+    } else if (P.zone === 'head' && !blocked && D.cut > .5 && dmg > 1.2 && R() < CUT.onEye * onEye(D.cutS)) {
       // clean shots that land on an open cut tear it wider
       const was = D.cut; D.cut = Math.min(10, D.cut + CUT.widen * dmg * (crit ? 1.8 : 1) * rnd(.6, 1.4));
       if (was < 5 && D.cut >= 5) this.emit('cutWorse', { d: D.side, sev: D.cut });
+    }
+    if (eyeL && SW.on) { // swelling (1e): the eye it landed on puffs up (an uppercut, half to each)
+      const g = SW.k * dmg * (P.cat === 'jab' ? SW.jab : P.kind === 'hook' ? SW.hook : 1) * (1 + SW.wear * (1 - D.headMax / 100));
+      for (const s of eyeL.lane === 'under' ? ['L', 'R'] : [eyeL.side]) {
+        const was = D.sw[s]; D.sw[s] = Math.min(10, was + (eyeL.lane === 'under' ? g * SW.up / 2 : g));
+        if (was < SW.at && D.sw[s] >= SW.at) this.emit('swell', { d: D.side, side: s });
+        if (was < SW.full && D.sw[s] >= SW.full) this.emit('eyeShut', { d: D.side, side: s });
+      }
     }
     if (!blocked || dmg > 6) {
       if (P.zone === 'head') {
@@ -2701,7 +2724,8 @@ class Fight {
       F.stam = Math.min(F.stamMax, F.stam + (F.stamMax - F.stam) * (.5 + rec * .4));
       // the cutman slows the bleeding and closes it a little; he can't make a bad cut go away
       F.cut = Math.max(0, F.cut - this.cutman[F.side] * CUT.cutman * rnd(.7, 1.2));
-      if (F.cut < .4) F.cut = 0;
+      if (F.cut < .4) { F.cut = 0; F.cutS = null; }
+      for (const s in F.sw) F.sw[s] = Math.max(0, F.sw[s] - this.cutman[F.side] * SW.ice); // ice and the enswell: the swelling goes down some
       F.kdR = 0; F.liverT = 0; F.rs = newRS(); F.hitT = 0; F.state = 'idle'; F.unanswered = 0; F.downP = 0;
       F.gi = Math.min(1, F.gi + .5); F.trapT = 0; F.slideT = 0; F.spin = false; F.esc = null; F.resetT = 0;
       R(); this.exP = 0; // the old AI's feel-out roll (same.js hash)
@@ -2714,6 +2738,11 @@ class Fight {
       if (F.cut >= CUT.doc - 1) {
         if (R() < clamp((F.cut - CUT.doc) / CUT.docSpan, 0, .9)) { this.emit('doctor', { d: F.side }); F.state = 'slump'; this.end(F.op.side, 'TKO (cut)'); return false; }
         this.emit('doctorLook', { d: F.side });
+      }
+      const eye = Math.max(F.sw.L, F.sw.R); // a shut eye: the doctor looks, and may not let him see out of one eye for another round
+      if (SW.on && eye >= SW.doc - 1) {
+        if (R() < clamp((eye - SW.doc) / SW.docSpan, 0, .9)) { this.emit('doctor', { d: F.side, eye: 1 }); F.state = 'slump'; this.end(F.op.side, 'TKO (eye)'); return false; }
+        this.emit('doctorLook', { d: F.side, eye: 1 });
       }
       const behind = F.side === 0 ? lead0 < -1 : lead0 > 1;
       if (F.headMax < 26 && behind && R() < .5) { this.emit('rtd', { d: F.side }); F.state = 'slump'; this.end(F.op.side, 'RTD'); return false; }
@@ -3975,6 +4004,7 @@ const Comm = (() => {
     tko: ['The referee waves it off! {a} by TKO!', 'That is enough, the ref steps in. TKO for {a}!'],
     three: ['Third knockdown of the round. It is over! {a} by TKO!'],
     doctor: ['The doctor has seen enough of that cut. It is stopped!'],
+    doctorEye: ["The doctor waves it off! {d} can't see out of that eye. It is over."],
     rtd: ['His corner has thrown in the towel! {a} wins!'],
     clinch: ['{c} ties him up.', 'They are tangled up inside.', '{c} grabs and holds.'],
     counter: ['{a} makes him miss and makes him pay!', 'Beautiful counter by {a}!', 'Slipped and countered by {a}!'],
@@ -3991,6 +4021,11 @@ const Comm = (() => {
     roll: ['{d} rolls it off the shoulder.', 'Shoulder roll by {d}. Nothing landed.', '{d} catches it on the shoulder.'],
     cutWorse: ["That cut on {d} is getting worse.", "{a} keeps hitting that cut. It is wide open now.", "Blood pouring down {d}'s face now."],
     doctorLook: ['The doctor is up on the apron, looking at that cut on {d}.', 'The ringside doctor takes a look at {d}. He lets it go, for now.'],
+    doctorLookEye: ["The doctor is in the corner, checking {d}'s eye. Can he see out of it?", "The doctor holds up fingers in front of {d}'s eye. He lets it go, for now."],
+    swell: ["{d}'s eye is starting to swell.", "There is a mouse coming up under {d}'s eye.", "{d}'s eye is puffing up."],
+    eyeShut: ["{d}'s eye is shut! He can't see the punches coming on that side.", "That eye is closed on {d}. He is fighting with one eye now."],
+    saw_swell: ['{a} has seen the eye. He is going to go after it.', "{a} knows {d}'s eye is closing."],
+    saw_swellBig: ["{a} sees that eye is shut. He is coming from the blind side.", "{a} is throwing to the side {d} can't see."],
     heard_jab: ['{a} heard the corner. The jab is popping now.', '{a} starts sticking the jab.', 'Double jab from {a}. That is what the corner wanted.'],
     heard_body: ['{a} goes downstairs, just like the corner said.', '{a} switches to the body.', '{a} is digging to the ribs now.'],
     heard_press: ['{a} steps on the gas and walks him down.', '{a} takes the advice and gets on him.', '{a} is cutting off the ring now.'],
@@ -4070,12 +4105,14 @@ const Comm = (() => {
       case 'home': if (ok('home' + e.a, t, 170) && ok('homeAny', t, 60)) { o.p = pn(e.p, fight.f[e.a]); L('home', 2); } break;
       case 'cutWorse': o.a = nm(1 - e.d); L('cutWorse', 3); break;
       case 'saw': { const k = 'saw_' + e.cue + (e.big && PBP['saw_' + e.cue + 'Big'] ? 'Big' : ''); if ((e.first || e.big) && PBP[k] && !once[e.a + k] && ok('sawAny', t, e.big ? 6 : 20)) { once[e.a + k] = 1; L(k, e.big ? 2 : 1); } break; } // the eyes (E3): first sight per cue, and the big moments
-      case 'doctorLook': L('doctorLook', 3); break;
+      case 'doctorLook': L(e.eye ? 'doctorLookEye' : 'doctorLook', 3); break;
+      case 'swell': if (ok('swell' + e.d, t, 60)) L('swell', 2); break;
+      case 'eyeShut': if (ok('eyeShut' + e.d, t, 120)) L('eyeShut', 3); break;
       case 'heard': if (ok('heard', t, 12)) L('heard_' + e.k, 1); break;
       case 'ignored': if (ok('ignored', t, 20)) L('ignored', 1); break;
       case 'learned': if (ok('learned', t, 30)) L('learned_' + e.k, 2); break;
       case 'stoppage': L(e.why === 'three' ? 'three' : 'tko', 5); break;
-      case 'doctor': L('doctor', 5); break;
+      case 'doctor': L(e.eye ? 'doctorEye' : 'doctor', 5); break;
       case 'rtd': o.a = nm(1 - e.d); L('rtd', 5); break;
       case 'end': if (e.result && e.result.method === 'KO') { o.a = nm(e.result.winner); L('ko', 5); } break;
     }

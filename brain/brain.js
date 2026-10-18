@@ -27,6 +27,9 @@
  * What's on screen about the other man (the eyes, E1: the truth; his eyes decide what he notices). All 0..1, optional: a host without one leaves it out.
  * @typedef {Object} Look
  * @property {number} [cut]     how bad the cut is (0 none .. 1 the doctor's looking)
+ * @property {?string} [cutS]   which eye it's over ('L' / 'R', his own left or right)
+ * @property {number} [swell]   the worse eye's swelling (0 none .. .4 half shut .. .85 shut)
+ * @property {string} [swS]     which eye that is ('L' / 'R')
  * @property {number} [body]    his body meter (1 fresh .. 0 gone)
  * @property {number} [arms]    arm wear (1 fresh .. 0 the guard's breaking down)
  * @property {number} [fold]    bent over a body shot right now
@@ -44,6 +47,7 @@
  * @property {number} sell       how real the feint looks
  * @property {?string} look      a changed ending (traps)
  * @property {number} tell       how much it was telegraphed
+ * @property {number} [blind]    how shut his own eye is on the side it comes in on (0 open .. 1 shut: he can't see it coming)
  */
 /**
  * What he decides each frame (think()). The game turns it into feet, hands and a guard.
@@ -178,11 +182,12 @@ const BR = {
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
   // the eyes (E2): what he notices about the other man (P.him.look). rate: sightings a second of clock at full salience; nov / vet: where he looks (a novice watches the gloves, a vet the chest: gaze = his read);
   // thr: how much there has to be before it's there to see (salience = v / thr, capped 1.5); tau: how long a sighting holds once it stops being seen (s of clock); big: a moment worth a line (E3)
-  eye: { on: 1, rate: { cut: .1, body: .05, arms: .35, fold: 2.5, legs: .16, wobble: 2.4 }, nov: { cut: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
-    thr: { cut: .1, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, body: .5, legs: .6, wobble: .9 },
+  eye: { on: 1, rate: { cut: .1, swell: .1, body: .05, arms: .35, fold: 2.5, legs: .16, wobble: 2.4 }, nov: { cut: .2, swell: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, swell: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
+    thr: { cut: .1, swell: .3, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, swell: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, swell: .8, body: .5, legs: .6, wobble: .9 },
     blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5,
     e4: 1, hold: 6 }, // e4: he fights on what he saw, not the truth (hurt from a wobble he caught, held hold s of clock; his gas from the legs; the arm wear in the guard). 0 = the truth (A/B)
   reactMin: .1,           // the fastest he ever sees a punch, read or not (s; was .04: expert averaged .09)
+  eyeShut: .12,           // a punch on the side of his shut eye (SeenPunch.blind 1) comes from where he can't see: seen this much later on top, read or not (s)
   antic: .6,              // a read punch is seen this much sooner
   antPrior: [30, 10],     // evidence before a habit read means anything, novice .. world class (he downloads you over rounds, not seconds)
 
@@ -623,7 +628,7 @@ class Brain {
   // the eyes (E2): each cue on screen has a chance a second to be noticed, by where he looks (his read), how much there is, and his state (blur, fear, hurt, gas, the hunt's tunnel vision)
   look(P, sdt) { // gaze from his mastery (the level tables' read), not the squeezed k: a Novice watches the gloves, World class the chest
     const L = P.him.look, B = BR.eye; if (!B.on || !L) return;
-    const val = { cut: L.cut, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
+    const val = { cut: L.cut, swell: L.swell, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
     const gaze = clamp((this.m.read - .3) / .6, 0, 1), tun = HUNTS[this.mode] ? B.tunnel : 0;
     const st = (1 - B.blur * this.blur) * (1 - B.fear * this.emo.fear) * (P.me.hurt ? 1 - B.hurt : 1) * (1 - B.fat * this.fat);
     for (const c in val) {
@@ -633,7 +638,7 @@ class Brain {
         const e = this.eye[c], first = !e;
         if (first || this.t - e.t > 1) this.note('sees ' + c + ' ' + v.toFixed(2));
         const big = B.big[c] != null && v >= B.big[c] && !(e && e.big);
-        this.eye[c] = { v, t: this.t, ct: this.ct, first: e ? e.first : this.t, big: big || !!(e && e.big) };
+        this.eye[c] = { v, t: this.t, ct: this.ct, first: e ? e.first : this.t, big: big || !!(e && e.big), s: c === 'cut' ? L.cutS : c === 'swell' ? L.swS : null }; // s: the side of the face it's on
         if ((first || big) && this.eyeLog.length < 40) this.eyeLog.push({ c, v, t: this.t, round: P.round, clock: P.clock, first, big });
       }
     }
@@ -698,6 +703,7 @@ class Brain {
       d *= 1 - BR.antic * rd;
       d -= BR.tellSee * (H.tell || 0);
       d = Math.max(BR.reactMin, d); // even a punch he's read needs a beat: no psychic blocks (Ed, Oct 17: smart, not psychic)
+      d += BR.eyeShut * (H.blind || 0); // his eye's shut on that side
       const start = this.t - (H.t || 0), deadline = H.feint ? start + .3 : this.t + (H.impactIn != null ? H.impactIn : .25);
       this.threat = { id: H.id, type: H.type, feint: !!H.feint, sell: H.sell || 0, look: H.look || null, start, at: start + d, deadline, rd, done: false };
       if (!H.feint) {
