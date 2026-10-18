@@ -879,3 +879,6 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 ### Handoff (Oct 18, reaction floor done)
 **State:** `claude/plugin-body`, hash 4cdff551 (same.js 200). `BR.reactMin` .1 replaces the .04 floor in `see()`. Numbers in `docs/PLUGIN.md` (fair check).
 **Next:** ROADMAP 1 (b) the P2 ladder test (`cheese.js N easy|hard|expert none`: easy ~15-20, hard ~50, expert ~80), then (c) merge into `claude/brain-wire`.
+
+### Handoff (Oct 18, P2 ladder done)
+Ladder vs a Pro: easy 21.7, hard 54.0, expert 87.7 (n160; `docs/PLUGIN.md`). No code change, hash 4cdff551. **Next:** ROADMAP 1 (c) merge `claude/plugin-body` into `claude/brain-wire` (brain-wire's hash 1a66d14e becomes 4cdff551), then (d) the eyes.

@@ -17,6 +17,14 @@ What already exists: `brain/brain.js` is standalone (no DOM, no engine globals, 
 - Expert also gets memory across fights in a session (L4c prior) when the host keeps a `memo()`.
 - Measure: each preset vs a fixed "average player" (a Pro brain, no corner): easy ~15-20%, hard ~50%, expert ~80%.
 
+### P2 ladder (Oct 18, `cheese.js 40 x4 [easy|hard|expert] none`, hash 4cdff551)
+| Preset | wins vs a Pro (n160) | target | defends 1st look -> read | react s |
+|---|---|---|---|---|
+| easy | 21.7 ±3 | 15-20 | 46 -> 57% | .139 |
+| hard | 54.0 ±4 | ~50 | 49 -> 63% | .124 |
+| expert | 87.7 ±3 (85.7 pooled with 83.1 n120) | ~80 | 53 -> 69% | .106 |
+All within a few points: real steps, no retune. Every level reads (defends better once he's seen it), none is psychic.
+
 ## 2. The anti-cheese test (P1, first: measure before building)
 A "player" who repeats one exploit all fight, run on the Last Bell engine (the real host). A cheese is the brain with its offense or defense pinned to a script (a wrapped brain: everything else, events and gas included, stays real).
 
