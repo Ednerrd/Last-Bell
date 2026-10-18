@@ -875,3 +875,7 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 **State:** `claude/plugin-body`, hash b30af66c (same.js 200). P2 `BoxerBrain.preset(easy|hard|expert)` (skills recentered on the tier, expert reads a `memo`). P3 body: `BR.body` reads his whole-fight diet (`memT`, norm .5, min 20, k 1): hash-inert in normal fights. P3 clinch: the ref's third holding warning costs a point for sure, Lettum warns at 12; `BR.cl` (clinch event to both brains, skips a hurt man holding on, norm 4). P4 draft in `brain/README.md`. `cheese.js` fair check (first look vs read, reaction). Research: `research/games_*.md`.
 **Numbers:** hard vs bodyOnly 67, vs clinch 71 (n160), expert vs bodyOnly 73 (older read). Styles 48.8-51.4, specials 49.2-54.2, audit 51.2 / 15.2 / 29.7%, stops 26.1 / 26.2, one level down 14.0-19.0. Body KD share is noisy (same engine: 3.1 and 5.2 at 1200).
 **Next:** ROADMAP 1 (a) the read-reaction floor.
+
+### Handoff (Oct 18, reaction floor done)
+**State:** `claude/plugin-body`, hash 4cdff551 (same.js 200). `BR.reactMin` .1 replaces the .04 floor in `see()`. Numbers in `docs/PLUGIN.md` (fair check).
+**Next:** ROADMAP 1 (b) the P2 ladder test (`cheese.js N easy|hard|expert none`: easy ~15-20, hard ~50, expert ~80), then (c) merge into `claude/brain-wire`.
