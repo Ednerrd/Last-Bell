@@ -882,3 +882,6 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 
 ### Handoff (Oct 18, P2 ladder done)
 Ladder vs a Pro: easy 21.7, hard 54.0, expert 87.7 (n160; `docs/PLUGIN.md`). No code change, hash 4cdff551. **Next:** ROADMAP 1 (c) merge `claude/plugin-body` into `claude/brain-wire` (brain-wire's hash 1a66d14e becomes 4cdff551), then (d) the eyes.
+
+### Handoff (Oct 18, merged)
+`claude/plugin-body` fast-forwarded into `claude/brain-wire` (hash 4cdff551). Work continues on `claude/brain-wire`. **Next:** ROADMAP 1 (d) the eyes (design in `docs/PLUGIN.md`; a design plan = high effort, ask Ed).

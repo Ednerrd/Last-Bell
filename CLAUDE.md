@@ -8,7 +8,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
-- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (~90 commits ahead). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
+- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/brain-wire` (~115 commits ahead; `claude/plugin-body` merged in Oct 18). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
 - Never publish to the live game without Ed's explicit OK.
 - Models (Ed, Oct 14): Opus for tuning, code and design; Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write). Sonnet subagents are fine for grunt work too (docs bookkeeping, sim runs and tables).
 - Effort (Ed, Oct 15, replaces Oct 14): **medium is the default.** Before a task that needs high, say so in one line and ask Ed to switch, then wait for his OK. High = debugging odd sim results, retiring or refactoring engine code that must keep the same.js hash, design plans (L4 learning, the drama build). Sim-driven knob tries, docs, roadmap edits, overviews, running sims and reading numbers stay at medium.
@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **4cdff551** on `claude/plugin-body`, Oct 18: the reaction floor; before it b30af66c, P3 cheese holes; brain-wire is still 1a66d14e).
+- Render-only changes must keep the `same.js` hash (now **4cdff551**, Oct 18: the plug-in brain (P3 cheese holes, the ref docks holding, the reaction floor); before it 1a66d14e, the officials).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
