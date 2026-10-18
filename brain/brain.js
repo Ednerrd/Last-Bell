@@ -178,7 +178,7 @@ const BR = {
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
   // the eyes (E2): what he notices about the other man (P.him.look). rate: sightings a second of clock at full salience; nov / vet: where he looks (a novice watches the gloves, a vet the chest: gaze = his read);
   // thr: how much there has to be before it's there to see (salience = v / thr, capped 1.5); tau: how long a sighting holds once it stops being seen (s of clock); big: a moment worth a line (E3)
-  eye: { on: 1, rate: { cut: .1, body: .05, arms: .35, fold: 2.5, legs: .08, wobble: 1.2 }, nov: { cut: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
+  eye: { on: 1, rate: { cut: .1, body: .05, arms: .35, fold: 2.5, legs: .16, wobble: 2.4 }, nov: { cut: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
     thr: { cut: .1, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, body: .5, legs: .6, wobble: .9 },
     blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5,
     e4: 1, hold: 6 }, // e4: he fights on what he saw, not the truth (hurt from a wobble he caught, held hold s of clock; his gas from the legs; the arm wear in the guard). 0 = the truth (A/B)
