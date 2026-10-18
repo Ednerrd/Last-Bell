@@ -892,5 +892,8 @@ Ladder vs a Pro: easy 21.7, hard 54.0, expert 87.7 (n160; `docs/PLUGIN.md`). No 
 ### Handoff (Oct 18, eyes E2 done)
 `Brain.look()` notices `him.look` cues by gaze (read mastery), salience and state, own dice (`eR`), hash 44b4f117 holds. `this.eye`, `seen(c)`, `this.eyeLog` (first sightings, big moments). Knobs `BR.eye`. `tests/eyes.js` table in `docs/PLUGIN.md`. **Next:** E3 show it (UI only: the line on first sight + big moments in the simple view, the full read in More; read `F.brain.eyeLog`).
 
+### Handoff (Oct 18, eyes E4 done)
+He fights on what he saw: `perc()` (hurt from a caught wobble or fold, held 6 s; gas from the legs; arm wear only if noticed), `BR.eye.e4`. Numbers in `docs/PLUGIN.md` (E4). Hash 791b3971 / quick 3bafb140. Left: outboxer ~46 (was 47.8, already under the band), a style knob for him, not the eye. **Next:** (e) target the damage, with swelling as a new zone (`docs/PLUGIN.md`).
+
 ### Handoff (Oct 18, eyes E3 done)
 `saw` events from `F.brain.eyeLog`, commentary `saw_*` lines (once per man per line, ~6 a fight), corner notes from `seen()`. UI only, hash 44b4f117. **Next:** E4 swap truth for sight (`him.hurt`, `him.gas`, `him.guard` read through `seen()`/the eye in the brain: hash moves, full check, expect the level gap to widen).

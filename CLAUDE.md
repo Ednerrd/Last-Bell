@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,300 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **4cdff551**, Oct 18: the plug-in brain (P3 cheese holes, the ref docks holding, the reaction floor); before it 1a66d14e, the officials).
+- Render-only changes must keep the `same.js` hash (now **791b3971**, Oct 18: eyes E4, he fights on what he saw; before it 4cdff551, the plug-in brain).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -49,7 +49,7 @@ engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, di
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless (`sim.js` is the shared loader). `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
 - **`tests/check.sh TAG [s a l f sp g]`: the full check on 4 cores, resumable after a restart (rerun the same line); `tests/check.sh TAG report` prints it all.** Default parts s a l f (~25 min); sp (specials) adds ~20 min.
-- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 44b4f117 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
+- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 3bafb140 for a quick look). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
 - `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
 - `node tests/bal2.js 300 82 peekaboo,philly TAG` then `node tests/agg.js TAG`: guard win % vs standard.
 - `TAG=x node tests/styles.js 300 82` then `node tests/styles.js agg x`: style round robin (`BIAS=1`, `GRD=roll`, `vs:volume,angle` for specials).
@@ -70,7 +70,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
-- Brain (default, with both AI corners, Oct 16): ~51.2 thrown / ~15.1 landed / ~29.5% connect, stops ~24.7–28% (audit 500 x3; finish.js 600: 25.8%; ~26% under every ref), styles 48.1–51.5, specials 48.0–54.3 pooled (angle at the ceiling), guards 47.7–55.8 (before the officials). Skill levels: one level down wins 15.8–18.0% (`levels.js sk`, 600/pair). Drama (`drama.js`, close fights): a lead change in ~41%, comebacks ~11.5% (target ~11, Ed). AI corner vs a silent one +3.6 (53.6 over 1800). History: `docs/BRAIN.md` "AI corner reads the fight", "Balance pass L6". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58. Specials vs base styles 48–54%.
+- Brain (default, with both AI corners, Oct 16): ~51.2 thrown / ~15.1 landed / ~29.5% connect, stops ~24.7–28% (audit 500 x3; finish.js 600: 25.8%; ~26% under every ref; E4 Oct 18: 28.2 / 28.3%), styles 48.1–51.5 (E4: 49.6–52.5, outboxer 45.8), specials 48.0–54.3 pooled (angle at the ceiling), guards 47.7–55.8 (before the officials). Skill levels: one level down wins 15.8–18.0% (`levels.js sk`, 600/pair). Drama (`drama.js`, close fights): a lead change in ~41%, comebacks ~11.5% (target ~11, Ed). AI corner vs a silent one +3.6 (53.6 over 1800). History: `docs/BRAIN.md` "AI corner reads the fight", "Balance pass L6". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58. Specials vs base styles 48–54%.
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
