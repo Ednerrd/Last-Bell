@@ -23,7 +23,8 @@ module.exports = PU => {
     runner: (o, P, s, dt) => { o.move = mv(o, { range: 88, lateral: 1, cut: 0 }); o.punch = o.punch && P.dist < 60 ? mk(['jab']) : null; return o; },
     clinch: (o, P) => { o.move = Object.assign({}, o.move, { clinch: P.dist < 50 }); return o; },
     // f3: the exploits, one per easy flaw (BR.flaw)
-    jabMove: (o, P, s, dt) => { o.move = mv(o, { range: 76, lateral: 1, cut: 0 }); o.punch = P.dist < 80 && (o.punch || (free(P) && R() < 2 * dt)) ? mk(['jab']) : null; return o; },        // vs the slugger: jab and move
+    jabMove: (o, P, s, dt) => { o.move = mv(o, { range: 76, lateral: 1, cut: 0 }); // vs the slugger: jab him as he comes in, and move
+      o.punch = P.dist < 80 && (o.punch && o.punch.type === 'jab' || (free(P) && P.him.closing > 5 && R() < 3 * dt)) ? mk(['jab']) : null; return o; },
     pressure: (o, P, s, dt) => { o.move = mv(o, { range: 34, lateral: 0, cut: 1 }); o.punch = P.dist < 64 && (o.punch || (free(P) && R() < 1.4 * dt)) ? mk(P.dist < 50 ? ['hook', 'cross'] : ['jab', 'cross', 'hook']) : null; return o; }, // vs the outboxer: cut off the ring
     stepCounter: (o, P, s, dt) => { // vs the swarmer: step back and counter him on the way in
       o.move = mv(o, { range: 76, lateral: .4, cut: 0 });
