@@ -16,6 +16,13 @@ The only to-do list. When something is done, delete its line here and put the nu
    - AI between-round adjustment: change one thing when losing exchanges; low adjusters wait too long.
    - Clarity: fatigue, damage and knockdowns blur the read.
    - Gassers save it for later (stamina pacing).
+   - Coach-clip ideas (`research/arena.md`, `research/precision.md`), best first:
+     1. Feint kinds (hand / shoulder / look-at-the-body) that pull a matching defense, follow-up goes in the hole; overdone feints stop working on high IQ. Pairs with a rhythm "hitch" (pause before the last punch).
+     2. Same-side counter (blocking arm fires short and straight back) + straight beats a looping shot in `pickCounter`. Then the anti-volume plan: cover, counter his last punch, get out, or circle if he has the legs.
+     3. Feel-out probes that tag the reaction (counter / retreat / cover) and pick the plan from it.
+     4. Body work: fast shot to move the elbow, hard shot in the gap; level-change combos; memory punishes repeating the same level.
+     5. Guards that shift shape when their hole is attacked (cross-arm becomes a shell vs body work, then the lead hook is the threat); hand-trap opener vs high guards.
+   - More clips queued (transcripts from Ed): `tools/*/SHORTLIST.md` (Arena, Precision, Coach Pillow Fists: ropes + inside fighting).
    - Check first, maybe not needed: within-round read decay (B1 already fades), defensive read inside `react()` capped ±25% per guard (B3 covers part).
 4. **Balance pass** (L6). Upsets one level down 15–20%, then the CLAUDE.md targets. Known weak: feinter ~46–47, swarmer ~47.4, high/cross guards swing between runs (pool 600+ per guard).
 5. **Gym mode steps 3–6** (`docs/GYM.md`): mitts + combo book, training sessions, sparring, signature moves and habits, in-round talk.
