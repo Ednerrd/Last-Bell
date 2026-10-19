@@ -103,3 +103,72 @@ Ed pasted the full broadcast transcript; it is not kept. Corales's trainer is Jo
 - **A hurt man can still end it.** Two knockdowns in one round, then the KO. The other man was hurt too, from R7. Both-hurt late rounds should allow wild swings. Check our KD and stop numbers before adding any.
 - **The ref and fouls in a close fight.** Two low-blow warnings in a round, no point, because it's close. Later, a point for the mouthpiece. Fits the clinch/ref work (warnings, then a point).
 - **The R1 break shape.** Praise, one defensive fix, what's working, one read, praise. A good template for a fresh, winning fighter. `corners.md` says 1 note is normal; this is a chatty corner (about 4 notes), but each note is short.
+
+---
+
+# Batch 3: Fury-Wilder III (2021), full fight broadcast
+Ed pasted the full broadcast transcript; it is not kept. The corners: Fury's is SugarHill Steward, Wilder's is Malik Scott. TV only aired four breaks. Speakers are inferred from the content.
+
+## Fight shape
+- Wilder came in with a real plan for once:
+  - The jab, a lot of it to the body: 12 jabs in R1, after 19 total punches in R1 of fight 2.
+  - Body first, then the right hand over the top.
+  - He bulked up to 238. Commentary: more mass tires you faster.
+- Fury: 277, his heaviest. Less head movement than fights 1-2. A slap-left decoy, the real threat is the right. He lands one-two then grabs. He leans his weight on Wilder.
+- Knockdowns:
+  - R3: Wilder down from a right.
+  - R4: Fury down twice. Wilder was hurt and still came back.
+  - R10: Wilder down.
+  - R11: stopped at 1:10. The ref waved it off with Wilder still falling, no count.
+- After 8, Fury outlanded him 98-54 but was down 2 KDs to 1. The unofficial card was even around R7-R8. A 10-7 round in R4.
+- The ref (Mora): "let them punch out of it." He warned Fury not to headlock. He called a forced knee not a knockdown. Commentary said his counts were slow.
+- Tired-man habits commentary called out, again and again:
+  - Wilder puts his head down, so the uppercut comes.
+  - Hurt, he backs straight up and walks into the right.
+  - His hands drop.
+  - His missed power shots drain him.
+  - His jab disappeared: only 2 landed over 4 rounds once he was tired.
+
+## The breaks
+1. **After R1, Fury corner (likely).**
+   - "He's getting tired already, you see it?"
+   - "Keep setting the trap, you already caught him once with an easy one."
+   - Then a sketch of the counter: when he comes in, boom.
+   - A read on the other man plus confirming a planned trap works.
+2. **After R3, Wilder corner (he was just dropped).**
+   - Tactic first, not calm: "When you jab, your right hand is down here. He's throwing the hook as you jab. Keep the hand here to shut the hook down."
+   - Then: deep breath, take a sip.
+   - Then a second tactic: going forward, he times you, so be alert, not lazy.
+   - Then R4: Wilder dropped Fury twice. A hurt man's corner went tactic-first and it worked. A counter-example to `corners.md`'s "state first."
+3. **After R6, Fury corner (SugarHill).**
+   - "Look at me. Wake up. You're lazy off the break. Stay alert, you control this guy. He only closes the space when you're not alert."
+   - "Back to the body, then one-two upstairs."
+   - Deep breath.
+   - "You hurt him at the end, then he clinched, and you're making too many **silent agreements**. Work the free hand. Be physical."
+4. **After R9, Wilder corner (Malik Scott).**
+   - "You were blessed with something that can end this, but it has to come behind the jab. Keep thinking."
+   - **"What round are we in?"** Wilder: "Like 10." A brain check.
+   - "We're in 10 and you're still here. Hold it together, you'll be so proud of yourself tomorrow."
+   - "When he backs you up, pivot out. Jab, go to the body. Keep the left up."
+   - R10: dropped again. R11: stopped.
+- **Off-air:** the doctor checked Wilder's right hand (he clutched his wrist). The corner said it was fine; commentary said it's a habit. A corner waving off an injury check.
+
+## What's new for Last Bell
+- **"Silent agreements" in the clinch.**
+  - The fighter who's winning lets the clinch become a rest for both men. The corner wants the free hand working.
+  - Game: a clinch should rest both men. A "physical" or well-coached man punches out of it (the ref lets them), a lazy one takes the rest.
+  - A great corner line. Fits the clinch/ref plans (Ed, Oct 17).
+- **"What round are we in?"** A second brain-check question, after Nazim's say-it-back (batch 1). Two cases now, so the stop check by question looks real. Build it as one mechanic with a few lines.
+- **The corner fixes YOUR hole the other guy found.** "Your hand drops when you jab, he's timing it." This is the eyes system turned around: the corner sees what the opponent has read. Ties to `him.look` and the traps.
+- **Hurt man, tactic first, and it worked.** Malik led with the fix after a knockdown. `corners.md` rule 2 says hurt = state line first. Keep that as the default, but a sharp corner with a clear read can lead with the fix. Maybe by corner skill.
+- **"Proud of yourself tomorrow" vs Atlas's "cry tomorrow."** The same lever (tomorrow), with a carrot or a stick. Good line pair for the corner-talk table.
+- **"Keep setting the trap."** The corner confirms a trap is working and says keep showing it. Ties to the built setups and traps (show, bank, draw).
+- **Tired habits to model** (commentary, not the corner):
+  - Head goes down, so uppercuts land.
+  - Hurt and backing straight up, he walks into the right.
+  - Missed power shots cost gas.
+  - The jab dies when tired.
+  - Check what the engine already does for each before adding anything.
+- **Body mass and gas.** Wilder bulked and tired early. If weight within a division ever matters, heavier = more power, less gas. Idea only.
+- **A hand injury, hidden.** The doctor checks, the corner says fine. Only matters if hand injuries get built. Parked.
+- **Highlight-bias warning again.** This fight had 5 KDs. Real heavyweights don't average that. Don't tune KD rates to it.
