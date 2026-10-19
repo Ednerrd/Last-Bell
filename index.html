@@ -4433,7 +4433,7 @@ function loop(ts) {
         if (F.phase === 'corner') { openCorner(); break; }
       }
     }
-    view = liveView(); updHud();
+    view = liveView(); updHud(); updBrainBox();
   } else if (FX.mode === 'corner') { view = liveView(); }
   else if (FX.mode === 'erupt') {
     FX.eruptT += dt; FX.acc += dt; FX.excite = 1;
@@ -4746,6 +4746,7 @@ function labFight(L) {
   Comm.stop && Comm.stop();
   const A = labSheet(L.A), B = labSheet(L.B), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
   F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6 });
+  F.f.forEach(X => { X.brain.debug = true; }); // the thought log for the debug panel (no dice: the fight plays the same)
   FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null, calls: [], gas0: 1 };
   const ta = gearItem('trunks', A.look.trunks).c;
   if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
@@ -4766,12 +4767,39 @@ function labFight(L) {
     <div class="shouts off" id="shouts" aria-label="Yell from the corner">${Object.keys(SHOUTS).map(k => `<button data-act="shout" data-v="${k}">${SHOUT_BTN[k]}<i></i></button>`).join('')}</div>
     <div class="cornerbox" id="cbox"></div>
     <div class="ctrl"><div class="seg small">${[1, 2, 4].map(s => `<button class="${FX.speed === s ? 'on' : ''}" data-act="speed" data-v="${s}">${s}x</button>`).join('')}</div><div class="row">${soundBtns()}</div></div>
+    <details class="bbox" id="bbox"${BBOX.open ? ' open' : ''} ontoggle="BBOX.open=this.open;updBrainBox(1)"><summary>🧠 What they're thinking</summary><div class="bcols"><div class="bcol" id="bb0"></div><div class="bcol" id="bb1"></div></div></details>
   </div>`, 'fightmode');
   Render.init($('#cv'));
   Sfx.init(); Comm.initVoices(); Sfx.crowd(CROWD_BASE[FX.venue], 1);
   overlay(`<div class="intro"><span>${esc(DIVS[L.div].name)}</span><b>${esc(A.name)}</b><em>vs</em><b>${esc(B.name)}</b><span>${o.rounds} rounds, ${esc(VENUE_NAMES[o.venue])}</span><span>Referee ${esc(F.ref.name)}</span></div>`, 2300);
   feed(`Referee ${F.ref.name}: ${F.ref.style}. Judges: ${F.judges.map(j => `${j.name} (${j.taste})`).join(', ')}.`);
   rafId = requestAnimationFrame(loop);
+}
+// the debug panel (Ed, Oct 19): what each brain is doing, what he believes about the other man next to the truth, what he's adjusting, his last thoughts. Display only
+const BBOX = { open: false, t: 0 };
+const MODE_TXT = { feelout: 'feeling him out', work: 'working', press: 'pressing', burst: 'letting it go', reset: 'resetting', counter: 'waiting to counter', hunt: 'going for the finish', huntSafe: 'finishing behind the guard', check: 'checking if he is hurt', survive: 'surviving', down: 'down' };
+const ADJ_TXT = { initiative: ['lead more', 'lead less'], range: ['stay long', 'get closer'], jab: ['more jab', 'less jab'], power: ['more power', 'less power'], body: ['more body', 'less body'], guard: ['hands up', 'hands looser'] };
+function adjList(o, cut) { const out = []; if (!o) return out; for (const k in ADJ_TXT) { const v = o[k] || 0; if (Math.abs(v) > (k === 'range' ? 2 : cut)) out.push(ADJ_TXT[k][v > 0 ? 0 : 1]); } if (o.out && Math.abs(o.out - 1) > .05) out.push(o.out > 1 ? 'throw more' : 'throw less'); return out; }
+function brainCard(X) {
+  const b = X.brain, O = X.op, ph = b.ph || {}, pc = v => Math.round(clamp(v, 0, 1) * 100), e = esc;
+  if (b.log.length > 300) b.log.splice(0, 200);
+  const md = b.out.intent === 'down' ? 'down' : b.mode, hr = md === 'survive' && b.hurtResp ? ' (' + b.hurtResp + ')' : '';
+  const me = [`guard ${pc(b.out.guard)}`]; if ((X.clamp || 0) > .2) me.push('elbows clamped, body hurt'); if ((X.low || 0) > .2) me.push('elbows in, he reads a body digger'); if (X.bluff) me.push('hiding the hurt'); if (X.cover) me.push('covering his ' + (X.cover.s === 'L' ? 'left' : 'right') + ' eye'); if (b.desp) me.push('desperate, behind late');
+  const tg = ph.tgt, spot = []; if (tg) { if (tg.eye) spot.push((tg.side === 'L' ? 'left' : 'right') + ' eye'); if (tg.body) spot.push('body going'); if (tg.arms) spot.push('arms heavy'); } if (ph.el) spot.push('elbows down');
+  const gasT = O.stam / Math.max(1, O.stamMax), grdT = O.bg * (.5 + .5 * O.gi), hurtT = hurtNow(O);
+  const adj = [...adjList(b.cc, .05).map(x => 'corner: ' + x), ...adjList(b.plan, .05).map(x => 'plan: ' + x)];
+  if (b.dl && b.dl.armed) adj.push('trap set for his ' + pName(b.dl.armed)); if ((b.bRd || 0) > .2) adj.push('he lives downstairs'); if (b.setup) adj.push('setup: ' + b.setup.name);
+  const E = b.emo, mood = E.fear > .5 ? 'scared' : E.frus > .5 ? 'frustrated' : E.conf > .4 ? 'confident' : E.conf < -.4 ? 'shaken' : '';
+  const log = b.log.slice(-6).reverse().map(l => `<li>${e(l.replace(/^[\d.]+ /, ''))}</li>`).join('');
+  return `<p><b>${e(X.sheet.name.split(' ').slice(-1)[0])}</b> <span class="bm">${e(MODE_TXT[md] || md)}${e(hr)}</span>${mood ? ' · ' + mood : ''}</p>
+    <p>${e(b.out.why || '')}</p><p>${e(me.join(' · '))}</p>
+    <p>Sees him: ${ph.hurt ? '<span class="bm">HURT</span>' : 'fine'}${hurtT !== !!ph.hurt ? ` <span class="tru">(${hurtT ? 'he is hurt' : 'he is not'})</span>` : ''}, gas ${pc(ph.gas == null ? 1 : ph.gas)} <span class="tru">(${pc(gasT)})</span>, guard ${pc(ph.guard == null ? grdT : ph.guard)} <span class="tru">(${pc(grdT)})</span></p>
+    ${spot.length ? `<p>Spotted: ${e(spot.join(', '))}</p>` : ''}${adj.length ? `<p>Adjusting: ${e(adj.join(', '))}</p>` : ''}
+    <ul class="bl">${log}</ul>`;
+}
+function updBrainBox(now) {
+  if (!BBOX.open || !F || !F.f[0].brain) return; const t = performance.now(); if (!now && t - BBOX.t < 250) return; BBOX.t = t;
+  F.f.forEach((X, i) => { const el = $('#bb' + i); if (el) el.innerHTML = brainCard(X); });
 }
 function labBar(L) {
   return `<div class="lab">
@@ -4825,6 +4853,8 @@ function resultScreen() {
 }
 const labCss = document.createElement('style');
 labCss.textContent = `.learned{text-align:left;margin:14px 0 4px;padding:10px 12px;border-left:3px solid var(--gold,#f0b85a);background:rgba(240,184,90,.08);border-radius:4px}.learned h3{margin:0 0 6px;font-size:15px}.learned ul{margin:0;padding-left:18px;font-size:14px;line-height:1.4}
+.bbox{background:#0e0a08;color:#cfc4ad;border-radius:5px;padding:6px 10px;font-size:12.5px;line-height:1.35}.bbox summary{cursor:pointer;color:#f0b85a;font-weight:700;font-size:15px;padding:4px 0}
+.bcols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}.bcol{min-width:0;overflow-wrap:anywhere;color:#cfc4ad}.bcol b{color:#ece4d6}.bcol .tru{color:#8f8273}.bcol .bm{color:#f0b85a;font-weight:700}.bcol .bl{color:#a09280;margin:4px 0 0;padding-left:14px}.bcol p{margin:3px 0}
 .lab{margin:0 0 6px}.labrow{display:flex;gap:6px}.labrow .btn{flex:1;padding:8px 6px;font-size:15px}
 .labwho{font-size:12.5px;line-height:1.35;color:var(--mute,#999);margin:6px 2px}.labA,.labB{color:var(--ink,#2a2018);font-weight:700}
 .labset[hidden]{display:none}.labset{display:grid;gap:6px;margin:6px 0;font-size:13px}.labf{display:flex;gap:6px;align-items:center}.labf b{width:56px;flex:none;text-align:left}.labf select{flex:1;min-width:0;font:inherit;padding:6px;border-radius:8px;background:#fffaf2;color:#2a2018;border:1px solid #c9bba5}`;
