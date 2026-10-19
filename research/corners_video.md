@@ -172,3 +172,61 @@ Ed pasted the full broadcast transcript; it is not kept. The corners: Fury's is 
 - **Body mass and gas.** Wilder bulked and tired early. If weight within a division ever matters, heavier = more power, less gas. Idea only.
 - **A hand injury, hidden.** The doctor checks, the corner says fine. Only matters if hand injuries get built. Parked.
 - **Highlight-bias warning again.** This fight had 5 KDs. Real heavyweights don't average that. Don't tune KD rates to it.
+
+---
+
+# Batch 4: Crawford-Spence (2023), full fight broadcast
+Ed pasted the full broadcast transcript; it is not kept. Crawford's trainer is Brian "BoMac" McIntyre, Spence's is Derrick James. The corner audio is garbled, so the speakers are inferred: James's lines match what commentary said he wanted (turn him, get off the center line).
+
+## Fight shape
+- Crawford fought southpaw vs the southpaw Spence. Neither had faced many lefties lately.
+- Spence's usual game: high output (69 thrown a round vs Crawford's ~48), a jab-led pressure fighter, a body puncher.
+- Crawford: a known slow starter who "collects information" in R1-R2. He gave R1 away, then took over.
+- **Camp plan (BoMac and Crawford after the fight):**
+  - Take away Spence's jab, because everything he does starts from it.
+  - They drilled a firm, stopping jab instead of the usual flicking one, because Spence is durable and strong. Stop him in his tracks.
+  - Defensive assignment: keep the right glove up to catch Spence's straight left.
+- **Result:**
+  - Spence threw 234 jabs and landed 28 (12%).
+  - Crawford landed ~50% of everything, 58% of power shots, 87 jabs (the most landed on Spence by any opponent).
+  - Knockdowns: R2 (a counter jab, Spence overreached), R7 twice (right uppercut, then right hook). Stopped R9 2:32.
+- Spence stayed on the center line, walking straight in, and ate counters on every step forward. Late, he was backing up, which isn't his game.
+- Crawford hurt him in R8 but took his time: "he knows Spence is still dangerous." A patient finisher.
+
+## The breaks (Spence's corner unless marked)
+1. **After R3.**
+   - "You've got to step around him, take the angle. You're standing right in front of him, that's why he hits you; he's waiting on it. Turn him."
+   - Mixed in, possibly BoMac to Crawford:
+     - "Toward the end of the round, that's when he slows down."
+     - "Keep the jab in his face, switch speeds."
+     - "He's going to get careless, because he's going to come."
+2. **After R4 (likely BoMac).** Behind the jab; keep the right hand up for the left hand. The defensive assignment, said again.
+3. **Before R5.** The ringside doctor checks Spence's eye.
+4. **After R5.**
+   - Spence talks back: he really got hit with a jab.
+   - Corner (likely): "I think you won it, but it was close." Commentary had Crawford sweeping since R2. A comforting misread, or a lie.
+   - Then: walk him down, don't give him space, make him feel you, short shots tight in the middle, use your legs to step around him, don't load up.
+5. **After R6.** Make sure you have room on the inside to punch.
+6. **After R7 (two knockdowns).** "Don't let him push you back. Step around him, take the angle, you're standing right in front of him." The same order as after R3.
+7. **After R8.** Don't react to him; stay focused, one shot at a time, step behind him. Commentary: James trying "anything" for a specific fix.
+
+## What's new for Last Bell
+- **The same order, four breaks, never followed.**
+  - "Step around him, take the angle, turn him" after R3, R5, R7 and R8. Spence never did it: a straight-line pressure fighter can't turn into an angle fighter mid-fight against that man.
+  - The strongest follow-through case so far. An order outside the man's style or skill barely lands, and saying it again doesn't fix that. It needs to be drilled in camp.
+  - Ties to `corners.md` rule 13 ("do not try something new") and coach_c rule 18.
+- **Camp plan aimed at one man:** "take away his best weapon."
+  - BoMac built the camp around Spence's jab: a firm stopping jab plus a glove assignment for his left.
+  - Game: a camp focus like "take away his jab / right hand / body work" that lowers that weapon's connect for that fight. Fits camp and scouting (offers/camp UI, `docs/GYM.md`).
+  - Numbers to sanity-check: Spence's jab went from a weapon to 12% connect.
+- **The comforting misread, again.** "You won it but it was close," while losing every round. Backs `corners.md` rule 7. Maybe a corner trait: honest vs comforting.
+- **The fighter talks back** ("he hit me with the jab", Corrales's "he didn't hurt me"). Two cases now. The corner hears the fighter's own read. A flavor line in corner talk, and maybe a small input to the corner's read.
+- **Pressure fighter on the center line gets countered on every step.**
+  - The fix is lateral (turn him); straight pressure into a counter man is the failure.
+  - Check against the f3 swarmer/outboxer work (`claude/clever-planck-urj1i4`: the swarmer's head comes in straight when chasing). Don't double up.
+- **Patient finisher vs the swarm finish.**
+  - Crawford hurt him and took his time, because the man was still dangerous. Lewis-Tyson (batch 1) was the opposite: the corner raged that he wouldn't finish.
+  - Finishing style could be a per-man trait (patient vs swarm) instead of one rule. Patient: fewer risks, a later stop. Swarm: a faster stop, more exposure to a hurt man's counter.
+- **The counter man gives R1 away on purpose to read** ("collects information"). Matches the Precision "collecting data" probes. Check the f1/f3 brain for a feel-out phase before adding one.
+- **The defensive assignment.** "Keep the right glove up for his left": one glove parked against one punch. Could be a corner order with a real engine effect (that punch blocked more, that side's offense slower).
+- **The corner reads the other man's round shape** ("he slows down at the end of the round"). Ties to `TEMPO` and NEED.
