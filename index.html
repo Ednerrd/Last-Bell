@@ -498,11 +498,11 @@ const BR = {
   wb: { on: 1, at: .82, sure: .5, d: [58, 82], p: .02, gap: 10, win: 1.5, after: .8, quit: 2, guard: .3, rd: .7, def: 6, try: .95, ctr: 3,
     thru: [.05, .1, .25, .5], wary: .15, hold: .2, seeG: .6, modes: { work: 1, counter: 1, feelout: 1, press: 1, reset: 1 } },
   // f3 easy flaws (plug-in only: preset('easy') sets profile.flaw by his style; the game never does): one hole a player can spot and beat, never fixed in the fight. in: he's closing = his own feet bring him in faster than this (units/s, smoothed)
-  // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): pressed (ropes over ropes, or near and the man coming at push) for build s running, he shells for hold s: guard, output x out, slides off x lat, blocks x blk.
+  // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): crowded (the man inside near) for build s running, he shells for hold s: guard, output x out, slides off x lat, blocks x blk.
   // straight (swarmer): head comes in straight, lunging in (his feet faster than v) he tries to defend a power shot x try at quality x q. wait (counter): won't lead, initiative capped at init, leads x out while the man's busy (punched in the last busy s), and lets a jab go (no counter) let of the time: outwork him and he never takes it back.
   // drop (boxer-puncher): the jab hand comes back low, t s after a jab the guard's at guard and he defends head shots x try. hole: what the host's own (passive) defense loses to those punches meanwhile (Action.hole)
   flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'wait', boxerpuncher: 'drop' }, in: 8,
-    jab: { try: .2, hole: .7 }, fold: { ropes: .7, near: 40, push: 22, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, blk: 3 }, straight: { try: .3, q: .7, hole: .8, v: 25 },
+    jab: { try: .2, hole: .7 }, fold: { near: 48, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, blk: 3 }, straight: { try: .3, q: .7, hole: .8, v: 25 },
     wait: { init: .1, out: .45, busy: .6, let: .7 }, drop: { t: .4, guard: .3, try: .45, hole: .4 } },
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
@@ -1461,7 +1461,7 @@ class Brain {
     if (P.me.down) { this.out.intent = 'down'; return this.out; }
     this.updMode(P, sdt);
     if (this.fl) { const v = this.pD == null ? 0 : (this.pD - P.dist) / Math.max(dt, 1e-3) - P.him.closing; this.myV = this.myV * .8 + v * .2; this.pD = P.dist; } // f3: how fast his own feet bring him in
-    if (this.fl === 'fold') { const F = BR.flaw.fold; this.pr = P.ropes.me > F.ropes || (P.dist < F.near && P.him.closing > F.push) ? this.pr + dt : Math.max(0, this.pr - 2 * dt); if (this.pr > F.build) this.flT = this.t + F.hold; } // f3: kept under pressure, he folds
+    if (this.fl === 'fold') { const F = BR.flaw.fold; this.pr = P.dist < F.near ? this.pr + dt : Math.max(0, this.pr - 2 * dt); if (this.pr > F.build) this.flT = this.t + F.hold; } // f3: crowded, he folds
     this.see(P);
     // he's rushing in head first: a counterpuncher meets him with the check hook and pivots off the line (Mayweather vs Hatton)
     const clr = this.clR || 0; // a grabber walking in to tie up: meet him on the way
