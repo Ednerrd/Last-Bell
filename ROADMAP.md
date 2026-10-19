@@ -67,3 +67,12 @@ The only to-do list. When something is done, delete its line here and put the nu
 - Call combos by number in corner talk; drill a combo in camp.
 - Mind knobs for named fighters (`research/mind_p4p_a.md`, `_b.md`), P4P data refresh (verify first: Opetaia, Nakatani at 122).
 - Bond/trust: good calls build trust, low trust argues back and can leave.
+- **Outside review ideas (Oct 19, a MiniMax review of a summary; Ed decides later, nothing scheduled).** It saw only a summary, so check each against the game first. Already handled or wrong: fight length (the clock runs 3x), "standing eight counts" (summary wording; the engine counts normally), 47% stoppages (all cards; `research/numbers.md` already has the 10-12 round floor), splits should be rare (ours says ~28%), the bait is invisible (it has a pose, lines, a corner note), coaching mid-round is illegal (the game's conceit). Worth a look:
+  - Coach's eye: after each round, one line on why it went that way (what the brain saw: cut, clamped elbows, flat feet) + one thing to watch next round. Builds on `roundNotes()` / `planVerdict()`.
+  - Read score: the player calls what he sees (hurt, bluffing, body gone) and gets scored against the engine's truth; a player "eyes" stat that grows. Turns the brain's perception into the player's progression.
+  - Retire by the apron step: the player's own stop decision.
+  - A shorter-fight option / skip to the moments (a 12-rounder is still ~12 min plus breaks on a phone).
+  - Rulebook check: the 3-knockdown rule, a downed man at the bell is still counted.
+  - Cutman as a player decision between rounds (cut, swelling or breathing; joins "cutman priority" above).
+  - Habits instead of fixed flaws (later, with traits): a tell he hides by round 5, shows only when hurt, or a decoy. f3 easy flaws stay as planned (training wheels).
+  - A local event log the player can export (rounds watched, calls, reads) for playtest data; a fixed seed corpus to diff tuning drift.
