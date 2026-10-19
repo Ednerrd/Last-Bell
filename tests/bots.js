@@ -26,8 +26,9 @@ module.exports = PU => {
     // the exploits ride on his own fight (a player who knows the hole: the same man, plus the trick)
     jabMove: (o, P, s, dt) => { o.move = mv(o, { range: Math.max(o.move.range, 72), lateral: .8 }); // vs the slugger: keep him at the end of it, jab him as he comes in
       if (P.him.closing > 5 && P.dist < 80 && free(P) && R() < 3 * dt) o.punch = mk(['jab']); return o; },
-    pressure: (o, P) => { o.move = mv(o, { range: 36, cut: 1 }); return o; }, // vs the outboxer: cut off the ring, walk him to the ropes
-    stepCounter: (o, P, s, dt) => { o.move = mv(o, { range: Math.max(o.move.range, 70) }); // vs the swarmer: give ground and counter him on the way in
+    pressure: (o, P) => { o.move = mv(o, { range: 44, cut: 1 }); return o; }, // vs the outboxer: cut off the ring, walk him to the ropes and keep him there
+    stepCounter: (o, P, s, dt) => { o.move = mv(o, { range: Math.max(o.move.range, 70) }); // vs the swarmer: give ground, save the right hand for him stepping in
+      if (o.punch && PU[o.punch.type].cat !== 'jab' && P.him.closing < 15) o.punch = null;
       if (P.him.closing > 15 && P.dist < 72 && free(P) && P.t - (s.ctr || -9) > .5 && R() < 6 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; } return o; },
     outwork: (o, P, s, dt) => { if (!o.punch && P.dist < 80 && free(P) && R() < 1.5 * dt) o.punch = mk(['jab']); return o; }, // vs the counter-puncher: outwork him, the jab all night
     overJab: (o, P, s, dt) => { // vs the boxer-puncher: the right hand over his jab (the rest is his own fight)
