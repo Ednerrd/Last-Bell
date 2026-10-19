@@ -11,6 +11,7 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_p4p_a.md` | Mind profiles: Shakur, Loma, Inoue, Usyk, Crawford, Bivol, Canelo, Mayweather |
 | `mind_p4p_b.md` | Ring + ESPN P4P (Sep 2026) vs `P4P_2026`, 17-division kings, 13 more mind profiles |
 | `arena.md` | Coach clips (The Arena): feint kinds, straight vs looper, liver setup, hand trap vs high guard, level changes |
+| `CLIPS_WANTED.md` | Ed's clip hunt list: what to look for (corner audio first), what makes a clip useful |
 | `precision.md` | Coach clips (Precision Boxing): probing feel-out, guard holes, rhythm hitch, same-side counter, beating volume |
 
 **Sourcing caveat:** the network proxy blocked most boxing sites, so quotes and numbers come from search-result text, not full articles. Each file tags sources and marks `[unverified]`, `[mem]` or `(est.)`. 2026 fight results are from search snippets: verify before putting them in game data.
