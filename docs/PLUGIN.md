@@ -137,6 +137,12 @@ What's already there to build on: the eyes (E2: by gaze, a novice watches the gl
 - UI: commentary ("{a} shakes his head: he wants you to think that didn't hurt", "{d} isn't buying it, he saw the legs"), a corner note, a `bluff` event.
 - Expect fewer stoppages of vets (they hide hurts) and more late ones: check finish.js, retune if stops fall under ~25%.
 
+**f1b, the hands tell the truth (Ed, Oct 19: "a tired fighter keeps his hands down; hurt to the body real bad, he keeps his hands tight on his body, not on his head").** What's there: a tired man's hands drop on screen (`v.tired` in `arms()`) and he blocks less (`stamFac`); a body-hurt man's head block dropping (`BODY.elbows`) is 0 (it was a flat cost that only punished high/cross); the brain's elbows-down (`Action.low`, `lowHead`) fires only when he's read a body digger, and isn't drawn.
+- His own body hurt pulls his elbows down: `low` also from his body meter and recent folds (more as it sinks), so the body's covered and the head's open (`lowHead`). Drawn: elbows clamped to the ribs, gloves low (render commit, hash holds).
+- The other man's eyes see it (an `elbows` cue, or `arms` reading the low guard) and go upstairs: "go to the body, the head will follow".
+- The bluff can't hide these: it hides the wobble only. Tired hands and clamped elbows still show, and a vet reads them.
+- Measure: body-then-head KOs (head KD after the body went), body KDs stay 5-8%, stops in band.
+
 **f2, the expert bait: show a read (any World-class man).**
 - Once `expected()` is sure of your lead punch (> .5) he offers it: hands drop at mid-range (visible: the engine draws the guard he picks), the defense for that punch pre-picked (best of `DEF_THRU` vs it), the counter loaded. 1.5 s window; nothing comes, back to normal. The watcher's `opening()` sees the low hands and his habit punch is the likely throw: that's the bite. A high read can see through it (a spot roll like the feint's) and take nothing.
 - Table [0, 0, 0, x]: World class only. Pro keeps today's quiet tools (`show`, `draw`). Commentary: "He's baiting it. He knows it's coming." (the 'bait' lines exist, nothing fires them today).
@@ -158,7 +164,7 @@ What's already there to build on: the eyes (E2: by gaze, a novice watches the gl
 - Flaws: easy vs an Intermediate "player" with the matching cheese (jabSpam vs the slugger, a pressure bot vs the outboxer...) vs the same easy man flaw off: the exploit should be worth +15-25 points; playing straight against him barely changes.
 - Each brain step: full check (`tests/check.sh`: audit, styles, levels, finish), the hash moves on purpose. f3 holds the game's hash (no flaw outside presets).
 
-Build order: f1 bluff, f2 bait (each a commit with a full check), f3 flaws, the outboxer knob, then the numbers here and in ROADMAP.
+Build order: f1 bluff, f1b hands (engine, then the render), f2 bait (each a commit with a full check), f3 flaws, the outboxer knob, then the numbers here and in ROADMAP.
 
 ## 4. The drop-in guide (P4)
 `brain/README.md` gets a "Plug it into your game" section: the minimal host loop (from `ring.js`), the Perception fields a host must fill and which can be faked, the events to send, presets, what to save between fights (`memo()`, the skill sheet), the per-frame cost (`think()` time on a phone), and the knobs a host should leave alone.
