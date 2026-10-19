@@ -182,6 +182,19 @@ What's already there to build on: the eyes (E2: by gaze, a novice watches the gl
 | counter | won't lead: initiative floor, waits on you | outwork him |
 | boxer-puncher | the jab hand comes back low (guard ~.3 for .4 s after a jab) | right hand over his jab |
 
+**f3 built (Oct 19; Ed: "go ahead" on the four picks: brain-led, the exploit bots in, on all fight, one per style).** Knobs `BR.flaw` (`by` style -> flaw); `preset('easy')` sets `profile.flaw` (`o.flaw` overrides, null = none), brain `flawSet` (a host or test can call it after create). Hash holds: 4a735ef6 (same.js 200; 40 = 76371bc7).
+- Brain-only wasn't enough: in Last Bell most blocks and slips are the engine's own passive defense (~9,400 jabs blocked or slipped vs ~2,300 brain defense calls in 20 fights), so a brain that stops defending moved landed jabs +7%. New contract piece `Action.hole` {k, zone?, cat?}: what he's open to right now; the engine's passive block and evade x (1 - k) (`holeF`). No flaw = no hole = x1 (no new rolls), so the hash holds.
+- "Closing" is his own feet (`myV`: dist change plus the other man's closing speed, smoothed), not the range he wants (only 3% of jabs met that test).
+- The flaws as built:
+  - slugger `jab`: walking in (feet > 8/s) he tries to defend a jab x .2 and his passive defense vs jabs x .3 (hole .7).
+  - outboxer `fold`: crowded (inside 48) for 1 s running, he shells for 2.5 s: guard .95, blocks x3, output x .25 and no counters, slides off x .15, fights for room x .3, the body open under the shell (hole .4). The ropes as a trigger let a straight player fold him 22% of the time; crowding is 0.1% straight vs ~39% under pressure.
+  - swarmer `straight`: lunging in (feet > 25/s) he defends power shots x .3 at quality x .7, hole .8 on power. Walking in at all, or chasing a man who backs off, hit every player alike (the straight player got +15-17).
+  - counter `wait`: initiative capped at .1, leads x .45 while the man's busy (punched in the last .6 s), lets 70% of jabs go without a counter: outwork him with the jab.
+  - boxer-puncher `drop`: .4 s after his jab the guard's at .3, head shots defended x .45, hole .4 on the head.
+- The bots (`tests/bots.js`, the cheese ones moved there too) ride on the player's own fight: a player who knows the hole is the same man plus the trick (a bot that only did the trick lost: jab-only 17% vs a slugger). jabMove (keep range, jab him as he comes in), pressure (cut the ring at 44, dig the body when he covers), stepCounter (give ground, power only on his step in), outwork (extra jabs), overJab (the right over his jab).
+- `tests/flaws.js` final (600 a cell, player win %, flaw on - off): exploit / straight: slugger +18.2 / +2.3, outboxer +26.3 / +5.0, swarmer +18.9 / +8.0, counter +18.3 / +11.1, boxer-puncher +20.1 / +8.7. Run to run a cell moves ±2 (a difference ±3-4): the counter's straight read +3 / +7 / +7 / +11 over four runs, the outboxer's exploit +28.6 at hole .5. Took 12 rounds; the tries and why are in the commits (`f3 round N`).
+- Not built: commentary or a corner note naming the hole (the plug-in host shows what it wants; Last Bell's own fighters get flaws with traits, ROADMAP 3). The game never calls preset, so nothing on screen changes.
+
 **Ride-along: the outboxer knob** (separate commit, style numbers only). He reads ~47 (band 48-53), ~2 down since E4. Sweep 2-3 candidates on his `STYLES` row (footwork/range skill, `legs`, output) at 300 a style, pick one, confirm at 600. Slugger: recheck first (±4 between runs), touch only if he stays under 48.
 
 **Measure (`tests/fakes.js`, new):**
