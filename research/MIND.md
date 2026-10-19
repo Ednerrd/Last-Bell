@@ -9,6 +9,7 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_pace.md` | CompuBox numbers, round shapes, round clock, gas, finishing/surviving, 15 corner calls, judging |
 | `mind_vision.md` | Where boxers look, anticipation vs reaction, tells, feints vs the read, fear/composure, fatigue |
 | `mind_p4p_a.md` | Mind profiles: Shakur, Loma, Inoue, Usyk, Crawford, Bivol, Canelo, Mayweather |
+| `trainers.md` | 14 real 2026 coaches (what they teach, corner voice), the trainer axes, draft game trainers, how they plug in (build after the brain) |
 | `mind_p4p_b.md` | Ring + ESPN P4P (Sep 2026) vs `P4P_2026`, 17-division kings, 13 more mind profiles |
 
 **Sourcing caveat:** the network proxy blocked most boxing sites, so quotes and numbers come from search-result text, not full articles. Each file tags sources and marks `[unverified]`, `[mem]` or `(est.)`. 2026 fight results are from search snippets: verify before putting them in game data.

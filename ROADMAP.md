@@ -18,9 +18,10 @@ The only to-do list. When something is done, delete its line here and put the nu
    - Gassers save it for later (stamina pacing).
    - Check first, maybe not needed: within-round read decay (B1 already fades), defensive read inside `react()` capped ±25% per guard (B3 covers part).
 4. **Balance pass** (L6). Upsets one level down 15–20%, then the CLAUDE.md targets. Known weak: feinter ~46–47, swarmer ~47.4, high/cross guards swing between runs (pool 600+ per guard).
-5. **Gym mode steps 3–6** (`docs/GYM.md`): mitts + combo book, training sessions, sparring, signature moves and habits, in-round talk.
-6. **3D phase 1** once Ed's phone numbers are in (`proto/PLAN.md`). Recommended start: the engine drives the 3D and draws punch lanes, why a shot lands or misses.
-7. **Footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet. Do it in 3D, not 2D.
+5. **Trainers + corners** (after the brain, L0–L6): every fighter's corner is a named trainer modeled on a real 2026 coach, each with his own plans, teaching speed, scouting and voice (`research/trainers.md`). Ed answers the open questions there first.
+6. **Gym mode steps 3–6** (`docs/GYM.md`): mitts + combo book, training sessions, sparring, signature moves and habits, in-round talk.
+7. **3D phase 1** once Ed's phone numbers are in (`proto/PLAN.md`). Recommended start: the engine drives the 3D and draws punch lanes, why a shot lands or misses.
+8. **Footwork during punches** (step-in jab, pivot-out hook) and stamina in the feet. Do it in 3D, not 2D.
 
 ## Decided (don't reopen)
 - No 2D-only render polish (uppercut curve, close-range spacing): 3D redoes the animation.
