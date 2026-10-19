@@ -1,6 +1,6 @@
 # The Arena Shorts: notes for the brain
 
-Source: The Arena (YouTube Shorts, coach-and-fighter pad work). Our own notes in our own words; raw transcripts are not kept.
+Source: The Arena (YouTube Shorts, coach-and-fighter pad work). Our own notes in our own words. Engine names in brackets are from the old AI (retired Oct 16); map them onto the plug-in brain (`docs/PLUGIN.md`) when building. Overlaps already built: setups and traps (show, bank, draw, delay, vary), f1b clamped elbows, f2 World-class bait. raw transcripts are not kept.
 Shortlist and checkboxes: `tools/arena/SHORTLIST.md`. Batch 1 = the top 5 (Oct 19).
 
 ## 1. Feints (FEINT_READ, STYLES.feint)

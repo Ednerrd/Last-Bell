@@ -1,6 +1,6 @@
 # Precision Boxing Shorts: notes for the brain
 
-Source: Precision Boxing (YouTube Shorts, coach explainers). Our own notes in our own words; raw transcripts not kept.
+Source: Precision Boxing (YouTube Shorts, coach explainers). Our own notes in our own words. Engine names in brackets are from the old AI (retired Oct 16); map them onto the plug-in brain (`docs/PLUGIN.md`) when building. Overlaps already built: setups and traps (show, bank, draw, delay, vary), f1b clamped elbows, f2 World-class bait. raw transcripts not kept.
 Shortlist: `tools/precision/SHORTLIST.md`. Batch 1 = Ed's top 5 (Oct 19).
 
 ## 1. Collecting data (TEMPO feel-out, MEMV, F.mem)
