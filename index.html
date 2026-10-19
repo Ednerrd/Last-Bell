@@ -499,11 +499,11 @@ const BR = {
     thru: [.05, .1, .25, .5], wary: .15, hold: .2, seeG: .6, modes: { work: 1, counter: 1, feelout: 1, press: 1, reset: 1 } },
   // f3 easy flaws (plug-in only: preset('easy') sets profile.flaw by his style; the game never does): one hole a player can spot and beat, never fixed in the fight. in: he's closing = he wants it this much closer than it is
   // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): pressed (ropes over ropes, or near and the man coming at push) he shells for hold s: guard, output x out, slides off x lat, blocks x blk.
-  // straight (swarmer): head comes in straight, closing he tries x try at quality x q. wait (counter): won't lead, initiative capped at init, leads x out while the man's busy (punched in the last busy s): outwork him and he never takes it back.
+  // straight (swarmer): head comes in straight, closing he tries x try at quality x q. wait (counter): won't lead, initiative capped at init, leads x out while the man's busy (punched in the last busy s), and lets jabs go (no counter): outwork him and he never takes it back.
   // drop (boxer-puncher): the jab hand comes back low, t s after a jab the guard's at guard and he defends head shots x try. hole: what the host's own (passive) defense loses to those punches meanwhile (Action.hole)
   flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'wait', boxerpuncher: 'drop' }, in: 6,
     jab: { try: .35, hole: .5 }, fold: { ropes: .7, near: 40, push: 22, hold: 1.5, guard: .95, out: .5, lat: .4, blk: 3 }, straight: { try: .3, q: .7, hole: .6 },
-    wait: { init: .1, out: .3, busy: .6 }, drop: { t: .4, guard: .3, try: .4, hole: .3 } },
+    wait: { init: .1, out: .3, busy: .6 }, drop: { t: .4, guard: .3, try: .4, hole: .45 } },
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
@@ -818,7 +818,7 @@ class Brain {
         if (ev.counter && this.lastMine && this.t - this.lastMine.t < 1.5) { this.madd(this.mem.mine, this.lastMine.p, { c: 1 }); E.frus = clamp(E.frus + .04 * (1 - comp * .5), 0, 1); }
       }
       if (ev.type === 'landed' && PUNCHES[p].zone === 'body' && this.mode !== 'survive') { const e = this.bodyRead(); if (e && this.R() < BR.body.trade * e) this.tryCounter('trade', p); } // take it on the elbow and hit him while he's down there
-      if (ev.type === 'evaded' || ev.type === 'blocked') { if (ev.def) this.lastDef = { def: ev.def, p, t: this.t }; this.tryCounter(ev.def, p); }
+      if (ev.type === 'evaded' || ev.type === 'blocked') { if (ev.def) this.lastDef = { def: ev.def, p, t: this.t }; if (!(this.fl === 'wait' && PUNCHES[p].cat === 'jab')) this.tryCounter(ev.def, p); } // f3: the waiter lets the jab go, he's waiting on your right hand
       else if (ev.type === 'missed' && ev.short && this.R() < BR.shortCtr) this.tryCounter('short', p); // he fell short: he's reaching, and coming back slow
     }
   }
