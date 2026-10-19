@@ -230,3 +230,45 @@ Ed pasted the full broadcast transcript; it is not kept. Crawford's trainer is B
 - **The counter man gives R1 away on purpose to read** ("collects information"). Matches the Precision "collecting data" probes. Check the f1/f3 brain for a feel-out phase before adding one.
 - **The defensive assignment.** "Keep the right glove up for his left": one glove parked against one punch. Could be a corner order with a real engine effect (that punch blocked more, that side's offense slower).
 - **The corner reads the other man's round shape** ("he slows down at the end of the round"). Ties to `TEMPO` and NEED.
+
+---
+
+# Batch 5: Canelo-Bivol (2022), full fight broadcast
+Ed pasted the full broadcast transcript; it is not kept. Almost no corner audio made it through: Reynoso speaks Spanish, and the TV picked up only "deep breath" and some concern. So this batch is mostly game plan and commentary, not corners.
+
+## Fight shape
+- Bivol won 115-113 on all three cards. He outlanded Canelo 110-61 through 9, landed double digits every round, and Canelo never did.
+- **Bivol's plan (from his team via commentary):**
+  - Copy what made Kovalev-Canelo close: jab volume, even if it only touches the gloves.
+  - An unpredictable right hand: they felt Kovalev's was too readable.
+  - A right to the body to set up the head.
+  - One-twos in bunches, then step back with his hands up.
+  - Never load up.
+  - The moment his back touches the ropes, go straight back to the center.
+- **Canelo:**
+  - A tight high guard and flat, planted feet for power.
+  - He started slow as usual and fell behind.
+  - He hit Bivol's arms and shoulders to wear them down (his Callum Smith plan); it didn't work on a natural light heavyweight.
+  - He played possum: stopped throwing to draw Bivol in.
+  - After Bivol's R5 flurry he waved him in for more.
+  - Bivol never bit, on either. Commentary: "discipline is his strongest attribute," "a boxing robot."
+- Fatigue tells: Canelo's arms draped on the ropes in the corner between rounds; frustration on his face; winded late.
+- Bivol's corner yelled during a break: "he's winning, cleanest shots, he blocks everything." Commentary thought it was loud on purpose so the judges would hear.
+- 115-113 for a fight that one-sided in the stats: the A-side star in Vegas gets close cards. Commentary said this before the cards came in (Golovkin, Plant, Mayweather draw on one card).
+
+## What's new for Last Bell
+- **The bait isn't taken by a disciplined man.**
+  - Canelo's possum and wave-in were real baits from a World-class man, and Bivol saw through both.
+  - A clean test case for f2 World-class bait (`docs/PLUGIN.md`: seen through by level). "Discipline" could also be a trait that adds to it.
+- **Volume that only touches the gloves still wins rounds.**
+  - Judges reward activity and the look of control.
+  - Check how our judges score blocked work and ring control before changing anything. `research/numbers.md` already has the judging targets.
+- **Arm punching doesn't work up a weight.** Ties to the eyes system's arm wear (E4, "arm wear only if noticed"). Wear on a bigger, stronger man should build slower.
+- **Moving up in weight.** The smaller man's power didn't carry, and his shots "had no effect." If careers ever change divisions, power vs a natural bigger man should drop. Idea only.
+- **Ring generalship: back off the ropes at once.** The outboxer's habit: touch the ropes, go back to the center. Check against the f3 outboxer work (he "folds" under pressure) so the two don't clash.
+- **The slow starter loses on points to a volume man.** Canelo's usual slow start had no KO to bail him out. A real cost of the "read first" habit (batch 4, Crawford) when the other man piles up rounds early.
+- **The corner lobbying the judges.** Flavor only: the corner yells the score so ringside hears it.
+- **The between-round fatigue tell.** Arms draped on the ropes at the stool. A render cue for gas (fits E1 `him.look` legs/gas).
+- **Star bias in close cards.**
+  - A Vegas A-side gets the close rounds, and commentary expects it.
+  - Our judges have tastes. A "house fighter" lean could be real, but it's touchy: it would feel unfair to the player. Ed's call.
