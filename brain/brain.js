@@ -296,11 +296,11 @@ const BR = {
   wb: { on: 1, at: .82, sure: .5, d: [58, 82], p: .02, gap: 10, win: 1.5, after: .8, quit: 2, guard: .3, rd: .7, def: 6, try: .95, ctr: 3,
     thru: [.05, .1, .25, .5], wary: .15, hold: .2, seeG: .6, modes: { work: 1, counter: 1, feelout: 1, press: 1, reset: 1 } },
   // f3 easy flaws (plug-in only: preset('easy') sets profile.flaw by his style; the game never does): one hole a player can spot and beat, never fixed in the fight. in: he's closing = his own feet bring him in faster than this (units/s, smoothed)
-  // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): crowded (the man inside near) for build s running, he shells for hold s: guard, output x out, slides off x lat, blocks x blk.
+  // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): crowded (the man inside near) for build s running, he shells for hold s: guard, output x out and no counters, slides off x lat, fights for room x push, blocks x blk, the body open (hole).
   // straight (swarmer): head comes in straight, lunging in (his feet faster than v) he tries to defend a power shot x try at quality x q. wait (counter): won't lead, initiative capped at init, leads x out while the man's busy (punched in the last busy s), and lets a jab go (no counter) let of the time: outwork him and he never takes it back.
   // drop (boxer-puncher): the jab hand comes back low, t s after a jab the guard's at guard and he defends head shots x try. hole: what the host's own (passive) defense loses to those punches meanwhile (Action.hole)
   flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'wait', boxerpuncher: 'drop' }, in: 8,
-    jab: { try: .2, hole: .7 }, fold: { near: 48, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, blk: 3 }, straight: { try: .3, q: .7, hole: .8, v: 25 },
+    jab: { try: .2, hole: .7 }, fold: { near: 48, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, push: .3, blk: 3, hole: .5 }, straight: { try: .3, q: .7, hole: .8, v: 25 },
     wait: { init: .1, out: .45, busy: .6, let: .7 }, drop: { t: .4, guard: .3, try: .45, hole: .4 } },
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
@@ -494,6 +494,7 @@ class Brain {
     if (f === 'jab' && this.inn(P)) return { cat: 'jab', k: F.jab.hole };
     if (f === 'straight' && this.lunge()) return { cat: 'power', k: F.straight.hole };
     if (f === 'drop' && this.t < this.dropT) return { zone: 'head', k: F.drop.hole };
+    if (f === 'fold' && this.t < this.flT) return { zone: 'body', k: F.fold.hole }; // shelled up top, the elbows leave the body
     return null; }
   // what his mastery does to the body of his punches, for the game to read (BR.lv): per punch skill, and his defense habits
   lvUpd() {
@@ -743,7 +744,8 @@ class Brain {
   }
   // a defense worked: does he make him pay?
   tryCounter(def, p) {
-    if (this.queue && this.queue.trap) return; // the trap's counter is already on its way
+    if (this.queue && this.queue.trap) return;
+    if (this.t < this.flT) return; // f3: folded, nothing comes back // the trap's counter is already on its way
     const k = this.k, m = this.mm();
     let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * clamp(this.tr.initiative + this.pv('initiative'), 0, 1)) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
@@ -1221,7 +1223,7 @@ class Brain {
     let lateral = tr.circle * lerp(.4, 1, k.angles) * (md.lat || .5);
     // on the ropes: get off them (a man without ring craft stays there and covers up; hurt, the runner and the steady man push off first)
     if (P.ropes.me > .4) lateral = Math.max(lateral, P.ropes.me * lerp(BR.ropes.lo, BR.ropes.hi, k.ropes) * lerp(BR.ropes.legs[0], BR.ropes.legs[1], tr.legs) * (sv === 'shell' ? .3 : sv === 'run' || sv === 'steady' ? 1.5 : 1));
-    if (this.t < this.flT) lateral *= BR.flaw.fold.lat; // f3: folded, he slides off weakly
+    const fold = this.t < this.flT; if (fold) lateral *= BR.flaw.fold.lat; // f3: folded, he slides off weakly
     let cut = (md.cut || (tr.initiative > .6 && tr.range < .5) || P.ropes.him > .4) ? lerp(.2, 1, k.cutoff) * (md.cut ? 1 : .6) : 0;
     if (HUNTS[this.mode] && P.him.closing < -25) cut = Math.min(1, cut * 1.5); // he's running: cut the ring, trap him on the ropes
     let clinch = false;
@@ -1233,7 +1235,7 @@ class Brain {
     }
     // push: how hard he fights for that distance. A mover who lives outside fights for room; a pressure man fights to close it. Footwork and range skill win the tug of war
     const out = range > P.dist, push = (out ? lerp(.4, 2, tr.legs) * lerp(.6, 1.3, k.footwork) : lerp(.4, 2, tr.initiative * (1 - tr.range)) * lerp(.6, 1.3, k.cutoff)) * lerp(.7, 1.2, k.range) * (this.mode === 'survive' ? 1.3 : 1);
-    return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch, feet: lerp(.75, 1.1, k.footwork), push }; // feet: how well he moves (no crossed feet, small steps)
+    return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch, feet: lerp(.75, 1.1, k.footwork), push: fold ? push * BR.flaw.fold.push : push }; // feet: how well he moves (no crossed feet, small steps)
   }
 
   /* ---------- the one call: perception in, action out ---------- */
