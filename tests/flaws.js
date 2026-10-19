@@ -2,6 +2,7 @@
 // same body, rating 78) who plays straight (his own brain) or runs the exploit for that flaw (bots.js). Four arms per style: flaw off / on x straight / exploit.
 //   TAG=x node tests/flaws.js 150 [styles]   (x4 processes; one line per arm to /tmp/flaws_x.txt)    node tests/flaws.js agg x
 // Out: the player's win % per arm. The exploit should be worth +15-25 points with the flaw on (vs off); playing straight should barely change.
+const pct = (a, b) => b ? (100 * a / b).toFixed(1) : '-';
 const fs = require('fs'), OUT = t => '/tmp/flaws_' + t + '.txt';
 const BOT = { slugger: 'jabMove', outboxer: 'pressure', swarmer: 'stepCounter', counter: 'outwork', boxerpuncher: 'overJab' };
 if (process.argv[2] === 'agg') { const L = fs.readFileSync(OUT(process.argv[3]), 'utf8').trim().split('\n').map(JSON.parse), A = {};
@@ -9,7 +10,6 @@ if (process.argv[2] === 'agg') { const L = fs.readFileSync(OUT(process.argv[3]),
 process.env.PATCH = (process.env.PATCH || '') + ';globalThis.__BB=BoxerBrain;';
 const S = require('./sim.js'), BB = globalThis.__BB, BOTS = require('./bots.js')(BB.PUNCHES);
 const N = +process.argv[2] || 150, STS = (process.argv[3] || Object.keys(BOT).join(',')).split(',');
-const pct = (a, b) => b ? (100 * a / b).toFixed(1) : '-';
 for (const st of STS) for (const fl of [0, 1]) for (const bot of ['none', BOT[st]]) {
   const o = { st, fl, bot, n: 0, pw: 0, d: 0, ko: 0, pL: 0, bL: 0, pT: 0, bT: 0 };
   for (let i = 0; i < N; i++) {
