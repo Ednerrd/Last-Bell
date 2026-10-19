@@ -70,7 +70,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
 
 ## Targets (check after engine changes)
-Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30%, body KDs 5–8%.
+Audit: ~53 thrown / ~15 landed / ~29% connect per round, stoppages ~25–30% (Ed, Oct 19: moves to **30–35%**, spread earlier, in the balance pass after 1f; `research/numbers.md`), body KDs 5–8%.
 - "Thrown" = punches that really start. With the brain on, a punch his own defense pulls back before 30% is un-counted (gas still spent); audit prints it as "unthrown /rd".
 - Damage (1e, Oct 18): cut stops ~1.2–1.7%, eye stops rare (~0.3%), body KDs 5–8% (finish.js).
 - Brain (default, with both AI corners, Oct 16): ~51.2 thrown / ~15.1 landed / ~29.5% connect, stops ~24.7–28% (audit 500 x3; finish.js 600: 25.8%; ~26% under every ref; E4 Oct 18: 28.2 / 28.3%), styles 48.1–51.5 (E4: 49.6–52.5, outboxer 45.8), specials 48.0–54.3 pooled (angle at the ceiling), guards 47.7–55.8 (before the officials). Skill levels: one level down wins 15.8–18.0% (`levels.js sk`, 600/pair). Drama (`drama.js`, close fights): a lead change in ~41%, comebacks ~11.5% (target ~11, Ed). AI corner vs a silent one +3.6 (53.6 over 1800). History: `docs/BRAIN.md` "AI corner reads the fight", "Balance pass L6". Thrown target for the brain ~52 (Ed, Oct 14). Styles 48–53% vs the field. Guards @82 vs standard ~48–58. Specials vs base styles 48–54%.
