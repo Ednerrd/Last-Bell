@@ -18,6 +18,10 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_vision.md` | Where boxers look, anticipation vs reaction, tells, feints vs the read, fear/composure, fatigue |
 | `mind_p4p_a.md` | Mind profiles: Shakur, Loma, Inoue, Usyk, Crawford, Bivol, Canelo, Mayweather |
 | `trainers.md` | 14 real 2026 coaches (what they teach, corner voice), the trainer axes, draft game trainers, how they plug in (build after the brain) |
+| `arena.md` | Coach clips (The Arena): feint kinds, straight vs looper, liver setup, hand trap vs high guard, level changes |
+| `CLIPS_WANTED.md` | Ed's clip hunt list: what to look for (corner audio first), what makes a clip useful |
+| `corners_video.md` | Corner audio from video. Batch 1 (Nazim, Hunter, Enzo, Roach, Steward, late KO calls): stop check by repeat-back, plan across rounds, KO-call cases. Batch 2: Corrales-Castillo I full fight (blind side of a shut eye, doctor at the stool, stalling for seconds). Batch 3: Fury-Wilder III (silent agreements in the clinch, "what round are we in?", the corner fixes your hole). Batch 4: Crawford-Spence (the same order 4 breaks never followed, camp plan to take away his jab, comforting misread, patient finisher). Batch 5: Canelo-Bivol (game plan, discipline vs bait, star bias on the cards; little corner audio). Adds to `corners.md` |
+| `precision.md` | Coach clips (Precision Boxing): probing feel-out, guard holes, rhythm hitch, same-side counter, beating volume |
 | `mind_p4p_b.md` | Ring + ESPN P4P (Sep 2026) vs `P4P_2026`, 17-division kings, 13 more mind profiles |
 
 **Sourcing caveat:** the network proxy blocked most boxing sites, so quotes and numbers come from search-result text, not full articles. Each file tags sources and marks `[unverified]`, `[mem]` or `(est.)`. 2026 fight results are from search snippets: verify before putting them in game data.
