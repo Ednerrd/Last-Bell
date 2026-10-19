@@ -76,3 +76,8 @@ The only to-do list. When something is done, delete its line here and put the nu
   - Cutman as a player decision between rounds (cut, swelling or breathing; joins "cutman priority" above).
   - Habits instead of fixed flaws (later, with traits): a tell he hides by round 5, shows only when hurt, or a decoy. f3 easy flaws stay as planned (training wheels).
   - A local event log the player can export (rounds watched, calls, reads) for playtest data; a fixed seed corpus to diff tuning drift.
+- **Roster review follow-ups (Oct 19, second outside review; Ed decides later).** Its "counter-puncher is too narrow" read the f3 easy flaws as the styles: wrong target. The 5 base styles stay; durable/heart stays a trait. Worth doing:
+  - Coach-voice test, every style and special: what does the coach tell this man that he wouldn't tell any other? Two with the same sentence: merge or cut one. Run it on the 9 specials before adding any.
+  - The roller (Whitaker, Toney, Benitez) is a family, not one cell: the counter-puncher with a defensive guard (philly: Toney; cross: Benitez's other look) or a high slip trait in any guard (Whitaker). Check the whole family plays like the archetype, don't hard-code it as counter + philly. His weakness ("behind on the cards, no second gear") as a trait gated to that family (on a slugger it's dull).
+  - Marquez check (leading with the counter): counter-puncher vs a patient out-boxer, 500 fights, his leads vs his counters (brain `tel` / `rep.ctr`). Lead share near 0: a real gap, he needs a proactive-counter gear. ~20-30%: covered, Marquez reads as a counter-puncher.
+  - Specials apart in a cold watch (playtest): can a player tell angle from awkward from switch-hitter? If not, merge or cut one.
