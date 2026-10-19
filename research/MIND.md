@@ -64,3 +64,9 @@ The order lives in `ROADMAP.md`. Steps 1 and 3 are built (BRAIN B1 + B3); step 6
 - `games_arcade.md`: Punch-Out, Ready 2 Rumble, Knockout Kings, Creed games, Ippo, Boxing Star, Real Boxing 2. Punch-Out's flaw ramp is the model for easy-mode planted flaws.
 - `games_manager.md`: Title Bout, WCBM, Punch Club, Prizefighters, MMA managers, Football Manager. Calls that fade, shouts by temperament, a visible reaction line, towel, key-moment timeline.
 - `games_ai.md`: KI Shadows, Tekken Ghost, VF4, SF6, UFC, MK, Drivatar, GT Sophy. Players hate input reading and stat boosts; difficulty from deck size, execution, fragility under pressure; reaction floor ~.25 s.
+
+## Trainers (Oct 19, search summaries only: WebFetch was down; tags S sourced / B lore / D design)
+- `coach_a.md`: Cus, Futch, Emanuel Steward, Dundee, Arcel, Atlas, Clancy. Atlas's bait (jab, step back, counter the right), Futch stopping Manila, Clancy keeps punching a hurt man, Steward's "out of fuel".
+- `coach_b.md`: Roach, Floyd Sr. and Roger, Beristain, Sanchez, McGirt, Garcia, Shields. Roach's Hatton habit counter, finishing costs gas (Horn), corner: short, one voice, back to the jab.
+- `coach_c.md`: Reynoso, Anatoly Lomachenko, Derrick James, Shingo Inoue, SugarHill, Davison, McCracken, BoMac. BoMac read Spence "more hurt than he let on", McCracken's "glazy" Joshua, Inoue's body-then-head, one scripted counter per habit.
+- Each ends with "For Last Bell" if/then rules (numbers are starting values). What 1f takes from them: `docs/PLUGIN.md`, fakes plan. No trainer has an on-record tell list for hurt, tired, body-hurt or bluffing men.
