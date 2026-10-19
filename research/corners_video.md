@@ -54,3 +54,52 @@ This adds to `research/corners.md` (26 corners, patterns, "For Last Bell" rules 
   - Highlight bias: most KO calls fail.
 - **Coasting while ahead loses again (Hopkins).** This backs `corners.md` rule 7: a misread "we're up" makes the fighter coast.
 - **Finish call (Steward-Lewis).** Ahead, fresh, the other man hurt: an angry finish call works. Matches rule 5's gas gate.
+
+---
+
+# Batch 2: Corrales-Castillo I (2005), full fight broadcast
+Ed pasted the full broadcast transcript; it is not kept. Corales's trainer is Joe Goossen. The TV audio only carries some breaks, and Goossen's famous "get inside" line during the R10 delay isn't on it. Who is speaking is a best guess where marked.
+
+## Fight shape
+- Castillo is known for: slow start, takes over in the middle, beats his man up late. Commentary had him trailing after 5, "right on time" in R6.
+- Corales was taller and better outside, but chose to fight inside, in Castillo's "house." The commentators kept saying he should go back out.
+- Cuts both ways from R3-R4: Castillo's left eye shut from the lid down; Corales's left eye shut from the cheek up. By R8 both were one-eyed.
+- R7 end: Corales's left hook nearly dropped Castillo. Both men hurt from there on.
+- R9: two low-blow warnings in one round and no point taken. The ref doesn't want to decide a close fight on a point.
+- R10: Corales down twice from left hooks, the mouthpiece out both times. A point docked for losing it twice. He gets up, lands a right, then a combination, and the ref stops it at 2:06 of R10.
+- Cards going in: two for Corales (by 1 and by 3), one for Castillo. Without the stop it was a 10-6 round the other way, and the cards would have flipped.
+
+## The breaks (Corrales side unless marked)
+1. **After R1 (won it).** Five things in a row: praise, keep the chin buried when you exchange, the hook and body shots are working, feint the jab more because he's waiting to counter it with the right, praise again. A "sandwich": what works plus one read of the other man, wrapped in praise.
+2. **After R2 (won it).** Short: don't hand him the initiative, both hands, two uppercuts then go low.
+3. **After R6 (wobbled at the end).**
+   - Goossen: box him, he's about to bring pressure, this is where the fight gets decided.
+   - Corales: "he didn't hurt me."
+   - Goossen doesn't argue: "I know. But you can't leave your hands spread apart and let him outwork you."
+   - R7: he boxed outside for a while, as told, then drifted back inside.
+4. **After R7 (dropped Castillo almost).** Someone: "don't let him off, he's almost gone." A second voice about not seeing the right hand, likely about Corales's swollen eye (unclear).
+5. **After R8 (both eyes swelling, the doctor at the stool).**
+   - Goossen counts the rounds out loud: 9, 10, 11, 12. Four rounds left, don't stop on me, it's you or him.
+   - The plan: smother him, head off to the side, keep walking forward.
+   - The doctor asks; Goossen answers for him: "yes he can."
+   - Then: you've got about 10 minutes of fight left, if you want it.
+6. **After R9 (side unclear).** "Use the upper hand, he can't see anything you throw from the outside." A blind-side read: work outside shots to the side where his eye is shut.
+7. **R10, between the knockdowns.** Goossen put the mouthpiece back in "smartly, very slowly" and bought Corales extra seconds. It cost a point, and it won the fight.
+
+## What's new for Last Bell
+- **A shut eye means a blind side.**
+  - Corners in this fight say "he can't see the right" and "throw from the outside, he can't see it."
+  - Wide shots (hooks, overhands) to the side of a shut eye should land more, and the corner should call it.
+  - This fits the planned swelling zone (Ed, Oct 17).
+- **A hurt man says he isn't hurt; the corner fixes the hole anyway.** Don't argue, give one guard fix. This supports `corners.md`'s hurt-fighter rule, with the denial line as flavor.
+- **The doctor at the stool, and the corner arguing for the fighter.**
+  - When the cut doctor checks between rounds, the corner says "he's fine, he can see."
+  - A family or loyal corner pushes the doctor's stop later. This fits `CUT`'s doctor and the "corner stops late" rule.
+- **Count the rounds out loud, late.** "9, 10, 11, 12, four rounds, it's you or him." A clock line done as a countdown. Good corner-talk content.
+- **Stalling for seconds (rare, dirty, real).**
+  - After a knockdown, the corner takes its time with the mouthpiece. That buys recovery time and costs a point.
+  - Could be a rare cornerman event for a hurt man with a "crafty" corner. Flag for Ed: the ref docks a point, the crowd boos.
+- **The fighter doesn't follow the plan.** Told to box outside, he drifts back into the war. Follow-through drops when the plan fights the man's nature.
+- **A hurt man can still end it.** Two knockdowns in one round, then the KO. The other man was hurt too, from R7. Both-hurt late rounds should allow wild swings. Check our KD and stop numbers before adding any.
+- **The ref and fouls in a close fight.** Two low-blow warnings in a round, no point, because it's close. Later, a point for the mouthpiece. Fits the clinch/ref work (warnings, then a point).
+- **The R1 break shape.** Praise, one defensive fix, what's working, one read, praise. A good template for a fresh, winning fighter. `corners.md` says 1 note is normal; this is a chatty corner (about 4 notes), but each note is short.
