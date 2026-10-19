@@ -79,3 +79,13 @@ Research (FNC + Thrill of the Fight) and the items it adds to each phase: `proto
 ## Guard reference for the 3D models (Ed, Oct 6 2026)
 - **Cross-arm (Ken Norton, Ed's photos):** both forearms horizontal, stacked across the body. Rear forearm on top, across the chest just under the chin, rear glove resting on the lead shoulder. Lead forearm below, across the belly, lead glove out at the rear side. Chin tucked down behind the top arm and the lead shoulder, elbows tight to the ribs. The 2D render can only fake this (forearms point at the camera); the 3D model should show the stack. Right hand comes straight off the chin, no hammer.
 - **Philly / cross-arm blocks:** elbows stay down by the ribs, never winged out (Ed: "elbows out, not natural").
+
+## The look: readable punches (Ed, Oct 19 2026)
+Ed's references are 5 stock images, not committed (watermarked stock). Kept in words:
+- **Style:** clean flat vector / cel look. Bold shapes, 2–3 tone shading, dark outlines, readable gloves and trunk colors. Two-color corners (red vs blue) so you always know who is who. FNC-like framing: side-on, both men full body, ring ropes behind, ref in the back.
+- **The point is reading the fight.** You should see *what* he threw, *where* it landed and *whether it got through*:
+  - **Where it lands.** Chin, temple, nose, body/liver, shoulder, gloves. A visible spot plus the right reaction (head snaps back on a straight, turns on a hook, lifts on an uppercut, folds on the body).
+  - **Through the guard.** A blocked shot thuds into the gloves and the arms give. A leaky block (engine `blockLeak`) shows the glove pushing *through* the guard into the face. A clean one hits open space.
+  - **Clean vs blocked vs missed** reads different at a glance: impact flash and sweat spray on clean, a dull glove-on-glove pop on blocked, a whiff and an off-balance step on a miss.
+- **The engine already has most of this.** `resolve()` knows the zone (`P.zone` head/body), the kind (jab, cross, hook, upper), blocked or not, rolled/evaded, and how much leaked (`mult`). Missing: a finer spot (chin vs temple, liver vs ribs). Pick it in render from kind + side, so no engine change.
+- **Where it fits:** Phase 1 (reactions by punch type, contact) and Phase 2 (look, impact FX). Not now: 3D waits for the engine work (ROADMAP item 7).
