@@ -164,6 +164,15 @@ What's already there to build on: the eyes (E2: by gaze, a novice watches the gl
   - How often: **rare, and it goes by the man**: his traits and style set the rate (a counter-puncher, a feinter, a high ring IQ bait more; a slugger or swarmer rarely), not one flat number. Keep a floor gap between baits so it never turns into fishing all night.
   - Who sees through it (takes nothing): **World ~50%, Pro ~25%, Intermediate ~10%, Novice ~5%**; each bite makes him warier, like `FEINT_READ` does for feints.
 
+**f2 built (Oct 19).** Engine 7ded2b3, render 1a84c3a (hash holds). Knobs `BR.wb`; Action/Look `bait` (an id while it's out); engine `F.baitId`, events `wcBait` / `wcBit` / `wcThru`, round stats `bait`, `baitBit`, `baitP`, `baitThru`.
+- Who: (read + counter) mastery over .82, full at World. The read: `wbLead()`, the lead table like `predict()` but the jab counts in full (the habit lead is the jab ~80% of the time; halved, nobody was ever sure). Sure > .5, mid-range 58-82, not hurt, not on the ropes, in work/counter/feelout/press/reset.
+- Rate (Ed: rare, by the man): .02 a decision x (1.3 - initiative) x (.4 + patience) x (.5 + composure) x his counter skill, 10 s apart, done for the round after 2 with no bite. Per 10 rounds: counter-puncher ~5.3, out-boxer ~1.6, boxer-puncher ~1.0, slugger ~.2, swarmer ~0.
+- The bait: guard .3 for 1.5 s (he doesn't lead meanwhile), the defense picked from DEF_THRU vs that punch (x6, tries .95, seen sooner: rd .7), counter x3 within 1 s of the bite; .8 s after the bite the hands come back.
+- The other man sees the low hands (no roll): `opening()` reads them as an opening. Seen through: `tierV(read, [.05, .1, .25, .5])` (Ed) x (1 + .15 per bite he's taken, the fight): takes nothing (throws x .2, the guard he sees stays .6). Fight-wide average with the wariness: N 10, I 17, P 32, W 57% (rolled = expected; .5 per bite read 22/42/67 for I/P/W, too much).
+- `tests/bait.js` (300, World vs a random level): bites 64-83% of baits, on the punch he waited for ~89%, counters landed .2-.35 a bite, KDs rare (2 in 300). World wins vs P 78-85% over 3 runs.
+- Full check (`check.sh f2`): audit 3x500 51.6 / 15.6 / 30.1%, stops 28.1%; finish 600 stops 28.3%, KDs .89, body 5.8%; styles 48.5-51.6 (counter 51.6, swarmer 51.1, outboxer 49.5, slugger 49.3, bp 48.5); levels dog wins IvN 16.7, PvI 16.7, WvP 17.7, PvN 3.0. Hash 4a735ef6 (same.js 200; 40 = 76371bc7); `BR.wb.on = 0` gives back 9c74be58.
+- Seen: commentary on the bait (30 s apart) and on a read ('not biting'); corner note when your man bit ("He's dropping his hands to draw your X. It's a trap") or when his bait works. Render: gloves to the waist (the handslow pose). Lab panel: 'hands down on purpose', 'baiting his X, slip ready', 'sees the bait'.
+
 **f3, easy flaws (plug-in only: `preset('easy')` sets `profile.flaw`; the game never calls preset).** One per style, something a player can spot and beat; the brain never fixes it in the fight:
 | Style | Flaw | Beat it with |
 |---|---|---|
