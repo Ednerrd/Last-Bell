@@ -2283,7 +2283,7 @@ class Fight {
     }
   }
   snap() {
-    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' || F.state === 'idle' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, hitQ: F.hitQ, hitGlove: F.hitGlove, aQ: F.act && F.act.q || null, downP: F.downP, rise: !!(this.kdState && this.kdState.who === F.side && (this.kdState.rising || this.kdState.standing)), walk: this.phase === 'roundEnd' || this.phase === 'corner', sit: this.phase === 'corner' || (this.phase === 'roundEnd' && F.arrived && (this.cornerT || 0) > .25) ? 1 : 0, cut: F.cut, cutS: F.cutS, swL: F.sw.L, swR: F.sw.R, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3, bluff: F.state === 'stun' ? 0 : F.bluff || 0, clamp: F.clamp || 0 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
+    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' || F.state === 'idle' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, hitQ: F.hitQ, hitGlove: F.hitGlove, aQ: F.act && F.act.q || null, downP: F.downP, rise: !!(this.kdState && this.kdState.who === F.side && (this.kdState.rising || this.kdState.standing)), walk: this.phase === 'roundEnd' || this.phase === 'corner', sit: this.phase === 'corner' || (this.phase === 'roundEnd' && F.arrived && (this.cornerT || 0) > .25) ? 1 : 0, cut: F.cut, cutS: F.cutS, swL: F.sw.L, swR: F.sw.R, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3, bluff: F.state === 'stun' ? 0 : F.bluff || 0, clamp: F.clamp || 0, bait: F.baitId ? 1 : 0 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
   }
   walkTo(F, x, z, dt, sp) {
     const dx = x - F.x, dz = z - F.z, d = Math.hypot(dx, dz); F.vx = F.vz = 0;
@@ -3347,6 +3347,7 @@ const Render = (() => {
     const sag = tir * (gd === 'handslow' ? 10 : 12) + (1 - gi) * 4;
     leadG.y += sag; rearG.y += sag * .85; leadG.x += (1 - gi) * 3.5; rearG.y += (1 - gi) * 2;
     if (live && v.clamp > .02 && !v.def) { const k = Math.min(1, v.clamp) * .75, B = GUARD_POSE.body; leadG = L(leadG, { x: N.x + B.l[0], y: N.y + B.l[1] }, k); rearG = L(rearG, { x: N.x + B.r[0], y: N.y + B.r[1] }, k); } // f1b: his body's hurt, elbows clamped to the ribs and the gloves low with them (the head's open)
+    if (live && v.bait > .02 && !v.def) { const k = Math.min(1, v.bait) * .85, B = GUARD_POSE.handslow; leadG = L(leadG, { x: N.x + B.l[0], y: N.y + B.l[1] }, k); rearG = L(rearG, { x: N.x + B.r[0], y: N.y + B.r[1] }, k); } // f2: the World-class bait, hands dropped on purpose to invite one
     if (v.walk) { const sw = Math.sin((v.gait || 0) * .2) * 4 * Math.min(1, (v.mv || 0) / 30); leadG = { x: J.hip.x + 5 + sw, y: J.hip.y + 13 }; rearG = { x: J.hip.x + 1 - sw, y: J.hip.y + 14 }; } // arms hang loose by his thighs, swinging with the walk
     if (J.sit > 0) { const s2 = ease(J.sit); leadG = L(leadG, { x: J.hip.x + 24, y: J.hip.y - 4 }, s2); rearG = L(rearG, { x: J.hip.x + 18, y: J.hip.y - 1 }, s2); }
     if (v.state === 'clinch') {
@@ -4055,7 +4056,7 @@ const Render = (() => {
     c.setTransform(s, 0, 0, s, canvas.width / 2 - (opts.dx || 0) * s, canvas.height - 12 * s);
     const g = c.createRadialGradient(0, -80, 5, 0, -60, 110); g.addColorStop(0, 'rgba(240,184,90,.28)'); g.addColorStop(1, 'rgba(240,184,90,0)');
     c.fillStyle = g; c.fillRect(-200, -200, 400, 220);
-    const v = { x: 0, dir: opts.dir || 1, guard: opts.guard || 'standard', tired: opts.tired || 0, gi: 1, defZ: opts.defZ || 'head', state: 'idle', aT: null, aP: 0, def: opts.def || (opts.block ? 'block' : null), defP: 1, hitT: 0, downP: 0, cut: opts.cut || 0, cutS: opts.cutS || null, swL: opts.sw || 0, swR: opts.sw || 0, dmg: opts.dmg || 0, bob: 0, stance: opts.stance, hurt: false, clamp: opts.clamp || 0 };
+    const v = { x: 0, dir: opts.dir || 1, guard: opts.guard || 'standard', tired: opts.tired || 0, gi: 1, defZ: opts.defZ || 'head', state: 'idle', aT: null, aP: 0, def: opts.def || (opts.block ? 'block' : null), defP: 1, hitT: 0, downP: 0, cut: opts.cut || 0, cutS: opts.cutS || null, swL: opts.sw || 0, swR: opts.sw || 0, dmg: opts.dmg || 0, bob: 0, stance: opts.stance, hurt: false, clamp: opts.clamp || 0, bait: opts.bait || 0 };
     if (opts.v) Object.assign(v, opts.v);
     const J = body(v, look, opts.t || 0);
     const A = arms(v, look, J, { head: { x: 60, y: -105 }, body: { x: 60, y: -70 } }, opts.t || 0);
@@ -4410,7 +4411,7 @@ function refTick(fs, info, dt) {
   return r;
 }
 // draw between the last two sim ticks so motion is smooth at any refresh rate and speed
-const LERP_K = ['x', 'z', 'gait', 'mv', 'aP', 'defP', 'defU', 'tired', 'gi', 'hitT', 'downP', 'clamp'];
+const LERP_K = ['x', 'z', 'gait', 'mv', 'aP', 'defP', 'defU', 'tired', 'gi', 'hitT', 'downP', 'clamp', 'bait'];
 function blendSnap(a, b, t) {
   if (!a) a = b;
   return { f: b.f.map((B, i) => {
@@ -4836,11 +4837,11 @@ function brainCard(X) {
   const b = X.brain, O = X.op, ph = b.ph || {}, pc = v => Math.round(clamp(v, 0, 1) * 100), e = esc;
   if (b.log.length > 300) b.log.splice(0, 200);
   const md = b.out.intent === 'down' ? 'down' : b.mode, hr = md === 'survive' && b.hurtResp ? ' (' + b.hurtResp + ')' : '';
-  const me = [`guard ${pc(b.out.guard)}`]; if ((X.clamp || 0) > .2) me.push('elbows clamped, body hurt'); if ((X.low || 0) > .2) me.push('elbows in, he reads a body digger'); if (X.bluff) me.push('hiding the hurt'); if (X.cover) me.push('covering his ' + (X.cover.s === 'L' ? 'left' : 'right') + ' eye'); if (b.desp) me.push('desperate, behind late');
+  const me = [`guard ${pc(b.out.guard)}`]; if ((X.clamp || 0) > .2) me.push('elbows clamped, body hurt'); if ((X.low || 0) > .2) me.push('elbows in, he reads a body digger'); if (X.bluff) me.push('hiding the hurt'); if (X.baitId) me.push('hands down on purpose'); if (X.cover) me.push('covering his ' + (X.cover.s === 'L' ? 'left' : 'right') + ' eye'); if (b.desp) me.push('desperate, behind late');
   const tg = ph.tgt, spot = []; if (tg) { if (tg.eye) spot.push((tg.side === 'L' ? 'left' : 'right') + ' eye'); if (tg.body) spot.push('body going'); if (tg.arms) spot.push('arms heavy'); } if (ph.el) spot.push('elbows down');
   const gasT = O.stam / Math.max(1, O.stamMax), grdT = O.bg * (.5 + .5 * O.gi), hurtT = hurtNow(O);
   const adj = [...adjList(b.cc, .05).map(x => 'corner: ' + x), ...adjList(b.plan, .05).map(x => 'plan: ' + x)];
-  if (b.dl && b.dl.armed) adj.push('trap set for his ' + pName(b.dl.armed)); if ((b.bRd || 0) > .2) adj.push('he lives downstairs'); if (b.setup) adj.push('setup: ' + b.setup.name);
+  if (b.dl && b.dl.armed) adj.push('trap set for his ' + pName(b.dl.armed)); if ((b.bRd || 0) > .2) adj.push('he lives downstairs'); if (b.setup) adj.push('setup: ' + b.setup.name); if (b.wb && b.wb.p && b.t < b.wb.until) adj.push('baiting his ' + pName(b.wb.p) + ', ' + b.wb.def + ' ready'); if (b.wbS && b.t < b.wbS.thru) adj.push('sees the bait, not biting');
   const E = b.emo, mood = E.fear > .5 ? 'scared' : E.frus > .5 ? 'frustrated' : E.conf > .4 ? 'confident' : E.conf < -.4 ? 'shaken' : '';
   const log = b.log.slice(-6).reverse().map(l => `<li>${e(l.replace(/^[\d.]+ /, ''))}</li>`).join('');
   return `<p><b>${e(X.sheet.name.split(' ').slice(-1)[0])}</b> <span class="bm">${e(MODE_TXT[md] || md)}${e(hr)}</span>${mood ? ' · ' + mood : ''}</p>
