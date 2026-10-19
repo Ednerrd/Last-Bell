@@ -19,7 +19,7 @@
  * @property {number} dist       distance between the two men
  * @property {{ me: number, him: number }} ropes  0 = center of the ring .. 1 = on the ropes
  * @property {{ head: number, headMax: number, stam: number, stamMax: number, hurt: boolean, down: boolean, clinch: boolean, punching: boolean, busy: boolean,
- *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean, eye?: ?{ s: string, v: number } }} me   his own body, the corner's plan and live shout, his stance (south: a southpaw), his worse eye (a cut or a swelling: side, 0..1)
+ *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean, eye?: ?{ s: string, v: number }, body?: number }} me   his own body (body: the meter, 1 fresh .. 0 gone), the corner's plan and live shout, his stance (south: a southpaw), his worse eye (a cut or a swelling: side, 0..1)
  * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number, look?: Look }} him
  * @property {Array<{ type: string, by: 'me' | 'him', [k: string]: any }>} events  what happened since last frame (landed, blocked, evaded, feinted, thrown...)
  */
@@ -36,6 +36,7 @@
  * @property {number} [legs]    heavy, flat feet (tired, a sinking body)
  * @property {number} [wobble]  the legs going (stunned 1, hurt .6; less while he bluffs)
  * @property {number} [sell]    he's acting fine (1f bluff: the nod, the smile, punching back), 0..1 as it shows (less while he moves sideways)
+ * @property {number} [elbows]  elbows clamped to his ribs, gloves low (f1b: his body's hurt; the bluff can't hide it)
  */
 /**
  * A punch in the air, as it truly is (his eyes add the error).
@@ -57,6 +58,7 @@
  * @property {{ range: number, lateral: number, cut: number, clinch: boolean }} move
  * @property {number} guard      0..1 how high and tight the hands are
  * @property {number} [low]      0..1 elbows down over the body (he's read a body digger): the body's covered, the head less
+ * @property {number} [clamp]    0..1 his own body's hurt (f1b): elbows clamped to the ribs, gloves low. Covers the body like low, opens the head, and it shows (Look.elbows)
  * @property {?Object} punch     { type, combo, counter, feint, tech, commit, tell, ... } or null
  * @property {?{ kind: string, zone: string, vs: string, quality: number }} defend
  * @property {string} why
@@ -186,8 +188,8 @@ const BR = {
   reactFat: .5, reactFear: .3, reactHurt: .35, jitter: .2,
   // the eyes (E2): what he notices about the other man (P.him.look). rate: sightings a second of clock at full salience; nov / vet: where he looks (a novice watches the gloves, a vet the chest: gaze = his read);
   // thr: how much there has to be before it's there to see (salience = v / thr, capped 1.5); tau: how long a sighting holds once it stops being seen (s of clock); big: a moment worth a line (E3)
-  eye: { on: 1, rate: { cut: .1, swell: .1, body: .05, arms: .35, fold: 2.5, legs: .16, wobble: 2.4 }, nov: { cut: .2, swell: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3 }, vet: { cut: 1, swell: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1 },
-    thr: { cut: .1, swell: .3, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3 }, tau: { cut: 60, swell: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6 }, big: { cut: .5, swell: .8, body: .5, legs: .6, wobble: .9 },
+  eye: { on: 1, rate: { cut: .1, swell: .1, body: .05, arms: .35, fold: 2.5, legs: .16, wobble: 2.4, elbows: .5 }, nov: { cut: .2, swell: .2, body: .1, arms: .9, fold: .45, legs: .12, wobble: .3, elbows: .8 }, vet: { cut: 1, swell: 1, body: .9, arms: 1, fold: 1, legs: .9, wobble: 1, elbows: 1 },
+    thr: { cut: .1, swell: .3, body: .3, arms: .4, fold: .15, legs: .35, wobble: .3, elbows: .25 }, tau: { cut: 60, swell: 60, body: 60, arms: 30, fold: 4, legs: 30, wobble: 6, elbows: 10 }, big: { cut: .5, swell: .8, body: .5, legs: .6, wobble: .9 },
     blur: .5, fear: .4, hurt: .6, fat: .3, tunnel: .5,
     e4: 1, hold: 6 }, // e4: he fights on what he saw, not the truth (hurt from a wobble he caught, held hold s of clock; his gas from the legs; the arm wear in the guard). 0 = the truth (A/B)
   reactMin: .1,           // the fastest he ever sees a punch, read or not (s; was .04: expert averaged .09)
@@ -281,6 +283,9 @@ const BR = {
   // tuned Oct 17 (tests/scar.js, 1,200 pairs): less initiative was a buff here (boxing long beats leading in this engine), so caution = less power + long, gun-shy = output
   scar: { on: 1, plan: { range: 40, power: -.6 }, planShy: { power: -1 }, risk: 2, shell: 1, clinch: 1, ini: 1, kill: 1, shyOut: 4, shyIni: 1.5, shyPow: 1, shyKill: 2 },
   cl: { on: 1, norm: 4, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
+  // f1b, the hands tell the truth (Ed): a body-hurt man clamps his elbows to his ribs, the head opens. at .. full: how far his body meter is gone before it starts .. in full; hit: each power shot
+  // that lands downstairs (fades, tau s of clock, hitMax at most); the other man: see (the guard he sees drops this much at a full clamp seen), up (go upstairs), open (an opening)
+  clamp: { on: 1, at: .35, full: .85, hit: .12, hitMax: .6, tau: 45, see: .15, up: .2, open: .25 },
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
@@ -573,6 +578,7 @@ class Brain {
         this.madd(this.mem.hurt, p, { d: dmg });
         E.conf = clamp(E.conf - .035 * dmg / 3, -1, 1); E.fear = clamp(E.fear + dmg / 90 * (1.25 - comp), 0, 1);
         this.sc.him += guess(pts(p));
+        if (PUNCHES[p].zone === 'body' && p !== 'bodyJab') this.bp = (this.bp || 0) + 1; // f1b: it hurt downstairs (the elbows come in)
         if (this.mode === 'survive') { if (PUNCHES[p].cat !== 'jab') this.h.unans++; this.modeT = Math.min(BR.surv.hurtMax, this.modeT + BR.surv.hitAdd); }
         if (ev.counter) { this.h.ctrd = this.ct; if (HUNTS[this.mode] && PUNCHES[p].cat !== 'jab' && !this.h.stung) { this.h.stung = 1; this.tel.stung = (this.tel.stung || 0) + 1; } } // walked onto one
         if (ev.counter && this.lf && BR.trap.on.show && this.t - (this.lf.done || this.t) < BR.trap.ctrWin) { this.madd(this.bait, this.lf.id, { ctr: 1 }); this.lf = null; } // he answers that one with a counter
@@ -642,7 +648,7 @@ class Brain {
   // the eyes (E2): each cue on screen has a chance a second to be noticed, by where he looks (his read), how much there is, and his state (blur, fear, hurt, gas, the hunt's tunnel vision)
   look(P, sdt) { // gaze from his mastery (the level tables' read), not the squeezed k: a Novice watches the gloves, World class the chest
     const L = P.him.look, B = BR.eye; if (!B.on || !L) return;
-    const val = { cut: L.cut, swell: L.swell, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble };
+    const val = { cut: L.cut, swell: L.swell, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble, elbows: L.elbows };
     const gaze = clamp((this.m.read - .3) / .6, 0, 1), tun = HUNTS[this.mode] ? B.tunnel : 0;
     const st = (1 - B.blur * this.blur) * (1 - B.fear * this.emo.fear) * (P.me.hurt ? 1 - B.hurt : 1) * (1 - B.fat * this.fat);
     for (const c in val) {
@@ -664,8 +670,8 @@ class Brain {
     this.tk = 1 - (L.sell || 0) * BR.bluff.talk * (1 - clamp((this.m.read - .3) / .6, 0, 1)); // 1f: he's selling 'I'm fine': a face-watcher lets go of what he saw sooner
     const hold = B.hold * this.tk, w = this.eye.wobble, f = this.eye.fold, hurt = !!H.hurt && (!!w && this.ct - w.ct < hold || !!f && this.ct - f.ct < hold); // hurt only if he caught it (and it still shows): a head shot wobbles him, a body shot folds him
     const lg = this.seen('legs'), gas = lg > 0 ? clamp(.6 - lg, 0, 1) : 1; // the tank as the feet show it; nothing seen = he looks fresh
-    const bg = L.arms != null ? H.guard / (.5 + .5 * L.arms) : H.guard, guard = L.arms != null ? bg * (.5 + .5 * (1 - this.seen('arms'))) : H.guard; // the hands he sees; the wear only if he's noticed it
-    return { hurt, gas, guard, tgt: this.target() };
+    const bg = L.arms != null ? H.guard / (.5 + .5 * L.arms) : H.guard, guard = (L.arms != null ? bg * (.5 + .5 * (1 - this.seen('arms'))) : H.guard) * (1 - BR.clamp.see * this.seen('elbows')); // the hands he sees; the wear only if he's noticed it, the gloves low if he's seen the elbows clamp (f1b)
+    return { hurt, gas, guard, tgt: this.target(), el: BR.clamp.on ? clamp(this.seen('elbows') / BR.eye.thr.elbows - .5, 0, 1) : 0 };
   }
   // 1e: the damage he's spotted, to go after: the worse eye (a cut or a swelling, with its side), a sinking body, worn arms (0..1 each, as he saw them)
   target() {
@@ -677,6 +683,8 @@ class Brain {
     return eye > 0 && side || body > 0 || arms > 0 ? { eye: side ? eye : 0, side, body, arms } : null;
   }
   // 1e: his own cut or closing eye: cover that side and move off it. The corner tells him at the break; before that, a smart man thinks of it himself
+  // f1b: his own body's hurt, the elbows clamp to the ribs and the gloves come down with them: the meter going, and the last few that really landed down there
+  clampOf(P) { const C = BR.clamp; return !C.on || P.me.body == null ? 0 : clamp(clamp((1 - P.me.body - C.at) / (C.full - C.at), 0, 1) + Math.min(C.hitMax, (this.bp || 0) * C.hit), 0, 1); }
   coverOf(P) {
     const e = P.me.eye, C = BR.cover; if (!C.on || !e || !e.s || e.v < C.at) return null;
     const k = clamp((e.v - C.at) / (C.full - C.at), 0, 1) * lerp(C.self, 1, this.told === e.s ? 1 : 0) * lerp(C.lo, 1, this.k.read);
@@ -824,9 +832,11 @@ class Brain {
     const H = P.him, k = this.k; let o = 0;
     if (H.recover != null && H.recover < .5) o = Math.max(o, (H.lastRes === 'missed' || H.lastRes === 'evaded' ? 1 : .6) * lerp(.4, 1, k.counter)); // he just threw and he's coming back
     if (P.ropes.him > .6) o = Math.max(o, .5 * lerp(.5, 1, k.cutoff));
-    if (H.gas < .35) o = Math.max(o, .4 * k.read);
-    if (H.guard < .4) o = Math.max(o, .5 * k.read);
-    if (this.ph ? this.ph.hurt : H.hurt) o = Math.max(o, lerp(.5, 1, k.read)); // the hurt he's caught, not the truth (1f: a bluff can't leak through here)
+    const ph = this.ph || { hurt: H.hurt, gas: H.gas, guard: H.guard, el: 0 }; // what he's seen, not the truth (1f the hurt, f1b the gas and the guard)
+    if (ph.gas < .35) o = Math.max(o, .4 * k.read);
+    if (ph.guard < .4) o = Math.max(o, .5 * k.read);
+    if (ph.el) o = Math.max(o, BR.clamp.open * ph.el * k.read); // his elbows are glued to his ribs: the head's there
+    if (ph.hurt) o = Math.max(o, lerp(.5, 1, k.read)); // the hurt he's caught (a bluff can't leak through here)
     return o;
   }
   updMode(P, dt) {
@@ -1000,7 +1010,7 @@ class Brain {
     const k = this.k, tr = this.tr, E = this.emo, md = this.mode, H = P.him, fat = 1 - P.me.stam / (P.me.stamMax || 100);
     const maxLen = Math.min(1 + Math.round(1 + 3 * k.combos * (.6 + .5 * tr.combo)), BR.lv.on.len ? Math.round(lvV('len', this.m.combos)) : 9);
     const last = this.hist[this.hist.length - 1], noise = lerp(.75, .3, (k.read + k.combos) / 2) * (1 + .8 * fat) * (1 + .6 * E.frus);
-    const nd = this.nd, tg = this.ph && this.ph.tgt, south = !!P.me.south;
+    const nd = this.nd, tg = this.ph && this.ph.tgt, south = !!P.me.south, hg = this.ph ? this.ph.guard : H.guard, hgas = this.ph ? this.ph.gas : H.gas, el = this.ph ? this.ph.el || 0 : 0; // f1b: the guard and the tank he sees
     let ctrN = 0, mN = 0; for (const x in this.mem.mine) { const e = this.mpeek(this.mem.mine, x); ctrN += e.c || 0; mN += e.n || 0; }
     const ctrRate = ctrN / Math.max(4, mN);
     let best = null, bw = 0, tot = 0;
@@ -1026,15 +1036,16 @@ class Brain {
       else if (md === 'huntSafe') w *= (1 + c.power * 2.5 * BR.fin.safePow * tr.killer) * lerp(1, BR.fin.safeStr, c.str) * lerp(1, BR.fin.safeWide, c.wide) * (c.n > 3 ? .6 : 1);
       else if (md === 'check') w *= lerp(.4, 1.6, c.str) * (c.n <= 2 ? 1.3 : .3);
       if (HUNTS[md]) {
-        if (H.guard > .75) w *= lerp(1, BR.fin.shellBody, c.body) * lerp(1, BR.fin.shellUpper, c.up * 2);  // he's in a shell: dig, and come up the middle
+        if (hg > .75) w *= lerp(1, BR.fin.shellBody, c.body) * lerp(1, BR.fin.shellUpper, c.up * 2);  // he's in a shell: dig, and come up the middle
         if (H.closing < -25) w *= lerp(1, BR.fin.runHook, c.hook * 2);                                    // he's running: hooks cut him off
       }
       if (md === 'survive') { const r = this.hurtResp; w *= r === 'fire' ? 1 + c.power : r === 'steady' ? (c.jab && c.n <= 2 ? 3 : .4) : c.n === 1 ? 2 : .3; }
       if (this.desp) w *= (1 + c.power * BR.desp.power * this.desp * tr.power) * (1 + c.wide * BR.desp.wide * this.desp) * (c.jab && c.n === 1 ? 1 - .5 * this.desp : 1); // the late equaliser: sit down on the right hand
       if (nd > 0) w *= 1 + c.power * nd; else w *= 1 + (c.jab - c.power) * -nd * .6; // behind: sit down on it. ahead: jab and stay safe
-      if (H.guard < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
-      if (H.guard > .8) w *= 1 + c.body * k.read;               // shell up high: go to the body
-      if (H.gas < BR.fuse.gas && !HUNTS[md]) w *= 1 + (c.body + (c.ps.includes('bodyHook') ? BR.fuse.liver : 0)) * (BR.fuse.gas - H.gas) / BR.fuse.gas * BR.fuse.w * k.read; // he's tired: the body is the slow fuse, dig to the liver
+      if (hg < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
+      if (hg > .8) w *= 1 + c.body * k.read;               // shell up high: go to the body
+      if (el) w *= 1 + BR.clamp.up * el * (c.power - c.body) * k.read; // f1b: the elbows are on his ribs: the body's done its work, go upstairs
+      if (hgas < BR.fuse.gas && !HUNTS[md]) w *= 1 + (c.body + (c.ps.includes('bodyHook') ? BR.fuse.liver : 0)) * (BR.fuse.gas - hgas) / BR.fuse.gas * BR.fuse.w * k.read; // he's tired: the body is the slow fuse, dig to the liver
       if (tg) { // 1e: go to the damage he's spotted (a smart man more surely)
         if (tg.eye) { const on = (tg.side === 'R') !== south; w *= Math.exp(BR.tgt.eye * tg.eye * ((on ? c.lead : c.rear) - (on ? c.rear : c.lead)) * k.read); } // the eye: straights and hooks that land on that side, fewer to the other
         if (tg.body) w *= 1 + BR.tgt.body * tg.body * c.body * k.read;                                      // the body's going: dig
@@ -1042,7 +1053,7 @@ class Brain {
       }
       // the situation (a smart man sees it, a novice throws his favourites)
       let sit = 1;
-      if (H.guard > .7 && c.lowHigh) sit *= 1.3;                          // lift then dig, or dig then lift: a high guard can't cover both
+      if (hg > .7 && c.lowHigh) sit *= 1.3;                          // lift then dig, or dig then lift: a high guard can't cover both
       if (c.lowHigh && this.bodyL && !BR.trap.on.bank) sit *= 1 + Math.min(.4, .08 * this.bodyL / Math.max(1, P.round)); // the body work pays upstairs later
       if (P.ropes.him > .6 && c.inside) sit *= 1.3;                        // he's on the ropes: rip inside
       if (P.round <= 3 && c.n === 1 && c.jab) sit *= 1.15;                 // early: probe with the jab
@@ -1171,6 +1182,7 @@ class Brain {
     E.conf *= 1 - .02 * sdt; E.frus *= 1 - (.03 + .05 * comp) * sdt; E.fear *= 1 - (.02 + .08 * comp) * sdt * (P.me.hurt ? .2 : 1);
     this.fat = 1 - P.me.stam / (P.me.stamMax || 100);
     this.ct += sdt; this.hisG = this.ph ? this.ph.guard : P.him.guard;
+    if (this.bp) this.bp *= Math.exp(-sdt / BR.clamp.tau);
     { const B = BR.blur, cur = Math.max(0, 1 - P.me.head / Math.max(1, P.me.headMax) - B.at) / (1 - B.at); // only real damage counts: a jab here and there doesn't blur anything
       this.blur = clamp((cur * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + (P.round - 1) / Math.max(1, P.rounds - 1) * B.late + this.kds * B.kd) * (1.3 - .6 * this.tr.composure), 0, 1); }
     this.famUpd(P);
@@ -1211,6 +1223,7 @@ class Brain {
     this.out.cover = this.coverOf(P);
     this.out.bluff = this.mode === 'survive' && this.sell ? this.sell : 0; // 1f: how well he's selling 'I'm fine'
     this.out.low = BR.body.on ? clamp((this.bRd || 0) * lerp(.6, 1.2, this.k.block), 0, 1) : 0; // he's read a body digger: elbows in
+    this.out.clamp = this.clampOf(P);
     return this.out;
   }
 
