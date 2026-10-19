@@ -34,7 +34,8 @@
  * @property {number} [arms]    arm wear (1 fresh .. 0 the guard's breaking down)
  * @property {number} [fold]    bent over a body shot right now
  * @property {number} [legs]    heavy, flat feet (tired, a sinking body)
- * @property {number} [wobble]  the legs going (stunned 1, hurt .6)
+ * @property {number} [wobble]  the legs going (stunned 1, hurt .6; less while he bluffs)
+ * @property {number} [sell]    he's acting fine (1f bluff: the nod, the smile, punching back), 0..1 as it shows (less while he moves sideways)
  */
 /**
  * A punch in the air, as it truly is (his eyes add the error).
@@ -60,6 +61,7 @@
  * @property {?{ kind: string, zone: string, vs: string, quality: number }} defend
  * @property {string} why
  * @property {?string} [hurt]    how he answers being hurt (survive mode)
+ * @property {number} [bluff]    0..1 hurt and hiding it (1f): the host shows a smaller wobble and sends Look.sell
  * @property {?{ s: string, k: number }} [cover]  his bad eye covered (1e): the side, and how much (the glove stays up there, he moves off it)
  */
 /**
@@ -246,6 +248,10 @@ const BR = {
     late: 20, lateRun: 1.5, lateFire: .6, despFire: 1.8,
     kdFire: 2, kdShell: 1.5,  // after a knockdown: composure decides, fire back harder or shell
     after: 8, rally: .2 },    // after a knockdown: more range rest of the round (and the next, unless he's composed: then more initiative)
+  // the bluff (1f): a hurt vet hides it (nods, fires back, stands his ground); the legs still give him away (docs/PLUGIN.md)
+  bluff: { on: 1, p: [0, .2, .5, .75], comp: [.6, 1.2], // chance at the hurt by mastery (Novice never), x composure (lerp .6..1.2): World ~75%, Pro ~50%
+    talk: .85,                // while he sells it, a man who watches the face lets go of what he saw this much sooner (x 1 - gaze: a vet keeps it)
+    kd: 8 },                  // off the floor (clock s): everyone saw it, nothing to hide
   desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 }, // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
   // skill levels L2: what mastery does (research/mind_learn.md 4a). Each table is [Novice, Intermediate, Pro, World class] at the tier centers,
   // read on his mastery (not squeezed by spread). Neutral at Pro (1, or 0 for the penalties) so a Pro-level field plays as before:
@@ -374,6 +380,7 @@ const SURV = {
   clinch: { aggr: .15, range: 0, guard: .95, lat: .4 },
   freeze: { aggr: .03, range: 0, guard: .45, lat: 0 },
   steady: { aggr: .6, range: 4, guard: .85, lat: .7 },                   // bites down, keeps the jab going
+  bluff:  { aggr: .8, range: 2, guard: .85, lat: .5 },                   // acts fine (1f): stands his ground and fires back, no shell, no run, no grab
   bait:   { aggr: .3, range: 0, guard: .8, lat: .2, ctr: 2 }               // a counterpuncher plays possum for the overcommit
 };
 const HUNTS = { hunt: 1, huntSafe: 1, check: 1 };
@@ -640,7 +647,7 @@ class Brain {
     const st = (1 - B.blur * this.blur) * (1 - B.fear * this.emo.fear) * (P.me.hurt ? 1 - B.hurt : 1) * (1 - B.fat * this.fat);
     for (const c in val) {
       const v = val[c]; if (v == null || v < B.thr[c] * .5) continue;
-      const w = lerp(B.nov[c], B.vet[c], gaze) * st * (tun && c !== 'wobble' && c !== 'legs' ? 1 - tun : 1), sal = Math.min(1.5, v / B.thr[c]);
+      const w = lerp(c === 'wobble' && L.sell ? lerp(B.nov.wobble, B.nov.legs, L.sell) : B.nov[c], B.vet[c], gaze) * st * (tun && c !== 'wobble' && c !== 'legs' ? 1 - tun : 1), sal = Math.min(1.5, v / B.thr[c]);
       if (this.eR() < 1 - Math.exp(-B.rate[c] * w * sal * sdt)) {
         const e = this.eye[c], first = !e;
         if (first || this.t - e.t > 1) this.note('sees ' + c + ' ' + v.toFixed(2));
@@ -654,7 +661,8 @@ class Brain {
   perc(P) {
     const H = P.him, L = H.look, B = BR.eye;
     if (!B.e4 || !L) return { hurt: !!H.hurt, gas: H.gas, guard: H.guard, tgt: this.target() };
-    const w = this.eye.wobble, f = this.eye.fold, hurt = !!H.hurt && (!!w && this.ct - w.ct < B.hold || !!f && this.ct - f.ct < B.hold); // hurt only if he caught it (and it still shows): a head shot wobbles him, a body shot folds him
+    this.tk = 1 - (L.sell || 0) * BR.bluff.talk * (1 - clamp((this.m.read - .3) / .6, 0, 1)); // 1f: he's selling 'I'm fine': a face-watcher lets go of what he saw sooner
+    const hold = B.hold * this.tk, w = this.eye.wobble, f = this.eye.fold, hurt = !!H.hurt && (!!w && this.ct - w.ct < hold || !!f && this.ct - f.ct < hold); // hurt only if he caught it (and it still shows): a head shot wobbles him, a body shot folds him
     const lg = this.seen('legs'), gas = lg > 0 ? clamp(.6 - lg, 0, 1) : 1; // the tank as the feet show it; nothing seen = he looks fresh
     const bg = L.arms != null ? H.guard / (.5 + .5 * L.arms) : H.guard, guard = L.arms != null ? bg * (.5 + .5 * (1 - this.seen('arms'))) : H.guard; // the hands he sees; the wear only if he's noticed it
     return { hurt, gas, guard, tgt: this.target() };
@@ -818,7 +826,7 @@ class Brain {
     if (P.ropes.him > .6) o = Math.max(o, .5 * lerp(.5, 1, k.cutoff));
     if (H.gas < .35) o = Math.max(o, .4 * k.read);
     if (H.guard < .4) o = Math.max(o, .5 * k.read);
-    if (H.hurt) o = Math.max(o, lerp(.5, 1, k.read));
+    if (this.ph ? this.ph.hurt : H.hurt) o = Math.max(o, lerp(.5, 1, k.read)); // the hurt he's caught, not the truth (1f: a bluff can't leak through here)
     return o;
   }
   updMode(P, dt) {
@@ -867,7 +875,7 @@ class Brain {
   }
   pv(x) { return this.plan[x] + (this.cc ? this.cc[x] : 0) + (this.sp ? this.sp[x] || 0 : 0); } // his plan plus what the corner told him, plus what a KO loss left (L4e: it doesn't fade in the fight)
   finM() { return (this.m.read + this.m.pacing) / 2; } // finishing mastery: reading the hurt, and knowing when to spend it
-  wobbly(P) { if (this.ph.hurt) this.h.seen = this.ct; return this.ph.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
+  wobbly(P) { if (this.ph.hurt) this.h.seen = this.ct; return this.ph.hurt || (this.ct - (this.h.seen || -99) < BR.fin.wob * (this.tk == null ? 1 : this.tk) && P.him.head < BR.fin.wobHead) || this.ct - this.h.kdBy < BR.fin.kdWob; }
   // the hunt: check, then commit (all-out or behind a guard); flurries with a look in between; capped, and it costs gas
   huntStart(P, late) {
     const tr = this.tr, H = this.h;
@@ -883,7 +891,9 @@ class Brain {
     if (this.mode === 'check') {
       if (this.modeT > 0 && !H.chk) return;
       H.chk = 0;
-      if (!hurt) { stop('he is fine'); return; }
+      const sold = P.him.look && P.him.look.sell > 0; // 1f: he's selling it
+      if (!hurt) { if (sold && P.him.hurt) this.tel.bought = (this.tel.bought || 0) + 1; stop('he is fine'); return; }
+      if (sold) this.tel.sawThru = (this.tel.sawThru || 0) + 1; // he isn't buying it: he saw the legs
       // he still throws back, or he's countered me, or I'm low: finish behind the guard
       const warn = this.t - this.lastHisT < 1 || this.ct - H.ctrd < 5, fm = this.finM(), HB = BR.hb.on;
       const safe = warn && !(HB.ignore && this.R() < hbV('ignore', fm)) || gas < F.gasSafe || !warn && HB.respect && this.R() < hbV('respect', fm); // a novice misses the signs; a vet respects a hurt man anyway
@@ -906,6 +916,9 @@ class Brain {
     if (P.roundLen - P.clock < SV.late) { w.run *= SV.lateRun; w.clinch *= SV.lateRun; w.fire *= SV.lateFire; } // ride it to the bell
     if (this.desp) w.fire *= SV.despFire;
     this.hurtResp = wpickR(this.R, Object.keys(w), x => w[x]) || 'shell';
+    this.sell = 0;
+    if (BR.bluff.on && this.ct - H.kdMe >= BR.bluff.kd) { const bm = this.finM(), ch = tierV(bm, BR.bluff.p) * lerp(BR.bluff.comp[0], BR.bluff.comp[1], comp); // a vet hides it: nod, smile, fire back
+      if (ch > 0 && this.R() < ch) { this.hurtResp = 'bluff'; this.sell = clamp(comp * bm, 0, 1); this.tel.bluffs = (this.tel.bluffs || 0) + 1; } }
     this.tel.hurts++; this.tel.hurtR[this.hurtResp] = (this.tel.hurtR[this.hurtResp] || 0) + 1;
     H.unans = 0; H.flip = 0; H.second = this.ct + this.rnd(SV.second[0], SV.second[1]); H.freezeEnd = this.ct + this.rnd(SV.freeze[0], SV.freeze[1]);
     this.queue = null; this.setup = null;
@@ -915,6 +928,7 @@ class Brain {
   survUpd(P) {
     const tr = this.tr, comp = tr.composure, k = this.k, SV = BR.surv, H = this.h, was = this.hurtResp;
     if (was === 'freeze' && this.ct > H.freezeEnd) this.hurtResp = 'shell';
+    if (H.second && this.ct > H.second && this.hurtResp === 'bluff') { H.second = 0; if (this.R() < .3 * k.read) this.hurtResp = 'steady'; } // he's selling it: keep it up, or bite down behind the jab (still selling)
     if (H.second && this.ct > H.second) {
       H.second = 0;
       const w = { keep: .6 + (1 - comp) * .6, clinch: tr.clinch * (.3 + k.clinch) * comp * 1.2, steady: comp > SV.steady ? comp * comp * k.read * 1.2 * 2 : 0, shell: (1 - comp) * .4 };
@@ -926,8 +940,9 @@ class Brain {
       H.flip = 1;
       if (this.R() < SV.shellFlip) { this.hurtResp = this.R() < tr.risk / (tr.risk + tr.clinch + .01) ? 'fire' : 'clinch'; this.tel.flip = (this.tel.flip || 0) + 1; }
     }
+    if (this.sell && H.unans >= SV.flipAt) { this.sell = 0; this.hurtResp = this.R() < tr.risk / (tr.risk + tr.clinch + .01) ? 'fire' : 'clinch'; this.tel.bluffBroke = (this.tel.bluffBroke || 0) + 1; } // he's eating them clean: the act is over
     if (this.hurtResp !== was) this.note('hurt: ' + was + ' -> ' + this.hurtResp);
-    if (this.modeT <= 0 && !P.me.hurt) { this.hurtResp = null; this.pickMode(P); }
+    if (this.modeT <= 0 && !P.me.hurt) { this.hurtResp = null; this.sell = 0; this.pickMode(P); }
   }
 
   /* ---------- the hands: when to throw, when not to, and what ---------- */
@@ -1194,6 +1209,7 @@ class Brain {
     this.out.intent = this.mode; this.out.hurt = this.mode === 'survive' ? this.hurtResp : null;
     this.out.guard = clamp(md.guard * lerp(.7, 1.2, this.tr.shell) * (1 - .35 * this.fat) * (this.mode === 'survive' && this.hurtResp === 'shell' ? 1.3 : 1) + (this.cc ? this.cc.guard : 0), .1, 1);
     this.out.cover = this.coverOf(P);
+    this.out.bluff = this.mode === 'survive' && this.sell ? this.sell : 0; // 1f: how well he's selling 'I'm fine'
     this.out.low = BR.body.on ? clamp((this.bRd || 0) * lerp(.6, 1.2, this.k.block), 0, 1) : 0; // he's read a body digger: elbows in
     return this.out;
   }
