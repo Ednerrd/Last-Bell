@@ -158,6 +158,11 @@ What's already there to build on: the eyes (E2: by gaze, a novice watches the gl
 **f2, the expert bait: show a read (any World-class man).**
 - Once `expected()` is sure of your lead punch (> .5) he offers it: hands drop at mid-range (visible: the engine draws the guard he picks), the defense for that punch pre-picked (best of `DEF_THRU` vs it), the counter loaded. 1.5 s window; nothing comes, back to normal. The watcher's `opening()` sees the low hands and his habit punch is the likely throw: that's the bite. A high read can see through it (a spot roll like the feint's) and take nothing.
 - Table [0, 0, 0, x]: World class only. Pro keeps today's quiet tools (`show`, `draw`). Commentary: "He's baiting it. He knows it's coming." (the 'bait' lines exist, nothing fires them today).
+- **Ed's calls (Oct 19, before the build):**
+  - Who baits: **World class only** (as above).
+  - The coach sees it: **commentary live + a corner note between rounds** when his man bit ("He's showing you the right, stop taking it").
+  - How often: **rare, and it goes by the man**: his traits and style set the rate (a counter-puncher, a feinter, a high ring IQ bait more; a slugger or swarmer rarely), not one flat number. Keep a floor gap between baits so it never turns into fishing all night.
+  - Who sees through it (takes nothing): **World ~50%, Pro ~25%, Intermediate ~10%, Novice ~5%**; each bite makes him warier, like `FEINT_READ` does for feints.
 
 **f3, easy flaws (plug-in only: `preset('easy')` sets `profile.flaw`; the game never calls preset).** One per style, something a player can spot and beat; the brain never fixes it in the fight:
 | Style | Flaw | Beat it with |
