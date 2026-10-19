@@ -122,28 +122,26 @@ What the brain sees of the other man today: his head meter, gas, guard (height x
 - **Tuning.** Sides alone cut the cuts in half (bad cut 4.3 -> 2.0%), so `CUT.widen` .085 -> .11. First full check (e1: swelling .075, shut eye .12 s) ran hot: stops 30.9%, eye stops ~3% and cuts 2.5% of the audit field, swarmer 47.9 (vs slugger 48.6 -> 39.3: the slugger's heavy shots shut his eyes). Final `SW.k` .06, `BR.eyeShut` .09.
 - **Numbers (check e2 vs base, same 31 jobs):** audit 51.3 / 15.2 / 29.7%, stops 26.0% (base 51.2 / 15.1 / 29.5%, 26.2%); cut stops 1.2% (base 1.7%), eye stops 0.3% of the audit field; finish.js stops 24.5% (29.3), body KDs 7.7% (4.2; noisy, in band); one level down IvN 14.0, PvI 14.3, WvP 21.0 (16.7 / 14.3 / 16.7); styles counter 53.0, swarmer 52.2, bp 50.5, **slugger 47.5**, outboxer 46.9 (base 47.3-51.9). Slugger vs boxer-puncher swings between checks (45.3 at 600, a rerun 53.0 at 300; with swelling, targeting or cover off 48.0 / 46.8 / 54.0): noise, not one piece. cut.js 600: bad cut 4.8%, cut TKO 1.3%, doctor looks at a cut 2.3% / an eye 1.8%, swelling 26%, shut 3%. Eye stops came in rarer than Ed's ~1%: `SW.doc` (9) is the knob if he wants more. Hash 12ad1b42 (same.js 40: 045ba267).
 
-### Fakes, flaws and baiting: the plan (ROADMAP 1f, design Oct 19, waiting on Ed)
-Ed's calls (Decided, Oct 17): fakes exist (a fake hurt, a fake gassed), the higher the skill and the veterancy the more surely he sees through one, a novice rarely does. Easy gets one planted flaw per fighter; hard and expert none. Showing a read on purpose: expert only, hard adjusts quietly.
+### Fakes, flaws and baiting: the plan (ROADMAP 1f, design Oct 19; Ed's calls Oct 19 below)
+Ed's calls (Decided, Oct 17): fakes exist, the higher the skill and the veterancy the more surely he sees through one, a novice rarely does. Easy gets one planted flaw per fighter; hard and expert none. Showing a read on purpose: expert only, hard adjusts quietly.
 
-**One idea under all three: a lie on the screen.** A fake hurt forges the wobble cue, a fake gassed forges the legs cue, an expert's bait shows a fake opening (hands down). The watcher's defense is the same for all three: the eyes (E2) catch the cue, then a see-through roll on his read. Same shape as the feint today: the engine passes the truth flag and a sell (`punch.feint`, `sell`), the brain may only use it through its spot roll (`biteRead x read x feints seen x (1 - .7 sell)`).
+**Ed, Oct 19 (questions round):** a fake wobble (selling a hurt you don't have) and a fake gassed are rare in real boxing (a handful of men): **dropped**, both. The fake that's real is the **bluff**: a hurt man hiding it (shakes his head, nods, smiles, fires back) so the other man doesn't jump on him. The tell is **the legs**: face and hands say "I'm fine", the knees still dip a little, the feet go flat; a vet watches the legs, a novice watches the face and buys it. Vets bluff often, novices never. The coach sees the tell too (the smaller knee dip). Easy flaws: plug-in only for now (fighters in Last Bell get flaws with traits, ROADMAP 2). The bait: any World-class man (it goes by skill).
 
-What's already there to build on: the possum stance (`SURV.bait`: guard .8, counter x2), the hurt man's counter on a hunter with his hands down (`BR.fin.baitCtr` 1.5, `hbV('danger')`), the hunt and its tunnel vision, E4 (he only believes a hurt he caught), the trap tables (`show`, `draw`), `expected()` (his read of your lead punch).
+What's already there to build on: the eyes (E2: by gaze, a novice watches the gloves, a vet the chest and legs) and E4 (he only believes a hurt he caught: a wobble or a fold), the `steady` hurt answer (`SURV.steady`: bites down, keeps the jab going), the hunt, the trap tables (`show`, `draw`), `expected()` (his read of your lead punch).
 
-**f1, the fake hurt (brain + engine, hash moves).**
-- Who sells it: a vet. Chance per trigger = `trV('fake', mastery)` [0, .03, .1, .2] (Novice never) x composure x patience x counter skill. Trigger: right after he eats a clean power shot (dmg > 4) that did not hurt him, gas over .4, not in the last 10 s of a round. At most 2 a fight, none after one was seen through.
-- What it is: 2-4 s of clock in the possum stance (`SURV.bait`, counter loaded). `Action.fake = { k: 'hurt', sell }`, sell from his composure and read. The engine holds `F.fake`, sends `him.hurt` true and `look.wobble` .6 with `look.fake` = sell, and draws the same knee dip as a real hurt.
-- The watcher: he has to catch the wobble first (E4, as now). Then one roll per fake: sees through = `trV('seeFake', his mastery)` [.1, .3, .55, .8] x (1 + .5 x fakes he's seen from this man) x (1 - .5 sell). Bites: he hunts (tunnel, hands down) into the loaded counter. Sees through: no hunt, a "he's faking" note, and the faker stands there doing little (the judges see it).
-- Fix on the way: `opening()` still reads the truth (`H.hurt`, `H.gas`, `H.guard`); it moves to what he sees (`this.ph`), so a fake can't leak and neither can anything else.
-- UI: commentary on the reveal ("He was playing possum!", "{a} isn't buying it."), corner note, `fake` events. A real hurt is always believed once caught (no "cry wolf" yet: Q1).
+**f1, the bluff (brain + engine, hash moves).**
+- Who: a hurt man picks it at the hurt (`survStart`), chance = `trV('bluff', mastery)` [0, .2, .5, .75] (Novice never) x composure. A man off the floor can't bluff (everyone saw it).
+- What he does: he acts fine. A new hurt answer `bluff` (near `steady`: keeps punching back, guard up, stands his ground, no shell, no run, no grab), `Action.bluff = sell` (his composure x mastery). The engine holds it and sends a smaller wobble: `look.wobble` x (1 - sell x .7) (a stun still shows in full: you can't hide your legs going), and draws the smaller knee dip.
+- The watcher needs no new roll: the eyes already do it. A weaker wobble has less salience, and a novice's gaze weight on the legs is .3 vs a vet's 1, so a vet still catches it and a novice mostly doesn't. Caught: he hunts as now (and the bluffer, standing in front of him, is in more danger than a man in a shell). Missed: no hunt, the bluffer rides it out with his hands going.
+- Fix on the way: `opening()` still reads the truth (`H.hurt`, `H.gas`, `H.guard`); it moves to what he sees (`this.ph`), so the bluff can't leak.
+- UI: commentary ("{a} shakes his head: he wants you to think that didn't hurt", "{d} isn't buying it, he saw the legs"), a corner note, a `bluff` event.
+- Expect fewer stoppages of vets (they hide hurts) and more late ones: check finish.js, retune if stops fall under ~25%.
 
-**f2, the fake gassed (smaller).**
-- A patient vet (pacing + read mastery, same table shape), mid to late rounds, drops his feet and output for 4-8 s: `look.legs` forged to ~.5. Bites: the watcher believes he's fading (`ph.gas` low) and presses: initiative up, range down while he believes it (new `BR.fake.press`; today a fading man only lifts his own work rate in `gasPace`). The faker answers the man walking in (check hook on the rush, counter x up), then fires a burst. Sees through: no press.
+**f2, the expert bait: show a read (any World-class man).**
+- Once `expected()` is sure of your lead punch (> .5) he offers it: hands drop at mid-range (visible: the engine draws the guard he picks), the defense for that punch pre-picked (best of `DEF_THRU` vs it), the counter loaded. 1.5 s window; nothing comes, back to normal. The watcher's `opening()` sees the low hands and his habit punch is the likely throw: that's the bite. A high read can see through it (a spot roll like the feint's) and take nothing.
+- Table [0, 0, 0, x]: World class only. Pro keeps today's quiet tools (`show`, `draw`). Commentary: "He's baiting it. He knows it's coming." (the 'bait' lines exist, nothing fires them today).
 
-**f3, the expert bait: show a read (World-class mastery only).**
-- Once `expected()` is sure of your lead punch (> .5) he offers it: hands drop at mid-range (visible: the engine already draws the guard he picks), the defense for that punch pre-picked (best of `DEF_THRU` vs it), the counter loaded. 1.5 s window; if nothing comes, back to normal. The watcher's `opening()` sees the low hands and his habit punch is the likely throw: that's the bite. A high read can see through it (same roll) and take nothing, or feint into it.
-- Table [0, 0, 0, x]: only World class. Pro keeps today's quiet tools (`show`, `draw`): hard adjusts, it doesn't show you. Commentary: "He's baiting it. He knows it's coming." (the 'bait' lines exist and nothing fires them today).
-
-**f4, easy flaws (plug-in only: `preset('easy')` sets `profile.flaw`, the game never calls preset: Q2).** One per style, each something a player can spot and beat; the brain never fixes it in the fight:
+**f3, easy flaws (plug-in only: `preset('easy')` sets `profile.flaw`; the game never calls preset).** One per style, something a player can spot and beat; the brain never fixes it in the fight:
 | Style | Flaw | Beat it with |
 |---|---|---|
 | slugger | walks in behind no jab defense (tries to defend a jab x .35 while closing) | jab and move |
@@ -152,23 +150,15 @@ What's already there to build on: the possum stance (`SURV.bait`: guard .8, coun
 | counter | won't lead: initiative floor, waits on you | outwork him |
 | boxer-puncher | the jab hand comes back low (guard ~.3 for .4 s after a jab) | right hand over his jab |
 
-**Ride-along: the outboxer knob** (separate commit, style numbers only: never with a visual). He reads ~47 (band 48-53), ~2 down since E4. Sweep 2-3 candidates on his `STYLES` row (footwork/range skill, `legs`, output) at 300 a style, pick one, confirm at 600. Slugger: recheck first (±4 between runs), touch only if he stays under 48.
+**Ride-along: the outboxer knob** (separate commit, style numbers only). He reads ~47 (band 48-53), ~2 down since E4. Sweep 2-3 candidates on his `STYLES` row (footwork/range skill, `legs`, output) at 300 a style, pick one, confirm at 600. Slugger: recheck first (±4 between runs), touch only if he stays under 48.
 
-**Measure (`tests/fakes.js`, new; both sides one level, then across levels):**
-- Fakes per fight by level (target: Novice 0, Pro ~1 in 5 fights, World ~1 in 2), bite rate by the watcher's level (target: Novice ~85%, Intermediate ~65%, Pro ~45%, World ~25%), and the second fake in a fight seen through more.
-- What a bite costs: counters landed, KDs on the biter in the 5 s after; what a see-through costs the faker (punches and points in that spell).
-- Worth: the faker's win % with fakes on vs off (pool 1500+): a vet's edge should be small (+1-2), a tool, not a cheat code. The level gap must not blow out (World beats Pro wider: check WvP stays ~14-21).
-- Bait (f3): baits per fight at World, bites, counters landed off them; expert vs a Pro (P2 ladder ~84-88) stays under ~90.
-- Flaws (f4): easy vs an Intermediate "player" with the matching cheese (jabSpam vs the slugger, a pressure bot vs the outboxer...) vs the same easy man flaw off: the exploit should be worth +15-25 points, and playing straight against him barely changes.
-- Each brain step: full check (audit, styles, specials, levels, finish, `same.js`), the hash moves on purpose. f4 holds the game's hash (no flaw outside presets).
+**Measure (`tests/fakes.js`, new):**
+- Bluff: how often a hurt man bluffs by level (target: World ~75% of hurts, Pro ~50%, Novice 0); how often the other man still catches the hurt, by his level (target: Novice catches a bluffed hurt ~25%, World ~80%); hunts and stoppages after a bluffed hurt vs a plain one; stops overall stay ~25-30%.
+- Bait: baits a fight at World, bites, counters landed off them; expert vs a Pro (P2 ladder ~84-88) stays under ~90; WvP stays ~14-21.
+- Flaws: easy vs an Intermediate "player" with the matching cheese (jabSpam vs the slugger, a pressure bot vs the outboxer...) vs the same easy man flaw off: the exploit should be worth +15-25 points; playing straight against him barely changes.
+- Each brain step: full check (`tests/check.sh`: audit, styles, levels, finish), the hash moves on purpose. f3 holds the game's hash (no flaw outside presets).
 
-**Questions for Ed:**
-- Q1. Cry wolf: should a man who's caught a fake doubt a real hurt later from the same guy? (Rec: not now; keeps the stoppages where they are.)
-- Q2. Flaws in the career too (low-tier opponents with one flaw, hinted on the scouting card)? (Rec: plug-in only now, career with fighter traits, ROADMAP 2, same shape.)
-- Q3. Does the coach (you) see the fake? (Rec: drawn the same as a real hurt, revealed after by the commentary and the corner.)
-- Q4. The bait at World class mastery (career champs do it too), or only the expert preset? (Rec: World mastery.)
-
-Build order: f1, f2, f3 (each a commit with a full check), f4, the outboxer knob, then the numbers here and in ROADMAP.
+Build order: f1 bluff, f2 bait (each a commit with a full check), f3 flaws, the outboxer knob, then the numbers here and in ROADMAP.
 
 ## 4. The drop-in guide (P4)
 `brain/README.md` gets a "Plug it into your game" section: the minimal host loop (from `ring.js`), the Perception fields a host must fill and which can be faked, the events to send, presets, what to save between fights (`memo()`, the skill sheet), the per-frame cost (`think()` time on a phone), and the knobs a host should leave alone.
