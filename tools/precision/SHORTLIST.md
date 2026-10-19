@@ -1,6 +1,6 @@
 # Precision Boxing Shorts: transcript shortlist
 
-20 of 242 Shorts (plus 354 long videos in videos.txt). Same drill: transcript site, paste to Claude, notes go to research/.
+20 of 241 Shorts (plus 354 long videos in videos.txt). Same drill: transcript site, paste to Claude, notes go to research/.
 
 ## Brain: reading him, rhythm (F.mem, TEMPO, FEINT_READ)
 - [ ] [MORE Uppercuts in Your Boxing](https://www.youtube.com/shorts/A41zbDVpTIg)
