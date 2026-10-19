@@ -70,3 +70,9 @@ The order lives in `ROADMAP.md`. Steps 1 and 3 are built (BRAIN B1 + B3); step 6
 - `coach_b.md`: Roach, Floyd Sr. and Roger, Beristain, Sanchez, McGirt, Garcia, Shields. Roach's Hatton habit counter, finishing costs gas (Horn), corner: short, one voice, back to the jab.
 - `coach_c.md`: Reynoso, Anatoly Lomachenko, Derrick James, Shingo Inoue, SugarHill, Davison, McCracken, BoMac. BoMac read Spence "more hurt than he let on", McCracken's "glazy" Joshua, Inoue's body-then-head, one scripted counter per habit.
 - Each ends with "For Last Bell" if/then rules (numbers are starting values). What 1f takes from them: `docs/PLUGIN.md`, fakes plan. No trainer has an on-record tell list for hurt, tired, body-hurt or bluffing men.
+
+## Full-page pass (Oct 19, page fetches open; YouTube, boxingscene, archive.org still blocked)
+- `tells.md`: hurt, tired, body-hurt, bluffing. The ABC ref manual and a ringside doctor handbook (legs, eyes, walk and turn), the bluff breaks on a turn, legs can go ~4 s late, Mayweather-Mosley R2, tired punches turn to pushes. Unconfirmed: elbows clamp.
+- `size.md`: height, reach, leverage. Studies (PLOS heavyweight titles, UFC 6,685 bouts): a small edge, bigger at heavyweight. Short man's plan, Fundora, leaning, a height/reach table by division.
+- `numbers.md`: our targets vs real data (Sloan 2026 open data, 1,228 bouts tallied; 2026 CompuBox round PDFs). Totals hold; stoppages, jab connect, split decisions, draws and late lead changes are off (ROADMAP parking lot, Ed's call).
+- `corners.md`: 26 real corners, quotes tagged. Notes per break (63% one), a hurt man gets a state check first, honest scores won, the loudest voice wins, stops come late.
