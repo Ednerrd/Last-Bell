@@ -37,10 +37,10 @@ const note = brain.rest({ round });          // { thinks: 1|0|-1, lead, change: 
   dist,                                       // between them, engine units (a jab reaches 78)
   ropes: { me, him },                         // 0 open ring .. 1 back on the ropes
   me:  { head, headMax, stam, stamMax, hurt, down, clinch, punching, busy,
-         south, eye: null | { s: 'L'|'R', v } },          // his stance (southpaw); his own worse eye, a cut or a swelling (optional)
+         south, eye: null | { s: 'L'|'R', v }, body },    // his stance (southpaw); his own worse eye, a cut or a swelling; his body meter, 1 fresh .. 0 gone (optional)
   him: { punch: null | { id, type, t, impactIn, feint, sell, tell, blind },   // the truth; the brain decides how fast and how well it sees it (blind: his own eye shut on that side, 0..1)
          recover, lastRes, guard, gas, hurt, head,
-         look: { cut, cutS, swell, swS, body, arms, fold, legs, wobble } },   // what's on screen about him, 0..1, the cut and the worse eye with their side (the eyes; optional)
+         look: { cut, cutS, swell, swS, body, arms, fold, legs, wobble, sell, elbows, bait } },   // what's on screen about him, 0..1, the cut and the worse eye with their side (the eyes; optional). sell/elbows/bait: send back his Action.bluff/clamp/bait
   events: [ { type: 'landed'|'blocked'|'evaded'|'missed'|'feinted'|'kd', by: 'me'|'him', p, def, dmg, counter, hurt, bit } ]
 }
 ```
@@ -50,11 +50,16 @@ Passing the truth is on purpose: reaction time, misreads and feint bites live in
 ```js
 {
   intent: 'feelout'|'work'|'press'|'burst'|'reset'|'counter'|'check'|'hunt'|'huntSafe'|'survive'|'down',
-  hurt:   null | 'shell'|'run'|'fire'|'clinch'|'freeze'|'steady'|'bait',   // what he's doing with it, while in survive
+  hurt:   null | 'shell'|'run'|'fire'|'clinch'|'freeze'|'steady'|'bait'|'bluff',   // what he's doing with it, while in survive
   move:   { range, lateral, cut, clinch, feet },     // wanted distance, circling (-1..1), cutting the ring off (0..1), wants to tie up, footwork quality
   guard:  0..1,                                      // how high and tight the hands are right now
   punch:  null | { type, combo: ['jab','cross'], num: '1-2', feint, sell, tech: [..], tell, commit, counter, why },
   defend: null | { kind: 'block'|'slip'|'duck'|'pull'|'roll', zone, vs, quality },
+  low, clamp,                                         // 0..1 elbows down over the body: low = he's read a body digger, clamp = his own body's hurt (shows: send Look.elbows)
+  bluff,                                              // 0..1 hurt and hiding it: draw a smaller wobble, send Look.sell
+  cover:  null | { s, k },                            // his bad eye covered (side, how much)
+  bait,                                               // an id while a World-class man drops his hands on purpose (else 0): send Look.bait
+  hole:   null | { k, zone, cat },                    // easy flaw (preset 'easy' only): what he's open to now; your own block/evade vs it x (1 - k)
   why                                                 // the reason for the last punch: 'counter after slip', 'setup: jab-jab-right', ...
 }
 ```
@@ -76,6 +81,8 @@ const act = brain.think(perceive(me, him), dt);
 //   act.move.range / lateral / cut  -> your footwork      act.punch -> start the combo (tech, tell, commit scale it)
 //   act.defend -> your defense (it arrives on time; the brain already added his reaction time)   act.guard, act.low -> your block odds
 //   act.cover -> { s, k }: his bad eye covered (more blocks on that side, move him off it), or null
+//   act.clamp -> body covered, head open, draw the elbows in     act.bluff -> draw a smaller wobble     act.bait -> draw the hands low
+//   act.hole -> { k, zone?, cat? }: your passive block/evade vs those punches x (1 - k) (only an easy man sends it; no passive defense: ignore it, his own already drops)
 //   act.move.clinch -> tie up if you have clinches
 // between rounds:
 brain.rest({ round }); brain.roundStart(round + 1);
@@ -95,6 +102,7 @@ brain.rest({ round }); brain.roundStart(round + 1);
 | `ropes.me/him` | should | 0: he never works the ropes |
 | `him.punch.feint/sell/tell`, `him.recover`, `him.lastRes`, `me.clinch` | nice | null / 0 |
 | `him.look` (cut/cutS, swell/swS, body, arms...), `me.south`, `me.eye`, `him.punch.blind` | nice | he never goes after damage, never covers his own eye; orthodox |
+| `me.body`, `him.look.sell/elbows/bait` (echo the other brain's Action) | nice | no clamp from his own body; every bluff and bait works, the clamp goes unseen |
 | `events` | yes | below |
 
 **Events** (push to both sides, `by: 'me'` for the one who did it, `by: 'him'` for the other): `landed`, `blocked`, `evaded`, `missed` (`short: true` if out of range), `feinted` (`bit`), `kd`, `clinch` (he tied me up), and `thrown` / `pulled` if your engine can tell a punch that really started from one he pulled back. Every punch event carries `p` (the punch id) and `def` (the defense that met it). His memory, his reads, the anti-cheese reads (a body digger, a grabber) all run on these.
