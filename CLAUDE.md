@@ -8,7 +8,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,700 
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
-- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/fakes-design-pass-gnymht` (brain-wire + the 1f plan and Oct 19 research, docs only; build 1f on it), before that `claude/brain-wire` (82 commits, re-rooted Oct 16: it shares no history with main; the full history up to Oct 16, main included, is `claude/retire-old-ai`; `claude/plugin-body` merged in Oct 18). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
+- Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch, last touched Oct 8); current work is on `claude/fakes-f1-bluff-review-8mmouh` (f1 the bluff, on top of `claude/fakes-design-pass-gnymht`: brain-wire + the 1f plan and Oct 19 research; build f1b on it), before that `claude/brain-wire` (82 commits, re-rooted Oct 16: it shares no history with main; the full history up to Oct 16, main included, is `claude/retire-old-ai`; `claude/plugin-body` merged in Oct 18). A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
 - Never publish to the live game without Ed's explicit OK.
 - Models (Ed, Oct 14): Opus for tuning, code and design; Sonnet for research subagents, with a tight brief (topic, what to pull out, which file to write). Sonnet subagents are fine for grunt work too (docs bookkeeping, sim runs and tables).
 - Effort (Ed, Oct 15, replaces Oct 14): **medium is the default.** Before a task that needs high, say so in one line and ask Ed to switch, then wait for his OK. High = debugging odd sim results, retiring or refactoring engine code that must keep the same.js hash, design plans (L4 learning, the drama build). Sim-driven knob tries, docs, roadmap edits, overviews, running sims and reading numbers stay at medium.
@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,700 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **12ad1b42**, Oct 18: 1e target the damage; before it 791b3971, eyes E4).
+- Render-only changes must keep the `same.js` hash (now **93a5b79f**, Oct 19: 1f f1 the bluff, `same.js 40` = ee9a7874; before it 12ad1b42, 1e target the damage).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -63,6 +63,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - Learning: `node tests/report.js 200` the fight report by level; `TAG=x node tests/grow.js 10 80` (x4) then `node tests/grow.js agg x`: careers, fights to each level by talent, the snowball check. `TAG=x node tests/rematch.js 300` (x4) then `agg x`: rematch memory (`ARMS=none,mem,full,wmem,lmem`). `TAG=x node tests/camp.js 75` then `agg x`: camp picks. `TAG=x node tests/scar.js 75` then `agg x`: scars.
 - Plug-in brain: `TAG=x node tests/cheese.js 40 [hard|expert]` (x4) then `node tests/cheese.js agg x`: one-trick players (jabSpam, oneTwo, pullCounter, shell, bodyOnly, haymaker, runner, clinch) vs the brain, win % and the cheese's landed share early vs late (`docs/PLUGIN.md`).
 - Eyes: `TAG=x node tests/eyes.js 40` (x4) then `node tests/eyes.js agg x`: what each level notices of the other man (cut, swell, body, arms, fold, legs, wobble), seen % and delay (`docs/PLUGIN.md`).
+- Bluff (1f): `TAG=x node tests/fakes.js 300` then `node tests/fakes.js agg x`: hurt spells by the hurt man's and the watcher's level, bluffed or plain, seen, caught (still hunting after the stun), KDs, stops.
 - Damage: `node tests/cut.js 600`: cut and eye stops, bad cuts, doctor looks, swelling and shut eyes, clean head shots onto the damaged eye once he's spotted it, by level (cut stops are rare: 600+ fights, read 'bad cut').
 - Hurt man's danger: `TAG=x node tests/danger.js 300 [on|off] [N,I,P,W]` then `node tests/danger.js agg x`: a Pro hunting a hurt man of each level, stung and caught per hunt.
 - Finishing: `TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
