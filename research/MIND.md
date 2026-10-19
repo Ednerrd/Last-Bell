@@ -76,3 +76,4 @@ The order lives in `ROADMAP.md`. Steps 1 and 3 are built (BRAIN B1 + B3); step 6
 - `size.md`: height, reach, leverage. Studies (PLOS heavyweight titles, UFC 6,685 bouts): a small edge, bigger at heavyweight. Short man's plan, Fundora, leaning, a height/reach table by division.
 - `numbers.md`: our targets vs real data (Sloan 2026 open data, 1,228 bouts tallied; 2026 CompuBox round PDFs). Totals hold; stoppages, jab connect, split decisions, draws and late lead changes are off (ROADMAP parking lot, Ed's call).
 - `corners.md`: 26 real corners, quotes tagged. Notes per break (63% one), a hurt man gets a state check first, honest scores won, the loudest voice wins, stops come late.
+- `compubox_2425.md`: CompuBox finals for 75 fights of 2024-2025 (25 with the jab/power split), per-round averages and splits (year, heavyweight, winners, stoppages) vs the sim targets, per-fight table with URLs.
