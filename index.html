@@ -502,7 +502,7 @@ const BR = {
   // straight (swarmer): head comes in straight, lunging in (his feet faster than v) he tries to defend a power shot x try at quality x q. wait (counter): won't lead, initiative capped at init, leads x out while the man's busy (punched in the last busy s), and lets a jab go (no counter) let of the time: outwork him and he never takes it back.
   // drop (boxer-puncher): the jab hand comes back low, t s after a jab the guard's at guard and he defends head shots x try. hole: what the host's own (passive) defense loses to those punches meanwhile (Action.hole)
   flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'wait', boxerpuncher: 'drop' }, in: 8,
-    jab: { try: .2, hole: .7 }, fold: { ropes: .7, near: 40, push: 22, build: 1, hold: 1.5, guard: .95, out: .4, lat: .27, blk: 3 }, straight: { try: .3, q: .7, hole: .6, v: 20 },
+    jab: { try: .2, hole: .7 }, fold: { ropes: .7, near: 40, push: 22, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, blk: 3 }, straight: { try: .3, q: .7, hole: .8, v: 25 },
     wait: { init: .1, out: .45, busy: .6, let: .7 }, drop: { t: .4, guard: .3, try: .45, hole: .4 } },
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
