@@ -1,6 +1,6 @@
 // f3 easy flaws (docs/PLUGIN.md 1f): is each easy man's hole worth finding? Easy brain (Intermediate, sk 56) of one style vs an Intermediate "player" (a boxer-puncher, sk 56,
 // same body, rating 78) who plays straight (his own brain) or runs the exploit for that flaw (bots.js). Four arms per style: flaw off / on x straight / exploit.
-//   TAG=x node tests/flaws.js 150 [styles]   (x4 processes; one line per arm to /tmp/flaws_x.txt)    node tests/flaws.js agg x
+//   TAG=x node tests/flaws.js 150 [styles]   (x4 processes; one line per arm to /tmp/flaws_x.txt; rerun the same line after a restart)    node tests/flaws.js agg x
 // Out: the player's win % per arm. The exploit should be worth +15-25 points with the flaw on (vs off); playing straight should barely change.
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) : '-';
 const fs = require('fs'), OUT = t => '/tmp/flaws_' + t + '.txt';
@@ -10,7 +10,9 @@ if (process.argv[2] === 'agg') { const L = fs.readFileSync(OUT(process.argv[3]),
 process.env.PATCH = (process.env.PATCH || '') + ';globalThis.__BB=BoxerBrain;';
 const S = require('./sim.js'), BB = globalThis.__BB, BOTS = require('./bots.js')(BB.PUNCHES);
 const N = +process.argv[2] || 150, STS = (process.argv[3] || Object.keys(BOT).join(',')).split(',');
+const had = {}; if (process.env.TAG && fs.existsSync(OUT(process.env.TAG))) for (const l of fs.readFileSync(OUT(process.env.TAG), 'utf8').trim().split('\n')) if (l) { const o = JSON.parse(l), k = o.st + ' ' + o.fl + ' ' + o.bot; had[k] = (had[k] || 0) + 1; }
 for (const st of STS) for (const fl of [0, 1]) for (const bot of ['none', BOT[st]]) {
+  if ((had[st + ' ' + fl + ' ' + bot] || 0) >= (+process.env.PROCS || 4)) continue; // resumable: after a restart, rerun the same line (PROCS = how many processes you run)
   const o = { st, fl, bot, n: 0, pw: 0, d: 0, ko: 0, pL: 0, bL: 0, pT: 0, bT: 0 };
   for (let i = 0; i < N; i++) {
     const side = i & 1, b = S.sheet(78, st, S.rollGuard(st)), pl = S.sheet(78, 'boxerpuncher', 'standard'); b.sk = S.skMake(56, st); pl.sk = S.skMake(56, 'boxerpuncher');
