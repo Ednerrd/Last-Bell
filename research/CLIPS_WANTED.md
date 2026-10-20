@@ -13,7 +13,7 @@ Ed, Oct 19: "I want to circle back to that." Paste transcripts into any session;
 ## Wanted, in order
 1. **Real corner audio between rounds** (mic'd-up trainers, "listen to the corner of X vs Y"). For trainers + corners: what they say first, how blunt, the one adjustment in 60 s. Top priority: can't be researched from text. **Got: batch 1 (`corners_video.md`, 10 corners) + batch 2 (Corrales-Castillo I) + batch 3 (Fury-Wilder III) + batch 4 (Crawford-Spence) + batch 5 (Canelo-Bivol, almost no corner audio) + batch 6 (Bradley-Provodnikov) + batch 7 (Wood-Conlan, little corner audio) + batch 8 (Gatti-Ward I) + batch 9 (Joshua-Ruiz I) + batch 10 (Usyk-Fury I) + batch 11 (body-shot KO reel) + batch 12 (KO reel with booth breakdowns), full fights.** The fight list is done.
 2. **Tall vs short** (short man getting inside, tall man keeping him off, Fundora breakdowns). For size. Gap with no data: **leaning on a man to tire him**.
-3. **Surviving hurt**: clinch, run, cover, when to fire back. For the hurt brain. **Got: batch 1 (`hurt.md`: Khan-Garcia breakdown, Crawford-Gamboa, the clinch rules).** Bot-walled leads listed there (Inoue-Cardenas 4 decisions, Fury R12).
+3. **Surviving hurt**: clinch, run, cover, when to fire back. For the hurt brain. **Got: batch 1 (`hurt.md`: Khan-Garcia breakdown, Crawford-Gamboa, the clinch rules, Inoue-Cardenas R3 after the KD).** Bot-walled leads listed there (Fury R12).
 4. **Fight breakdowns**: "why X beat Y", the adjustment that won it (Lee Wylie style). For between-round adjustments.
 5. **Jab defense**: how pros shut down the jab. Our jab connect ~27% vs real ~17%.
 
