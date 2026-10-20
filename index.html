@@ -1796,6 +1796,8 @@ const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30,
 /* ---------- TUNING: the balance knobs in one place (combat, damage, cuts, gas, body, the brain on this engine, skill sheet, corner, style tricks) ----------
    Content tables live with their code: PUNCH, STYLES, GUARDS (+ GUARD_HOLES, STYLE_GUARDS), STRATS, SHOUTS, STYLE_PLANS. The brain's own knobs: BoxerBrain.BR in
    brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
+// ref stoppages: the unanswered-punch stop (at: punches before he looks, by ref stop dial -1/0/+1; p: the first look, step: each one after) and the check after a count (he's up at 8: headMax under hm, or head under head at headP)
+const STOP = { at: [7, 5, 4], p: .2, step: .15, hm: 22, head: 5, headP: .4 };
 const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
 let DMG = 0.38; // global tuning
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .11, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
@@ -2757,8 +2759,8 @@ class Fight {
         }
       }
     }
-    const stopAt = [7, 5, 4][this.ref.stop + 1]; // unanswered punches before he steps in: a let-them-fight ref waits two more, a quick hook one less
-    if (D.unanswered >= stopAt && R() < .2 + .1 * this.ref.stop + (D.unanswered - stopAt) * .15) {
+    const stopAt = STOP.at[this.ref.stop + 1]; // unanswered punches before he steps in: a let-them-fight ref waits two more, a quick hook one less
+    if (D.unanswered >= stopAt && R() < STOP.p + .1 * this.ref.stop + (D.unanswered - stopAt) * STOP.step) {
       D.state = 'slump'; D.act = null; D.queue = []; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'unanswered' }); this.recAfter = 1.1;
       return;
     }
@@ -2849,7 +2851,7 @@ class Fight {
       if (K.getUp !== null && K.count >= K.getUp && !K.rising && !K.standing) { K.rising = true; this.emit('rising', { d: D.side, n: K.count }); }
       if (K.count >= 10 && !K.standing) { this.end(A.side, 'KO'); return; }
       if (K.standing && K.count >= 8) {
-        if (D.headMax < 22 + 8 * this.ref.stop || (D.kd >= 4 && R() < .6) || (D.head < 5 + 6 * this.ref.stop && R() < .4 + .2 * this.ref.stop)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
+        if (D.headMax < STOP.hm + 8 * this.ref.stop || (D.kd >= 4 && R() < .6) || (D.head < STOP.head + 6 * this.ref.stop && R() < STOP.headP + .2 * this.ref.stop)) { D.state = 'slump'; this.end(A.side, 'TKO'); this.emit('stoppage', { a: A.side, d: D.side, why: 'ref' }); return; }
         D.state = 'idle'; D.head = Math.max(D.head, Math.min(D.headMax, TUNE.upFloor + D.s.heart * .22 - D.kd * 4));
         if (K.zone === 'body') D.body = Math.max(D.body, 22);
         D.stunT = 0;
