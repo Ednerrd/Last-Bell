@@ -8,6 +8,7 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_combos.md` | Combo grammar, 19-row combo library, 12-row counter library, southpaw playbook, COMBOS gaps |
 | `mind_pace.md` | CompuBox numbers, round shapes, round clock, gas, finishing/surviving, 15 corner calls, judging |
 | `mind_finish.md` | Finishing a hurt man, surviving hurt, ref stoppages, recovery times, FINISH/SURVIVE knobs for the brain |
+| `hurt.md` | Surviving hurt from YouTube (Oct 20): don't make space with dead legs (smother, lean, hold), don't fire back while hurt (Khan-Garcia), temper as the tell, carry-over hurt and the corner's revival (Crawford-Gamboa), the hurt clinch vs the tactical one; leaning tires the hunter (first source for the size gap) |
 | `mind_learn.md` | Novice vs pro tells, punch force by level, teaching order, learning from losses, rematches, scouting; tier tables and growth rules for skill levels |
 | `mind_southpaw.md` | Southpaw edge by the numbers (boxing, MMA, fencing, tennis), the experience effect, targets for the L3 familiarity knob |
 | `mind_between.md` | Between fights: rest and medical suspensions, gaps between fights, what wins teach, matchmaking, confidence and complacency, gun-shy after a KO, ring rust (UFC data), chin wear, age curves by attribute, habits coming back; game rules with numbers |
