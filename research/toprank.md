@@ -48,3 +48,48 @@ What a level gap looks like, fight by fight:
 3. **Gun shy vs the quicker man:** output drops when he keeps getting beaten to the punch.
 4. **Switching stance up close costs balance.**
 5. More fouls (hit on a knee, on the break): already `ring.md` #5.
+
+# Batch 2 (Oct 20): Cotto-Margarito I and II (pressure vs a mover, both ways)
+Fight I (2008, Top Rank PPV booth) and fight II (2011, HBO: Lampley, Kellerman, Steward, with **both corners mic'd**). The rematch is the same matchup with the lessons learned, so the pair is a before/after of pressure fighting.
+
+## 4. Cotto-Margarito I: the pressure man wins late
+- **Rounds 1-6, Cotto.** He moves laterally, double jabs, and catches Margarito *coming in*. Margarito leans forward and ducks in, which throws away his own height and reach, and the shorter man's uppercuts land on the leaning head. "Zero adjustments in five rounds." Cotto moving **to his left** sets up his left hook to the body; Margarito wants to push him the other way and doesn't.
+- **The booth's key line:** when Margarito lands, he catches Cotto *moving* (away, less on it); when Cotto lands, he catches Margarito *coming in or static* (full on it). That's the difference in damage.
+- **Stepping straight back is the danger:** "he can't just step backwards, he has to step laterally", that's where the long puncher catches you.
+- **Body work early pays later.** Round 2's body shots "slowed Cotto down, made him tuck his hands in".
+- **Margarito follows instead of cutting** in the middle rounds: "he needs to take a drastic step to his right and force Cotto back a different direction."
+- **Round 7, the turn:** Margarito lets it all hang out, 130 thrown, 48 landed (outlands Cotto 48-23), uppercuts on the inside. "The idea of waiting for Margarito has run its course." Cotto's nose bleeds, he's breathing through his mouth.
+- **After the turn:** Cotto's movement changes "from setting him up to escaping him: the getaway car". He keeps his right hand at his chin (the hook that hurt him), so Margarito works over the top. Sits on the second rope, drops his hands for the first time. Margarito "never flinches, keeps walking through you, and psychologically that's a great edge."
+- **The cards:** close rounds go to the man pressing; the man backing up has to *dominate* to get them ("ring generalship" when he shows the presser up). Margarito was up two points on two cards, even on one.
+- **The end, round 11:** Cotto takes a knee twice, his uncle (his trainer) waves it off.
+- Fouls along the way: headbutts (one bloodies Cotto's nose), a low-blow warning, belt-line shots.
+
+## 5. Cotto-Margarito II: the mover wins with the fix
+- **Cotto's plan:** move side to side, change direction, stay off the ropes (4 minutes before he touches them: "very important"), punch and move away. And **when he comes in, lock him up and push him back**: the shorter man's leverage breaks the pressure man's forward momentum (Mosley did it too). "A brilliant tactic." Cotto's corner: "Turn him. Don't stand still. Middle of the ring."
+- **Margarito's corner, round after round (our ring-cutting lesson in one voice):** "Lateral, side to side. Don't walk in straight." "You're following him. Cut him off. Turn him." "Move off to your right, block him off, get behind him." "Start at the bottom: body and uppercuts." "Pressure. Risk a little."
+- **Steward on why it failed:** "Cotto circles to his left *all the time*. All Margarito has to do is take a step to his right and he's got him cut off. He doesn't do it." The corner says it; the fighter doesn't do it.
+- **The eye:** Cotto targets Margarito's right eye (damaged by Pacquiao), and the jab opens it in round 3. Closed for three rounds; Margarito, leading with the right hand, "couldn't see where Cotto was". The doctor stops it after 10 (no vision, no peripheral vision). Margarito's corner, at that moment: "It was our best round!" (He *was* finally landing and Cotto was starting to wilt.) Steward: in a normal fight with no history on the eye, they probably let him go on.
+- **Ref Steve Smoger:** known for letting fights go, "non-intrusive". He talks to Cotto for a punch after the bell.
+- **Kellerman: can you win running away?** Steward: he isn't running, he's landing the effective shots.
+- **Punching on the way back is an arm punch**, less on it.
+- **Numbers:** Cotto 37-43% connect, 51% of power shots; Margarito 22-23%, throwing far more (through 6: Cotto 134/333, Margarito 102/450). Margarito's jab is slow and lazy, a range-finder.
+
+## Engine check, batch 2 (Oct 20; code read, no engine changes)
+- **Cutting the ring: built** (batch 4 of `skillr.md`). This fight shows the real problem isn't the geometry: it's *reading a habit*. In the engine **nobody has a circling habit**: the brain's direction flips at random (8% a decision, more on the ropes, `brain.js` ~1291), and the cutter leads the man's current velocity. So "he always circles left, step right" can't happen yet: no habit to read, no read of one. Idea: a man's preferred side (a trait: most fighters favor one, a predictable one is a flaw), and the cutter/brain notices it over the rounds (opponent memory) and steps across it. Fits the traits pass and the weak-side idea (`skillr.md` #18).
+- **Caught coming in hits harder; caught moving away less: partly built.** `caught` (mid-punch) x1.3 and the counter; walking-in momentum only doubles *body* KDs. Getting hit while moving away doesn't take anything off, and punching while moving back isn't weaker. Idea: momentum on both ends (the man coming in eats more, the man going away eats and throws less). Check against the style grid before tuning (this would help the mover).
+- **Stepping straight back is dangerous: built-ish.** The pull is a fixed impulse; the escape picks lanes (`escDir`). No penalty for a straight retreat vs a lateral one. Pairs with the line above.
+- **Body work makes him tuck the hands: built** (f1b: a hurt body clamps the elbows, `clampOf`, `Look.elbows`).
+- **Lock him up and push him back:** the clinch exists, the push doesn't. Idea for the clinch rework: the stronger/shorter man leans the pressure fighter back on the break, resetting him to the center.
+- **The turn (round 7) and "never flinches":** the hunt and the gas exist; "his best doesn't hurt me" is the `emo` idea (`ring.md` #1). The mover going from "setting traps" to "the getaway car" = the brain's `survive` mode. Built.
+- **Covering the side that got hurt** (right hand stuck at the chin): the cover exists for a bad eye (`coverEye`), not for a punch that hurt him. Small idea.
+- **The judges reward the presser in close rounds: built** (`JUDGES` taste weights include aggression; check it matches "the man backing up must dominate").
+- **Targeting a bad eye, the doctor stop: built** (`target()`, `TKO (eye)`, `blindTo`: he can't see punches on that side). The doctor ignores the fight's flow (fine, real).
+- **Corner calls that the fighter doesn't follow:** the AI corner gives a plan and the brain may follow it or not (`ACT.talk`, `planVerdict`). Built.
+- **Punch after the bell, headbutts, low blows:** not built (`ring.md` #5).
+- **Pressure = volume, low connect (22% vs 40%):** matches our swarmer shape. Fine.
+
+## What's new from batch 2 (each one an engine check first)
+6. **A circling habit** (a preferred side), and the cutter reads it and steps across it. The swarmer's real tool vs the mover, and a flaw for the traits pass ("circles one way").
+7. **Momentum on both ends:** caught coming in eats more, caught going away eats less, punches on the way back lighter. Watch the style grid (it helps movers).
+8. **Lock up and push back:** the clinch break resets the pressure man (clinch rework).
+9. **Cover the side that got hurt** (hand stuck high after a hook hurt him: the body and the other side open).
