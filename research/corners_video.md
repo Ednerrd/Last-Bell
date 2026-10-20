@@ -497,6 +497,48 @@ Ed pasted a YouTube compilation of body-shot KOs; the transcript is not kept. It
 - **The body-KD quit.** More body KDs end on "no more" (stays down, looks at the corner) than head KDs do. Check bodykd.js for how often a body KD man beats the count vs a head KD.
 - **All flagged ideas need checking against `research/numbers.md` before any tuning:** this reel only shows the hits.
 
+# Batch 12: knockout reel with broadcast breakdowns (many fights, ~2023-25)
+A KO highlight reel with the booth (Bradley, Ward and others) breaking each one down on replay. Same warning as batch 11: only the shots that worked. The value is the booth naming *why* each one landed.
+
+## Why the shots landed (the booth's reads)
+- **Caught in between his punches.** The most common one by far: hit him while he's throwing (Lopez, Delgado's short right inside a hook, Mongia's catch and shoot, Navarrete's uppercut as the man threw a hook: "double impact").
+- **His own momentum.** A man stepping in eats it twice as hard ("head-on collision"; Torres backing up, Keyshawn's pull counter as Lemos came in).
+- **The one he didn't see.** Over and over: "never saw it", "blindsided", the left that came straight down the middle while the other man watched the hook (Ramirez). A man who blinds himself with his own glove eats the looping one he can't see.
+- **Dropping the other hand to load up.** The booth yells at it twice: you load the hook and the right hand drops, the shot comes in on that side (Suarez's opponent, Chavez's right hand down).
+- **Leaning over the front knee.** The uppercut finds him (Iwata, Conlan "dipped right into it", "a bad habit, leaning forward like that").
+- **Wide punches leave holes.** "You can punch in between fat punches" (Crawford's line): the straight inside the hook, the body shot under a wide right.
+- **Lifting the elbow to throw.** The liver opens as he jabs or throws the right (Mariaga, De La Hoya-Hopkins compared).
+- **Squared up.** "Giving all his body away": the body shot lands on a square man.
+- **Up then down, high one side low the other.** Hook up top, right hand to the ribs (Barbosa); touch him up top, then the hook to the body ("bring his hands up, then go"); body to bring the hands down, then the head.
+- **Lead-hand control.** Measure and blind with the lead, hold it out, then the power shot (Norman, Elvis Rodriguez "holding it out, putting his hand where he wants him", Janibek: "when you use your left hand, he's blind"). This is the long guard Ed picked (`research/skillr.md` #8).
+- **Feints and level changes.** A foot feint before the right (Figueroa/Diaz), the dip that brings the eyes down, then the hook, then the straight down the middle (Ramirez). The rocker step: pull back off the jab, ride back in with the right (Vianello).
+- **Short and turned over beats long and wide.** "He didn't loop it, short compact punch"; "turned the hook over, didn't slap with it". A tall man punches down with all his weight.
+- **Banked counter.** Keyshawn saw the pull counter in round 1 and saved it for later ("not going to make him pay just yet").
+- **Perfect range on the finish.** Not smothering his own shots, room to extend; body then head on a man pinned in the corner (Zayas).
+- **Weird ones.** A graze behind the ear or on the back of the head puts a man out (Seals, Lopez): "I can't explain it". The temple and the ear take the legs ("Bambi legs").
+
+## Corner and ref notes
+- **"You've got nothing to lose."** Kim's corner said it, he went for it and got flattened. The desperate corner order has a cost.
+- **Towel.** Booth threw in the towel on Conlan before a count.
+- **Live corner order:** Crawford in Davis's corner: "don't let him tie you up, go to the body", and it worked.
+- **Refs late on the finish** (Carrington, Keyshawn Davis: shots on a man already falling). **No count needed**: the ref sees the eyes and waves it at once (Martinez-Metaf, the Mohamdy KO). Face-first falls rarely get up; a head bouncing off the canvas brings the doctor and the stretcher.
+- **Celebrating early** again (Alvarado to the ropes before the man was checked).
+- **Took a round off, then finished him** (Mongia): pacing a finish.
+
+## Engine check (Oct 20, code read)
+- Caught punching: **built.** `caught` x1.3 damage, flush quality, no defense mid-punch; the counter window `counterWin` x1.2 more.
+- Ducking into the uppercut: **built.** A duck vs an uppercut takes x1.4 (x1.6 out of the peekaboo).
+- The random shot: **built, sort of.** 5% crit at x1.75 (`crit`), which covers the odd graze. No spot (ear, temple, back of the head).
+- Range on the finish: **built.** `extF(P, d)`, short of full extension has less on it.
+- Banked counter: **built.** `BR.trap.bank` (invest early, cash later).
+- His momentum: **body only.** Liver and wind KDs double on "a counter or a man walking in" (`BODY` comment), head shots don't. Idea: a head shot on a man stepping in gets a bit more (small, it stacks with `caught` and `counterWin`).
+- Hand drops to load: **easy-mode only** (the boxer-puncher's `drop` flaw). Third source now (Haney, Hearns, this reel): the strongest case for a real per-fighter flaw.
+- Leaning over the front knee: **not a habit.** We have the duck penalty but no man who leans in by habit. Flaw idea (pairs with Hagler's head-first lunge).
+- Lifting the elbow on his own jab opens the liver: **not built.** The f1b clamp is the opposite (his elbow clamps when hurt). Idea: a body shot timed on his jab or right hand lands the liver more.
+- No-count stops: **not built.** Every KD gets a count. Idea for the refs: a quick ref waves it off when the KD was a cold one (face first, or a big shot on a worn chin). Ties to `REFS.stop`.
+- Lead-hand control (measure and blind): **not built** = Ed's long-guard call.
+- Wide punches leave holes: **built** in the counter book (straight inside the hook). Do our hooks leave more of a hole than straights? Not checked.
+
 # Ed's call on officials (Oct 20 2026): refs with reputations
 Ed: refs are human, and each one has a known reputation ("doesn't like holding" etc.). So the officials list from batches 5-10 becomes a feature, not random unfairness.
 
