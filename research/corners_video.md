@@ -461,3 +461,23 @@ Ed pasted the full TNT broadcast transcript; it is not kept. A little corner aud
 - **Ropes holding a man up.** The ref counted it as a KD. Same question as batch 6: do we count rope-held drops?
 - **Losers blame something outside the ring.** "His country is at war," "the ref stole a KO." Flavor for post-fight talk, not a judging rule.
 - **Highlight bias warning.** A one-of-a-kind undisputed fight. Don't tune swings or KDs off it.
+
+---
+
+# Ed's call on officials (Oct 20 2026): refs with reputations
+Ed: refs are human, and each one has a known reputation ("doesn't like holding" etc.). So the officials list from batches 5-10 becomes a feature, not random unfairness.
+
+**Why it works:** unfairness the player can see coming is strategy, not a robbery. The ref's name and reputation show on the fight offer / pre-fight screen, so the coach plans around him.
+
+**What the engine already has (index.html):** each judge has a taste (`judgeLean`, ~611), a rare robbery bias (`judgeBias`, 2%), and the ref already warns and takes points for holding-and-hitting (`STYLE_SPOIL`, `foulDed`), breaks clinches, and stops fights on damage (~1433). A ref profile would mostly scale knobs that exist.
+
+**Ref profile ideas (each a dial, from the batches):**
+- **Clinch tolerance:** breaks fast vs lets them work inside. Hurts clinchers and spoilers, helps outboxers (batch 3 Fury leaning, batch 7).
+- **Foul strictness:** quick to warn and dock points vs lets it go (low blows, holding and hitting, heads).
+- **Stoppage speed:** early stopper vs lets warriors go (batch 6 Bradley, batch 8 Gatti R9, batch 9 the "are you ready to box" will check).
+- **Knockdown calls:** calls slips as slips vs calls everything (batch 6 missed KD, batch 7 the half slip, batch 10 the ropes holding him up).
+- **Benefit of the doubt for the champion / house fighter** (batch 9 R3). The touchiest dial; maybe only a few refs have it.
+
+**Judges could get the same treatment later:** a judge who likes volume vs one who likes clean punches (batches 5, 6, 10). That's already `judgeLean`, just hidden; showing it is the step.
+
+**Before building:** check the f3 branch (`claude/clever-planck-urj1i4`) and ROADMAP so this lands in the right place. Needs sims (stoppage and decision rates shouldn't drift on average across the ref pool). Ed's voice for any ref names/bios.
