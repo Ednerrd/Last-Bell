@@ -521,7 +521,7 @@ A KO highlight reel with the booth (Bradley, Ward and others) breaking each one 
 - **"You've got nothing to lose."** Kim's corner said it, he went for it and got flattened. The desperate corner order has a cost.
 - **Towel.** Booth threw in the towel on Conlan before a count.
 - **Live corner order:** Crawford in Davis's corner: "don't let him tie you up, go to the body", and it worked.
-- **Refs late on the finish** (Carrington, Keyshawn Davis: shots on a man already falling). **No count needed**: the ref sees the eyes and waves it at once (Martinez-Metaf, Ozaki). Face-first falls rarely get up; a head bouncing off the canvas brings the doctor and the stretcher.
+- **Refs late on the finish** (Carrington, Keyshawn Davis: shots on a man already falling). **No count needed**: the ref sees the eyes and waves it at once (Martinez-Metaf, the Mohamdy KO). Face-first falls rarely get up; a head bouncing off the canvas brings the doctor and the stretcher.
 - **Celebrating early** again (Alvarado to the ropes before the man was checked).
 - **Took a round off, then finished him** (Mongia): pacing a finish.
 
