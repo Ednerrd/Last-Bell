@@ -128,3 +128,88 @@ The empty corners: **pressure-counter** (both kinds), **out-volume** (Soviet / L
 9. Off his own rhythm: a cost for the man dragged off his natural tempo.
 10. Weak and strong beats in a combo (throwaway shots that set up the hard one).
 11. Style = 3 dials (range, output, initiative) for the traits pass; fill the empty corners.
+
+# Batch 3 (Oct 20): Four Kings, breaking the Philly shell, counters
+
+## 6. The Four Kings (Duran, Hearns, Hagler, Leonard)
+They beat each other in a ring, which makes a good test: **Duran beat Leonard, Leonard beat Hagler, Hagler beat Hearns, Hearns beat Duran.** No one style wins everything.
+
+**Duran: inside pressure, open guard**
+- Square stance (the rear hand is closer). From outside: an open guard that parries and blocks with long arms, then jabs right after. Circles left as he jabs.
+- The jab *measures*: it often falls short on purpose and the right hand lands behind it.
+- Defense: moves only as much as needed, so the slips come fast one after another. Bobs and weaves under shots to get inside.
+- **Counters to the body** off a slip or roll: rare in boxing, Duran did it all the time.
+- Inside: head on the chest to break his balance, free hand to the body, uppercuts sneaked upstairs. His trademark: a long-arm block at the elbow that pins the other man's arms. When the contact breaks, he knows a punch is coming and ducks. Spins men onto the ropes.
+- **Flaws**: the open guard needs his reflexes and distance to be perfect, so feints and set-up shots catch him. Against slick movers he got frustrated, dropped his technique and went reckless.
+
+**Hearns: the tall hitman**
+- 6'2", 78" reach, narrow stance, bounces, lead hand at the waist.
+- Flicker jab from the low lead: out of the other man's eyeline, head and body, doubled. **Timing**: catches him resetting, squared up, moving sideways, or between his punches (a small outside slip, his jab misses, Hearns's lands).
+- Set-ups: the jab gets parried, so the hook comes around the side. Weight to the front foot and to the side raises the other man's guard, then the liver shot, which opens the hook again. Body-to-head feint on the right hand. Overhand when the man ducks.
+- **Flaws**: pulls straight back with both hands out; the low guard that works at range is a liability in close; gets into exchanges he doesn't need up close.
+
+**Hagler: the switch-hitting pressure fighter**
+- Solid high guard, chin down, weight a bit forward. A real switch-hitter, mid-combination.
+- Lives at mid-range (both can just reach): pre-slips and level changes to stay off the center line and feint. Free hand always up.
+- Power jab down the middle, doubled and tripled while circling. **Leaping jab and leaping hook** off a level change (the dip is also a feint: they over-parry).
+- **The switch trap**: he lunges in, the other man escapes to the open side, Hagler switches stance and the new lead hand cuts him off.
+- **Flaws**: lunges head first (counter uppercut); half-switches and ends up square; burns gas early cutting the ring.
+
+**Leonard: the fast counter-puncher who beat them all**
+- Narrow stance, tall, square, head off the center line, open guard at shoulder height, pre-slips and parries.
+- Pull-back counters: bait the punch, lean back, spring off the back foot with the jab.
+- Feet: always changing direction, feints *while moving*, then turns the offense on fast while backing up, catching a man who's chasing with his mind on attack.
+- Hand speed: flurries in close ("two punches that sound like one"). Best punch: the lead hook, loaded by the right hand shifting his weight forward, thrown loose like a slap.
+- **Flaws**: squares up when moving sideways (a man who reads it steps in with a straight); stands tall, can't duck well, so leans on pulls and parries.
+
+Checked against the engine:
+- Have, roughly: the style triangle is what `tests/styles.js` measures (5 styles, 48–53% each vs the field). Duran's frustration is in the brain already (`E.frus * (1 - composure)` pushes him into a burst). Switch-hitting exists (`switch` style, the stance flip and the other man's re-read). Hearns's timing on a squared or resetting man ~ the brain's `opening()` read.
+- Each king's flaw is an f3-style flaw (`BR.flaw`): Duran, open guard vs feints; Hearns, pulls straight back with hands out; Hagler, lunges head first; Leonard, squares up moving sideways. These are good named flaws for the traits pass.
+- Idea: a **matchup check**. Is there any loop in our style table (A beats B beats C beats A)? Today each style is measured vs the field, not pair by pair.
+
+## 7. Breaking the Philly shell (same stance)
+Philly defends: body with both arms, jab caught, right hand off the shoulder roll, lead hook by the rear hand or a bend, rear hook by a pull or bend, uppercuts no clean way in.
+How to crack it:
+1. **Jab from the hook position**: weight on the front foot like a lead hook, then throw it straight. He expects the hook and blocks the wrong door. Set it up with a right hand to the body first.
+2. **Jab to the body**: a little gap between his arms. He reaches to grab the glove and squares up or drops his hands.
+3. **Overhand right, not the straight right**: the shoulder roll stops the straight one. Start it like a cross and loop it late, so it goes over the shoulder. Set it up with the body jab.
+4. **Hard lead hook**: blocked with the rear hand in a sideways stance, it lands harder than on a high guard and sometimes slips through.
+5. **Counter his jab**: when he jabs, the front shoulder leaves his chin. Best way in.
+6. **Circle to his weak side**: he has to turn to face you, the stance breaks, the shoulder isn't where the cross is.
+The rule: **straight lines get blocked, angles and broken posture crack it.**
+
+Checked against `GUARD_HOLES.philly` (what a smart man throws in): ours puts the **straight right hand first** (cross 1.55) and leans *away* from the lead hook (.8) and the body jab (.75). Skillr says the straight right is exactly what the shoulder roll eats, and the hook and body jab are two of the six ways in.
+- We have no overhand punch. Our "cross" may be standing in for it. If so it's fine, if not the table is upside down.
+- Also uppercut 1.15 (ours, a hole) vs "no clean way in" (theirs). Same conflict as batch 2.
+- Before changing: the guard numbers are tuned to land guards in 47.7–55.8. Moving the holes means a guard balance run (300+ each).
+
+## 8. Counter-punching: draw, defend, hit back
+Three steps: **get him to throw** (or read his tell), **defend it**, **hit back right away**.
+- A counter that lands **freezes him**: he thinks twice about throwing that punch again.
+- **Drawing the attack** when he won't lead:
+  - Light jabs, volume not power, to annoy him into throwing.
+  - **Show a target**: guard a bit high to show the body, lead hand dropped a touch, or lean the head forward. Not too obvious, or a smart man counters your counter. Against a hothead, obvious works.
+  - **Look defensive**: switch from an open guard into a high guard. He thinks it's his turn and lets go (Crawford did it to Spence).
+- **Off each kind of defense**:
+  - Footwork (step back, then back in): simple, no guessing, but you have to get back in range in time.
+  - Parry: hard (you have to read which punch, which hand), but the counter is easy and you don't move much. Same-hand counter hits the side he left open; free-hand counter is easier but he's covered there.
+  - Head movement: the most common and the most dangerous (you stay at mid-range). Slipping outside *to counter* crosses his line of fire. **If you slip the jab and counter but he's throwing a 1-2, you eat the 2.** Works best vs lazy, uncommitted jabs.
+  - Block or catch: the safest. Keep your stance (don't sit on the back foot) so you can punch. Catch and shoot with the same hand.
+  - Clinch: no counter off it.
+- **Don't overdo the defense**: the farther you get away, the harder the counter.
+- Their 4 examples: Bivol steps back from Castillo's hook, steps in with the 1-2. Mayweather lets Ortiz jab, parries with the elbow, right hand with the head off the line. Tank pins Ryan's lead, Ryan throws his hook on instinct, Tank dips just enough and lands the overhand left. Crawford shifts to a high guard, takes Spence's jabs and overhand, hook on the open side.
+
+Checked against the brain: **a lot of this is built.**
+- The counter book (`COUNTER_BOOK`): what he threw x how I got out of it -> the answer. That's this video's whole middle part.
+- The traps (`BR.trap`: show, bank, draw, delay, vary) and the f2 bait.
+- Smaller, new:
+  - **Look defensive to draw him**: raise the guard to invite him. The f2 bait drops the hands; this is the opposite door.
+  - **A counter freezes him**: does the brain throw that punch less after eating a counter on it? Check `mem` before adding.
+  - **Slip the jab, counter into his 1-2**: does the engine let the 2 land on a man who's mid-counter? Check.
+  - **Overdoing it**: a man who backs too far loses the counter window. The brain's defense picks a `pull` or a step: is there a "too far" cost?
+
+## What's new from batch 3 (each one an engine check first)
+12. Four Kings flaws as named flaws for the traits pass (open guard vs feints, pulls straight back, lunges head first, squares up moving sideways).
+13. Style matchups pair by pair: is there any loop, or does one style just beat the rest?
+14. `GUARD_HOLES.philly` looks upside down vs Skillr (straight right first, hook and body jab avoided). Is our "cross" an overhand? Then decide. Guard balance run.
+15. Counter small ones: look defensive to draw him, a counter makes him shy of that punch, a slip-counter eats the 2 of a 1-2, overdone defense loses the counter.
