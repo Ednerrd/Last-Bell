@@ -18,6 +18,7 @@ What already exists: `brain/brain.js` is standalone (no DOM, no engine globals, 
 - Measure: each preset vs a fixed "average player" (a Pro brain, no corner): easy ~15-20%, hard ~50%, expert ~80%.
 
 ### P2 ladder (Oct 18, `cheese.js 40 x4 [easy|hard|expert] none`, hash 4cdff551)
+Oct 20 (1f review): this easy had no f3 flaw. Through the flaw (`cheese.js` now gives easy his style's hole, `FLAW=0` for none; 200 fights each, hash 4a735ef6): easy vs a Pro **10.9%** with it, 19.7% without.
 | Preset | wins vs a Pro (n160) | target | defends 1st look -> read | react s |
 |---|---|---|---|---|
 | easy | 21.7 ±3 | 15-20 | 46 -> 57% | .139 |

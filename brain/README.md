@@ -89,7 +89,7 @@ brain.rest({ round }); brain.roundStart(round + 1);
 // after the fight, for a rematch (expert reads it): save brain.memo(), pass it back as preset(..., { memo, lost, won })
 ```
 
-**Presets.** `easy` = Intermediate (skills centered on 56), `hard` = Pro (74, the Last Bell default AI), `expert` = World class (90, and remembers you across fights from `memo`). The level is the skill sheet: no hidden cheats, no extra damage. One level apart wins ~16-18% of fights on the Last Bell engine.
+**Presets.** `easy` = Intermediate (skills centered on 56) with one hole a player can find (his style's, `BR.flaw`: send it to your defense through `act.hole`; `preset('easy', { flaw: null })` for none: vs a Pro he wins ~11% with it, ~20% without), `hard` = Pro (74, the Last Bell default AI), `expert` = World class (90, and remembers you across fights from `memo`). The level is the skill sheet: no hidden cheats, no extra damage. One level apart wins ~16-18% of fights on the Last Bell engine.
 
 **What a host must fill** (the rest can be faked):
 | Field | Must | If you don't have it |
