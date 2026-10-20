@@ -464,6 +464,39 @@ Ed pasted the full TNT broadcast transcript; it is not kept. A little corner aud
 
 ---
 
+# Batch 11: body-shot knockout compilation (~60 min, many fights)
+Ed pasted a YouTube compilation of body-shot KOs; the transcript is not kept. It's TV commentary over dozens of finishes, old (Arguello, Morrison, Ward-Sanchez, De La Hoya-Hopkins, Mayweather) to now (Inoue, Davis, Lomachenko, Shakur, Zayas, Navarrete, Valdez, Anderson). Almost no corner audio. **Highlight bias at its worst:** it's a reel of only the body shots that ended fights. It says nothing about how often body work fails or how rare a body KO is (our target stays 5-8% of KDs, `tests/bodykd.js`).
+
+## Patterns across the reel
+- **Investment, then one shot.** Most finishes come after rounds of body work ("investing," "accumulation"), and then one shot in the right spot ends it. A few come out of nowhere on a fresh man (Ward-Sanchez: one left hook to the body turns a fight he was losing; Barbosa, Morales "out of nowhere").
+- **The delayed reaction.** Twice the man stands a beat, then folds (a short left uppercut to the body; Lomachenko's first liver shot). The second time, the same shot drops him on the spot.
+- **The unseen shot hurts most.** "Never saw it coming, that's why it hurt so much." A body shot he didn't see does more than one he braced for. Solar plexus named as the worst along with the liver.
+- **Up then down.** The classic finisher's pattern: work the head until the guard comes up, then go downstairs (Ramirez "switched it up"; Mayweather "jabbed upstairs, explosive ending downstairs"). Also the reverse: liver first, then the right hand when he folds.
+- **Go to the body when he's hurt.** "He does what very few do": senses the man is hurt and goes to the body instead of headhunting. Our brain headhunts a hurt man; this is a choice a smart finisher makes.
+- **The elbow pin and going away from it.** A fighter pins his right elbow to his side every time it's close, so a smart puncher (Inoue) goes away from the body, then comes back to it. **That's f1b (the clamp) plus a vet's answer to it:** the clamp works, so he baits it open by going upstairs, then returns. Check `opening()` / `BR.clamp` reads before building anything.
+- **Same spot again.** "He got you in the same spot." A man hit in one spot goes back to it (the ref said it too). Fits (e) target the damage: the brain already digs a sinking body.
+- **Feet and leverage.** Inoue's torque "starts at his feet." Ward's had "good leverage, got his body into it." Lomachenko's liver shot was a counter while pivoting, feet not even planted. Power from position, not just strength.
+- **Counter to the body as he steps in.** Several finishes are body counters on a man lunging or "getting off the line." Pairs with batch 9's uppercut for a man coming in.
+- **Tall, long torso = more target.** The commentators call a lanky man's long torso a target. Ties to size (roadmap item 4).
+- **The quit.** Many body KO victims are awake but can't or won't get up: looks to the corner, spits out the mouthpiece, shakes his head, turns his back. A body KD ends more by "no more" than by the count.
+- **Celebrating early.** A kid celebrates before the ref waves it, and the man nearly gets up. Flavor for commentary.
+- **Turn it up after a feel-out.** Davis "touched, walked him down, gave him a false sense he was safe, then increased the cadence" and the body shot landed. Same family as batch 8's style switch.
+
+## The corners and refs
+- Crawford to Davis from the corner, mid-round: don't let him tie you up, hit him downstairs. Then the body shot ends it.
+- Navarrete's corner: "you have to have a sense of urgency, this fight is getting away from you." Then he gets stopped by a body shot.
+- Lopez's corner: stop playing with him, he's dangerous, handle your business. He did, next round.
+- Morrison's corner (reported): go downstairs. He hadn't in four rounds; it turned the fight in the fifth.
+- Refs: "Walk to me, let me see your gloves," "You okay? You want to go?" (the will check again, as in batches 6 and 9). A ref counted a man out at the bell: **can't be saved by the bell** in the last round, and some commissions in any round (rulebook check is already in the parking lot). A ref waved one off without finishing the count because the man was clearly done.
+
+## What's new for Last Bell
+- **Delayed reaction on a body KD.** He takes it, stands a beat, then goes down. Cheap and real: a short delay before the fold on some liver KDs. Render/feel, check `bodyPush()` and the KD path in `resolve()` first.
+- **The unseen body shot hits harder.** If the brain's `SeenPunch` says he didn't see it, more body damage. Check whether resolve already scales damage by seen/unseen (the head probably does).
+- **A smart finisher goes to the body on a hurt man.** Today the hunt goes for the head. A World-class finisher could mix in the body when the body's been worked. Check the hunt/finish code (`BR.fin`) first.
+- **The answer to the clamp:** go upstairs until the elbow lifts, then back down. f1b already sends him upstairs on a clamp; the "come back to it" part may be missing.
+- **The body-KD quit.** More body KDs end on "no more" (stays down, looks at the corner) than head KDs do. Check bodykd.js for how often a body KD man beats the count vs a head KD.
+- **All flagged ideas need checking against `research/numbers.md` before any tuning:** this reel only shows the hits.
+
 # Ed's call on officials (Oct 20 2026): refs with reputations
 Ed: refs are human, and each one has a known reputation ("doesn't like holding" etc.). So the officials list from batches 5-10 becomes a feature, not random unfairness.
 
