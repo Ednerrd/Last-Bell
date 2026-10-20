@@ -26,11 +26,17 @@ module.exports = PU => {
     // the exploits ride on his own fight (a player who knows the hole: the same man, plus the trick)
     jabMove: (o, P, s, dt) => { o.move = mv(o, { range: Math.max(o.move.range, 72), lateral: .8 }); // vs the slugger: keep him at the end of it, jab him as he comes in
       if (P.him.closing > 5 && P.dist < 80 && free(P) && R() < 3 * dt) o.punch = mk(['jab']); return o; },
+    jabIn: (o, P, s, dt) => { // vs the slugger, take 2: his own fight, plus a jab every time he walks in
+      if (P.him.closing > 8 && P.dist < 80 && free(P) && R() < 4 * dt) o.punch = mk(['jab']); return o; },
     pressure: (o, P) => { o.move = mv(o, { range: 44, cut: 1 }); // vs the outboxer: cut off the ring, crowd him, dig the body when he covers up
       if (o.punch && !o.punch.feint && P.dist < 50 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
     stepCounter: (o, P, s, dt) => { o.move = mv(o, { range: Math.max(o.move.range, 70) }); // vs the swarmer: give ground, save the right hand for him stepping in
       if (o.punch && PU[o.punch.type].cat !== 'jab' && P.him.closing < 20) o.punch = null;
       if (P.him.closing > 20 && P.dist < 72 && free(P) && P.t - (s.ctr || -9) > .5 && R() < 6 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; } return o; },
+    crowd: (o, P) => { o.move = mv(o, { range: Math.min(o.move.range, 50) }); // vs the outboxer, take 2: his own fight, a step closer, and dig the body when he shells up
+      if (o.punch && !o.punch.feint && P.dist < 54 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
+    lungeCounter: (o, P, s, dt) => { // vs the swarmer, take 2: his own fight, plus the right hand on him lunging in
+      if (P.him.closing > 25 && P.dist < 72 && free(P) && P.t - (s.ctr || -9) > .5 && R() < 6 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; } return o; },
     slipCounter: (o, P, s, dt) => { // vs the counter-puncher: learn the punch he always counters with, slip it, come back over it
       const c = s.c || (s.c = {}); for (const e of P.events) if (e.by === 'him' && e.counter && e.p) c[e.p] = (c[e.p] || 0) + 1;
       let hab = null, n = 0; for (const x in c) if (c[x] > n) { n = c[x]; hab = x; } if (n < 2) return o; // two of the same and he's got it
