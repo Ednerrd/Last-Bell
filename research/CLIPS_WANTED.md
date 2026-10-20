@@ -16,4 +16,4 @@ Ed, Oct 19: "I want to circle back to that." Paste transcripts into any session;
 5. **Jab defense**: how pros shut down the jab. Our jab connect ~27% vs real ~17%.
 
 ## Already done
-- The Arena batch 1 (`research/arena.md`), Precision Boxing batch 1 (`research/precision.md`), Skillr Boxing batch 1 (`research/skillr.md`: anticipation, the clinch; shortlist in its header). Shortlists: `tools/arena/`, `tools/precision/`.
+- The Arena batch 1 (`research/arena.md`), Precision Boxing batch 1 (`research/precision.md`), Skillr Boxing batches 1-2 (`research/skillr.md`: anticipation, the clinch, guards, rhythm, styles; shortlist in its header). Shortlists: `tools/arena/`, `tools/precision/`.
