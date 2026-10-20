@@ -2,6 +2,8 @@
 
 Ed, Oct 19: "I want to circle back to that." Paste transcripts into any session; notes go in `research/`, our own words, no raw transcripts kept.
 
+**Claude can pull clips itself now (Oct 20):** `python3 tools/yt/yt.py search "Usyk vs Dubois breakdown"` lists id / length / channel / title; `python3 tools/yt/yt.py get ID ...` saves the auto-captions as text in `tools/yt/raw/` (gitignored). Ed picks matchups, Claude searches, picks the breakdowns and writes the notes.
+
 ## What makes a clip useful
 - **Decisions, not technique**: "when he does X, you do Y, because Z". The engine/animation handles form.
 - Good titles: "how to beat", "when", "why", "vs". Usually skip: "fix", "drill", "workout", "power", conditioning, bag work.
