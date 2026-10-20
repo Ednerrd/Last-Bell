@@ -46,3 +46,16 @@ More a style study than a round-by-round fix; what made it work against a bigger
 10. **Same-hand doubles break the defense's rhythm:** a man defending left-right expects alternation; a double on one side (jab-jab, left-left mid-combo) gets through more. Check how `pickCombo` and the defender's read handle repeats.
 11. **Feints wear the eyes down over rounds:** buying feints gets more likely as the fight goes on and the pressure piles up (fatigue + fear), not flat through the fight.
 12. **Wear-then-ramp** as a World-class plan shape: low-risk early rounds to read and tire, a jump in volume late. Ties to the round-by-round plan and the drama numbers (late lead changes).
+
+## 4. Hidden Gem Boxing: Usyk-Joshua II, the adjustments
+- **Fight 1, Usyk's trap:** Joshua's habit is a proactive long guard: he picks at the other man's lead hand with his own to stop the jab before it starts (how he handled Klitschko's lead). Usyk shows the lead hand, Joshua reaches to control it, Usyk leaves him hanging and counters over the outstretched arm.
+- **Rematch, Joshua's fix:** don't hand-fight at all. A traditional high guard (Usyk knew the long guard's holes), and he uses Usyk's hand-show as **his own cue to punch**: lead hand up high means the body is open, so the left hook to the body.
+- **Usyk's answer: break the high guard.** A high guard stops what comes straight at it; its holes are the flanks, and punches can make new ones. A tap hook to open it, then the straight left down the middle; jab high, straight left low; step to the outside with a double jab, then loop the left around the guard.
+- **Joshua's money punch: punching *with* him.** As Usyk let his combinations go, Joshua timed the right uppercut to the body on the open side, mid-combination (the shots that hurt Usyk most).
+- **Usyk's last fix: leave range, then pivot.** He'd been pivoting out after his jabs but still in range, so Joshua pivoted with him and landed the uppercut. Later he stepped back out of range (at an angle) after the jabs. "Distance is the first line of defense": a pivot, slip or roll still in range can be hit.
+
+### For Last Bell (ideas, not built)
+13. **A habit is a hole the other man can learn** (fight 1 -> fight 2): Joshua's lead-hand picking was read and baited, then he dropped it. Rematch memory (L4c `priorSet`) and camp tape (`tapeOf`) are where this lives: a man who lost to a trap changes the habit for the rematch; the other man must find the new hole (high guard flanks).
+14. **His tell as my cue:** a man's feint/hand-show becomes the other man's trigger once read (Joshua hitting the body on Usyk's hand-show). A read in opponent memory that turns his setup into my counter window.
+15. **High guard holes:** around the guard (hooks, looping shots), and opened by a punch first (tap hook, then straight). Guards that change shape when attacked (coach-clip list 1b(5)) should come with a matching way to crack them.
+16. **Exit range, not just angle:** after his own combo, a man who pivots but stays in range can be followed and hit; a smart one steps out at an angle. A footwork rule for the end of combinations, by level.
