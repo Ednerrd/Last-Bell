@@ -44,6 +44,10 @@ module.exports = PU => {
       if (o.punch && !o.punch.feint && P.dist < 54 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
     crowd3: (o, P) => { o.move = Object.assign({}, o.move, { range: Math.min(o.move.range, 60) }); // take 4: the same, never farther out than 60
       if (o.punch && !o.punch.feint && P.dist < 54 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
+    crowd4: (o, P, s) => { // take 5: box him straight; once you've seen him shell up inside twice, crowd him the rest of the way and dig the body
+      const sh = P.dist < 52 && P.him.guard > .93; if (sh && !s.in) s.n = (s.n || 0) + 1; s.in = sh;
+      if (s.n >= 2) o.move = mv(o, { range: 44, cut: 1 });
+      if (o.punch && !o.punch.feint && P.dist < 54 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
     lungeCounter: (o, P, s, dt) => { // vs the swarmer, take 2: his own fight, plus the right hand on him lunging in
       if (P.him.closing > 25 && P.dist < 72 && clear(P) && P.t - (s.ctr || -9) > .5 && R() < 6 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; } return o; },
     slipCounter: (o, P, s, dt) => { // vs the counter-puncher: learn the punch he always counters with, slip it, come back over it
