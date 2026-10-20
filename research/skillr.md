@@ -248,3 +248,49 @@ Checked against the brain: **a lot of this is built.**
 - The boxer-puncher is 49–51 with everyone: the true middle, as designed.
 - Vs the field: counter 52.8, boxer-puncher 50.9, slugger 50.6, outboxer 48.1, swarmer 47.7 (target 48–53: all in, the swarmer at the floor).
 - Idea for the balance pass: a pressure man who walks through the counter-puncher's first shot (swarmer or slugger) should beat him a bit, which closes the loop the way Duran-Leonard did.
+
+# Batch 4 (Oct 20): pressure fighting, parrying, blocking
+(Clip 9 is not Skillr: a short promo-style piece with Troy Isley, 2020 Olympian, on pressure fighting. Filed here because it pairs with the pressure work. Ed hunted these after a DeepSeek memo; we don't build off that memo, only off real clips.)
+
+## 9. Pressure fighting (Troy Isley)
+- **Pressure is smart, not just physical.** Constant stalking and good feet so he's always in position to attack. It drains the other man even when few punches land. Throw fewer, but make each one hurt and land in the right spot.
+- **When to press:** against the mover who wants the outside. **When not to:** against a brawler or an inside fighter; don't give him the fight he wants, keep it long.
+- **When to turn it up:** his punches get weaker and he starts to respect you. Then it's violence.
+- **While pressing:** move the head, feint, keep him thinking. Keep the jab, it sets up everything.
+- **His weak side:** if he only knows how to move one way, step to cut that way off and he freezes. Then combinations.
+- **He's hurt: don't rush in.** He's throwing with all he has left. Feint, jab, see if he still has power; when nothing's there, jump on him.
+
+## 10. Parrying (Skillr)
+- A parry redirects the punch with a small move of the hand, forearm or elbow. Harder than blocking and catching, easier than slipping. Energy-cheap: no giving ground, no big head moves.
+- **The catch first:** open glove, thumb in, drive toward the jab. More coverage, less commitment, but little control of his hand (few follow-ups).
+- **A parry trades coverage for control.** From the catch:
+  1. **Down parry**: push his hand down. Tires him (he lifts it back against your arm), opens his head for your power hand, easy. Cost: your own face is open during it.
+  2. **Inside parry**: knock it across. Your hand stays at head level and sits in the path of his cross, so he hesitates to throw it. Sets up same-side counters. Cost: timing; mistimed, you're open.
+  3. **Outside (scoop) parry**: roll it outward. Long control of his hand (circle, step off line, close on that side), your hand ends on the inside track (you arrive first with a quick shot). Cost: hardest to time, no real same-side power counter.
+- Hooks can be parried (dip and lift it over), also shoulder (the roll) and elbow parries (lazy shots, rests the arms).
+
+## 11. Blocking (Skillr)
+- **Extended block** (long guard): arms out, covers more lanes, stops punches early. If one gets through, you're wide open, and the body is exposed. Mostly from the outside with the lead hand.
+- **Close block**: the classic. You absorb it (still feel it) but nothing lands clean. Less guesswork.
+- **Stay relaxed**, tense only right before impact. Tense = slower, burns gas ("nervous energy").
+- **Use the whole body**: crouch, chin down, knees bent, so the skull takes it, not the temple or chin. Punchers hurt their hands on the top of a short man's head.
+- **Eyes open**: always a gap to see through (GGG). Covering too wide or too high blinds you.
+- **Dynamic beats static**: the closed shell is for a punch or two, a few seconds. Static helps getting off the floor or to tire him out, but mostly it eats heavier shots.
+- **Subtle**: big blocking moves make big openings (liver shots land when the elbow lifts too much).
+- **Blocking with the same-side arm while turning loads your counter.** Block with the other arm and you're open to the second punch.
+- Body straights stop your feet when coming forward; body uppercuts are hard to see up close.
+
+## Engine check, batch 4 (Oct 20; code read, no engine changes)
+- **Cutting the ring: built.** The engine's `F.cutting` (`index.html` ~2428) steps between him and the open ring, leading his movement (smarter = earlier), and a cutter lowers his chance to slide off the ropes (`AI.escCut`). The brain's `cut` scales with `cutoff` skill and goes up when he runs (`brain.js` ~1235). The swarmer's 47.7 is not missing ring geometry.
+- **Isley's "hurt man: don't rush, check his power": built.** The brain's `check` mode ("is he hurt?") before the hunt, short straight probes, then `hunt` or `huntSafe` (`BR.fin`).
+- **Press the mover, not the brawler: partly.** Styles have fixed ranges; nobody picks the range by who's in front of him (the AI corner's plan can). Matches the style grid (the swarmer loses to the slugger, 41).
+- **Fewer punches, every one hurts** = the slugger and the pressure boxer special. Fine.
+- **Parry: not built.** Defense today is slip, block (which already counts as a miss, like CompuBox), roll, pull, duck. The counter book has "catch and shoot" under block. A real parry would add a cheap jab defense that controls his hand: candidate for the jab gap (27% vs ~17%, `numbers.md`). Two pieces to it: a way to make a jab miss that costs no gas or ground, and a counter window (the down parry opens his head; the inside parry makes him shy of the cross).
+- **Shell too long eats heavy shots:** the hurt man's shell exists (`hurtResp 'shell'`); whether holding it long costs him is a check for the clinch/long guard work.
+- **Tense = gas:** not built (no relaxed/tense). Color for now.
+- **Extended block = the long guard gear** (`#8`): matches its costs (body open, wide open if one gets through).
+
+## What's new from batch 4 (each one an engine check first)
+16. A parry for the jab (catch, down, inside, outside), measured on jab connect % in the audit. Lead candidate for the jab gap.
+17. Pick pressure by the matchup: press a mover, keep a brawler long (the brain or the AI corner's plan).
+18. Step to his weak side when he only moves one way (pairs with `#6` circle to the weak side, and the lead foot battle in `ring.md`).
