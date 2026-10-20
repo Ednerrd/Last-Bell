@@ -124,7 +124,7 @@ The empty corners: **pressure-counter** (both kinds), **out-volume** (Soviet / L
 
 ## What's new from batch 2 (each one an engine check first)
 7. Cross vs Philly uppercut conflict: second source, then maybe flip `up` (a guard balance run).
-8. A long guard for the outboxer (balance job).
+8. A long guard for the outboxer. **Ed's call (Oct 20): a gear he shifts into, not a 7th fixed guard.** He keeps his career guard and posts the lead hand out at the end of his jab (measure, blind, jam the rear hand), then pulls it back when the man closes. Costs: gas for the arm, body open on that side, a timed walk-in gets under it. Brain guard switch (like the shell when hurt and the f2 bait), then an outboxer balance run. Fits the traits pass (a perk: "uses the long guard"). After the review.
 9. Off his own rhythm: a cost for the man dragged off his natural tempo.
 10. Weak and strong beats in a combo (throwaway shots that set up the hard one).
 11. Style = 3 dials (range, output, initiative) for the traits pass; fill the empty corners.
