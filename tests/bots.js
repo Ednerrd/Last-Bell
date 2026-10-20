@@ -40,6 +40,10 @@ module.exports = PU => {
       if (!o.punch && P.him.closing > 25 && P.dist < 72 && clear(P) && P.t - (s.ctr || -9) > .8 && R() < 6 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; } return o; },
     crowd: (o, P) => { o.move = mv(o, { range: Math.min(o.move.range, 50) }); // vs the outboxer, take 2: his own fight, a step closer, and dig the body when he shells up
       if (o.punch && !o.punch.feint && P.dist < 54 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
+    crowd2: (o, P) => { // vs the outboxer, take 3: his own fight; dig the body when he shells up
+      if (o.punch && !o.punch.feint && P.dist < 54 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
+    crowd3: (o, P) => { o.move = Object.assign({}, o.move, { range: Math.min(o.move.range, 60) }); // take 4: the same, never farther out than 60
+      if (o.punch && !o.punch.feint && P.dist < 54 && P.him.guard > .7) { const c = o.punch.combo.map(p => PU[p].zone === 'body' ? p : BODY[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } return o; },
     lungeCounter: (o, P, s, dt) => { // vs the swarmer, take 2: his own fight, plus the right hand on him lunging in
       if (P.him.closing > 25 && P.dist < 72 && clear(P) && P.t - (s.ctr || -9) > .5 && R() < 6 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; } return o; },
     slipCounter: (o, P, s, dt) => { // vs the counter-puncher: learn the punch he always counters with, slip it, come back over it
