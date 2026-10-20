@@ -1,7 +1,8 @@
 // f3 easy flaws (docs/PLUGIN.md 1f): is each easy man's hole worth finding? Easy brain (Intermediate, sk 56) of one style vs an Intermediate "player" (a boxer-puncher, sk 56,
 // same body, rating 78) who plays straight (his own brain) or runs the exploit for that flaw (bots.js). Four arms per style: flaw off / on x straight / exploit.
 //   TAG=x node tests/flaws.js 150 [styles]   (x4 processes; one line per arm to /tmp/flaws_x.txt; rerun the same line after a restart)    node tests/flaws.js agg x
-// Out: the player's win % per arm. The exploit should be worth +15-25 points with the flaw on (vs off); playing straight should barely change.
+// Out: the player's win % per arm. The exploit should be worth +15-25 points with the flaw on (vs off); playing straight should barely change;
+// and with the flaw on the trick should beat just boxing him (+10-20: otherwise the hole isn't worth finding, the bot's own handicap made the first number).
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) : '-';
 const fs = require('fs'), OUT = t => '/tmp/flaws_' + t + '.txt';
 const BOT = { slugger: 'jabMove', outboxer: 'pressure', swarmer: 'stepCounter', counter: 'outwork', boxerpuncher: 'overJab' };
@@ -33,6 +34,6 @@ function report(A, one) {
       + (pct(a.ko, a.n) + '%').padEnd(7) + (a.pL / a.n).toFixed(0).padStart(5) + ' / ' + (a.bL / a.n).toFixed(0).padEnd(16) + (a.pT / a.n).toFixed(0).padStart(5) + ' / ' + (a.bT / a.n).toFixed(0) + '  (n' + a.n + ')'); }
   if (one) return;
   const by = {}; for (const k in A) { const a = A[k], d = a.n - a.d; (by[a.st] = by[a.st] || {})[(a.fl ? 'on' : 'off') + (a.bot === 'none' ? 'S' : 'X')] = 100 * a.pw / Math.max(1, d); }
-  console.log('\nworth of the flaw (player win %, on - off):   straight   exploit   (target: exploit +15-25, straight small)');
-  for (const st in by) { const b = by[st], f = x => x == null || isNaN(x) ? '   -' : (x >= 0 ? '+' : '') + x.toFixed(1); console.log('  ' + st.padEnd(14) + f(b.onS - b.offS).padStart(22) + f(b.onX - b.offX).padStart(10)); }
+  console.log('\nworth of the flaw (player win %):   on - off: straight   exploit   |  flaw on: exploit - straight   (targets: exploit +15-25, straight small; the trick beats boxing him +10-20)');
+  for (const st in by) { const b = by[st], f = x => x == null || isNaN(x) ? '   -' : (x >= 0 ? '+' : '') + x.toFixed(1); console.log('  ' + st.padEnd(14) + f(b.onS - b.offS).padStart(22) + f(b.onX - b.offX).padStart(10) + f(b.onX - b.onS).padStart(18)); }
 }

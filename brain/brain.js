@@ -482,7 +482,10 @@ class Brain {
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
   // f3: an easy man's one hole (BR.flaw), null = none. A host (or a test) can call it again after create
-  flawSet(f) { this.fl = Object.values(BR.flaw.by).includes(f) ? f : null; this.flT = -9; this.dropT = -9; this.myV = 0; this.pD = null; this.pr = 0; if (this.fl === 'wait') this.tr.initiative = Math.min(this.tr.initiative, BR.flaw.wait.init); }
+  flawSet(f) { this.fl = Object.values(BR.flaw.by).includes(f) ? f : null; this.flT = -9; this.dropT = -9; this.myV = 0; this.pD = null; this.pr = 0; }
+  // his initiative (trait, and with the plan and the corner on top); the waiter's cap holds whatever the corner yells (f3: never fixed in the fight)
+  trI() { return this.fl === 'wait' ? Math.min(this.tr.initiative, BR.flaw.wait.init) : this.tr.initiative; }
+  ini() { const v = clamp(this.tr.initiative + this.pv('initiative'), 0, 1); return this.fl === 'wait' ? Math.min(v, BR.flaw.wait.init) : v; }
   inn(P) { return this.myV > BR.flaw.in; } // he's walking in
   lunge() { return this.myV > BR.flaw.straight.v; } // ... fast
   flawTry(P, p) { const F = BR.flaw, f = this.fl; // how much of his defense the hole leaves him, vs this punch
@@ -735,7 +738,7 @@ class Brain {
     const W = BR.wb, D = this.wb, mm = (this.m.read + this.m.counter) / 2;
     if (mm < W.at || this.t < D.next || D.off === this.rd || dSeen < W.d[0] || dSeen > W.d[1] || !W.modes[this.mode] || P.ropes.me > .5 || P.me.hurt || this.queue || this.setup) return false;
     const L = this.wbLead(); if (!L) return false;
-    const tr = this.tr, sf = (1.3 - clamp(tr.initiative + this.pv('initiative'), 0, 1)) * (.4 + tr.patience) * (.5 + tr.composure) * lerp(.6, 1.4, this.k.counter);
+    const tr = this.tr, sf = (1.3 - this.ini()) * (.4 + tr.patience) * (.5 + tr.composure) * lerp(.6, 1.4, this.k.counter);
     if (this.R() > W.p * sf * clamp((mm - .74) / .16, 0, 1)) return false;
     const kd = kindOf(L.p); let def = 'block', v = 9; for (const x in DEF_THRU) if (x !== 'none' && DEF_THRU[x][kd] < v) { v = DEF_THRU[x][kd]; def = x; }
     Object.assign(D, { p: L.p, def, until: this.t + W.win, next: this.t + W.gap, bit: 0, right: 0 }); D.id++; this.tel.wbN = (this.tel.wbN || 0) + 1;
@@ -747,7 +750,7 @@ class Brain {
     if (this.queue && this.queue.trap) return;
     if (this.t < this.flT) return; // f3: folded, nothing comes back // the trap's counter is already on its way
     const k = this.k, m = this.mm();
-    let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * clamp(this.tr.initiative + this.pv('initiative'), 0, 1)) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
+    let ch = lerp(BR.ctrP[0], BR.ctrP[1], k.counter) * (1.4 - 1.1 * this.ini()) * (m.ctr || 1) * (1 - .5 * this.emo.fear);
     if (this.threat && this.threat.rd > .3) ch *= 1.3; // he called it: the counter is already loaded
     if (this.t < this.ctrReady) ch *= BR.trap.ctrUp;   // I showed him half of it to draw his counter: mine is waiting
     if (this.wb.right && this.t - this.wb.bitT < 1) ch *= BR.wb.ctr; // f2: he took the bait: the counter was loaded for it
@@ -871,7 +874,7 @@ class Brain {
   /* ---------- intent: what he's trying to do for the next few seconds ---------- */
   setMode(m, dur, why) { if (m !== this.mode) this.note('-> ' + m + (why ? ' (' + why + ')' : '')); this.mode = m; this.modeT = dur; }
   pickMode(P) {
-    const tr = this.tr, E = this.emo, fat = 1 - P.me.stam / (P.me.stamMax || 100), nd = this.nd, ini = clamp(tr.initiative + this.pv('initiative'), 0, 1);
+    const tr = this.tr, E = this.emo, fat = 1 - P.me.stam / (P.me.stamMax || 100), nd = this.nd, ini = this.ini();
     const inRange = P.dist < 84;
     const w = {
       work: 1,
@@ -1037,7 +1040,7 @@ class Brain {
     p *= 1 - .5 * E.fear * (1 - tr.risk * .5);
     p *= 1 + .3 * E.conf + .4 * E.frus * (1 - tr.composure);
     p *= 1 + .45 * this.nd + BR.desp.out * this.desp;
-    if (P.round === 1) p *= lerp(.55 + .35 * tr.initiative, 1, P.clock / P.roundLen); // the first round: he's still finding out what the other man has
+    if (P.round === 1) p *= lerp(.55 + .35 * this.trI(), 1, P.clock / P.roundLen); // the first round: he's still finding out what the other man has
     if (H.punch && !H.punch.feint && this.mode !== 'counter' && !(this.mode === 'survive' && this.hurtResp === 'bait')) p *= .6 + .6 * (1 - k.read) * tr.risk; // he's punching: most men cover, the reckless trade
     if (this.t < this.wbS.thru) p *= BR.wb.hold; // f2: I see the bait for what it is: I don't take it
     if (this.t < this.flT) p *= BR.flaw.fold.out; // f3: folded, the hands stop
@@ -1045,7 +1048,7 @@ class Brain {
     if (this.R() > p) { if (dSeen < 80) this.tel.holds++; return null; }
     // the bait: a counterman shows the jab and steps back, to draw the lead
     if (BR.trap.on.draw && this.t > this.dl.next && dSeen > 58 && dSeen < 82 && this.k.counter >= BR.trap.drawCtr && (this.mode === 'counter' || this.mode === 'work' || this.mode === 'feelout')
-      && this.R() < trV('draw', (this.m.counter + this.m.read) / 2) * (1.3 - clamp(tr.initiative + this.pv('initiative'), 0, 1))) return this.dlBait(dSeen);
+      && this.R() < trV('draw', (this.m.counter + this.m.read) / 2) * (1.3 - this.ini())) return this.dlBait(dSeen);
     // feint, a planned sequence, or a combo
     if (this.R() < BR.feintP * (.4 + k.feints * 1.5) * lvV('feint', this.m.feints) * (.5 + tr.patience) / Math.max(.3, m.aggr) * (this.mode === 'feelout' || this.mode === 'reset' ? 2 : 1)) return this.feint(dSeen);
     if (this.mode !== 'survive' && !HUNTS[this.mode] && this.R() < BR.setupP * k.read * (.5 + k.feints * .5 + k.combos * .5) * (this.mode === 'burst' ? .4 : 1)) { const s = this.startSetup(P, dSeen); if (s) return s; }
@@ -1224,7 +1227,7 @@ class Brain {
     // on the ropes: get off them (a man without ring craft stays there and covers up; hurt, the runner and the steady man push off first)
     if (P.ropes.me > .4) lateral = Math.max(lateral, P.ropes.me * lerp(BR.ropes.lo, BR.ropes.hi, k.ropes) * lerp(BR.ropes.legs[0], BR.ropes.legs[1], tr.legs) * (sv === 'shell' ? .3 : sv === 'run' || sv === 'steady' ? 1.5 : 1));
     const fold = this.t < this.flT; if (fold) lateral *= BR.flaw.fold.lat; // f3: folded, he slides off weakly
-    let cut = (md.cut || (tr.initiative > .6 && tr.range < .5) || P.ropes.him > .4) ? lerp(.2, 1, k.cutoff) * (md.cut ? 1 : .6) : 0;
+    let cut = (md.cut || (this.trI() > .6 && tr.range < .5) || P.ropes.him > .4) ? lerp(.2, 1, k.cutoff) * (md.cut ? 1 : .6) : 0;
     if (HUNTS[this.mode] && P.him.closing < -25) cut = Math.min(1, cut * 1.5); // he's running: cut the ring, trap him on the ropes
     let clinch = false;
     if (P.dist < 46) {
@@ -1234,7 +1237,7 @@ class Brain {
       else if (tr.range > .7 && P.dist < 40 && this.R() < .015 * tr.clinch) clinch = true;      // an out-boxer doesn't want it in there
     }
     // push: how hard he fights for that distance. A mover who lives outside fights for room; a pressure man fights to close it. Footwork and range skill win the tug of war
-    const out = range > P.dist, push = (out ? lerp(.4, 2, tr.legs) * lerp(.6, 1.3, k.footwork) : lerp(.4, 2, tr.initiative * (1 - tr.range)) * lerp(.6, 1.3, k.cutoff)) * lerp(.7, 1.2, k.range) * (this.mode === 'survive' ? 1.3 : 1);
+    const out = range > P.dist, push = (out ? lerp(.4, 2, tr.legs) * lerp(.6, 1.3, k.footwork) : lerp(.4, 2, this.trI() * (1 - tr.range)) * lerp(.6, 1.3, k.cutoff)) * lerp(.7, 1.2, k.range) * (this.mode === 'survive' ? 1.3 : 1);
     return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch, feet: lerp(.75, 1.1, k.footwork), push: fold ? push * BR.flaw.fold.push : push }; // feet: how well he moves (no crossed feet, small steps)
   }
 
@@ -1258,7 +1261,7 @@ class Brain {
       if (!Lb) S.live = 0; else if (this.t < S.thru) this.ph.guard = Math.max(this.ph.guard, W.seeG);
       const D = this.wb; if (D.p && this.t >= D.until) { if (!D.bit && ++D.miss >= W.quit) { D.off = this.rd; this.note('he will not bite: no more baits this round'); } D.p = null; } }
     this.hisG = this.ph.guard; // E4: he fights on what he sees
-    if (P.me.down) { this.out.intent = 'down'; return this.out; }
+    if (P.me.down) { this.out.intent = 'down'; this.pD = null; return this.out; } // f3: his feet start over when he's up
     this.updMode(P, sdt);
     if (this.fl) { const v = this.pD == null ? 0 : (this.pD - P.dist) / Math.max(dt, 1e-3) - P.him.closing; this.myV = this.myV * .8 + v * .2; this.pD = P.dist; } // f3: how fast his own feet bring him in
     if (this.fl === 'fold') { const F = BR.flaw.fold; this.pr = P.dist < F.near ? this.pr + dt : Math.max(0, this.pr - 2 * dt); if (this.pr > F.build) this.flT = this.t + F.hold; } // f3: crowded, he folds
@@ -1266,7 +1269,7 @@ class Brain {
     // he's rushing in head first: a counterpuncher meets him with the check hook and pivots off the line (Mayweather vs Hatton)
     const clr = this.clR || 0; // a grabber walking in to tie up: meet him on the way
     if (P.him.closing > BR.rushV * (clr ? BR.cl.rushV : 1) && P.dist < 66 && P.dist > 40 && !this.queue && !P.me.busy && !P.him.punch && this.mode !== 'survive'
-      && this.R() < BR.rushP * this.k.counter * (1.3 - clamp(this.tr.initiative, 0, 1)) * (1 + BR.cl.rush * clr) * dt) {
+      && this.R() < BR.rushP * this.k.counter * (1.3 - clamp(this.trI(), 0, 1)) * (1 + BR.cl.rush * clr) * dt) {
       const o = this.counterFor('rush', 'jab'); this.queue = { ps: o[0].slice(), why: 'counter: ' + o[2], ctr: 1, at: this.t, pivot: o[2] === 'check hook' };
     }
     this.decT -= dt;
@@ -1332,7 +1335,7 @@ class Brain {
     // dropped this round: a composed man comes out firing (the rally), the rest box careful and long
     if (this.h.kdR) { if (tr.composure >= .65) { this.plan.initiative = clamp(this.plan.initiative + BR.surv.rally, -.4, .4); this.plan.power = clamp(this.plan.power + .1, -.4, .4); } else this.plan.range = clamp(this.plan.range + BR.surv.after, -16, 16); }
     this.h.kdR = 0; this.despR = 0; this.mode = 'feelout';
-    this.mode = 'feelout'; this.modeT = this.rnd(2, 6) * (1.3 - tr.initiative);
+    this.mode = 'feelout'; this.modeT = this.rnd(2, 6) * (1.3 - this.trI());
     this.note('round ' + (info.round || '?') + ' ' + (r > 0 ? 'won' : r < 0 ? 'lost' : 'even') + ' (he thinks)' + (change ? ', change: ' + change : ''));
     return { thinks: r, lead: this.sc.lead, change };
   }
@@ -1354,7 +1357,8 @@ class Brain {
     ];
     return opts;
   }
-  roundStart(round) { this.mode = 'feelout'; this.modeT = (round === 1 ? this.rnd(15, 40) : this.rnd(2, 6)) * (1.3 - this.tr.initiative); }
+  roundStart(round) { this.flT = this.dropT = -9; this.pD = null; this.pr = 0; this.myV = 0; // f3: a fold or a dropped hand doesn't carry over the bell
+    this.mode = 'feelout'; this.modeT = (round === 1 ? this.rnd(15, 40) : this.rnd(2, 6)) * (1.3 - this.trI()); }
   state() { return { mode: this.mode, hurtResp: this.hurtResp, emo: Object.assign({}, this.emo), plan: Object.assign({}, this.plan), lead: this.sc.lead }; }
 }
 

@@ -1,6 +1,6 @@
 // Plug-in brain P1 (docs/PLUGIN.md 2): can a player beat the brain with one trick all night? The bots live in bots.js (the cheese side's brain decides WHEN, the bot WHAT).
 // Same body both sides (rating 78); the cheese man is a Pro (sk 74), the brain hard (74) or expert (90).
-//   TAG=x node tests/cheese.js 40 [hard|expert] [none,jabSpam,...]   (one line per cheese to /tmp/cheese_x.txt)    node tests/cheese.js agg x
+//   TAG=x node tests/cheese.js 40 [easy|hard|expert] [none,jabSpam,...]   (easy carries his style's f3 flaw like preset('easy'); FLAW=0 for none)   (one line per cheese to /tmp/cheese_x.txt)    node tests/cheese.js agg x
 // Out: the brain's win %, and the cheese's share of landed punches in rounds 1-3 vs 8-10 (the brain should take the trick away as he reads it)
 // Fair check (Ed, Oct 17: smart, not psychic): how the brain defends each punch type the first 5 times he sees it vs from the 30th on, his counters landed per 100 of the cheese's punches
 // on first look vs read, and his mean reaction time. First look should sit near the control's; a first look as good as the read is a brain that knew before it saw.
@@ -17,6 +17,7 @@ for (const c of CS) {
   for (let i = 0; i < N; i++) {
     const side = i & 1, bst = pick(ALL), b = S.sheet(78, bst, S.rollGuard(bst)), ch = S.sheet(78, 'boxerpuncher', 'standard'); b.sk = S.skMake(SK, bst); ch.sk = S.skMake(74, 'boxerpuncher');
     const f = new S.Fight(side ? ch : b, side ? b : ch, { rounds: 10 }), C = f.f[1 - side], st = {}, real = C.brain.think.bind(C.brain);
+    if (LVL === 'easy' && process.env.FLAW !== '0') f.f[side].brain.flawSet(BB.BR.flaw.by[bst]); // f3: easy has his style's hole, like preset('easy') (FLAW=0: the old rung, no hole)
     C.brain.think = (P, dt) => CHEESE[c](real(P, dt), P, st, dt);
     const Bb = f.f[side].brain, hr = Bb.hear.bind(Bb), seen = {}; let ph = null; // fair check: what he does with each punch type by how often he's seen it
     Bb.hear = ev => { if (ev.by === 'him' && PU[ev.p] && ev.type !== 'feinted' && ev.type !== 'thrown' && ev.type !== 'pulled') { const k = seen[ev.p] = (seen[ev.p] || 0) + 1, def = ev.type === 'blocked' || ev.type === 'evaded';
