@@ -5,7 +5,7 @@
 // and with the flaw on the trick should beat just boxing him (+10-20: otherwise the hole isn't worth finding, the bot's own handicap made the first number).
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) : '-';
 const fs = require('fs'), OUT = t => '/tmp/flaws_' + t + '.txt';
-const BOT = { slugger: 'jabMove', outboxer: 'pressure', swarmer: 'stepCounter', counter: 'slipCounter', boxerpuncher: 'overJab' };
+const BOT = { slugger: 'jabIn2', outboxer: 'crowd4', swarmer: 'lungeCounter2', counter: 'slipCounter', boxerpuncher: 'overJab' };
 for (const x of (process.env.BOTX || '').split(',').filter(Boolean)) { const [st, b] = x.split(':'); BOT[st] = b; } // BOTX=slugger:jabIn tries another bot; ARMS=X skips the straight arms
 if (process.argv[2] === 'agg') { const L = fs.readFileSync(OUT(process.argv[3]), 'utf8').trim().split('\n').map(JSON.parse), A = {};
   for (const o of L) { const k = o.st + ' ' + o.fl + ' ' + o.bot, a = A[k] = A[k] || { st: o.st, fl: o.fl, bot: o.bot }; for (const q in o) if (typeof o[q] === 'number') a[q] = (a[q] || 0) + o[q]; } report(A); return; }
