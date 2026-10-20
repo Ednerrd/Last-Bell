@@ -319,3 +319,39 @@ Ed pasted the full HBO broadcast transcript; it is not kept. A lot of real corne
 - **Ref calls a knockdown a slip.** Two R1-2 drops ruled slips, and experts after said R1 should've been a knockdown (a missed 10-8). Our ref could miss calls at some small rate. Flavor, touchy like the star bias. Ed's call.
 - **Ropes holding a man up.** The ref can rule the ropes kept him up and count it. Engine check: we have ropes; do we count rope-held drops?
 - **Highlight bias warning.** This was a war between two all-heart men. Don't tune hurt or KD rates off it.
+
+---
+
+# Batch 7: Leigh Wood-Michael Conlan (2022), full fight broadcast
+Ed pasted the full broadcast transcript; it is not kept. Very little corner audio: a few lines from Ben Davison (Wood) and Adam Booth (Conlan), the rest is commentary. Speaker IDs are mine.
+
+## Fight shape
+- Wood (home champion, Nottingham) TKO 12 (1:20). Conlan was ahead on the TV card going into the last round and had looked well ahead most of the night.
+- **R1:** Wood took the center and started well. At the bell, Conlan (switching to southpaw) dropped him with a looping left. The setup: a run of lefts to the body, eyes on the chest, then the same left over the top.
+- **R2-3:** Wood hurt badly, holding to survive, cut by the left eye. Conlan didn't rush the finish ("this is a 12-round fight"). The same looping left kept landing because Wood leaned back with his right hand low.
+- **R4:** Wood's legs came back. He backed Conlan to the ropes and closed the gap. Conlan stayed comfy on the ropes but started taking more.
+- **R5-9:** Conlan wins most exchanges: faster, first and last in every one, sharp body work. Wood brave but "popshotting" big single shots. By R8 Conlan was taking more and breathing hard, often on the ropes.
+- **R10:** Wood's best round so far, late.
+- **R11:** Wood dropped Conlan at the bell. Messy (part slip), but a punch landed. Booth furious that it counted.
+- **R12:** Wood stormed out and stopped him. Conlan fell through the ropes and left for hospital. A scary ending; the Wood corner asked the crowd to calm down.
+
+## The corners
+- **Davison to Wood, before the fight (likely):** "If I give instructions, listen and react."
+- **Davison after R3 (via commentary):** "Get your right hand up." Later: "you can't go downstairs without something to occupy him upstairs," i.e. mix the body with head shots.
+- **Davison after R4 (likely):** something about being backed up against the ropes not looking as bad as it seemed. Garbled.
+- **Davison around R10:** asking for feints. "Raise the left a little, give him something to think about before you attack." Commentary: Conlan is too cute for big shots coming straight in; you have to set them up.
+- **Booth after R7:** "You're spending too much time on the ropes." "Success because you allow it." After R8: "This is now a four-round fight." The cutman before R11: "You need these rounds, no time to relax."
+- **Commentary on corners (Tony Bellew, pre-fight):** the real test of a trainer is when his man is behind or hurt. "The captain of the ship is judged by what he does when the seas are rough."
+
+## What's new for Last Bell
+- **The comeback from way behind.** Down early, losing most rounds, still won by stoppage in the 12th. "He can't win on points, he has to stop him" after R10 is what both the commentary and the corner said. That's the `NEED` system's late-round all-in. A good test case: does a man well behind on the cards go for broke in R11-12, and can it pay off?
+- **The setup shot.** Body, body, eyes to the body, then the same hand over the top. Same family as Fury's trap (batch 3) and Davison's "nothing downstairs without something upstairs." Check `COMBOS` and the f2 bait/trap work for a body-to-head set-up before adding.
+- **The one punch he can't solve.** The looping left landed all night because Wood's right hand dropped and he leaned back. Our `F.mem` should let a man land the same shot again if the other guy never fixes the hole. And the corner order to fix it ("right hand up") should actually help.
+- **Living on the ropes stops working late.** Conlan was "comfortable" on the ropes early. Late, tired, the same spot got him hurt. Booth's corner saw it ("too much time on the ropes"). Rope-fighting could cost more as gas drops.
+- **Popshotting vs setting it up.** Wood threw single big shots and walked onto counters until his corner asked for feints. That's `FEINT_READ`: big shots without feints vs a slick counter man should land less.
+- **The patient early finish (again).** Conlan hurt him in R1-2 and chose not to rush. Batch 4 (Crawford) had the same trait. This time patience let the hurt man recover and he lost. The other side of that trait.
+- **Gas from early work.** Conlan did a lot in R1-3 chasing a stop; by R8 he was breathing hard. Hard work early costs late (batch 6 burnout, slower here).
+- **A disputed late knockdown swings the cards.** R11 KD was half slip. Same family as batch 6 (missed KD calls). Ed's call on ref mistakes.
+- **The home crowd and the judges.** Commentary worried the crowd would sway the cards (they mentioned another close fight that week). Same family as the star bias (batch 5). Ed's call.
+- **After a stoppage: the injured man.** A scary end, the winning corner calming the crowd. Not a game mechanic to build lightly; if we ever show a hospital/injury moment, keep it respectful. Ed's call.
+- **Highlight bias warning.** A war with a last-round turnaround. Don't tune comeback rates off it.
