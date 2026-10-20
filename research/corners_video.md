@@ -467,6 +467,8 @@ Ed pasted the full TNT broadcast transcript; it is not kept. A little corner aud
 # Ed's call on officials (Oct 20 2026): refs with reputations
 Ed: refs are human, and each one has a known reputation ("doesn't like holding" etc.). So the officials list from batches 5-10 becomes a feature, not random unfairness.
 
+**Already built (found Oct 20):** `REFS` in index.html (~1766 on `claude/clever-planck-urj1i4`, Drama b, Oct 17) has 4 refs with dials, shown on screen: Clarence Breakwell (on time, breaks fast), Hank Lettum (lets them fight), Norma Rulebrook (strict, warns early), Teddy Quickhook (quick to stop it). Dials: `stop`, `hold`, `holdN`, `dirty`. So this is an add-on, not new: more refs, KD calls, benefit of the doubt to the champ / house fighter, a bit of human night-to-night wobble, and the ref on the offer screen.
+
 **Why it works:** unfairness the player can see coming is strategy, not a robbery. The ref's name and reputation show on the fight offer / pre-fight screen, so the coach plans around him.
 
 **What the engine already has (index.html):** each judge has a taste (`judgeLean`, ~611), a rare robbery bias (`judgeBias`, 2%), and the ref already warns and takes points for holding-and-hitting (`STYLE_SPOIL`, `foulDed`), breaks clinches, and stops fights on damage (~1433). A ref profile would mostly scale knobs that exist.
