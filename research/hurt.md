@@ -5,7 +5,7 @@ Read with `research/mind_finish.md` section 2 (the options, recovery time) and t
 
 # Batch 1 (Oct 20)
 
-Pulled: 7 tried, 4 with captions, 3 useful (Loma-Linares was a fan recap: "got up quickly, survived the round, then went to the body"). Bot-walled (no captions, retry later): fightTIPS "recover after a big hit" (`3mzP2YM1YfQ`), "fighters that didn't know how to stay down" (`rJyHh3pxGLs`), Atlas on why Fury got up (`XVsaB4_Z42c`), Fury on round 12 (`TWP6rAPUxDs`).
+Pulled: 7 tried, 4 with captions, 3 useful (Loma-Linares was a fan recap: "got up quickly, survived the round, then went to the body"). Bot-walled (no captions, retry later): "fighters that didn't know how to stay down" (`rJyHh3pxGLs`), Atlas on why Fury got up (`XVsaB4_Z42c`), Fury on round 12 (`TWP6rAPUxDs`).
 
 ## 1. Regal Boxing: "Dos and don'ts when hurt" (Khan-Garcia, a coach's breakdown)
 Khan dropped by Garcia's wide left hook; the coach goes through what he did wrong, then a second fighter (name lost in the captions) who did it right.
@@ -62,6 +62,11 @@ His four points, in order, from a pressure fighter who has been on both sides:
 - **Don't fire back** ("go out on your shield"): the fighter's instinct is to give it back, and the multiple blows are what finish you. "Take your time, relax, spread your feet."
 - **The hunter's mistake:** wasting energy punching the arms and elbows of a shelled man. Take little breaks, look for the uppercut, crack the body.
 - **Against section 1 on distance:** Regal says smother, don't make space; Joe says move and make space, *then* clinch when backed up. Both say clinch over shell and don't trade. Our read: a man whose legs still work moves (our `run`, from `tr.legs` / footwork); a man whose legs are gone smothers and holds. Joe says "try" each time: moving is the plan if he can.
+
+## 7. fightTIPS: "How to recover after taking a big hit" (short, a self-defense coach)
+- The two instincts to fight: **reaching and grabbing** blind, and **walking backward**. Backing up only delays it: he chases you to the corner or the ropes and lights you up there.
+- Instead: a tight shell you can see through (gloves to the forehead, elbows in, weight on the back foot), then **move forward into him and tie up** (overhooks: pin his arms at the armpits so he can't punch). Turn him, put him on the ropes, **lean on him and take some of his energy back** while you recover.
+- Tally on distance: 2 for close (Regal, fightTIPS), 1 for moving away first (Bazooka Joe, then clinch when caught). All three: clinch beats shell-and-wait and beats trading. Second source for leaning to drain the other man.
 
 ## For Last Bell (ideas, not built)
 1. **Close, not far, while the legs are gone** (Regal): `run` (range 24) is the textbook mistake for a man with bad legs; smother/lean (`clinch`, `shell` close) is the coach's answer. Run could stay for a man whose legs still work (`tr.legs`, footwork), and the far `wary` plan could start once the hurt clears (Inoue). Check `finish.js` hurt answers before touching it.
