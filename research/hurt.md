@@ -5,7 +5,7 @@ Read with `research/mind_finish.md` section 2 (the options, recovery time) and t
 
 # Batch 1 (Oct 20)
 
-Pulled: 7 tried, 4 with captions, 3 useful (Loma-Linares was a fan recap: "got up quickly, survived the round, then went to the body"). Bot-walled (no captions, retry later): Bazooka Joe "strategies to survive being hurt or rocked" (`ve1t5-8YFic`), fightTIPS "recover after a big hit" (`3mzP2YM1YfQ`), "fighters that didn't know how to stay down" (`rJyHh3pxGLs`), Atlas on why Fury got up (`XVsaB4_Z42c`), Fury on round 12 (`TWP6rAPUxDs`).
+Pulled: 7 tried, 4 with captions, 3 useful (Loma-Linares was a fan recap: "got up quickly, survived the round, then went to the body"). Bot-walled (no captions, retry later): fightTIPS "recover after a big hit" (`3mzP2YM1YfQ`), "fighters that didn't know how to stay down" (`rJyHh3pxGLs`), Atlas on why Fury got up (`XVsaB4_Z42c`), Fury on round 12 (`TWP6rAPUxDs`).
 
 ## 1. Regal Boxing: "Dos and don'ts when hurt" (Khan-Garcia, a coach's breakdown)
 Khan dropped by Garcia's wide left hook; the coach goes through what he did wrong, then a second fighter (name lost in the captions) who did it right.
@@ -53,6 +53,16 @@ Fury's trainer on the round he got up from. Most of the interview is the comebac
 - **After he got up:** full guard, eats a big left hook, the corner wonders whether to step in, then he ties Wilder up at the right moment. ~20 s left. The corner wanted only "nullify, see the round out, you're not winning this round back"; Fury pushed Wilder back the last 10-20 s instead.
 - **Getting up breaks the finisher.** "Being able to break the man in front of you is a massive part of boxing": Fury rising "took a huge part of Wilder away from him".
 
+## 6. Bazooka Joe Valtellini: "Strategies to survive being hurt or rocked" (kickboxing world champ, a coach's list)
+His four points, in order, from a pressure fighter who has been on both sides:
+1. **Don't shell up** (try not to: it's the natural reaction). As the pressure man he *wants* you shelled: then he goes to the body, takes angles, rips uppercuts. Shelled on the ropes is how most finishes happen: no offense, can't see him, picked apart. You can tell the experienced man by who doesn't shell.
+2. **Move your feet.** A stationary man is a target; distance buys time to breathe and recover. A good hunter will track you to the corner, but keep moving.
+3. **Feint from the distance.** A shelled man with his hands on his head is no threat; one feint makes the hunter slow down for a split second and think "he's recovered". (A small bluff, like 1f.)
+4. **Clinch: the most important one.** Catch a big hook, get inside, tie up, breathe, hold until the ref breaks it; then move again, get distance, feint to keep him off.
+- **Don't fire back** ("go out on your shield"): the fighter's instinct is to give it back, and the multiple blows are what finish you. "Take your time, relax, spread your feet."
+- **The hunter's mistake:** wasting energy punching the arms and elbows of a shelled man. Take little breaks, look for the uppercut, crack the body.
+- **Against section 1 on distance:** Regal says smother, don't make space; Joe says move and make space, *then* clinch when backed up. Both say clinch over shell and don't trade. Our read: a man whose legs still work moves (our `run`, from `tr.legs` / footwork); a man whose legs are gone smothers and holds. Joe says "try" each time: moving is the plan if he can.
+
 ## For Last Bell (ideas, not built)
 1. **Close, not far, while the legs are gone** (Regal): `run` (range 24) is the textbook mistake for a man with bad legs; smother/lean (`clinch`, `shell` close) is the coach's answer. Run could stay for a man whose legs still work (`tr.legs`, footwork), and the far `wary` plan could start once the hurt clears (Inoue). Check `finish.js` hurt answers before touching it.
 2. **Hurt magnifies damage** (Regal, and the light punch on top of Khan's head): the engine's hurt is a low head meter (`hurtNow`: stun or head under 30%), so he is already closer to the floor; nothing scales a punch up while he trades. Open question for the balance pass (stops 30-35%): a hurt man who fires pays a little more per shot taken.
@@ -62,4 +72,6 @@ Fury's trainer on the round he got up from. Most of the interview is the comebac
 7. **The counter-trap guard** (Cardenas): a high guard that looks basic, a fast counter hook; let him think it's safe. Same idea as f2 the bait and the coach-clip list 1b(5).
 8. **Make it boring** (Davison): a corner plan for a man ahead late vs a puncher: feints, range, height changes, clinches that eat the clock. Our AI corner has Slow down; this is the safe-lead version. The other side: a man ahead who goes for the late finish (greed) is open to the counter.
 9. **Getting up hurts the hunter** (Fury-Wilder): a man rising from a big KD dents the finisher's confidence (`emo.conf`). Small, a commentary hook either way.
+10. **The hunter vs a shell** (Joe): a smart finisher stops hitting the arms and goes body / uppercut / angle on a shelled man; a novice wastes gas on the gloves. Check what `pickCombo` does in a hunt vs `shell` (by level) before building anything.
+11. **Legs decide close or far** (sections 1 and 6): `run` when the legs work, smother/hold when they don't. The engine has a legs read already (`Look`, the wobble).
 5. **Lean to tire him** (size, item 4 on the roadmap): the hurt man leaning on the hunter costs the hunter gas. One coach's claim, no numbers yet.
