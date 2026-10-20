@@ -393,3 +393,35 @@ Ed pasted HBO's tribute rebroadcast (aired after Gatti's death in 2009); it is n
 - **The big ring favors the mover.** Commentary was surprised the ring was big, which helped Gatti box. Ring size as a venue knob? Idea only.
 - **A scorecard mistake decided it.** Same family as missed KDs (batch 6), the home crowd (batch 7), and star bias (batch 5). Ed's call on judge and ref errors as a whole.
 - **Highlight bias warning.** This is the most famous war of its era. Don't tune pace, KDs or comebacks off it.
+
+---
+
+# Batch 9: Joshua-Ruiz I (2019), full fight broadcast
+Ed pasted the full DAZN broadcast transcript; it is not kept. A little corner audio, mostly garbled: Rob McCracken (Joshua) and Manny Robles (Ruiz). The best audio is the referee at the end. Speaker IDs are mine.
+
+## Fight shape
+- Ruiz TKO 7 (1:27). A short-notice sub (Jarrell Miller failed his drug tests), about a 15-1 to 20-1 underdog. Before the stop, the cards were close (one judge each way by a point; the TV desk had Ruiz up).
+- **R1-2:** Joshua jabs, uses his height. Ruiz is calm, hands up, walks in behind his jab, and counters sharply every time Joshua misses. Joshua is wary of the counters early.
+- **R3:** Joshua drops Ruiz with a left hook and goes for the finish. Ruiz hits him with a left hook to the temple on the way in and drops him. Then drops him again. The ref asked Joshua to walk to him; he didn't really, and the ref gave the champion the benefit of the doubt.
+- **R4:** Ruiz doesn't rush the finish ("I didn't want to throw everything... I wanted to hunt him down"). Commentary: he let Joshua off the hook. Joshua's output drops hard.
+- **R5-6:** Joshua averages 28 punches a round vs about 40 in his last eight fights. He respects the counters. Ruiz works the body (jabs to the chest, hooks downstairs) to set up the overhand right.
+- **R7:** Joshua opens up, Ruiz's faster hands win the exchange, two more knockdowns. On the second, Joshua turns to his corner, his mouthpiece out, and doesn't step toward the ref. Griffin: "Are you ready to box?" No clear answer. Stopped.
+- Joshua after: "I'll make no excuses," but admitted he underestimated a short-notice guy. Great sportsmanship.
+
+## The corners
+- **McCracken after R1:** "One-two... keep him long, keep him long. Jab, jab back. If you have to, feint first. Don't fall in." A plan for a fast counter man: be long, feint, don't lunge.
+- **Robles after R2 (via commentary):** "Show him the right hand" (from the outside, to make Joshua commit so Ruiz can counter). And: when you double the jab, see what happens in the exchanges.
+- **McCracken after R5 (likely, garbled):** "Let's get boxing again... jab, jab, right hand. That's all that will win this."
+- **Robles after R5-6 (likely):** a body attack downstairs, then the looping right over the top. Ruiz after the fight: "listening to the game plan... work the body, work the head."
+- **Referee Griffin, R3 and R7:** "Walk to me." "Are you ready to box?" The ref judges whether the man *wants* to go on, not just whether he can stand.
+
+## What's new for Last Bell
+- **The finisher gets caught finishing.** Joshua dropped Ruiz and charged in, and got dropped himself. Same family as batch 4 (patient vs swarm finisher) and batch 7 (Conlan). Now three cases: the swarm finish risks the hurt man's counter, the patient finish lets him recover. A clean set of tests for a finishing trait.
+- **Hand speed beats size.** The shorter, heavier man with faster hands won every exchange. Commentary: "you don't want to exchange with a man with faster hands." In-engine: speed should decide who wins the trade when both throw at once. Check how `resolve()` handles simultaneous punches.
+- **The counter man punishes misses.** "He punches back sharply every time you miss." Joshua's fix was to stay long and feint (`FEINT_READ`). Fits Wood-Conlan (batch 7) too.
+- **Output drops from fear.** After the KDs, Joshua threw about 30% less. A hurt or spooked man stops letting his hands go even when his legs come back. A "shaken" state that lowers output for rounds, separate from gas and hurt. Check the brain's memory (`F.mem`) for something that already does this.
+- **The fighter who wants out.** Turning his back, looking at his corner, mouthpiece out, not walking to the ref. Body language the ref reads as quitting. Our ref stops on damage; a will check ("are you ready to box?") could stop a man whose heart is gone. Big, touchy: ties to heart and the batch 1 stop check. Ed's call.
+- **The ref's benefit of the doubt for a champion.** He didn't walk to the ref in R3 and was allowed to continue anyway. Same family as the officials list (batches 5-8). Ed's call.
+- **Underestimating a short-notice sub.** AJ admitted it. A career flavor: a late replacement opponent is more dangerous than his record. Idea only (`gym`/offers).
+- **The left hook to the temple takes the legs.** The 3D "where it landed" plan (`proto/PLAN.md`): temple shots cause the leg-wobble reaction.
+- **Highlight bias warning.** One of the biggest heavyweight upsets ever. Don't tune upset rates off it.
