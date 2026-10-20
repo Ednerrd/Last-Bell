@@ -503,7 +503,7 @@ const BR = {
   // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): crowded (the man inside near) for build s running, he shells for hold s: guard, output x out and no counters, slides off x lat, fights for room x push, blocks x blk, the body open (hole).
   // straight (swarmer): head comes in straight, lunging in (his feet faster than v) he tries to defend a power shot x try at quality x q. same (counter, Ed Oct 20: a habit to find): every counter he throws is the same punch (p), and for t s after it his guard's at guard and he defends head shots x try: slip that one and come back.
   // drop (boxer-puncher): the jab hand comes back low, t s after a jab the guard's at guard and he defends head shots x try. hole: what the host's own (passive) defense loses to those punches meanwhile (Action.hole)
-  flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'same', boxerpuncher: 'drop' }, in: 8,
+  flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'same', boxerpuncher: 'drop' }, in: 8, k: .6, // k: how open the holes are, all of them (the defense he loses x k; .6, Ed Oct 20: easy vs a Pro ~15%, was 11% at 1)
     jab: { try: .2, hole: .7 }, fold: { near: 48, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, push: .3, blk: 3, hole: .4 }, straight: { try: .3, q: .7, hole: .8, v: 25 },
     same: { p: 'cross', t: .5, guard: .35, try: .45, hole: .5 }, drop: { t: .4, guard: .3, try: .45, hole: .4 } },
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
@@ -691,12 +691,14 @@ class Brain {
   ini() { return clamp(this.tr.initiative + this.pv('initiative'), 0, 1); }
   inn(P) { return this.myV > BR.flaw.in; } // he's walking in
   lunge() { return this.myV > BR.flaw.straight.v; } // ... fast
-  flawTry(P, p) { const F = BR.flaw, f = this.fl; // how much of his defense the hole leaves him, vs this punch
+  flawTry(P, p) { const x = this.flawT(P, p); return 1 - (1 - x) * BR.flaw.k; }
+  flawT(P, p) { const F = BR.flaw, f = this.fl; // how much of his defense the hole leaves him, vs this punch
     if (f === 'jab' && PUNCHES[p].cat === 'jab' && this.inn(P)) return F.jab.try;
     if (f === 'straight' && this.lunge() && PUNCHES[p].cat === 'power') return F.straight.try;
     if ((f === 'drop' || f === 'same') && this.t < this.dropT && PUNCHES[p].zone === 'head') return F[f].try;
     return 1; }
-  holeOf(P) { const F = BR.flaw, f = this.fl; // ... and what's open to the host's own defense
+  holeOf(P) { const h = this.holeT(P); if (h) h.k *= BR.flaw.k; return h; }
+  holeT(P) { const F = BR.flaw, f = this.fl; // ... and what's open to the host's own defense
     if (f === 'jab' && this.inn(P)) return { cat: 'jab', k: F.jab.hole };
     if (f === 'straight' && this.lunge()) return { cat: 'power', k: F.straight.hole };
     if ((f === 'drop' || f === 'same') && this.t < this.dropT) return { zone: 'head', k: F[f].hole };
