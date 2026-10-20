@@ -19,3 +19,16 @@ Source: YouTube breakdowns pulled with `tools/yt/yt.py` (`research/CLIPS_WANTED.
 3. **"Punch before he resets"** on a tired man: a counter window that opens with the other man's gas (his `tired` look) and the counterer's speed. Ties to the eyes (gas) and the counter timing.
 4. **Don't push a hurt man whose game is fighting off pressure** (R10-12): a smart World-class leader keeps it low-risk rather than hunting. Ties to `HUNTS` and the finisher's choice: hunt by the other man's style, not only his hurt.
 5. **Gun-shy kills the step-in counter** (adjustment 2 caveat): the counter plan needs the will to punch, not just the read (emotion `fear` lowering output undoes it).
+
+## 2. Teddy Atlas: "How Bivol beat Canelo" (THE FIGHT, his breakdown)
+- **When you knew it was over:** Bivol left his own fight and went inside, Canelo's ground, and *still* won those rounds. Winning on the other man's ground is the sign of a long night.
+- **Bivol controlled the jab and the range** and put punches together. Bivol's trainer (with him since the amateurs) had the better plan than Reynoso.
+- **Canelo's mistake: looking only for power.** Power you don't land puts you behind on the cards, and power needs a table set: the jab. Against a man with good legs who wants the outside, bring a jab to at least stabilize him there; Canelo didn't.
+- **The rope show-off:** Canelo goes to the ropes and goes defensive for no reason but to show the defense: slipping, making you miss, **nothing coming back**. Atlas's plan said steal rounds right there: with no counter to deter him, throw more, put them together; "he can't slip them all". Bivol did, and landed.
+- **Riding punches** (Duran's trick: turn with the right hand to take the sting out) cost Canelo with the judges: it made him look caught clean even when he wasn't. "A flashlight on himself." Better a clean slip that everyone sees miss, in position to counter.
+
+### For Last Bell (ideas, not built)
+6. **The punch-back test:** a man who defends without countering invites volume. The attacker reads "nothing coming back" (counters seen per defense, opponent memory) and throws longer combos; a defensive man must answer now and then or get piled on. (Same idea as the hurt man's "a punch now and then so he knows you're still there", `hurt.md` 1.)
+7. **Power-only plans lose on the cards** (Canelo): a plan that skips the jab lands less and sets up nothing; the AI corner's call against a mover is "bring the jab".
+8. **Rolling with punches looks worse to the judges:** a defense that takes the sting out but reads as clean (`judgeScore`) vs a slip that reads as a miss. Small, a judging-taste detail.
+9. **Winning on his ground** as a sign for the corner: when the plan's ground is lost and the round still goes your way, the gap is real (between-round confidence).
