@@ -5,7 +5,7 @@ Read with `research/mind_finish.md` section 2 (the options, recovery time) and t
 
 # Batch 1 (Oct 20)
 
-Pulled: 7 tried, 4 with captions, 3 useful (Loma-Linares was a fan recap: "got up quickly, survived the round, then went to the body"). Bot-walled (no captions, retry later): Bazooka Joe "strategies to survive being hurt or rocked" (`ve1t5-8YFic`), fightTIPS "recover after a big hit" (`3mzP2YM1YfQ`), "fighters that didn't know how to stay down" (`rJyHh3pxGLs`), Ben Davison on Fury's round 12 (`rL9BcK4vDU0`), Atlas on why Fury got up (`XVsaB4_Z42c`), Fury on round 12 (`TWP6rAPUxDs`).
+Pulled: 7 tried, 4 with captions, 3 useful (Loma-Linares was a fan recap: "got up quickly, survived the round, then went to the body"). Bot-walled (no captions, retry later): Bazooka Joe "strategies to survive being hurt or rocked" (`ve1t5-8YFic`), fightTIPS "recover after a big hit" (`3mzP2YM1YfQ`), "fighters that didn't know how to stay down" (`rJyHh3pxGLs`), Atlas on why Fury got up (`XVsaB4_Z42c`), Fury on round 12 (`TWP6rAPUxDs`).
 
 ## 1. Regal Boxing: "Dos and don'ts when hurt" (Khan-Garcia, a coach's breakdown)
 Khan dropped by Garcia's wide left hook; the coach goes through what he did wrong, then a second fighter (name lost in the captions) who did it right.
@@ -45,6 +45,14 @@ Round 3, the round after Cardenas dropped Inoue at the end of R2. A coach goes t
 - **His holes (the coach's read):** regular patterns when he "really wants to retaliate" (tells), and almost no jab going backward: he always steps in with his attacks, so he closes the distance for a counter-puncher. Twice he steps into Cardenas's slip-inside left hook doing it. A square base after defending gets caught by the third punch.
 - **Fit with section 1:** Regal says smother while the legs are gone; this is the next phase, the legs back: box long at a short-step distance behind the jab, defense first, feints, and counter the hunter's greed. (Our `wary` after a KD, `SV.after`, is the box-long part.)
 
+## 5. Ben Davison on Fury-Wilder I, round 12 (TNT interview)
+Fury's trainer on the round he got up from. Most of the interview is the comeback story; the fight parts:
+- **The late-round plan vs a puncher: "make it boring."** Feint, keep the distance, change height, tie him up. "Lose 10 seconds here, 10 seconds there, you can make a three-minute round a two-minute round." Nullify, no silly chances: a dangerous man with three minutes left can land at any time. Keep him calm: anxiety makes mistakes.
+- **The knockdown came from greed.** Fury was worried about the judges and wanted to finish strong. He'd been landing the 1-2 "in two phases" all night (land, take a little distance, land again); he landed it, thought "I'm going to get you again", got "a little too offensively minded" for a split second, and got caught. (A man ahead going for the late finish: our `desp` is the other side of this, the man behind.)
+- **The corner reads the floor.** "When a fighter's hurt but going to get up, something's moving: hands, feet, rolling over, the head pops up." Fury lay still, so Davison thought it was over and didn't even think of the towel. The ref (Jack Reiss) has him step to the side: legs under him, go on.
+- **After he got up:** full guard, eats a big left hook, the corner wonders whether to step in, then he ties Wilder up at the right moment. ~20 s left. The corner wanted only "nullify, see the round out, you're not winning this round back"; Fury pushed Wilder back the last 10-20 s instead.
+- **Getting up breaks the finisher.** "Being able to break the man in front of you is a massive part of boxing": Fury rising "took a huge part of Wilder away from him".
+
 ## For Last Bell (ideas, not built)
 1. **Close, not far, while the legs are gone** (Regal): `run` (range 24) is the textbook mistake for a man with bad legs; smother/lean (`clinch`, `shell` close) is the coach's answer. Run could stay for a man whose legs still work (`tr.legs`, footwork), and the far `wary` plan could start once the hurt clears (Inoue). Check `finish.js` hurt answers before touching it.
 2. **Hurt magnifies damage** (Regal, and the light punch on top of Khan's head): the engine's hurt is a low head meter (`hurtNow`: stun or head under 30%), so he is already closer to the floor; nothing scales a punch up while he trades. Open question for the balance pass (stops 30-35%): a hurt man who fires pays a little more per shot taken.
@@ -52,4 +60,6 @@ Round 3, the round after Cardenas dropped Inoue at the end of R2. A coach goes t
 4. **Carry-over hurt:** the legs stay heavy into the next round (Gamboa R6), the corner can revive him (R7). Today the break clears most of it (`mind_finish.md` 4b item 6 has a residue idea). The hunter missing it is a level thing (the eyes).
 6. **After the KD, once he's back** (Inoue R3): the `wary` box-long plan could look like this: jab share way up (~70%, touches to the guard count for range and respect), short steps back instead of max range, more feints, defense first, and a counter-trap for a hunter who unloads. A reckless re-entry right after a KD (retaliating) shows tells and walks into the counter.
 7. **The counter-trap guard** (Cardenas): a high guard that looks basic, a fast counter hook; let him think it's safe. Same idea as f2 the bait and the coach-clip list 1b(5).
+8. **Make it boring** (Davison): a corner plan for a man ahead late vs a puncher: feints, range, height changes, clinches that eat the clock. Our AI corner has Slow down; this is the safe-lead version. The other side: a man ahead who goes for the late finish (greed) is open to the counter.
+9. **Getting up hurts the hunter** (Fury-Wilder): a man rising from a big KD dents the finisher's confidence (`emo.conf`). Small, a commentary hook either way.
 5. **Lean to tire him** (size, item 4 on the roadmap): the hurt man leaning on the hunter costs the hunter gas. One coach's claim, no numbers yet.
