@@ -52,7 +52,7 @@ Engine check against `REFS` and `foul()`:
 - **Intentional = no warning:** our `foul()` warns twice before a point, for holding and for dirty shots both. By Taylor's rules a deliberate foul is a point right away. Holding is a warning-first foul for most refs (fine); the dirty shot in the clinch is closer to accidental (fine). Nothing to change unless we add real deliberate fouls (punch after the bell, hitting on the break, hitting a downed man).
 - **No punch on the break:** fits batch 1 of Skillr (#3 "the break is live"): the sneak shot on the break is exactly the foul Taylor warns about. So the idea needs both sides: a sneak shot that lands, and a strict ref who takes a point for it (`dirty`).
 - **"Do something" on the ropes:** **built.** That's the unanswered-punch stop (`unanswered`, `REFS.stop`). Taylor counts holding and running as doing something. Checked: the count (`F.unanswered`) only grows on power shots into a stunned or badly hurt man, and clears when he lands one back or after 2.5 s with nothing new (`unT`). A clinch doesn't clear it: a short tie-up (1.1–2.3 s x the ref's `hold`) can leave the count standing when they break. Small fix idea: a clinch he started, or getting off the ropes, clears it (Taylor's "hold him, run, do something").
-- **Corner stop (towel):** not built as a corner call. The AI corner never throws the towel; stops come from the ref, the doctor, or 3 knockdowns. Idea for the AI corner (and the coach player: a "stop it" button).
+- **Corner stop (towel):** built but thin (corrected Oct 20, `toprank.md`): between rounds, worn and behind on the cards, a coin flip says RTD. No real corner call, never mid-round, no button for the coach. Idea for the AI corner (and the coach player: a "stop it" button).
 - Rabbit punches, kidney shots, low blows, head clashes, the punch after the bell: **not built.** Only holding and the clinch dirty shot are fouls today. Low blows and head clashes are the common ones (a head clash cut is a real fight-changer). Parking-lot ideas.
 
 ## What's new from batch 1 (each one an engine check first)
@@ -62,4 +62,4 @@ Engine check against `REFS` and `foul()`:
 4. Tom Tyler a touch stricter on holding? (Ed's call.)
 5. More fouls: punch on the break, after the bell, low blows, head clashes; deliberate ones cost a point at once.
 6. Holding or getting off the ropes should clear the unanswered-punch count (checked: today a clinch doesn't).
-7. The corner throws the towel (AI corner, and a button for the coach).
+7. The corner throws the towel for real (AI corner, and a button for the coach): see `toprank.md` #1.
