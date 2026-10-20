@@ -293,6 +293,13 @@ A coach's punch-by-punch breakdown of three shorter men beating taller ones. Par
 - **Loma: close the distance progressively.** Early counters and jabs aimed at the gloves on purpose, not to land, each step a little closer. Insane tempo changes. Sometimes he creates an opening and *doesn't* take it: the other man never knows when it will be punished, gets hesitant touch shots, freezes ("a drowning feeling"). Then he walks in and Campbell still can't land.
 - Side note: the inside angle is fine if you know where his jab and right hand end; don't always take the outside.
 
+## V2. DelCardo Boxing: countering a taller man as he steps in (Inoue-Fulton)
+- **Stand just outside his range** so he has to step to reach you; too close and you can't see it coming in time. A loaded stance (weight on the back foot), alert, "like a wolf stalking".
+- **Two counters, in order through the fight:** (1) *after* he steps: one defensive move (level change / slip), see whether he follows up, then a power jab pushed off the loaded back foot (safe early, while you learn him); (2) *as* he steps, once his timing is read: he walks into it, so it hits harder (Inoue's jab to the body, then the right on top).
+- **Head off the centre line as you punch:** both start at the same time, the one who moves his head wins (Fulton kept his on the line).
+- Even with his timing down, stay outside his range: less energy, safer. Fulton measuring, too far, stepping in again: each step in is a chance.
+- Same idea as Pacquiao in V1 (make the tall man come), the opposite of the walk-in. For D: the counter-style short man waits outside the long man's range; "after" early, "as" once he's read him (a learning-in-the-fight hook: opponent memory, `mem`).
+
 ### For Last Bell (adds to section D and C, not built)
 1. **Two short-man plans, not one:** D has the entry plan (get on the chest). The video adds the long one: circle away, make him reach and over-lean, counter the reach (Pacquiao). A skill/style choice for the short man.
 2. **Feint the entry, many times** (D, trigger 2): a World-class short man's entry comes behind a run of entry feints, not one; a single feint into a 1-2 vs a counter-puncher eats the uppercut. Novice walks straight in (already in D).
