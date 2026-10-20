@@ -272,3 +272,50 @@ Ed pasted the full broadcast transcript; it is not kept. Almost no corner audio 
 - **Star bias in close cards.**
   - A Vegas A-side gets the close rounds, and commentary expects it.
   - Our judges have tastes. A "house fighter" lean could be real, but it's touchy: it would feel unfair to the player. Ed's call.
+
+---
+
+# Batch 6: Bradley-Provodnikov (2013), full fight broadcast
+Ed pasted the full HBO broadcast transcript; it is not kept. A lot of real corner audio on both sides (Joel Diaz for Bradley, Freddie Roach for Provodnikov). Speaker IDs are mine where the mic doesn't name them.
+
+## Fight shape
+- Bradley UD 114-113, 114-113, 115-112. CompuBox: Bradley threw exactly 1,000 and out-landed him by 129. Body: Bradley 69, Provodnikov 25.
+- **R1-2:** Bradley came out to brawl (to make a statement after the Pacquiao fight). Provodnikov's overhand right over the top of the jab hurt him badly both rounds. Two drops ruled slips. Bradley stood straight up, which set up the left hook. Provodnikov threw 97 in R2.
+- **R3:** Provodnikov arm-weary after 97 punches: 15 thrown, 2 landed. Bradley's easy round.
+- **R4-5:** Bradley 107 and 118 thrown, body work, small "pitty-pat" punches to keep Provodnikov's hands home. A body hook hurt Provodnikov in R5 (right elbow dropped to cover).
+- **R6:** Bradley stopped moving, ate a left hook, out on his feet again. 3-3 on Lederman's card.
+- **R7-10:** Bradley boxes: jab, angles, body. Provodnikov's left eyelid cut (from a punch) and his face swelling.
+- **R12:** Provodnikov drops Bradley late (the ropes held him first, then a knee). Not enough to catch up.
+- Bradley after: "I think I got a concussion... I'm dizzy right now."
+
+## The corners
+- **Diaz after R1 (likely Diaz):** angry. "What did I tell you about the first two rounds?" The plan was to box early, let the big puncher burn his steam, *then* get inside. Bradley ignored it.
+- **Diaz after R2:** "He has to fight your fight. Don't fight his." When he pushes you to the ropes, get inside on him, "don't let him work."
+- **Diaz after R6 (reported by the truck):** threatened to stop it if Bradley kept taking risks. Interviewed after R7: "If he comes to the corner hurt, I will not throw him in there to get hurt again." Then the fix: "He's too strong. Use skill instead of power. Angles, counter off him, don't let him sit."
+- **Diaz after R7:** praise first ("that's how we need you to box"), the deep breath, then "you're winning this fight... we need these 4 rounds... you can't get careless, he's going for the kill now."
+- **Roach after R1-R4:** short and technical. "The jab is working." "Get the power shot behind the jab." "He's moving into your right hand... feint the left, right hand over the top." "Bob and weave." "Catch him when he's punching with you."
+- **Roach after R8:** "You're opening up too wide." "You took too many shots that round."
+- **Roach interviewed after R9:** "He's outscoring us, outboxing us... I'm close to stopping the fight." Worried about the punches, not the cut. "But every time I think about it, he comes back with a combination."
+- **Roach after R10 and R11: the ultimatum.** "We need to knock him out to win. Show me you can do that this round or I'm gonna stop the fight." Then "every time you hit him, you hurt him. Let's hurt him." Provodnikov came out with new life; Bradley went right to the body to take it out of him.
+- **Diaz before R12:** "He's gonna try to knock you out, so stay sharp. Hold on to him and move." Bradley half did it and got dropped.
+- **Roach on the cut (R9 break):** "Just do your job. If the doc wants to look, I'll bring him up." The referee checked both men between rounds all night.
+
+## What's new for Last Bell
+- **Both corners threatening to stop it, in the same fight.**
+  - Two different reasons: Diaz because his man kept taking risks (a discipline threat), Roach because his man was losing and taking punishment (a "show me" ultimatum).
+  - Batch 1-2 had the stop check (repeat-back, the doctor). This is new: the threat *as a motivator*. "Show me this round or I stop it" gave Provodnikov his best late rounds.
+  - Game idea: a corner call "Show me" for a man who's behind late. Big effort and risk spike for one round; if the round goes bad, the corner may really stop it. Check `NEED` (round awareness) and the existing stop logic before building.
+- **The fighter ignores the early plan, then listens.** Bradley brawled R1-2 against orders, got hurt, then boxed and won. Same as batch 4 (orders not followed), but here the follow-through *improves* after a scare. A hurt man listens better: compliance could go up after he's been hurt.
+- **Big output burns out the puncher.** 97 punches in R2, then 15 in R3. A clean gas case: a crash round after a huge burst. Check `gas.js` for a one-round crash vs a slow fade.
+- **Activity wins rounds the puncher thinks he won.** Bradley's 100+ punch rounds beat Provodnikov's fewer, harder shots on the cards. Commentary: "throw and land more, the single best way to get across with judges." Same as batch 5 (Bivol). That's two sources now.
+- **The body as the answer to a strong man.**
+  - Bradley's body work slowed him round by round; Provodnikov barely went there (25 landed). Lampley called it as big a factor as anything.
+  - "When a guy comes out with new life, the fastest way to take it out of him is the body." A corner rule worth having: vs a rally, go body.
+- **Standing straight up when hurt = the hook lands.** Posture as the tell (fits the batch 3 tired habits list).
+- **The arm-weary round.** Not hurt, just empty: walks around, throws nothing. A distinct state from hurt.
+- **Walking knockout.** Bradley was "out" several times but kept punching back. A huge-heart man can stay up and fire back while badly hurt. Check how chin/heart split in the engine before adding.
+- **Where it lands matters to the chin.** Jones: shots high on the head didn't bother Bradley, the ones on the chin did. Fits the 3D "where it landed" plan (`proto/PLAN.md`) if the engine ever splits chin vs top of the head. Idea only.
+- **Head snap sells it to judges.** Lederman: Bradley's head snapped back when hit, Provodnikov's didn't, and that catches the judges' eye. A render cue, and maybe a small judging taste. Ed's call.
+- **Ref calls a knockdown a slip.** Two R1-2 drops ruled slips, and experts after said R1 should've been a knockdown (a missed 10-8). Our ref could miss calls at some small rate. Flavor, touchy like the star bias. Ed's call.
+- **Ropes holding a man up.** The ref can rule the ropes kept him up and count it. Engine check: we have ropes; do we count rope-held drops?
+- **Highlight bias warning.** This was a war between two all-heart men. Don't tune hurt or KD rates off it.
