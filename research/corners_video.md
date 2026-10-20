@@ -425,3 +425,39 @@ Ed pasted the full DAZN broadcast transcript; it is not kept. A little corner au
 - **Underestimating a short-notice sub.** AJ admitted it. A career flavor: a late replacement opponent is more dangerous than his record. Idea only (`gym`/offers).
 - **The left hook to the temple takes the legs.** The 3D "where it landed" plan (`proto/PLAN.md`): temple shots cause the leg-wobble reaction.
 - **Highlight bias warning.** One of the biggest heavyweight upsets ever. Don't tune upset rates off it.
+
+---
+
+# Batch 10: Usyk-Fury I (2024), full fight broadcast
+Ed pasted the full TNT broadcast transcript; it is not kept. A little corner audio, almost all from Fury's side (SugarHill Steward and his dad John Fury), mostly garbled. Usyk's corner: nothing usable. Speaker IDs are mine.
+
+## Fight shape
+- Usyk SD 12: 115-112, 114-113 Usyk, 114-113 Fury. Undisputed. The TV desk had it 114-114.
+- **R1-3:** Fury takes the center, jabs, feints, tries to draw Usyk in for the counter uppercut. Usyk goes single shots to the body and a left over the top late in R1. Usyk the more accurate, Fury the busier. Fury's nose bothers him from R1.
+- **R4:** Fury clowns: shows off, drops his hands, buys a few seconds to slow Usyk's pace. Commentary: the clowning is there to get a breather.
+- **R5-7:** Fury's best stretch. He finally goes to the body (17 body shots through 4 vs 60 for Usyk) and Usyk complains of low blows. In R6 the uppercut and body shots hurt Usyk; his mouth open, legs slowed, head stopped moving. Commentary: "Fury cruising," "hard for Usyk to come back."
+- **R8:** Usyk changes gear. The "one or two little victories per round to keep the belief." Fury bleeding from the nose.
+- **R9:** Usyk's left hand wobbles Fury. A long barrage; Fury out on his feet, held up by the ropes, then counted (a 10-8). Saved by the bell.
+- **R10:** Fury survives. Usyk eases off (tired from R9) and Fury recovers.
+- **R11-12:** close; Usyk fresher, works Fury onto the ropes. Fury finds the uppercut once.
+- Fury after: "I won that fight... his country is at war, so people are siding with a country at war." Usyk's promoter: the ref "stole a KO" in R9.
+
+## The corners
+- **SugarHill/John Fury after R1 (garbled):** "You'll end up catching him with that."
+- **SugarHill after R3:** angry, swearing. "Break that up," keep using the jab, a combination when he comes in, "right, left, up to the body." "In the clinch, don't hit the back of the head." Commentary: "I didn't expect that till round nine."
+- **John Fury after R6:** "The uppercut, it's working." Commentary: use it more.
+- **SugarHill after R10 ("reading the riot act"):** no words caught.
+- **Ref Nelson, R9:** "Walk to me." Fury did, and was allowed to go on.
+
+## What's new for Last Bell
+- **Clowning to buy time.** Fury showboats to slow the pace and catch his breath. A real gas tool, not just flavor: a showman who's tired could clown to drop the tempo. Check `TEMPO` and the existing taunt/shout bits before building.
+- **Busy vs accurate.** Fury threw more, Usyk landed more, and the judges went with landed. Batches 5 and 6 said activity wins rounds; here accuracy did. Our judges' taste for thrown vs landed needs a look (`research/numbers.md`).
+- **The body work that came late.** Fury waited until R5 to go to the body, and it worked right away. "Should've done it sooner." A corner call ("go to the body") with a delay before it pays.
+- **The uppercut for a man coming in.** Usyk walked forward to get past the jab, and the uppercut met him. A classic counter for the inside fighter (fits the batch 4 "straight pressure into a counter man fails").
+- **The pace drains you mentally.** Fighters who faced Usyk say he "breaks your heart." Steady pressure plus work rate wins the late rounds. Ties to gas and the f3 swarmer.
+- **The momentum swing.** Fury clearly ahead at the halfway mark, and then Usyk changed gear. Lennox before: "one of them will realize he's behind and change something." That's `NEED` again, and now the swing came from the *opponent's* adjustment, not a lucky punch.
+- **The rest round after a big effort.** Usyk eased off in R10 after emptying the tank in R9, and Fury got back into it. Same family as batch 6 (burnout round). A finishing-trait cost: a failed finish costs gas.
+- **Too proud to take a knee.** Fury never went down on purpose in R9. Commentary asked whether he should have taken the 8 count to recover. Idea: a smart veteran takes a knee to get the count; a proud man eats more punishment. A trait (pride vs ring IQ). Ed's call.
+- **Ropes holding a man up.** The ref counted it as a KD. Same question as batch 6: do we count rope-held drops?
+- **Losers blame something outside the ring.** "His country is at war," "the ref stole a KO." Flavor for post-fight talk, not a judging rule.
+- **Highlight bias warning.** A one-of-a-kind undisputed fight. Don't tune swings or KDs off it.
