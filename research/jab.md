@@ -14,6 +14,18 @@ Source: YouTube clips pulled with `tools/yt/yt.py` (`research/CLIPS_WANTED.md` i
 - **The uppercut:** the lead uppercut vs a man who ducks forward into his jab (meet him as he comes up); the rear uppercut underneath (much harder).
 - **The bread and butter is your own jab:** "he who controls the left controls the world".
 
+## 2. fightTIPS with coach Adam Lerner (Vicente Luque's boxing coach): "5 ways to shut down the jab"
+- **Why it works:** the jab is the punch thrown most and usually first, so you can count on it. Goal: take control of its rhythm early, "so he doesn't even want to throw it".
+- **A ladder, built on one timing:**
+  1. **Parry** the first jabs (hands high) to feel his timing. Within **two or three jabs**, switch to offense before he changes his rhythm.
+  2. Parry + dip + **jab to the body**.
+  3. Same parry, same dip, same timing, **jab to the head** instead.
+  4. Same again, **lead hook** to the head (he now has to guess between three things on the same beat).
+  5. **Parry and right hand straight over the top** (Ali's counter): touch it down, redirect, fire; no pulling the hand back to wind up.
+  6. Fully on his timing: **inside slip**, let the jab go over the shoulder, the **right hand as he walks in** (a KO punch: the jaw line, the chin).
+- **Don't reach on the parry:** a big parry opens you to the hook over the top. Minimal movement.
+- **Change the angle, not the timing:** keep the beat the same so he expects the same thing, change where the counter goes.
+
 ### For Last Bell (ideas, not built)
 1. **Countered jabs make him jab less** (the main lever for jab connect ~21%): opponent memory counts his jabs that got countered; past a few, his jab share and commitment drop (a Pro reads it sooner, a Novice keeps pumping). Lower jab volume from a careful man + more defended jabs = lower jab connect without touching the punch table. Check what `mem` already stores about counters taken.
 2. **A parry** (pull / slip / parry family): parry the jab = jab blocked + the lane open for a quick return (the cross), opposite stance a little better. Novice rarely, World often. Moves the hash: balance pass.
