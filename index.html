@@ -1763,11 +1763,20 @@ const JUDGES = [
   { name: 'Monty Command', taste: 'ring generalship', w: { ctrl: 4 }, noise: 1 },
   { name: 'Rocco Forward', taste: 'rewards the man coming forward', w: { fwd: 1, thrown: 1.5 }, noise: 1 }
 ];
+// regular refs, each one modeled on a working ref of 2024-26 (research/refs.md). Plain dials only; perks and traits come later (Ed, Oct 20).
+// stop: -1 lets it go, 1 quick to stop. hold: how long he lets a clinch run. holdN: clinches in a round before he warns for holding (3 warnings = a point). dirty: how hard he is on holding and hitting
 const REFS = [
-  { name: 'Clarence Breakwell', style: 'on time, breaks fast', stop: 0, hold: .75, holdN: 8, dirty: 1 },
-  { name: 'Hank Lettum', style: 'lets them fight', stop: -1, hold: 1.35, holdN: 12, dirty: .6 },
-  { name: 'Norma Rulebrook', style: 'strict, warns early', stop: 0, hold: 1, holdN: 4, dirty: 1.6 },
-  { name: 'Teddy Quickhook', style: 'quick to stop it', stop: 1, hold: 1, holdN: 8, dirty: 1 }
+  { name: 'Tom Tyler', style: 'quick to stop it', stop: 1, hold: 1, holdN: 6, dirty: 1 },           // Thomas Taylor
+  { name: 'Tony Wicks', style: 'quick to stop it lately', stop: 1, hold: 1, holdN: 6, dirty: 1 },    // Tony Weeks
+  { name: 'Howard Fowler', style: 'quick to stop it', stop: 1, hold: 1, holdN: 6, dirty: 1 },        // Howard Foster
+  { name: 'Mike Griffith', style: 'down the middle', stop: 0, hold: 1, holdN: 6, dirty: 1 },         // Michael Griffin
+  { name: 'Larry Coyle', style: 'breaks them fast, slow to take a point', stop: 0, hold: .75, holdN: 7, dirty: .7 }, // Laurence Cole
+  { name: 'Harvey Dorsey', style: 'breaks them fast, docks a holder', stop: 0, hold: .75, holdN: 4, dirty: 1.3 },   // Harvey Dock
+  { name: 'Marcus McDowell', style: 'strict on fouls', stop: 0, hold: 1, holdN: 4, dirty: 1.6 },     // Marcus McDonnell
+  { name: 'Hector Alofa', style: 'strict, takes points early', stop: 0, hold: 1, holdN: 3, dirty: 1.6 }, // Hector Afu
+  { name: 'Mark Nolan', style: 'lets them fight', stop: -1, hold: 1.2, holdN: 8, dirty: .8 },        // Mark Nelson
+  { name: 'Luis Pagan', style: 'lets them fight, patient with fouls', stop: -1, hold: 1.35, holdN: 8, dirty: .6 }, // Luis Pabon
+  { name: 'Steve Gale', style: 'lets it go long', stop: -1, hold: 1.2, holdN: 8, dirty: .8 }         // Steve Gray
 ];
 // a good call gives him an edge: the corner saw something he couldn't. A bad one costs him: he is doing the wrong thing and the other guy reads it
 function orderPow(F) { const o = F.order; if (!o) return 0; const f = o.fit - SHOUT_EDGE.bar; return o.q * (f < 0 ? f * SHOUT_EDGE.bad : f) * Math.min(1, o.t / (SHOUT_LEN * .3)); }
