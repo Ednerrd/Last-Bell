@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~4,700 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **e0cc30d7**, Oct 20: the 11 refs, `same.js 40` = aa4efac5; before it fd40cab3, the bluff's combos).
+- Render-only changes must keep the `same.js` hash (now **40db28f0**, Oct 20: hands low rare, `same.js 40` = a4c1059; before it e0cc30d7, the 11 refs).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
