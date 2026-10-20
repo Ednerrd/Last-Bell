@@ -1,0 +1,21 @@
+# Fight breakdowns (YouTube): the adjustment that won it
+
+Source: YouTube breakdowns pulled with `tools/yt/yt.py` (`research/CLIPS_WANTED.md` item 4). Our own notes in our own words; raw transcripts are not kept. For between-round adjustments: the brain's `adjust` (by level), the AI corner (`aiStrategy`, Pick it up / Slow down), corner talk.
+
+# Batch 1 (Oct 20)
+
+## 1. DelCardo Boxing: "5 fight adjustments from Usyk vs Fury" (Usyk-Fury I, round by round)
+**The plans going in.** Fury wants to be chased: outbox you with the jab going backward, punch you as you step in, counter you over-extended. The more you chase, the better he does. Usyk wants to live in your face at a high pace, make you miss, punch your openings, and make you pay when you shell up or slow down; someone you can't hit who never leaves drains you, and he cashes it in late.
+1. **R1-2, Usyk: punch his openings.** High pace, the open-stance lead-hand battle: every time Fury's arm leaves his body, Usyk goes around it and hits. Touch high so he guards high, then the body. Fury's lead hand, meant to keep the space, is the opening when he's on the ropes and can't step back.
+2. **R2, Fury: more space, punch as he steps in.** He gives up the lead-hand game, keeps the hand home, moves away without losing eye contact, feints to hold the gap, and beats Usyk to the punch on the step-in. Coach's caveat: it only works with the distance read *and* the will to let the hands go; a gun-shy man who freezes just gets walked down.
+3. **R3, Usyk: mix up the tempo.** His high output was playing into Fury's game (chasing makes you predictable). He keeps the pressure but changes *when* he attacks, lets openings go, keeps his space so Fury lands less; Fury has to stay alert, burns punches and gas keeping him off, and the moment Fury relaxes or resets, Usyk doubles the straight left (lean to the side, head off the line, double it).
+4. **R4-7, Fury: bring the fight to him.** Against an unpredictable man, waiting for the counter stops working, so Fury takes the lead: more feints, the right uppercut, starts the exchange and leaves before Usyk answers, makes sure he's the last man punching, mixes front foot and back foot. "Accelerating the pace is not about more volume, it's dictating when exchanges start and end."
+5. **R8-9, Usyk: punch before he resets.** Fury slows down (the work of keeping Usyk off, the damage); his feints stop, his shots lose snap, he backs up without feinting or punching, tries a lone right from too far. Usyk punches with him or right after he finishes, before he resets: that's the R9 knockdown. Caveat: it takes the quicker man vs a tiring or relaxing one; a slow man waiting for the other to finish finds him already gone.
+- **R10-12: layering 3 + 5,** and *not* pushing the hurt man harder. Fury is still at his best when pressured, even hurt, so Usyk keeps the intensity low, stays unpredictable, and commits long combinations only when Fury opens up (often right after Fury's own attack): bank the rounds, take away Fury's one way back.
+
+### For Last Bell (ideas, not built)
+1. **Adjustments answer each other** (the core of this clip): each side's fix beats the other's last fix, round by round. A between-round `adjust` reads *why* he lost the round (countered on the way in / out-landed at range / gassed) and picks the matching answer: getting countered on entry -> change the tempo (attack less often, at odd times); his counter isn't landing -> lead himself; he's tired -> punch right after his punches.
+2. **Tempo as a plan knob, separate from output** (adjustments 3 and 4): when he attacks vs how much he throws. Pick it up / Slow down are volume today.
+3. **"Punch before he resets"** on a tired man: a counter window that opens with the other man's gas (his `tired` look) and the counterer's speed. Ties to the eyes (gas) and the counter timing.
+4. **Don't push a hurt man whose game is fighting off pressure** (R10-12): a smart World-class leader keeps it low-risk rather than hunting. Ties to `HUNTS` and the finisher's choice: hunt by the other man's style, not only his hurt.
+5. **Gun-shy kills the step-in counter** (adjustment 2 caveat): the counter plan needs the will to punch, not just the read (emotion `fear` lowering output undoes it).
