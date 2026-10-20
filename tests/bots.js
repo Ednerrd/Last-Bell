@@ -3,7 +3,8 @@
 module.exports = PU => {
   const mk = (ps, x) => Object.assign({ type: ps[0], combo: ps, feint: false, counter: false, tech: .75, tell: .15, commit: .4, why: 'cheese', num: ps.join('-') }, x || {});
   const BODY = { jab: 'bodyJab', cross: 'bodyCross', hook: 'bodyHook', rhook: 'bodyHook', uppercut: 'bodyHook', lupper: 'bodyHook' };
-  const free = P => !P.me.busy && !P.me.punching, clear = P => free(P) && !(P.him.punch && !P.him.punch.feint), // clear: nothing of his on the way (a punch starting drops your own defense) R = Math.random, mv = (o, m) => Object.assign({}, o.move, { clinch: false }, m);
+  const free = P => !P.me.busy && !P.me.punching, clear = P => free(P) && !(P.him.punch && !P.him.punch.feint), R = Math.random, mv = (o, m) => Object.assign({}, o.move, { clinch: false }, m);
+  // clear: nothing of his on the way (a punch starting drops your own defense)
   const his = (P, f) => P.events.some(e => e.by === 'him' && f(e)); // something the brain did, this frame
   return {
     none: o => o,
