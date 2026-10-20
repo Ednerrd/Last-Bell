@@ -213,3 +213,22 @@ Checked against the brain: **a lot of this is built.**
 13. Style matchups pair by pair: is there any loop, or does one style just beat the rest?
 14. `GUARD_HOLES.philly` looks upside down vs Skillr (straight right first, hook and body jab avoided). Is our "cross" an overhand? Then decide. Guard balance run.
 15. Counter small ones: look defensive to draw him, a counter makes him shy of that punch, a slip-counter eats the 2 of a 1-2, overdone defense loses the counter.
+
+## Engine check, batch 3 (Oct 20, Ed asked; code read, no engine changes)
+**14. Philly shell holes: mostly a non-issue.**
+- `GUARD_HOLES` is read in one place only: the AI corner's `shoutRead` (the "jab" and "body" calls, from `holes.jab` and `holes.bodyHook`). **Nobody throws punches off it.** `philly.cross` 1.55, `uppercut` 1.15 etc. are dead numbers.
+- The brain doesn't know the other man's guard *type* at all: it sees his guard *height* (`him.guard`, 0..1, `this.ph.guard`) and picks off that. A Philly man and a high-guard man at the same height look the same to him.
+- What really decides it: `GUARDS.philly` in `coverF` (the passive block): straights 1.12 (stops the 2 well: agrees with Skillr), hooks .8 (leaks the hook: agrees, "hard lead hook" is a way in), uppercuts .85 (leaks: **disagrees**), body 1.05 (agrees), plus a strong `roll` (1.25). So the only real conflict left is the uppercut, the same one as batch 2.
+- We have no overhand. Our `cross` is a straight right (`kind: 'straight'`), so the shoulder roll is right to eat it.
+- Ideas if we ever want it: (a) the brain reads guard *type* (a smart man works the holes of that guard, a novice doesn't), (b) an overhand right that goes over a Philly or a ducking man, (c) `GUARD_HOLES` either wired into the brain or cut.
+
+**15. Counter small ones**
+- A counter makes him shy of that punch: **built.** `punchVal(p)` divides a punch's value by how often it got countered (`mem.mine[p].c`), scaled by his read; he also gets more frustrated (`E.frus`).
+- Slip the jab, counter, eat the 2: **built.** A man mid-punch can't block or defend (`D.state === 'punch'`), and a shot that catches him punching lands `flush` with extra damage (`caught`, `L.late`).
+- Overdone defense loses the counter: **not built.** The pull is the same size every time (a fixed push back for .22 s), whatever his level. Idea: skill shrinks the pull ("just enough", Duran, Leonard), and a smaller pull leaves the pull counter in range more often.
+- Look defensive to draw him (raise the guard to invite him): **not built.** The f2 bait only drops the hands. Small idea for the bait family.
+
+**12. Four Kings flaws vs the f3 flaws we have** (`BR.flaw`, easy mode only):
+- Hagler lunges head first ≈ the swarmer's `straight` flaw (head comes straight in, lunging): **have it.** Skillr adds the counter uppercut as the punishment; ours is any power shot.
+- Haney / Hearns hand drops ≈ the boxer-puncher's `drop` flaw (the jab hand comes back low): **have it.**
+- New: Hearns pulls straight back with his hands out; Leonard squares up moving sideways (straight shots land as he moves); Duran's open guard bites on feints. Three new named flaws for the traits pass (today flaws are plug-in only, one per style, the game never sets them).
