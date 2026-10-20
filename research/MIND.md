@@ -7,8 +7,21 @@ Six research passes, merged. Detail lives in the source files; this is the map.
 | `mind_engage.md` | When/why to engage or not: 12 trigger cues, disengage rules, reading phase, score logic |
 | `mind_combos.md` | Combo grammar, 19-row combo library, 12-row counter library, southpaw playbook, COMBOS gaps |
 | `mind_pace.md` | CompuBox numbers, round shapes, round clock, gas, finishing/surviving, 15 corner calls, judging |
+| `mind_finish.md` | Finishing a hurt man, surviving hurt, ref stoppages, recovery times, FINISH/SURVIVE knobs for the brain |
+| `mind_learn.md` | Novice vs pro tells, punch force by level, teaching order, learning from losses, rematches, scouting; tier tables and growth rules for skill levels |
+| `mind_southpaw.md` | Southpaw edge by the numbers (boxing, MMA, fencing, tennis), the experience effect, targets for the L3 familiarity knob |
+| `mind_between.md` | Between fights: rest and medical suspensions, gaps between fights, what wins teach, matchmaking, confidence and complacency, gun-shy after a KO, ring rust (UFC data), chin wear, age curves by attribute, habits coming back; game rules with numbers |
+| `mind_traps.md` | Traps across rounds (bait, answer, payoff), body banking, adjust timing by tier, rematch changes, corner talk, Plan B menus |
+| `mind_coach.md` | Live shouts vs corner calls: what a fighter can hear and use, absorb limits (1-2 per break), famous corner turnarounds, est. knobs (strength, delay, half-life, hurt/gassed gates) for wiring calls into the brain (Oct 15) |
+| `mind_traits.md` | 12 fighter traits (chin, recovery, starts/closers, cuts, dangerous when hurt, quitter): examples, numbers (mostly UFC proxies), born vs earned, stacks, est. knobs and roll rates (Oct 15) |
+| `fighters_c.md` … `fighters_g.md` | Exciting fighters (Reddit r/Boxing list, Oct 2026): 60 DNA cards with style, why they're exciting, mind, best bouts, brain knobs. c 140-160 punchers, d feather-light, e 105-122, f heavyweights, g mixed + Pacquiao |
 | `mind_vision.md` | Where boxers look, anticipation vs reaction, tells, feints vs the read, fear/composure, fatigue |
 | `mind_p4p_a.md` | Mind profiles: Shakur, Loma, Inoue, Usyk, Crawford, Bivol, Canelo, Mayweather |
+| `trainers.md` | 14 real 2026 coaches (what they teach, corner voice), the trainer axes, draft game trainers, how they plug in (build after the brain) |
+| `arena.md` | Coach clips (The Arena): feint kinds, straight vs looper, liver setup, hand trap vs high guard, level changes |
+| `CLIPS_WANTED.md` | Ed's clip hunt list: what to look for (corner audio first), what makes a clip useful |
+| `corners_video.md` | Corner audio from video. Batch 1 (Nazim, Hunter, Enzo, Roach, Steward, late KO calls): stop check by repeat-back, plan across rounds, KO-call cases. Batch 2: Corrales-Castillo I full fight (blind side of a shut eye, doctor at the stool, stalling for seconds). Batch 3: Fury-Wilder III (silent agreements in the clinch, "what round are we in?", the corner fixes your hole). Batch 4: Crawford-Spence (the same order 4 breaks never followed, camp plan to take away his jab, comforting misread, patient finisher). Batch 5: Canelo-Bivol (game plan, discipline vs bait, star bias on the cards; little corner audio). Adds to `corners.md` |
+| `precision.md` | Coach clips (Precision Boxing): probing feel-out, guard holes, rhythm hitch, same-side counter, beating volume |
 | `mind_p4p_b.md` | Ring + ESPN P4P (Sep 2026) vs `P4P_2026`, 17-division kings, 13 more mind profiles |
 | `arena.md` | Coach clips (The Arena): feint kinds, straight vs looper, liver setup, hand trap vs high guard, level changes |
 | `CLIPS_WANTED.md` | Ed's clip hunt list: what to look for (corner audio first), what makes a clip useful |
@@ -56,3 +69,21 @@ The order lives in `ROADMAP.md`. Steps 1 and 3 are built (BRAIN B1 + B3); step 6
 - `P4P_2026` matches the Ring list exactly (latest Ring update 2026-09-08, top 10 unchanged since June). ESPN differs: Opetaia in at No. 9, Collazo out.
 - Candidates: add Opetaia (cruiser), move Nakatani to feather (he's at 122 now), maybe nudge Usyk down (behind on two cards vs Verhoeven before the R11 stop).
 - Retired: Crawford (Dec 2025, 42-0), Lomachenko (June 2025). Legends material.
+
+## Other games (Oct 17, search summaries only: claims tagged by source)
+- `games_arcade.md`: Punch-Out, Ready 2 Rumble, Knockout Kings, Creed games, Ippo, Boxing Star, Real Boxing 2. Punch-Out's flaw ramp is the model for easy-mode planted flaws.
+- `games_manager.md`: Title Bout, WCBM, Punch Club, Prizefighters, MMA managers, Football Manager. Calls that fade, shouts by temperament, a visible reaction line, towel, key-moment timeline.
+- `games_ai.md`: KI Shadows, Tekken Ghost, VF4, SF6, UFC, MK, Drivatar, GT Sophy. Players hate input reading and stat boosts; difficulty from deck size, execution, fragility under pressure; reaction floor ~.25 s.
+
+## Trainers (Oct 19, search summaries only: WebFetch was down; tags S sourced / B lore / D design)
+- `coach_a.md`: Cus, Futch, Emanuel Steward, Dundee, Arcel, Atlas, Clancy. Atlas's bait (jab, step back, counter the right), Futch stopping Manila, Clancy keeps punching a hurt man, Steward's "out of fuel".
+- `coach_b.md`: Roach, Floyd Sr. and Roger, Beristain, Sanchez, McGirt, Garcia, Shields. Roach's Hatton habit counter, finishing costs gas (Horn), corner: short, one voice, back to the jab.
+- `coach_c.md`: Reynoso, Anatoly Lomachenko, Derrick James, Shingo Inoue, SugarHill, Davison, McCracken, BoMac. BoMac read Spence "more hurt than he let on", McCracken's "glazy" Joshua, Inoue's body-then-head, one scripted counter per habit.
+- Each ends with "For Last Bell" if/then rules (numbers are starting values). What 1f takes from them: `docs/PLUGIN.md`, fakes plan. No trainer has an on-record tell list for hurt, tired, body-hurt or bluffing men.
+
+## Full-page pass (Oct 19, page fetches open; YouTube, boxingscene, archive.org still blocked)
+- `tells.md`: hurt, tired, body-hurt, bluffing. The ABC ref manual and a ringside doctor handbook (legs, eyes, walk and turn), the bluff breaks on a turn, legs can go ~4 s late, Mayweather-Mosley R2, tired punches turn to pushes. Unconfirmed: elbows clamp.
+- `size.md`: height, reach, leverage. Studies (PLOS heavyweight titles, UFC 6,685 bouts): a small edge, bigger at heavyweight. Short man's plan, Fundora, leaning, a height/reach table by division.
+- `numbers.md`: our targets vs real data (Sloan 2026 open data, 1,228 bouts tallied; 2026 CompuBox round PDFs). Totals hold; stoppages, jab connect, split decisions, draws and late lead changes are off (ROADMAP parking lot, Ed's call).
+- `corners.md`: 26 real corners, quotes tagged. Notes per break (63% one), a hurt man gets a state check first, honest scores won, the loudest voice wins, stops come late.
+- `compubox_2425.md`: CompuBox finals for 75 fights of 2024-2025 (25 with the jab/power split), per-round averages and splits (year, heavyweight, winners, stoppages) vs the sim targets, per-fight table with URLs.
