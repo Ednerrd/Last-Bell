@@ -300,9 +300,17 @@ A coach's punch-by-punch breakdown of three shorter men beating taller ones. Par
 - Even with his timing down, stay outside his range: less energy, safer. Fulton measuring, too far, stepping in again: each step in is a chance.
 - Same idea as Pacquiao in V1 (make the tall man come), the opposite of the walk-in. For D: the counter-style short man waits outside the long man's range; "after" early, "as" once he's read him (a learning-in-the-fight hook: opponent memory, `mem`).
 
+## V3. DelCardo Boxing: "Don't chase taller boxers" (Romero-Garcia, Tank-Garcia)
+- **Chasing is why short men lose:** walking in or standing in his range gives a fast puncher the confidence to let his hands go (Garcia vs Barrios). Romero, shorter and seen as less skilled, stood just outside Garcia's range, moved every time he jabbed, and after taking one shot was never there for the second. **Garcia never let his hands go.** Tank the same: long range, move when too close, or **smother to force the reset**; Garcia had to reach, and the space let both see his left hook coming and counter it (Romero, "not famous for countering", did it too).
+- **Feint from outside his range** (most men feint too close and get countered), and keep feinting all fight, not only right before attacking (that's a tell) and not only in round one. Read the reaction first, be ready to defend if he jumps first, take it only when he opens.
+- **Build the offense from the safest shot:** the jab to the body first (hard to counter), then the jab to the head, then right hooks to the body, then the big right hook. No openings: back to the safe shot. He's in a bad spot: longer, bigger combinations.
+- **Discipline is the cost:** Garcia landed his hook when Romero rushed his work.
+- Fourth short-man source saying the same: make the tall man come to you, don't walk in (V1 Pacquiao, V2 Inoue, V3 Romero, Tank).
+
 ### For Last Bell (adds to section D and C, not built)
 1. **Two short-man plans, not one:** D has the entry plan (get on the chest). The video adds the long one: circle away, make him reach and over-lean, counter the reach (Pacquiao). A skill/style choice for the short man.
 2. **Feint the entry, many times** (D, trigger 2): a World-class short man's entry comes behind a run of entry feints, not one; a single feint into a 1-2 vs a counter-puncher eats the uppercut. Novice walks straight in (already in D).
 3. **The tall man's retaliation** (C): after he loses a range exchange, a chance he comes forward himself and squares up: the short man's counter window. Ties to the brain's emotions (`emo.frus`).
 4. **Make him throw first:** occupying the lead hand (touch jab to the glove) draws the rear hand, the counter goes in as he squares. Overlaps f2 the bait and coach-clip idea 1b(1).
+6. **The outside-range short man** (V2, V3): stand just past his reach, move off each jab, smother when caught close, feint from out there all fight, build from the body jab up. His output drops (Garcia "never let his hands go"): a range he can't punch from cuts the tall man's thrown count. Section D's walk-in is one plan among three.
 5. **Leaving openings alone** (Loma): a World-class man skipping a free shot now and then to plant doubt. Fits the familiarity/reading layer; costs nothing in the engine.
