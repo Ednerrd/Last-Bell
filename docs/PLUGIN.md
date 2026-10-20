@@ -201,6 +201,16 @@ What's already there to build on: the eyes (E2: by gaze, a novice watches the gl
 - `BR.flaw.k` (.6) scales every hole (Ed: easy vs a Pro ~15-18%): 10.9% at k 1, **14.4%** at .6 (200 fights).
 - At k .6, trick - straight (flaw on), 600 a cell: boxer-puncher **+17.1**, counter +9.3, outboxer +7.7, swarmer +5.0, slugger **-21.8**. On - off: exploit +10 to +20, straight -0.2 to +6.6. The slugger's `jabMove` with no flaw wins 32.8% vs straight 59.7% (stops 48%): the bot is the problem, like outwork was. **Not done**: make each bot match straight play with no flaw (slipCounter does), then retune the holes on the new column.
 
+**f3 retune, part 1: fair bots (Oct 20, branch `claude/kind-newton-dhep4n`, `tests/flaws.js`, 600 a cell, k .6).** Why the old bots lost: a punch starting drops your own defense (`startPunch`: `F.def = null`), and the bots fired whenever their hands were free, into his punch on the way (jabIn, same trick as jabMove without the footwork: 19.6% vs straight 63.4, stops 65%). Bots now punch only when `clear(P)` (nothing of his on the way) and only when his own brain isn't punching (`!o.punch`), with a cooldown. The outboxer trick (crowding) costs on its own (crowd to 60: 15.8%), so `crowd4` boxes straight and crowds (range 44, cut 1) only after it's seen him shell up inside twice: the player who spots the hole. New defaults: slugger `jabIn2`, outboxer `crowd4`, swarmer `lungeCounter2` (old ones kept in `bots.js`).
+| style | bot | no flaw: bot / straight | flaw on: bot / straight | trick - straight |
+|---|---|---|---|---|
+| slugger | jabIn2 | 62.3 / 63.4 | 69.2 / 69.2 | 0 |
+| outboxer | crowd4 | 29.8 / 29.5 | 34.0 / 26.6 | +7 |
+| swarmer | lungeCounter2 | 58.6 / 64.1 (still -5) | 67.2 / 66.8 | 0 |
+| counter | slipCounter (f3a) | 40.5 / 38.4 | 49.0 / 38.4 | +11 |
+| boxer-puncher | overJab (f3a, fires on `free`, not `clear`) | 55.2 / 50.2 | 64.1 / 56.3 | +8 |
+Part 2, sweep A (PATCH: jab try 0 hole 1, straight try .1 hole 1, fold hole .7): trick - straight slugger +5.2, swarmer +0.3, outboxer +0.3; the trick's own on - off +7 to +9. **The hole size isn't the lever**: the tricks rarely catch him inside the window (walking in, the lunge, the shell). **Next (high effort, debugging):** instrument the trick punches (how often each bot's trick fires, lands, and lands on an open hole, flaw on vs off), then widen the window or sharpen the bot's timing, then the holes; then easy vs a Pro (`cheese.js 75 x4 easy none`, ~15-18%).
+
 **Ride-along: the outboxer knob** (separate commit, style numbers only). He read 46.8 at f1b and 49.5 at f2 (band 48-53; f3 holds the hash, so f2's stands): his pairs swing, so confirm he's low at 600 before sweeping. Sweep 2-3 candidates on his `STYLES` row (footwork/range skill, `legs`, output) at 300 a style, pick one, confirm at 600. Slugger: recheck first (±4 between runs), touch only if he stays under 48.
 
 **Measure (`tests/fakes.js`, new):**
