@@ -355,3 +355,41 @@ Ed pasted the full broadcast transcript; it is not kept. Very little corner audi
 - **The home crowd and the judges.** Commentary worried the crowd would sway the cards (they mentioned another close fight that week). Same family as the star bias (batch 5). Ed's call.
 - **After a stoppage: the injured man.** A scary end, the winning corner calming the crowd. Not a game mechanic to build lightly; if we ever show a hospital/injury moment, keep it respectful. Ed's call.
 - **Highlight bias warning.** A war with a last-round turnaround. Don't tune comeback rates off it.
+
+---
+
+# Batch 8: Gatti-Ward I (2002), full fight broadcast
+Ed pasted HBO's tribute rebroadcast (aired after Gatti's death in 2009); it is not kept. Real corner audio from both sides: Buddy McGirt (Gatti) and Dickie Eklund (Ward's brother and trainer). Cutmen Joe Souza (Gatti) and Al Gavin (Ward). Speaker IDs are mine where the mic doesn't name them.
+
+## Fight shape
+- Ward MD 10: 94-94, 94-93, 95-93. One judge's R9 card was reportedly a scoring error (10-7 written, should've been 10-8); fixed, it's a draw. Lampley called that "poetic grounds for a rematch."
+- **R1-3:** Gatti boxes beautifully: jab (about 29-31 a round), combos from every angle, upper-body movement, out before Ward can return. He cuts Ward's right eye in R1. Ward has no jab, walks in, and has one main punch (the left hook). McGirt had rebuilt Gatti as a boxer.
+- **R4:** Ward's short right over the shoulder rocks Gatti. Gatti lands a low left to the body and Ward goes down. Ruled a low blow, a point taken, no knockdown. The timekeeper never stopped the clock, so the round ended during the recovery. Ward: "I want to go."
+- **R5:** Ward walks through bombs without hitting back until Gatti stops, then rallies late. 98 punches landed between them.
+- **R6-7:** Gatti goes back to boxing on McGirt's orders and wins rounds.
+- **R9:** Ward's left hook to the body drops Gatti. Gatti gets up and survives a horrible round (81 power punches landed between them). The ref let it go on. McGirt nearly stopped it after the round and didn't.
+- **R10:** A short round (the timekeeper again). Gatti, exhausted, wins it: 99 thrown, 50 landed.
+
+## The corners
+- **Ward's corner after R1:** "Move your head." The cutman went to work at once.
+- **McGirt after R1 (per the truck):** "You've got too much power for him; he's not used to power like yours."
+- **McGirt after R2:** "When he gets close, keep your hands up. He's looking for the body shot, so keep him turning. Use the speed. Double jab, over the right. Keep your right hand up, all he's looking for is the hook." Then a deep breath. A clear scouting report in 30 seconds.
+- **McGirt after R3:** "Don't take that body shot. When you get inside, go to your left." (Away from the hook.)
+- **McGirt after R5 (likely):** "Turn out. You stand inside taking unnecessary body punishment." **Ward's corner (likely Eklund):** "I've got the power, don't worry. Let me work for you" (or "let the hook work"; garbled).
+- **McGirt after R6:** "He's in the same fight you're in. He's feeling the same tired, if not more." "If you don't feel like punching, move your upper body, then go back to the jab." "You can rest all day tomorrow. This is for all the marbles." Gatti boxed and won R7.
+- **Eklund after R7:** "We got 10 minutes, can we get 10 minutes?" Then, per the commentary: "Don't be a punching bag. If you're going to be a punching bag, I'm not going to let this go on."
+- **Ward's corner after R8:** "You're taking too many shots inside. Throw the right hand to the body. We got six minutes, give me six minutes."
+- **McGirt after R9:** "Listen to me. I'm not going to let you take this punishment. Look at me. Tell me something." Gatti answered and they sent him out. Same stop check as batch 1 (repeat-back): the fighter talks, the corner lets him go.
+
+## What's new for Last Bell
+- **"He's as tired as you are."** McGirt's R6 line is a classic motivator for a tired man. It worked: Gatti boxed again and won the round. A corner call to add to the talk pool (the line in our own words).
+- **Both corners count the rounds down in minutes.** "We got 10 minutes," "give me six minutes." Same as Corrales-Castillo (batch 2): late in a fight, corners turn time into a small, doable chunk.
+- **The style switch mid-fight, by corner order.** Gatti, the brawler, boxed R1-3 and R6-7 on McGirt's orders and won those rounds; when he stood and traded (R4-5, R8-9) Ward caught up. The corner's "box" order clearly changed rounds. Check how `SHOUTS` and the corner plan already do this.
+- **The one-punch man.** Ward is "primarily one punch" (the left hook, to the body). A good opponent can scout and take it away ("go to your left"), but if he ever lets it land, it's still deadly. Our `GUARDS` and the defensive assignment idea (batch 4) cover this side.
+- **Wait out the flurry, then answer.** Ward takes three or four shots and only fires back when Gatti stops, which invites Gatti to keep going. A specific defensive habit: invites a long flurry, then gets the last word. Could be a trait of a chin-and-heart grinder.
+- **Body shot hurts last longer than a head shot.** Steward: "It's not like a head punch, he may not recover." The body KD drained Gatti's legs and movement for the rest of R9. Check `bodykd.js` for how long body-hurt lasts vs head-hurt.
+- **The low blow that drops a man.** Our low-blow rules: point taken, recovery time, no KD. The timekeeper mess is flavor only.
+- **The boxer under pressure goes back to brawling.** Steward's read: once Ward pressed hard, Gatti's instinct pulled him back into a war. Habit under stress beats the plan (same family as batches 4 and 6).
+- **The big ring favors the mover.** Commentary was surprised the ring was big, which helped Gatti box. Ring size as a venue knob? Idea only.
+- **A scorecard mistake decided it.** Same family as missed KDs (batch 6), the home crowd (batch 7), and star bias (batch 5). Ed's call on judge and ref errors as a whole.
+- **Highlight bias warning.** This is the most famous war of its era. Don't tune pace, KDs or comebacks off it.
