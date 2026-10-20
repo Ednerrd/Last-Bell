@@ -256,7 +256,9 @@ const BR = {
   // the bluff (1f): a hurt vet hides it (nods, fires back, stands his ground); the legs still give him away (docs/PLUGIN.md)
   bluff: { on: 1, p: [0, .2, .5, .75], comp: [.6, 1.2], // chance at the hurt by mastery (Novice never), x composure (lerp .6..1.2): World ~75%, Pro ~50%
     talk: .85,                // while he sells it, a man who watches the face lets go of what he saw this much sooner (x 1 - gaze: a vet keeps it)
-    kd: 8 },                  // off the floor (clock s): everyone saw it, nothing to hide
+    kd: 8,                    // off the floor (clock s): everyone saw it, nothing to hide
+    pick: [1.2, 2.5, .3],     // what he throws while he sells it (Ed, Oct 20): singles, 1-2s and doubles (the best), longer x .3: he fires back, nothing wild
+    wild: { wide: 2, commit: .3 } }, // the act breaks and he goes out swinging (fire): wild, wide hooks (x 1 + wide x share), sitting down on them
   desp: { last: 3, out: .35, commit: .2, power: .6, wide: .5, hunt: 1 }, // behind on his cards in the last 3 rounds: risk, killer, output up (Walker, Wardley)
   // skill levels L2: what mastery does (research/mind_learn.md 4a). Each table is [Novice, Intermediate, Pro, World class] at the tier centers,
   // read on his mastery (not squeezed by spread). Neutral at Pro (1, or 0 for the penalties) so a Pro-level field plays as before:
@@ -988,7 +990,7 @@ class Brain {
     if (P.roundLen - P.clock < SV.late) { w.run *= SV.lateRun; w.clinch *= SV.lateRun; w.fire *= SV.lateFire; } // ride it to the bell
     if (this.desp) w.fire *= SV.despFire;
     this.hurtResp = wpickR(this.R, Object.keys(w), x => w[x]) || 'shell';
-    this.sell = 0;
+    this.sell = 0; this.wild = 0;
     if (BR.bluff.on && this.ct - H.kdMe >= BR.bluff.kd) { const bm = this.finM(), ch = tierV(bm, BR.bluff.p) * lerp(BR.bluff.comp[0], BR.bluff.comp[1], comp); // a vet hides it: nod, smile, fire back
       if (ch > 0 && this.R() < ch) { this.hurtResp = 'bluff'; this.sell = clamp(comp * bm, 0, 1); this.tel.bluffs = (this.tel.bluffs || 0) + 1; } }
     this.tel.hurts++; this.tel.hurtR[this.hurtResp] = (this.tel.hurtR[this.hurtResp] || 0) + 1;
@@ -1012,7 +1014,7 @@ class Brain {
       H.flip = 1;
       if (this.R() < SV.shellFlip) { this.hurtResp = this.R() < tr.risk / (tr.risk + tr.clinch + .01) ? 'fire' : 'clinch'; this.tel.flip = (this.tel.flip || 0) + 1; }
     }
-    if (this.sell && H.unans >= SV.flipAt) { this.sell = 0; this.hurtResp = this.R() < tr.risk / (tr.risk + tr.clinch + .01) ? 'fire' : 'clinch'; this.tel.bluffBroke = (this.tel.bluffBroke || 0) + 1; } // he's eating them clean: the act is over
+    if (this.sell && H.unans >= SV.flipAt) { this.sell = 0; this.hurtResp = this.R() < tr.risk / (tr.risk + tr.clinch + .01) ? 'fire' : 'clinch'; this.wild = this.hurtResp === 'fire' ? 1 : 0; this.tel.bluffBroke = (this.tel.bluffBroke || 0) + 1; } // he's eating them clean: the act is over
     if (this.hurtResp !== was) this.note('hurt: ' + was + ' -> ' + this.hurtResp);
     if (this.modeT <= 0 && !P.me.hurt) { this.hurtResp = null; this.sell = 0; this.pickMode(P); }
   }
@@ -1106,7 +1108,7 @@ class Brain {
         if (hg > .75) w *= lerp(1, BR.fin.shellBody, c.body) * lerp(1, BR.fin.shellUpper, c.up * 2);  // he's in a shell: dig, and come up the middle
         if (H.closing < -25) w *= lerp(1, BR.fin.runHook, c.hook * 2);                                    // he's running: hooks cut him off
       }
-      if (md === 'survive') { const r = this.hurtResp; w *= r === 'fire' ? 1 + c.power : r === 'steady' ? (c.jab && c.n <= 2 ? 3 : .4) : c.n === 1 ? 2 : .3; }
+      if (md === 'survive') { const r = this.hurtResp; w *= r === 'fire' ? (1 + c.power) * (this.wild ? 1 + BR.bluff.wild.wide * c.wide : 1) : r === 'bluff' ? BR.bluff.pick[Math.min(c.n, 3) - 1] : r === 'steady' ? (c.jab && c.n <= 2 ? 3 : .4) : c.n === 1 ? 2 : .3; }
       if (this.desp) w *= (1 + c.power * BR.desp.power * this.desp * tr.power) * (1 + c.wide * BR.desp.wide * this.desp) * (c.jab && c.n === 1 ? 1 - .5 * this.desp : 1); // the late equaliser: sit down on the right hand
       if (nd > 0) w *= 1 + c.power * nd; else w *= 1 + (c.jab - c.power) * -nd * .6; // behind: sit down on it. ahead: jab and stay safe
       if (hg < .4) w *= 1 + (c.power - c.body) * k.read;  // hands are down: go upstairs
@@ -1197,6 +1199,7 @@ class Brain {
     const tech = ps.map((p, i) => clamp(skillOf(p) * (i ? lerp(.7, 1, k.combos) : 1) * (1 - .25 * fat) * (1 - .15 * E.frus * (1 - tr.composure)) + this.g() * .06, .1, 1));
     let commit = clamp(tr.power * .5 + tr.risk * .3 + BR.desp.commit * this.desp + E.frus * .2 - (ps.length > 2 ? .2 : 0), 0, 1) + (BR.fin.commit[this.mode] || 0); // finishing: he sits down on everything (past his usual)
     if (ctr && this.mode === 'survive' && (this.hurtResp === 'fire' || this.hurtResp === 'bait')) commit = Math.min(1, commit + BR.fin.ctrCommit); // nothing to lose: he sits down on it
+    if (this.wild && this.mode === 'survive' && this.hurtResp === 'fire') commit = Math.min(1, commit + BR.bluff.wild.commit); // the bluff broke: he's swinging for it
     if (this.mode === 'hunt' || this.mode === 'huntSafe') { const H = this.h; H.n += ps.length; if (H.n >= H.goal) { H.n = 0; H.goal = Math.round(this.rnd(BR.fin.burst[0], BR.fin.burst[1] + tr.killer)); H.look = this.t + this.rnd(BR.fin.look[0], BR.fin.look[1]); } } // the flurry, then a look
     const tell = clamp(clamp((1 - tech[0]) * .8 + commit * .25 * (1 - k.power), 0, 1) + lvV('tell', skillM(ps[0])), 0, 2); // loading up shows it; a novice shows it from the parking lot
     this.tel.techSum += tech[0]; this.tel.techN++;
