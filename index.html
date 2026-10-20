@@ -1797,7 +1797,7 @@ const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30,
    Content tables live with their code: PUNCH, STYLES, GUARDS (+ GUARD_HOLES, STYLE_GUARDS), STRATS, SHOUTS, STYLE_PLANS. The brain's own knobs: BoxerBrain.BR in
    brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
 // ref stoppages: the unanswered-punch stop (at: punches before he looks, by ref stop dial -1/0/+1; p: the first look, step: each one after) and the check after a count (he's up at 8: headMax under hm, or head under head at headP)
-const STOP = { at: [7, 5, 4], p: .2, step: .15, low: .2, hm: 22, head: 5, headP: .4 }; // low: power shots count as unanswered once he's stunned or his head is under this share
+const STOP = { at: [6, 4, 3], p: .2, step: .15, low: .3, hm: 22, head: 5, headP: .4 }; // low: power shots count as unanswered once he's stunned or his head is under this share
 const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .3 };
 let DMG = 0.38; // global tuning
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .11, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
