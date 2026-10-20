@@ -232,3 +232,19 @@ Checked against the brain: **a lot of this is built.**
 - Hagler lunges head first ≈ the swarmer's `straight` flaw (head comes straight in, lunging): **have it.** Skillr adds the counter uppercut as the punishment; ours is any power shot.
 - Haney / Hearns hand drops ≈ the boxer-puncher's `drop` flaw (the jab hand comes back low): **have it.**
 - New: Hearns pulls straight back with his hands out; Leonard squares up moving sideways (straight shots land as he moves); Duran's open guard bites on feints. Three new named flaws for the traits pass (today flaws are plug-in only, one per style, the game never sets them).
+
+**13. Style matchups pair by pair** (`TAG=kings node tests/styles.js 300 82`, 10 pairs x 300, same stats, standard guard, refs code e0cc30d7; one pair is ±~3%):
+
+| row beats column | counter | boxer-puncher | slugger | outboxer | swarmer |
+|---|---|---|---|---|---|
+| counter | - | 50 | 50 | **60** | 53 |
+| boxer-puncher | 50 | - | 51 | 51 | 51 |
+| slugger | 50 | 49 | - | 45 | **59** |
+| outboxer | 40 | 49 | **55** | - | 47 |
+| swarmer | 47 | 49 | 41 | 53 | - |
+
+- **There is a loop**: outboxer beats slugger (55), slugger beats swarmer (59), swarmer edges outboxer (53, inside the noise). Rock-paper-scissors, Four Kings style. The outboxer-swarmer leg is the weak one.
+- **Nobody beats the counter-puncher** (50, 50, 47, 40 against him). He's top vs the field (52.8) only because he crushes the outboxer (60) and edges the swarmer. Real boxing says pressure is the answer to a counter-puncher (Duran over Leonard): our pressure men only break even.
+- The boxer-puncher is 49–51 with everyone: the true middle, as designed.
+- Vs the field: counter 52.8, boxer-puncher 50.9, slugger 50.6, outboxer 48.1, swarmer 47.7 (target 48–53: all in, the swarmer at the floor).
+- Idea for the balance pass: a pressure man who walks through the counter-puncher's first shot (swarmer or slugger) should beat him a bit, which closes the loop the way Duran-Leonard did.
