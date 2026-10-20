@@ -32,3 +32,17 @@ Source: YouTube breakdowns pulled with `tools/yt/yt.py` (`research/CLIPS_WANTED.
 7. **Power-only plans lose on the cards** (Canelo): a plan that skips the jab lands less and sets up nothing; the AI corner's call against a mover is "bring the jab".
 8. **Rolling with punches looks worse to the judges:** a defense that takes the sting out but reads as clean (`judgeScore`) vs a slip that reads as a miss. Small, a judging-taste detail.
 9. **Winning on his ground** as a sign for the corner: when the plan's ground is lost and the round still goes your way, the gap is real (between-round confidence).
+
+## 3. The Modern Martial Artist: "How Usyk beat Joshua" (Usyk-Joshua I, tactics)
+More a style study than a round-by-round fix; what made it work against a bigger man:
+- **Always off the centre line:** feet and head moving together, level changes that also threaten the body and the power hand; small economical steps for exact angles and distance on the fly (Loma's coach).
+- **The double jab:** the first (or a jab feint) draws a reaction, the second takes it. A feint doesn't need to look like a real punch: eyes follow quick movement, and after rounds of pressure that instinct wins.
+- **The pendulum step:** the lead foot in and out at the edge of range dulls the reaction to the real one; step back from his punch and follow it back in, or step in to draw it and step back to counter (Holyfield).
+- **Southpaw foot position:** outside foot for the straight left down the middle and to blunt his right; Usyk's own trick: foot outside, head slipped inside, to beat Joshua's jab with his own and still follow with the cross. A crossed-over corkscrew lead from the same spot.
+- **Late, the pressure goes up:** 5-10 punch runs, doubling the same hand mid-combination to break the left-right defensive pattern.
+- **Order:** wear him down first (movement, off-rhythm jabs, feints), *then* ramp it up.
+
+### For Last Bell (ideas, not built)
+10. **Same-hand doubles break the defense's rhythm:** a man defending left-right expects alternation; a double on one side (jab-jab, left-left mid-combo) gets through more. Check how `pickCombo` and the defender's read handle repeats.
+11. **Feints wear the eyes down over rounds:** buying feints gets more likely as the fight goes on and the pressure piles up (fatigue + fear), not flat through the fight.
+12. **Wear-then-ramp** as a World-class plan shape: low-risk early rounds to read and tire, a jump in volume late. Ties to the round-by-round plan and the drama numbers (late lead changes).
