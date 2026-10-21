@@ -8,7 +8,7 @@ The only to-do list. When something is done, delete its line here, add a short l
 
 ## Claude, in this order
 1. **Balance pass, the rest** (knobs and numbers only; step b, more jab work, skipped for now: Ed, Oct 21, parking lot; in progress; hands low rare Oct 20, stops up and eased Oct 21: Done lately). Targets and sources: `research/numbers.md`, `research/compubox_2425.md`. Steps, one per session:
-   - d. KDs .77-.83 a fight (real .4-.6), body KDs 7.6% (pr2, in band now). Design call first (high): fewer KDs pull the stops down (32.2%), so it's fewer flash head KDs and more TKOs off the unanswered count, read together.
+   - d. KDs .77-.83 a fight (real .4-.6), body KDs 7.6% (pr2, in band now). Design call first (high): fewer KDs pull the stops down (32.2%), so it's fewer flash head KDs and more TKOs off the unanswered count, read together. Measured Oct 21 (`tests/kdwhy.js`, `docs/BRAIN.md` "step d: KD measurement"): ~75% of KDs drop a fresh man (crit flat bonus + flash); options A/B/C put to Ed, pick pending.
    - e. Decisions: split+majority ~27% (ours 10-17), draws ~5% (ours ~8), last-3-round lead changes ~10% (ours 6.5).
    - Watch: totals after 1c: 14.5 landed / 28.4% (keep 15 / 29): jabs land real now (22%), power connect 30 head / 36 body (real power ~35): the slack is power connect, not the jab. Jab share 36% (real ~45): untouched.
    - Watch: one level down PvI 13.3 (pr2, under 15; lg4 17.3, pr1 16.7: noise or the parry's Pro edge, `BR.parry.reflex`). WvP 18.0 now.
