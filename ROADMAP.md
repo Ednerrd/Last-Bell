@@ -91,6 +91,12 @@ The only to-do list. When something is done, delete its line here, add a short l
   - Balance dashboard: an artifact charting every `check.sh` run over time (stops, connect, style spread).
   - GitHub Action: `tsc` + the `same.js` hash on every push.
   - Broadcast voice: TTS commentary, a ring announcer for the intro and the decision.
+- **Coach's voice and tone (Ed, Oct 21, idea only).** Corner talk already turns words into a plan and a call (`talkPrompt`, `talkClaude`, keyword fallback `talkWords`); the phone's keyboard mic already works. Missing: how he says it.
+  - Tone tag: the prompt also returns `tone` (calm, steady, urgent, angry, fire-up) from the words, cursing, CAPS, "!!!". The coach may swear; the fighter still answers clean.
+  - Voice stand-in: an in-game mic button reads loudness and pace (Web Audio) as a hint for yelling vs calm. Check first that the published page gets mic access.
+  - The flowchart (Ed): the call fits the moment and the man. Hurt, panicking or gassed -> calm and steady ("breathe, hands up, get through it") settles him, yelling rattles him. Losing rounds, flat, sure he's fine -> urgent ("YOU'RE LOSING ROUNDS, PICK IT UP") lights him up. A proud, high-heart man takes fire well (more output, more gas); a low-composure man gets scared by it (fear up, worse choices). Engine side: tone pushes the brain's `emo` (fear, frus, conf). Reading your fighter becomes the coaching skill. Moves the hash: design pass first (high effort), sims before and after.
+  - Later: voice for the live yells ("JAB! JAB!" -> the jab call); needs a fast, always-on mic.
+  - Research: `research/corners.md` has 26 real corners; Ed may pull more corner clips (tone vs the state of the fight, what worked) when the design pass needs them.
 - Headbutts and fouls (Ed parked it Oct 18): a clash of heads opens a cut (more often orthodox vs southpaw, the lead feet fighting for the same spot), low blows, rabbit punches; the ref warns and docks for them like holding (`foul()`).
 - The brain may lead too much: in `tests/scar.js` less initiative + a longer range won ~9 points more vs the same man (Oct 17). Worth a look in a balance pass.
 - L4 leftovers (small): a loser's rematch lesson that works (read the punch that hurt him earlier, a plan that holds 3+ rounds), stale tape that misleads a dumb man a little.
