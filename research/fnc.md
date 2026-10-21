@@ -24,6 +24,9 @@ Ed asked for "FNC 3, just for any info". Covers Fight Night Champion (FNC) and F
 - **Parry:** a well-timed parry leaves the attacker open for a few seconds.
 - **Clinching and pacing** matter. Reviewers: "it pays to understand boxing".
 
+## Status (Oct 21)
+Built since: contact quality per punch (`hitQ`: clean / glancing / blocked), swollen and shut eyes with the doctor (1e), fighter personality (the brain). Still open, in Claude's order: the parry / timed block (the jab-connect fix, `research/jab.md`), a whiffed loaded shot opening a longer counter window, per-arm punch fatigue (today only the guard's arm wear), max stamina back by work rate, the stun moment (render, 3D).
+
 ## Where we already match
 - Two-tier stamina: `stam` / `stamMax`, and body shots cut `stamMax` (~1142).
 - Guard wears down under pressure and comes back when it stops (`F.gi`, ~749).
