@@ -38,6 +38,7 @@
  * @property {number} [sell]    he's acting fine (1f bluff: the nod, the smile, punching back), 0..1 as it shows (less while he moves sideways)
  * @property {number} [elbows]  elbows clamped to his ribs, gloves low (f1b: his body's hurt; the bluff can't hide it)
  * @property {number} [bait]    f2: he's dropped his hands on purpose to invite one (an id per bait, 0 = not baiting). The low hands show in `guard`; this lets a reader roll to see through it
+ * @property {number} [post]    his lead hand posted out (the long guard, 1b), 0..1 as far out as it is. Nothing reads it yet (the answers: body jab, walk under, peel and straight over)
  */
 /**
  * A punch in the air, as it truly is (his eyes add the error).
