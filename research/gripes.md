@@ -23,7 +23,7 @@ Source: Ed's paste, a Boxing Fanatico video from the Undisputed 2 creator event 
 - One fan's guess: SCI kept signing big names (Pacquiao) while the game struggled, so they sold the fighters a better sequel. Roster sells.
 
 ## Check list for Last Bell
-1. Cheese: run `cheese.js` after any brain change; no one trick should win much over 50%, and it should land less late than early.
+1. Cheese: run `cheese.js` after any brain change; no one trick should win much over 50%, and it should land less late than early. Oct 21 run (`docs/PLUGIN.md` "Cheese recheck"): expert passes all; hard loses 38-40% to haymaker and bodyOnly (target under 35).
 2. Repeats: watch a fight (or 20) for the same punch over and over.
 3. Contact: freeze-frame landed vs missed shots, no "landed from a foot away".
 4. Gassed look: a round-11 man next to a round-1 man, side by side.

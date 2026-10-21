@@ -62,6 +62,22 @@ A "player" who repeats one exploit all fight, run on the Last Bell engine (the r
 - **Hole 2, clinch at hard (small):** 55% (target 65). Tying up every time costs the cheese nothing; the brain doesn't punish the way in (uppercuts, short shots, turning off). Expert passes.
 - P3 done Oct 17 (below).
 
+### Cheese recheck (Oct 21, hash 28f99fe9, same table, 160 per row)
+| Cheese | hard wins (Oct 17) | expert wins (Oct 17) | landed share R1-3 -> R8-10 (hard / expert) |
+|---|---|---|---|
+| none | 47.6 (52.3) | 87.7 (84.1) | 51 -> 51 / 43 -> 34 |
+| jabSpam | 78.6 (89.2) | 94.9 (97.4) | 54 -> 54 / 50 -> 49 |
+| oneTwo | 71.9 (77.0) | 94.9 (93.0) | 53 -> 46 / 45 -> 36 |
+| pullCounter | 99.4 | 100 | 16 -> 17 / 10 -> 10 |
+| shell | 95.6 (99.4) | 99.4 | 19 -> 23 / 13 -> 14 |
+| **bodyOnly** | **60.5** (6.3) | 89.9 (19.1) | 46 -> 40 / 33 -> 27 |
+| **haymaker** | **61.6** (79.4) | 83.1 (90.0) | 35 -> 28 / 31 -> 25 |
+| runner | 100 | 100 | 31 -> 36 / 28 -> 34 |
+| clinch | 76.7 (55.4) | 86.3 (83.7) | 51 -> 50 / 47 -> 44 |
+
+- Expert passes everything (80%+). Hard misses 65 on two: bodyOnly (the P3 fix holds, still a bit short) and **haymaker, down 18 points since Oct 17**: the brain reads it (counters 24 -> 39 per 100, the cheese's share falls late) and still loses 38%. Best guess: the stops/power retunes since (stops ~25 -> ~32%) made the big shot worth more; untested. Every cheese but runner and shell loses ground at hard (the control is down 5 too, so part of it is noise and a softer hard).
+- Repro: `LB=copy TAG=x node tests/cheese.js 40 hard` (x4, same for expert), `node tests/cheese.js agg x`.
+
 ## 3. Fix what the cheese finds (P3)
 Each hole is a brain change with sims before and after (the usual balance checks: styles, audit, levels, the hash moves on purpose).
 
