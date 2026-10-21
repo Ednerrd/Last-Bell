@@ -79,6 +79,18 @@ The only to-do list. When something is done, delete its line here, add a short l
 - Ed, Oct 21 (project review): stops ease to ~32% (`STOP.low` .25); the balance pass goes before the easy-flaws retune; finished steps push to main too, no extra ask; the outboxer gets both a better jab + footwork and the long guard gear (designed first).
 
 ## Parking lot (ideas, not scheduled)
+- **Ed's extras list (Oct 21, ideas only, nothing scheduled).** Display only unless marked:
+  - **Tale of the tape** before the bell: started as a WIP on `claude/bold-faraday-bryk6t` (8a0469d: portraits, record, KOs, age, height from the drawn size, weight, stance, style, guard, OVR, 10 stat bars with the edge lit, "Ring the bell"). Left to do: stretch the bar scale (40-99), check the `same.js` hash, then Ed's calls: reach (wait for the Size step?), a favorite line, every fight or only New fight.
+  - Fight poster after the result (names, records, result, round) to save and share.
+  - Highlight reel: knockdowns, hurt spells and the comeback round cut from the replay, ~30 s.
+  - CompuBox-style live stats bar during the fight.
+  - Haptics on knockdowns and big shots (phone vibrate).
+  - Pick 'em / odds board: odds before the fight, call the winner and the method, keep a record of calls.
+  - Tournament bracket: 8 men, single elimination (career-lite).
+  - Fight of the Day: one seeded fight a day, the same for everyone, to argue over.
+  - Balance dashboard: an artifact charting every `check.sh` run over time (stops, connect, style spread).
+  - GitHub Action: `tsc` + the `same.js` hash on every push.
+  - Broadcast voice: TTS commentary, a ring announcer for the intro and the decision.
 - Headbutts and fouls (Ed parked it Oct 18): a clash of heads opens a cut (more often orthodox vs southpaw, the lead feet fighting for the same spot), low blows, rabbit punches; the ref warns and docks for them like holding (`foul()`).
 - The brain may lead too much: in `tests/scar.js` less initiative + a longer range won ~9 points more vs the same man (Oct 17). Worth a look in a balance pass.
 - L4 leftovers (small): a loser's rematch lesson that works (read the punch that hurt him earlier, a plan that holds 3+ rounds), stale tape that misleads a dumb man a little.
