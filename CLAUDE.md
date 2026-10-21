@@ -68,6 +68,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - `node tests/jabprobe.js 100 [rating]`: how jabs end (landed, blocked, slipped, parried, countered; landed jabs by the other man's state: punching or not).
 - `TAG=x node tests/jabsafe.js 150 [outboxer] [counter]` (x2) then `node tests/jabsafe.js agg x`: every shot the other man lands by when it came vs his jab (during, just after, else), tight-jab blocks, long guard time and jams.
 - `TAG=x node tests/range.js 300 outboxer [opps]` (one process per opponent) then `node tests/range.js agg x`: where a style's fights happen (time per range band, landed and damage per band both ways), jabs, ropes, counters, hit while jabbing.
+- `node tests/kdwhy.js 100` (x4): where KDs come from (flash / accum / zero / body, counter, crit, crit on a fresh head, fate, stops with a KD in the round).
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
 - YouTube research: `tools/yt/yt.py search "query"` / `get ID` (captions to `tools/yt/raw/`, gitignored; `research/CLIPS_WANTED.md`).
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
