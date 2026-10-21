@@ -225,6 +225,10 @@ const BR = {
  // a combo punch that can't reach from here (with the step he gets on the first one): weight left for a man with a perfect eye
   rushV: 48, rushP: 1,  // a man coming in faster than this (units/s) can be met with a check hook: chance per second at full counter skill
   jabCtr: .5,             // counter chance off a jab (it's back before you are)
+  // 1c, the parry (research/skillr.md 10, jab.md 2): the rear hand turns his straight aside, mostly the jab. Weight vs the other defenses by (block + read) mastery [N, I, P, W]
+  // (a novice rarely, a World-class man often), x (lo + shell trait) (the philly catches and parries), x cross for a rear straight. A parry clears the lane: counter chance x ctr.
+  // reflex: a jab he didn't answer (never saw it, didn't try, the defense didn't come off) his hand turns aside anyway, chance by the same mastery (Action-free: the engine reads mast.parry)
+  parry: { on: 1, w: [.08, .3, .75, 1.3], lo: .5, cross: .35, ctr: 1.6, reflex: [.2, .32, .42, .48] },
   shortCtr: .5,           // a punch that fell short is a counter chance this often (the pull counter)
   stealT: 30,             // the last 30 s, where rounds get stolen
   hurtQ: .6,              // a hurt man's defense works this much worse
@@ -418,7 +422,8 @@ const DEF_THRU = {
   slip:  { straight: .1, hook: 1.15, upper: .8, body: 1 },
   duck:  { straight: .5, hook: .1, upper: 1.3, body: 1 },
   pull:  { straight: .3, hook: .35, upper: .45, body: .6 },
-  roll:  { straight: .3, hook: .55, upper: .9, body: .7 }
+  roll:  { straight: .3, hook: .55, upper: .9, body: .7 },
+  parry: { straight: .2, hook: 1, upper: 1, body: 1 }
 };
 // which defense fits which punch (for a man who called it)
 const DEF_BEST = { straight: 'slip', hook: 'duck', upper: 'pull', body: 'block' };
@@ -430,10 +435,12 @@ const CB = (s, w, why) => [s.split('-').map(n => NUM[n]), w, why];
 const COUNTER_BOOK = {
   jab:      { slip: [CB('2', 3, 'right hand over the jab'), CB('2-3', 1.5, 'slip the jab, 2-3'), CB('3', .8, 'slip inside, hook')],
               block: [CB('2', 3, 'catch and shoot'), CB('1-2', 1, 'catch it, 1-2 back')], roll: [CB('2', 3, 'roll the jab, fire the right'), CB('2-3', 1, 'roll and 2-3')],
-              pull: [CB('2', 3, 'pull counter'), CB('2-3', 1, 'pull counter, 2-3')], duck: [CB('2b', 1.5, 'under the jab, right to the body'), CB('2b-3', 1, 'under it, 2b-3')] },
+              pull: [CB('2', 3, 'pull counter'), CB('2-3', 1, 'pull counter, 2-3')], duck: [CB('2b', 1.5, 'under the jab, right to the body'), CB('2b-3', 1, 'under it, 2b-3')],
+              parry: [CB('2', 3, 'parry it, right hand over the top'), CB('1', 1.5, 'parry, jab back'), CB('1b', 1, 'parry, dip, jab to the body'), CB('3', .8, 'parry, lead hook')] }, // Lerner's ladder (research/jab.md 2)
   straight: { slip: [CB('3', 3, 'slip the right hand, hook'), CB('3-2', 2, 'slip, 3-2'), CB('3b', 1, 'slip, hook to the body')],
               block: [CB('3', 2, 'block the right, hook back'), CB('3-2', 1, 'block, 3-2')], roll: [CB('2', 3, 'shoulder roll, right hand back'), CB('2-3', 1.5, 'roll, 2-3')],
               pull: [CB('2', 2.5, 'pull counter'), CB('1-2', 1, 'pull, 1-2')], duck: [CB('3b', 1.5, 'duck, hook to the body'), CB('6-3', 1.5, 'duck, come up the middle')],
+              parry: [CB('3', 2, 'parry the right, hook back'), CB('1-2', 1.5, 'parry, 1-2')],
               jab: [CB('1-2', 1, 'counter jab, then the 2')] },
   hook:     { duck: [CB('6-3', 2.5, 'duck the hook, up the middle'), CB('3', 1.5, 'duck, hook back'), CB('2', 1, 'duck, right hand')],
               roll: [CB('3-2', 2, 'roll under, 3-2'), CB('2', 1, 'roll under, right hand')], block: [CB('2', 3, 'straight inside the hook'), CB('2-3', 1.5, 'block, 2-3')],
@@ -444,7 +451,7 @@ const COUNTER_BOOK = {
   short:    { any: [CB('2', 3, 'pull counter: he fell short'), CB('2-1', 1.2, 'chase him back, 2-1'), CB('1-2', 1, 'he fell short, 1-2')] },
   rush:     { any: [CB('3', 3, 'check hook'), CB('1', 1.5, 'jab him on the way in')] }   // he runs in head first: hook and pivot off the line
 };
-const DEF_SKILL = { block: 'block', slip: 'slip', duck: 'slip', pull: 'footwork', roll: 'block' };
+const DEF_SKILL = { block: 'block', slip: 'slip', duck: 'slip', pull: 'footwork', roll: 'block', parry: 'block' };
 
 class Brain {
   /** @param {any} profile @param {BrainOpts} [opts] */
@@ -512,6 +519,7 @@ class Brain {
     const m = this.m, sk = { jab: m.jab, power: m.power, body: m.body }, L = this.mast = { force: {}, gas: {}, off: {}, late: {} };
     for (const c in sk) { L.force[c] = lvV('force', sk[c]); L.gas[c] = lvV('gas', (sk[c] + m.pacing) / 2); L.off[c] = lvV('off', (sk[c] + m.footwork) / 2); L.late[c] = lvV('late', (sk[c] + m.block) / 2); }
     L.flinch = lvV('flinch', (m.block + m.slip) / 2);
+    L.parry = BR.parry.on ? tierV((m.block + m.read) / 2, BR.parry.reflex) : 0; // 1c: the jab he never answered: his guard hand turns it aside anyway (the engine x lo + shell)
   }
   // L3: how new this man is to him (0 = seen plenty, 1 = never), by style and by stance. null = neutral. The game calls it again when he switches stance
   famSet(f) { const F = BR.fam, u = (k, a) => k == null ? 0 : clamp((a - k) / a, 0, 1); this.fam = f ? { style: u(f.style, F.at), stance: u(f.stance, F.atS || F.at) } : null; }
@@ -655,6 +663,7 @@ class Brain {
     const d = this.dNow == null ? 60 : this.dNow, fits = p => PUNCHES[p].max + BR.reachStep >= d;
     if (ans === 'slip') { if (last !== 'hook' && fits('hook')) out.push('hook'); else out[out.length - 1] = PUNCHES[last].zone === 'head' ? (last === 'jab' ? 'bodyJab' : 'bodyCross') : 'hook'; return out; } // he slips the last one: the hook where he slips to (from long range: the head moves, the body doesn't)
     if (ans === 'duck') { out.push(['uppercut', 'bodyHook', 'bodyCross'].find(fits) || 'bodyCross'); return out; }  // he ducks it: come up the middle
+    if (ans === 'parry') { if (last === 'jab' && fits('hook')) out.push('hook'); else out.unshift('jab'); return out; } // 1c: he parries it: the hook over the hand that reached for it, or double it up and beat his timing
     if (ans === 'pull') { out.unshift('jab'); return out; }                                 // he pulls back: double up the jab, walk him down first
     if (ans === 'ctr') return out.length > 1 ? out.slice(0, -1) : out;                       // he counters it: show half, my counter is loaded for his
     return null;
@@ -767,6 +776,7 @@ class Brain {
     if (BR.trap.on.draw && !this.dl.armed && this.t < this.dl.win + .6) ch *= BR.trap.drawHide;              // building the trap: don't show him the counter yet
     if (p && PUNCHES[p].zone === 'body') ch *= 1 + BR.body.ctr * this.bodyRead(); // he keeps bending to dig: the head comes with it
     if (p && PUNCHES[p].cat === 'jab' || p === 'bodyJab') ch *= BR.jabCtr; // a jab snaps back: much harder to counter than a missed hook
+    if (def === 'parry') ch *= BR.parry.ctr; // 1c: I turned it aside: his hand's out of the way and mine's already there
     if (this.mode === 'survive') {
       const r = this.hurtResp; ch *= { shell: .3, run: .4, clinch: .3, freeze: .1 }[r] || 1;
       if ((r === 'fire' || r === 'bait') && this.hisG < .55) ch *= (r === 'bait' ? BR.fin.baitCtr : BR.fin.fireCtr) * (BR.hb.on.danger ? hbV('danger', (this.m.counter + this.m.read) / 2) : 1); // he came in with his hands down: the finisher gets caught (a hurt vet more)
@@ -856,7 +866,8 @@ class Brain {
       slip: kd === 'straight' ? (tr.slip * 1.3 + .1) * (.3 + k.slip) : kd === 'upper' ? .1 : 0,
       duck: kd === 'hook' ? (tr.slip * 1.2 + .1) * (.3 + k.slip) : kd === 'straight' ? tr.slip * .3 : 0,
       pull: (tr.legs * 1.1 + .1) * (.3 + k.footwork),
-      roll: kd === 'body' ? 0 : tr.shell * tr.slip * .8 * (.3 + k.block)
+      roll: kd === 'body' ? 0 : tr.shell * tr.slip * .8 * (.3 + k.block),
+      parry: kd === 'straight' && BR.parry.on ? tierV((this.m.block + this.m.read) / 2, BR.parry.w) * (BR.parry.lo + tr.shell) * (seenAs === 'jab' ? 1 : BR.parry.cross) : 0 // 1c
     };
     if (this.mode === 'survive' && (this.hurtResp === 'shell' || this.hurtResp === 'steady')) w.block *= this.hurtResp === 'shell' ? 3 : 1.6;
     if (this.mode === 'survive' && this.hurtResp === 'run') w.pull *= 3;
@@ -1184,7 +1195,7 @@ class Brain {
     if (st === 'react') {
       if (!S.bit) { if (this.t > S.next + .3) this.setup = null; return 'wait'; }
       // he bit: punish where he went
-      st = S.bit === 'slip' || S.bit === 'roll' ? ['hook'] : S.bit === 'duck' ? ['uppercut', 'hook'] : S.bit === 'pull' ? ['jab', 'cross'] : ['bodyHook', 'hook'];
+      st = S.bit === 'slip' || S.bit === 'roll' || S.bit === 'parry' ? ['hook'] : S.bit === 'duck' ? ['uppercut', 'hook'] : S.bit === 'pull' ? ['jab', 'cross'] : ['bodyHook', 'hook'];
     }
     if (S.name === 'body then head' && S.i === 2 && this.ph.guard > .5 && !S.blocked) { S.steps[2] = ['bodyHook']; } // the hands haven't dropped yet: one more downstairs
     S.i++; S.next = this.t + S.gap;
