@@ -292,7 +292,7 @@ const BR = {
   // f1b, the hands tell the truth (Ed): a body-hurt man clamps his elbows to his ribs, the head opens. at .. full: how far his body meter is gone before it starts .. in full; hit: each power shot
   // that lands downstairs (fades, tau s of clock, hitMax at most); the other man: see (the guard he sees drops this much at a full clamp seen), up (go upstairs), open (an opening)
   // 1b, the long guard (research/longguard.md): by style (a trait: profile.traits.post wins), only out at long range (near .. far), not hurt, gas over gas; how well: his jab + range skill (q, low .. high)
-  post: { on: 1, by: { outboxer: .8, boxerpuncher: .25, counter: .2 }, near: 56, far: 84, gas: .35, q: [.5, 1] },
+  post: { on: 1, by: { outboxer: .8, boxerpuncher: .25, counter: .2 }, near: 56, far: 84, gas: .35, q: [.5, 1], close: 30 }, // close: a man walking in faster than this (units/s): the hand comes home
   clamp: { on: 1, at: .35, full: .85, hit: .12, hitMax: .6, tau: 45, see: .15, up: .2, open: .25 },
   // f2, the World-class bait (Ed, Oct 19; Atlas: jab, step back, invite the right, counter the miss). Once he's sure of the other man's lead (sure, the lead read), at mid-range (d) he drops the hands (guard)
   // for win s: the defense for that punch picked (the best of DEF_THRU vs it, chosen x def), seen sooner (rd), the counter loaded (ctr x). Only World class: (read + counter) mastery over at, full at World.
@@ -727,7 +727,7 @@ class Brain {
   // 1e: his own cut or closing eye: cover that side and move off it. The corner tells him at the break; before that, a smart man thinks of it himself
   // f1b: his own body's hurt, the elbows clamp to the ribs and the gloves come down with them: the meter going, and the last few that really landed down there
   // 1b: the long guard, the lead hand left out at the end of the jab while the man is out at the end of it; pulled home when he comes inside, when hurt, when the tank's low
-  postOf(P) { const L = BR.post; if (!L.on || !this.pst || P.me.hurt || P.me.clinch || this.mode === 'survive' || P.dist < L.near || P.dist > L.far || P.me.stam / Math.max(1, P.me.stamMax) < L.gas) return 0; return this.pst * lerp(L.q[0], L.q[1], (this.k.jab + this.k.range) / 2); }
+  postOf(P) { const L = BR.post; if (!L.on || !this.pst || P.me.hurt || P.me.clinch || this.mode === 'survive' || P.dist < L.near || P.dist > L.far || P.him.closing > L.close || P.me.stam / Math.max(1, P.me.stamMax) < L.gas) return 0; return this.pst * lerp(L.q[0], L.q[1], (this.k.jab + this.k.range) / 2); }
   clampOf(P) { const C = BR.clamp; return !C.on || P.me.body == null ? 0 : clamp(clamp((1 - P.me.body - C.at) / (C.full - C.at), 0, 1) + Math.min(C.hitMax, (this.bp || 0) * C.hit), 0, 1); }
   coverOf(P) {
     const e = P.me.eye, C = BR.cover; if (!C.on || !e || !e.s || e.v < C.at) return null;
