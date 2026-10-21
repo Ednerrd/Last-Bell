@@ -1816,8 +1816,9 @@ const DT = 1 / 60, CLOCK = 3, ROUND_LEN = 180, RING = 146, ZR = 115, MIN_D = 30,
    Content tables live with their code: PUNCH, STYLES, GUARDS (+ GUARD_HOLES, STYLE_GUARDS), STRATS, SHOUTS, STYLE_PLANS. The brain's own knobs: BoxerBrain.BR in
    brain/brain.js (AI.br below overrides a few for this engine). Tests poke these through PATCH="TUNE.x=..." etc. */
 // ref stoppages: the unanswered-punch stop (at: punches before he looks, by ref stop dial -1/0/+1; p: the first look, step: each one after) and the check after a count (he's up at 8: headMax under hm, or head under head at headP)
-const STOP = { at: [6, 4, 3], p: .2, step: .15, low: .25, hm: 22, head: 5, headP: .4 }; // low: power shots count as unanswered once he's stunned or his head is under this share
-const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .009, flashStun: 2.2, critKd: .04, critStun: .12, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .45 };
+const STOP = { at: [5, 3, 3], p: .3, step: .15, low: .25, hm: 22, head: 5, headP: .4 }; // low: power shots count as unanswered once he's stunned or his head is under this share
+// KDs (step d, Oct 21): flash = a fresh man dropped (mostly counters), its near misses stun him (flashStun x the KD roll); a crit adds critStun to the stun roll, critKd to the worn-head KD roll (0: a crit alone no longer drops a fresh man)
+const TUNE = { ev: .3, guard: .34, regen: 1, wild: .95, wildAt: 80, evDiv: 150, flush: 1.2, load: .6, jabEv: .12, jabBlk: 1.4, form: 3.8, even: .01, evenAt: .25, jShare: .3, jNoise: .9, flash: .0081, flashStun: 2.56, critKd: 0, critStun: .16, kdHurt: .18, kdRegen: .3, kdAt: 3, kdBase: 2.6, kdDiv: 9, upFloor: 3, wear: .08, reach: .2, reachIn: 14, moveEv: .2, setup: .45 };
 let DMG = 0.38; // global tuning
 const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, widen: .11, onEye: .65, doc: 6.55, docSpan: 2.8, cutman: 2.4,
   off: .5 }; // off: a cut sits over one eye (the side the punch came in on); shots to the other eye open it this much as often (an uppercut up the middle: half way)
@@ -1845,7 +1846,7 @@ const STAM = { free: 45, wear: .05, regen: .5, tank: .45, bodyHit: .15, tankDmg:
 // awake but he can't beat the count. Wind: a straight in the gut freezes him, hands down, the gas goes. Both need a real shot (danger
 // over a floor) and grow as the body wears and with a weak body stat; a counter or a man walking in doubles it.
 // Kill the body: a worn body slows his feet (legs) and drops his elbows, so head shots get through his guard more (elbows)
-const BODY = { legs: .2, elbows: 0, liver: .003, lAt: 1.2, delay: .35, up: .35, wind: .035, wAt: .8, windT: .9, gasHit: 25, over: 0, overT: .3, overEv: 0, elbow: 1, lowLeak: .35, lowBlk: .8, lowHead: .3, lowEv: 2, gas: .9, clampBody: .35 }; // gas: wind out per point of body damage. low (the brain's elbows-in when he reads a body digger) or clamp (f1b: his own body's hurt), the bigger of them (lowB; the clamp covers the body x clampBody): body blocks leak less (lowLeak), catch more (lowBlk), the head guard catches less (lowHead); only the read sees body shots coming (lowEv). elbow: how much of a body shot gets through the arms when he blocks it. over: a head shot on a man bent over his own body punch (or still coming up, overT s) lands harder and is harder to slip (overEv)
+const BODY = { legs: .2, elbows: 0, liver: .003, liverKd: .65, liverHold: .7, lAt: 1.2, delay: .35, up: .35, wind: .035, wAt: .8, windT: .9, gasHit: 25, over: 0, overT: .3, overEv: 0, elbow: 1, lowLeak: .35, lowBlk: .8, lowHead: .3, lowEv: 2, gas: .9, clampBody: .35 }; // liverKd: share of liver shots that put him down (the rest: folded on his feet, a stun liverHold s longer). gas: wind out per point of body damage. low (the brain's elbows-in when he reads a body digger) or clamp (f1b: his own body's hurt), the bigger of them (lowB; the clamp covers the body x clampBody): body blocks leak less (lowLeak), catch more (lowBlk), the head guard catches less (lowHead); only the read sees body shots coming (lowEv). elbow: how much of a body shot gets through the arms when he blocks it. over: a head shot on a man bent over his own body punch (or still coming up, overT s) lands harder and is harder to slip (overEv)
 // how far out the arm is when it lands. Straights need the arm out: jammed or half out has no weight behind it, the sweet spot is
 // just short of locking out, reaching at the very end of his range loses a little again. Hooks and uppercuts are short punches
 // (the power comes from the turn, not the reach): only fully jammed or overreaching costs them. ext 0 = the punch's min range, 1 = its max
@@ -2801,7 +2802,7 @@ class Fight {
       else if (!blocked && D.state !== 'stun') {
         const dn = dmg * .45 / DMG, worn = (1.3 - Math.max(0, D.body) / 100) * (1.35 - D.s.body / 100) * (caught || A.counterWin > 0 ? 2 : 1), ln = laneOf(A, P);
         if (ln.side === 'R' && (P.kind === 'hook' || P.arm === 'rear') && dn > BODY.lAt && R() < BODY.liver * (dn - BODY.lAt) * worn) {
-          this.stun(D, true); D.stunT = BODY.delay + .2; D.liverT = BODY.delay; this.emit('liver', { a: A.side, d: D.side }); return;
+          this.stun(D, true); D.stunT = BODY.delay + .2; if (R() < BODY.liverKd) D.liverT = BODY.delay; else D.stunT += BODY.liverHold; this.emit('liver', { a: A.side, d: D.side }); return;
         }
         if (P.kind === 'straight' && dn > BODY.wAt && R() < BODY.wind * (dn - BODY.wAt) * worn) {
           this.stun(D, true); D.stunT = BODY.windT * (1.3 - D.s.heart / 200); D.stam = Math.max(0, D.stam - BODY.gasHit); D.gi = Math.min(D.gi, .4); this.emit('wind', { a: A.side, d: D.side }); return;
