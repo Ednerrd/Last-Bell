@@ -18,5 +18,5 @@ Ed, Oct 19: "I want to circle back to that." Paste transcripts into any session;
 5. **Jab defense**: how pros shut down the jab. Our jab connect ~27% vs real ~17%. **Got: batch 1 (`jab.md`: the counters list, Lerner's parry ladder; the countered jab makes him jab less).** **The hit list (items 2-5) is done, Oct 20.**
 
 ## Already done
-- Boxing Life "Genius Boxing Advice" playlist (Ed, Oct 21): `research/boxinglife.md`, V1 done, V2-V5 to pull.
+- Boxing Life "Genius Boxing Advice" playlist (Ed, Oct 21): `research/boxinglife.md`: V1, V2 and the 3 h Master Edition done; parts 3-4 bot-walled (likely covered).
 - The Arena batch 1 (`research/arena.md`), Precision Boxing batch 1 (`research/precision.md`), Skillr Boxing batches 1-4 (`research/skillr.md`: anticipation, the clinch, guards, rhythm, styles, Four Kings, Philly shell, counters, pressure, parrying, blocking; shortlist in its header), Top Rank batches 1-2 (`research/toprank.md`: levels reel, Porter's towel, Loma-Commey, Cotto-Margarito I and II; shortlist in its header), The Ring batch 1 (`research/ring.md`: Crawford-Canelo, Shakur-Teofimo, Thomas Taylor's rules talk; shortlist in its header). Shortlists: `tools/arena/`, `tools/precision/`.
