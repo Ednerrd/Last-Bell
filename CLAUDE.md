@@ -50,7 +50,7 @@ engine (~200, the brain inlined at ~203) → career (~2590: just fighter gen, di
 ## Tests (`tests/`, run from repo root)
 Node extracts the engine+career sections and runs fights headless (`sim.js` is the shared loader). `PATCH="js code"` injects overrides. `LB=file.html` runs against another copy.
 - **`tests/check.sh TAG [s a l f sp g]`: the full check on 4 cores, resumable after a restart (rerun the same line); `tests/check.sh TAG report` prints it all.** Default parts s a l f (~25 min); sp (specials) adds ~20 min.
-- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = aa4efac5 for a quick look). Long sims read `index.html` when they start: while you keep editing, run them on a frozen copy (`LB=copy.html`). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
+- `node tests/same.js 200`: determinism hash (~95 s; `same.js 40` = 302e9ecf for a quick look). Long sims read `index.html` when they start: while you keep editing, run them on a frozen copy (`LB=copy.html`). `tsc -p .`: type check of `brain/brain.js` (tsconfig `checkJs`, no build step).
 - `TAG=x node tests/bait.js 75` (x4) then `agg x`: the World-class bait (baits by style, bites, counters off them, seen through by level).
 - `TAG=x node tests/hands.js 300` then `agg x`: body then head (head shots and KDs on a gone body or clamped elbows, reads off the truth).
 - `node tests/audit.js 500`: CompuBox-style audit (output, connect %, KDs, stoppages, decisions, upsets).
