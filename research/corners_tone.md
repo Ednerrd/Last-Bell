@@ -1,6 +1,6 @@
 # Corner tone vs fighter state (SmB Boxing corner moments, Oct 21)
 
-Source: SmB Boxing "10 Memorable Corner Moments In Boxing" series, pts 1-5 (ids 7_78hpsKnAg, SFe9L6S2eqc, BFQKDQCmaEU, fk7jw-OWuaA, 6P9Pz7JYsnM). **Pt 3 (BFQKDQCmaEU) came through; Ed pasted Pt 4 (fk7jw-OWuaA) by hand.** Pts 1, 2, 5 are bot-walled ("sign in to confirm you're not a bot", yt.py and the yt-dlp fallback both, rerun once). So this file has Pt 3 and Pt 4 only. Nothing was filled in from memory for the missing parts. Rerun `python3 tools/yt/yt.py get 7_78hpsKnAg SFe9L6S2eqc 6P9Pz7JYsnM` later (or paste the transcripts) to fill the rest. Notes are in our own words; the video is a highlight reel, so it favors corners that worked (survivorship, see `corners_video.md` caveat). Outcome source marked video (the narration) or known (boxing knowledge).
+Source: SmB Boxing "10 Memorable Corner Moments In Boxing" series, pts 1-5 (ids 7_78hpsKnAg, SFe9L6S2eqc, BFQKDQCmaEU, fk7jw-OWuaA, 6P9Pz7JYsnM). **Pt 3 (BFQKDQCmaEU) came through; Ed pasted Pt 4 (fk7jw-OWuaA) by hand; Pts 1 (7_78hpsKnAg) and 2 (SFe9L6S2eqc) came through on a retry with `--extractor-args youtube:player_client=android`.** Pt 5 hits a 429 / bot wall (first try: "sign in to confirm you're not a bot", yt.py and the yt-dlp fallback both, rerun once). So this file has Pts 1-4. Nothing was filled in from memory for the missing parts. Rerun `python3 tools/yt/yt.py get 6P9Pz7JYsnM` later (with the android client) (or paste the transcripts) to fill the rest. Notes are in our own words; the video is a highlight reel, so it favors corners that worked (survivorship, see `corners_video.md` caveat). Outcome source marked video (the narration) or known (boxing knowledge).
 
 ## Moments (Pt 3)
 
@@ -35,7 +35,37 @@ Pt 3 also names a 10th clip (Matthew Saad Muhammad) but the caption cuts off the
 | 18 | Bradley-Rios, after R7, Teddy Atlas | Healthy, ahead, focus slipping | Instructions first, then a fire-up speech (we're firemen, the heat is home) | Fix two things (knees bent, go around him), then: the fire is coming, it's where we live | Video: Bradley turned it up in R8, body-shot stop in R9 ("like flipping a switch") | worked (strong) |
 | 19 | Leonard-Hearns I, after R12, Angelo Dundee | Behind on all three cards, left eye nearly shut | Urgent, repeated: you're blowing it, son, nine minutes | You're blowing it, take it away from him | Video: Leonard hurt Hearns in R13, stopped him R14 | worked (strong; note `corners.md` read it as not turning the fight: this footage says it did) |
 
-## Patterns (n = 9 from Pt 3 + 9 usable from Pt 4 = 18)
+## Moments (Pt 1)
+
+| # | Fight, round, trainer | State going in | Tone | Key line (paraphrased) | Next / outcome | Fit |
+|---|---|---|---|---|---|---|
+| 20 | Eubank-Collins, after R10, Ronnie Davis | Ahead: dropped Collins, then showboated and backed off | Angry (at the coasting) | You had him and you let him off | Known: Collins won the decision | unclear (clip cuts before the next round) |
+| 21 | Brandon Gonzales fight, before the last round, Virgil Hunter | Ahead, fresh | Whisper: calm but intense, repeated | He's ready to be beaten, he can't figure you out. Don't let it get away, look at me, it's yours | Unknown | unclear (a quiet tone with an urgent message: whispering makes him lean in) |
+| 22 | Ruiz-Rahman, before R12, Norman Stone | Close fight, healthy | Cursing fire-up | Don't let him get the upper hand, go kick his ass | Known: Ruiz won the decision | worked (weak evidence) |
+| 23a | Povetkin-Chagaev, after R3, Teddy Atlas | Winning but nervous (first title shot) | Calm, steady: it's the same as your other 21 fights | A title fight is no different, now you know it | Video: lost R4-6, hurt in R6 | unclear (calm on a nervous man, then the other man came on) |
+| 23b | Povetkin-Chagaev, after R6, Atlas | Hurt, slipping, tired | Stakes with a clock: 18 minutes, what you do lasts forever, your family's name | Can you be strong for 18 minutes? | Video: R7-8 he still faded, outworked | **no effect** (stakes on a gassed man: same as Mugabe) |
+| 23c | Povetkin-Chagaev, after R8, Atlas | Tired, the fight close (booth: up 2 rounds) | Pride / love: bring your late father back tonight | They'll talk about his son, the new champion | Video: R9 he came alive, won the last rounds, UD | worked (strong; the second speech, deeper and personal) |
+| 24 | Mayorga fight, Ray Torres translating for HBO | Fine | Street fire-up (hit him back low if he does it) | Be first, pressure him | Unknown | skip (comedy) |
+| 25 | Marquez-Peyton, after R10, Peyton's corner | Hurt to the body, vomits blood on the stool | (Not tone: the doctor stops it) | You can't fight like that | Video: stopped on the stool | skip (a state signal: body damage ends it) |
+| 26 | Toney-Jirov, before R12, Freddie Roach | Close fight, both healthy | Urgent, honest, stakes: the title is right here, I'm serious, put him down | Don't let him outwork you this round | Video: Toney dropped Jirov in R12, won the title | worked (strong; the honest read: "it's close") |
+
+## Moments (Pt 2)
+
+| # | Fight, round, trainer | State going in | Tone | Key line (paraphrased) | Next / outcome | Fit |
+|---|---|---|---|---|---|---|
+| 31 | Mayweather-Gatti, after R6, Roger Mayweather (to the camera) | Cruising, dominant | Cocky | Told you he wouldn't get beaten | Known: Gatti retired on the stool | skip (not to the fighter) |
+| 32 | Hopkins-Shumenov, whole fight, no trainer (a cutman only) | Losing, adversity | Silence: nobody tells him anything | (none) | Known: Hopkins won the split decision | note: the game's "no corner" case. He has to fix it alone |
+| 33 | Kurtsidze-Douglas, before R10 (last), Gary Stark | Ahead but needs a KO, the other man tired | Fire-up with an order: he's finished, give me this fight, five at a time | Three minutes, he's done, throw five at a time | Video: pinned him on the ropes, stopped in R10 | worked (strong) |
+| 34 | Molina-Moreno, R8-9, Molina's corner | Hair in his eyes | (Not tone: they cut the hair) | | | skip |
+| 35 | Austin-R. Marquez, after R7, Aaron Snowell | Austin thought to be ahead | Taunt at the OTHER corner: it won't be long now | | Video: three minutes later Austin was the one stopped | **backfired** (a corner's confidence is not a read) |
+| 36 | Moorer-Holyfield, R3 / R8 / R9 / before R12, Teddy Atlas (dup of `corners.md` item 6, new detail) | R3: dropped, losing. R6-8: healthy but cautious. Late: close | R3: ultimatum (don't come back to this corner). R8: sits on the stool (want to change places?), you're lying to yourself, you'll cry tomorrow. R9: 12 minutes, you're blowing it. R12: you're not doing your best | Live or win, decide | Video: R4-5 aggressive, R6-8 cautious again (the R3 speech wore off in 2 rounds); after R8 still cautious; R12 the fight still close, won a majority decision | worked in the end, **but each push faded** |
+| 37 | Ruiz-Jones, every round, Norman Stone | Outboxed by a better, faster man, passive | Cursing, nonstop: fight him, you need a KO | What are you waiting for? | Known: Jones won a wide decision | **no effect** (anger can't fix a skill gap) |
+| 38 | Lewis-Tyson, after R4-5, Emanuel Steward | Dominant but complacent | Cursing, angry: there's a dead man in front of you, let it go | Step it up, don't let him catch you | Known: Lewis KO'd Tyson R8 | worked |
+| 39 | Golovkin-Rosado, after R6 and in R7, Billy Briscoe | Face covered in blood, can't see | Asks first (want me to stop? no), then gentle and final; pleads with the father | I have to stop it, he can't see the punches | Video: towel in R7. Booth: the right call | worked (the stop) |
+
+(Pt 2 also repeats Virgil Hunter's whisper: row 21.)
+
+## Patterns (Pt 3: 9, Pt 4: 9, Pt 1: 9, Pt 2: 7 usable = 34)
 
 - **Anger / threat at a flat, behind, healthy man: 2 of 2 worked** (Atlas on Moorer, rows 3 and 4), and **angry/urgent at a cruising-but-passive man: 1 of 1** (Steward, row 7). Anger worked here because the man was healthy and had the tools. Total angry/urgent on a healthy man: 3 of 3 worked, but this is a highlight reel, so backfires are missing. Rule: anger pays when he is fresh and passive; in `corners.md` Moorer-Holyfield also worked and the Hearns "you're blowing it" line did not turn the fight. Flag: no backfire cases in this pt.
 - **Calm / one instruction on a hurt man: 2 of 2 worked** (rows 8, 2). Mouthpiece in, one thing: get inside. And "you've got control" to a man who was outfought.
@@ -53,7 +83,20 @@ Pt 3 also names a 10th clip (Matthew Saad Muhammad) but the caption cuts off the
 - **Instructions first, then fire** (row 18): Atlas fixes two things, then the speech. Same order as Moorer-Botha (threat, then stakes). The fire carries the fix.
 - **Anger at the ref, not the fighter, does nothing** (row 14).
 
-- **Big caveat:** n = 18, two pts, a highlight reel. Do not set odds from this. The use is the order: threat then stakes, calm on hurt, loud on fresh-passive, and a gentle finality for the stop.
+- **Pt 1:**
+  - **Stakes on a gassed man: no effect again** (23b, Povetkin R7-8). With Mugabe: 0 of 2. Tone never fixes the tank.
+  - **Atlas's second speech lands, again** (23c, Povetkin R9; Moorer-Botha rows 3-4). The deeper, personal one comes after the first one fails. In game: a pride/stakes call works better once per fight, and the second, deeper call can work after a rest.
+  - **Honest urgent on a close fight: 1 of 1** (26, Roach: "it's close, put him down"). Compare Algieri (row 17): Lane lied, Roach told the truth.
+  - **Whisper** (21): a calm voice with an urgent message. Tone (volume) and words (content) are two dials, not one.
+
+- **Pt 2:**
+  - **A push wears off** (36, Moorer-Holyfield): the R3 ultimatum gave 2 good rounds, then he went back to cautious; the next speech didn't move him; the clock ("12 minutes") did a little. In game: a tone's effect decays over ~2 rounds, and the same tone again is weaker.
+  - **Anger can't fix a skill gap** (37, Ruiz-Jones). Anger moves the will, not the hands. Same family as "can't fix gas".
+  - **Cursing at a dominant, complacent man: 1 of 1** (38, Steward on Lewis). With Hunter (row 11) and Steward on Klitschko (row 7): anger on a healthy man who is ahead and coasting is 3 of 3.
+  - **A corner's confidence is not a read** (35): the trainer taunts, his man gets stopped.
+  - **No corner** (32, Hopkins): one case, he won by thinking alone. That's a vet; the game's no-corner fighter leans on his own ring IQ.
+
+- **Big caveat:** n = 34, four pts, a highlight reel. Do not set odds from this. The use is the order: threat then stakes, calm on hurt, loud on fresh-passive, and a gentle finality for the stop.
 
 ## Lines for the game (our own words, no names)
 
@@ -99,3 +142,14 @@ More urgent / fire (Pt 4)
 25. You're blowing it, son. Nine minutes. Take it from him.
 26. Fix two things, then the fire: knees bent, go around him. The heat is where we live.
 27. I'm not saying it again. Hands up. You're making this close.
+
+More (Pt 1)
+28. Listen to me. It's close. This round is the title. Put him down.
+29. This is the same as every other fight you've had. Nothing new.
+30. (Low voice) He's ready to break. Don't let it get away. Look at me.
+
+More (Pt 2)
+31. He's finished. Three minutes. Give me this fight, five at a time.
+32. You want my stool? Then fight like you want yours.
+33. You're doing just enough to get by. You'll regret it tomorrow.
+34. There's a beaten man in front of you. Stop playing and let it go.
