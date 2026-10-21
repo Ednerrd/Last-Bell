@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **28f99fe9**, Oct 21: 1b fixes + the long guard drawn, `same.js 40` = 9228fd2d; before it 76c69f21, 1b built).
+- Render-only changes must keep the `same.js` hash (now **4b4792b9**, Oct 21: 1c the parry, `same.js 40` = c9e5d6ec; before it 28f99fe9, 1b fixes).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -65,6 +65,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - Damage: `node tests/cut.js 600`: cut and eye stops, bad cuts, doctor looks, swelling and shut eyes, clean head shots onto the damaged eye once he's spotted it, by level (cut stops are rare: 600+ fights, read 'bad cut').
 - Hurt man's danger: `TAG=x node tests/danger.js 300 [on|off] [N,I,P,W]` then `node tests/danger.js agg x`: a Pro hunting a hurt man of each level, stung and caught per hunt.
 - Finishing: `TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
+- `node tests/jabprobe.js 100 [rating]`: how jabs end (landed, blocked, slipped, parried, countered; landed jabs by the other man's state: punching or not).
 - `TAG=x node tests/jabsafe.js 150 [outboxer] [counter]` (x2) then `node tests/jabsafe.js agg x`: every shot the other man lands by when it came vs his jab (during, just after, else), tight-jab blocks, long guard time and jams.
 - `TAG=x node tests/range.js 300 outboxer [opps]` (one process per opponent) then `node tests/range.js agg x`: where a style's fights happen (time per range band, landed and damage per band both ways), jabs, ropes, counters, hit while jabbing.
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
@@ -75,7 +76,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 Audit: ~52 thrown / ~15 landed / ~29% connect per round (Ed, Oct 14). "Thrown" = punches that really start: one his own defense pulls back before 30% is un-counted (gas still spent), audit prints it as "unthrown /rd".
 - Stops **30–35%** (Ed, Oct 21: ~32%), spread earlier (`research/numbers.md`). KDs a fight real .4–.6, body KDs 5–8%. Cut stops ~1.2–1.7%, eye stops ~0.3%.
 - Styles 48–53% vs the field, specials 48–54, guards @82 vs standard ~48–58. One level down wins 15–20%. Drama (close fights): a lead change ~40%, comebacks ~11% (Ed). AI corner vs a silent one ~+3.6.
-- **Latest full check** (`check.sh lg4`, hash 28f99fe9, Oct 21): 51.3 / 14.9 / 29.0%, stops 31.5% (finish 30.7), KDs .76, body KDs 4.8% (under 5), styles 48.6–51.0, ob vs ctr 45, one level down (300) IvN 16.7 / PvI 17.3 / WvP 15.0. History: `docs/BRAIN.md`, `docs/NOTES.md` "Balance history".
+- **Latest full check** (`check.sh pr2`, hash 4b4792b9, Oct 21, 1c the parry): 51.2 / 14.5 / 28.4% (jab 22.2%, head power 30.0), stops 32.2% (finish 33.8), KDs .77, body KDs 7.6%, styles 48.5–52.5, ob vs ctr 45, one level down (300) IvN 16.3 / PvI 13.3 (low: watch) / WvP 18.0. History: `docs/BRAIN.md`, `docs/NOTES.md` "Balance history".
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
