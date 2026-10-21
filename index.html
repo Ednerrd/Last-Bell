@@ -2379,7 +2379,7 @@ class Fight {
     }
   }
   snap() {
-    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' || F.state === 'idle' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, hitQ: F.hitQ, hitGlove: F.hitGlove, aQ: F.act && F.act.q || null, downP: F.downP, rise: !!(this.kdState && this.kdState.who === F.side && (this.kdState.rising || this.kdState.standing)), walk: this.phase === 'roundEnd' || this.phase === 'corner', sit: this.phase === 'corner' || (this.phase === 'roundEnd' && F.arrived && (this.cornerT || 0) > .25) ? 1 : 0, cut: F.cut, cutS: F.cutS, swL: F.sw.L, swR: F.sw.R, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3, bluff: F.state === 'stun' ? 0 : F.bluff || 0, clamp: F.clamp || 0, bait: F.baitId ? 1 : 0, post: F.post || 0 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
+    return { f: this.f.map(F => ({ x: F.x, z: F.z, dir: F.dir, gait: F.gait || 0, mv: F.state === 'move' || F.state === 'idle' ? F.mv : 0, stance: F.stance, state: F.state, aT: F.act ? F.act.type : null, aP: F.act ? F.act.t / F.act.dur : 0, feint: F.act ? F.act.feint : false, def: F.def, defP: F.defP, defU: F.def ? clamp(1 - F.defT / (F.defD || .3), 0, 1) : 0, ctr: F.counterWin > 0 && !!F.act, defZ: F.defZ, guard: F.guard, tired: clamp(1 - F.stam / Math.max(1, F.stamMax) / .45, 0, 1), gi: F.gi, hitT: F.hitT, hitZone: F.hitZone, hitKind: F.hitKind, hitPow: F.hitPow, hitQ: F.hitQ, hitGlove: F.hitGlove, aQ: F.act && F.act.q || null, downP: F.downP, rise: !!(this.kdState && this.kdState.who === F.side && (this.kdState.rising || this.kdState.standing)), walk: this.phase === 'roundEnd' || this.phase === 'corner', sit: this.phase === 'corner' || (this.phase === 'roundEnd' && F.arrived && (this.cornerT || 0) > .25) ? 1 : 0, cut: F.cut, cutS: F.cutS, swL: F.sw.L, swR: F.sw.R, dmg: 1 - F.headMax / 100, bob: F.bob, hurt: F.head < F.headMax * .3, bluff: F.state === 'stun' ? 0 : F.bluff || 0, clamp: F.clamp || 0, bait: F.baitId ? 1 : 0, post: F.post || 0, par: F.parV != null && this.t - F.parV < .3 ? 1 - (this.t - F.parV) / .3 : 0 })), ev: this.stepEv.filter(e => e.type === 'hit' || e.type === 'knockdown').map(e => Object.assign({}, e)) };
   }
   walkTo(F, x, z, dt, sp) {
     const dx = x - F.x, dz = z - F.z, d = Math.hypot(dx, dz); F.vx = F.vz = 0;
@@ -2683,10 +2683,10 @@ class Fight {
       else if (def === 'duck') { if (P.zone === 'head' && P.kind !== 'upper') evaded = true; else if (P.kind === 'upper') mult = D.guard === 'peekaboo' ? 1.6 : 1.4; }
       else if (def === 'slip') { if (P.zone === 'head' && P.kind === 'straight') evaded = true; else if (P.kind === 'hook') mult = 1.15; }
       else if (def === 'pull') { if (R() < (P.zone === 'head' ? .8 : .5 + BODY.lowEv * .3 * (D.low || 0))) evaded = true; }
-      else if (def === 'parry') { if (P.zone === 'head' && P.kind === 'straight' && R() < (P.cat === 'jab' ? PAR.jab : PAR.cross)) { evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; } else mult = PAR.miss; } // 1c
+      else if (def === 'parry') { if (P.zone === 'head' && P.kind === 'straight' && R() < (P.cat === 'jab' ? PAR.jab : PAR.cross)) { evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; D.parV = this.t; } else mult = PAR.miss; } // 1c
     } else if (D.state !== 'stun' && D.state !== 'clinch') {
       const parB = D.state !== 'punch' ? 1 : D.act && PUNCH[D.act.type].arm === 'lead' ? PAR.busy : 0; // throwing with the lead hand, the rear one is still home on the chin: it catches his jab (jab vs jab)
-      if (P.cat === 'jab' && parB && R() < parB * D.brain.mast.parry * (PAR.lo + D.brain.tr.shell) * stamFac(D) * parO * (1 - atkEdge(A, P)) * (1 - holeF(D, P))) { def = 'parry'; evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; } // 1c: the guard hand turns it aside
+      if (P.cat === 'jab' && parB && R() < parB * D.brain.mast.parry * (PAR.lo + D.brain.tr.shell) * stamFac(D) * parO * (1 - atkEdge(A, P)) * (1 - holeF(D, P))) { def = 'parry'; evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; D.parV = this.t; } // 1c: the guard hand turns it aside
       let ev = TUNE.ev + (P.cat === 'jab' ? TUNE.jabEv : 0) + (D.s.defense * .5 + D.s.footwork * .3 - A.s.accuracy * .5 - A.s.speed * .3) / TUNE.evDiv;
       ev = clamp(ev, .06, .5) * stamFac(D) * (this.atRopes(D) ? .75 : 1) * gf(D, 'ev') * (D.guard === 'handslow' ? stamFac(D) * tankF(D) : 1);
       if (D.state === 'punch') ev *= .45;
@@ -3469,6 +3469,9 @@ const Render = (() => {
       const k = v.defP != null ? ease(v.defP) : 1, B = v.defZ === 'body' ? GUARD_POSE.body : (GP.b || GUARD_POSE.standard.b);
       leadG = L(leadG, { x: N.x + B.l[0], y: N.y + B.l[1] }, k); rearG = L(rearG, { x: N.x + B.r[0], y: N.y + B.r[1] }, k);
     }
+    if (live && (v.par > 0 || v.def === 'parry') && !(v.aT && PUNCH[v.aT].arm === 'rear')) { // 1c: the parry, the rear glove meets his jab out front and pats it down (reaching for it on a called one)
+      const u = v.par > 0 ? 1 - v.par : 0, k = v.par > 0 ? Math.sin(Math.PI * Math.min(1, .35 + u * .75)) : ease(v.defP || 0) * .6;
+      rearG = L(rearG, { x: N.x + 27 - 5 * u, y: N.y - 1 + 13 * u }, k); }
     if (v.def === 'roll') { const k = ease(v.defP); lsh0.y -= 5.5 * k; lsh0.x += 3 * k; rearG = L(rearG, { x: N.x + 7, y: N.y - 9 }, k); leadG = L(leadG, { x: N.x + 5, y: N.y + 18 }, k); }
     if (v.hurt || v.state === 'stun') { const k = v.state === 'stun' ? 1 : 1 - (v.bluff || 0); leadG.y += 7 * k; rearG.y += 6 * k; leadG.x -= 2 * k; } // the hands sag; a bluffer keeps them up
     if (v.state === 'clinch') { leadG = { x: J.neck.x + 24, y: J.neck.y + 2 }; rearG = { x: J.neck.x + 20, y: J.neck.y + 8 }; }
