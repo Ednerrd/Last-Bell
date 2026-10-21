@@ -39,6 +39,7 @@ The only to-do list. When something is done, delete its line here, add a short l
 - Older: `docs/NOTES.md` "Done log".
 
 ## Decided (don't reopen)
+- Ed, Oct 21: no lab or live republish for now, keep dialing in the engine.
 - Ed, Oct 14 (project review): keep v1, v2 (`claude/brave-einstein-ojkyzm`) parked. Focus is the AI, the brain and the fight sim; career, camp and the rest of the game come after. Live game stays as is until then. The brain is the default AI. Brain thrown target ~52/rd. Skill-sheet walk-in defaults OK as they are.
 - No 2D-only render polish (uppercut curve, close-range spacing): 3D redoes the animation.
 - Lab B rhythm (`ccr-026fa9ad-j4d8rw`) is dead; Ed picked Lab A. The parallel step 6 (`ccr-b57f3498-nk3hk1`) is superseded.
@@ -91,7 +92,7 @@ The only to-do list. When something is done, delete its line here, add a short l
   - Coach's eye: after each round, one line on why it went that way (what the brain saw: cut, clamped elbows, flat feet) + one thing to watch next round. Builds on `roundNotes()` / `planVerdict()`.
   - Read score: the player calls what he sees (hurt, bluffing, body gone) and gets scored against the engine's truth; a player "eyes" stat that grows. Turns the brain's perception into the player's progression.
   - Retire by the apron step: the player's own stop decision.
-  - Watch speed apart from sim speed (Oct 21 review of an outside essay): a speed control + auto-slow on hurts, KDs and big shots (off `bev`), quiet rounds fly by; render/UI only, the hash holds. And print the spread in the audit (quietest/busiest 10% of rounds), not just averages.
+  - Watch speed apart from sim speed (Oct 21 review of an outside essay): auto-slow on hurts, KDs and big shots (off `bev`) on top of the 1x/2x/4x toggle that's already in, so quiet rounds fly by; render/UI only, the hash holds. And print the spread in the audit (quietest/busiest 10% of rounds), not just averages.
   - A shorter-fight option / skip to the moments (a 12-rounder is still ~12 min plus breaks on a phone).
   - Rulebook check: the 3-knockdown rule, a downed man at the bell is still counted.
   - Cutman as a player decision between rounds (cut, swelling or breathing; joins "cutman priority" above).
