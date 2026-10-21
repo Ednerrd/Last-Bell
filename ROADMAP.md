@@ -14,6 +14,7 @@ The only to-do list. When something is done, delete its line here, add a short l
    - e. Decisions: split+majority ~27% (ours 10-17), draws ~5% (ours ~8), last-3-round lead changes ~10% (ours 6.5).
    - The hurt fixes from the clips ride here (`research/hurt.md`): legs gone -> smother/hold, not run; legs back -> box long behind the jab; firing back hurt is the low-composure pick and costs; a smart hunter goes body/uppercut on a shell. A real corner stop (towel, mid-round too): `research/toprank.md` #1; the man asks out late and the corner says no or throws it (`research/pbc.md` #2).
    - Watch: one level down WvP 15.0 (lg4, at the floor).
+   - Watch: cheese at hard (Oct 21 recheck, `docs/PLUGIN.md`): haymaker 61.6% (was 79.4 Oct 17) and bodyOnly 60.5%, target 65+. Expert passes all. Rerun `cheese.js` after d (KDs); if haymaker stays low, it is a brain fix (high effort).
    - Keep: 52/15/29 totals, body ~24% of landed, comebacks ~11%, lead changes ~40%, styles 48-53, one level down 15-20. Worth a look: thrown by division (~52 at 135 and under, ~40 at heavyweight).
 2. **Brain ideas design pass with Ed** (high effort; no build before it). Two research piles, merged:
    - Clips (Oct 21, `docs/BRAIN.md` handoff): read why he's losing between rounds and answer it (countered on entry / out-landed at range / tired -> tempo, feint in, punch after his punches; tempo apart from volume; the AI corner calls the same fix); feint the entry many times; emotion as the trigger (`emo`).
