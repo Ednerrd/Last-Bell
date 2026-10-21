@@ -80,6 +80,24 @@ The only to-do list. When something is done, delete its line here, add a short l
 - Ed, Oct 21 (project review): stops ease to ~32% (`STOP.low` .25); the balance pass goes before the easy-flaws retune; finished steps push to main too, no extra ask; the outboxer gets both a better jab + footwork and the long guard gear (designed first).
 
 ## Parking lot (ideas, not scheduled)
+- **Ed's extras list (Oct 21, ideas only, nothing scheduled).** Display only unless marked:
+  - **Tale of the tape** before the bell: started as a WIP on `claude/bold-faraday-bryk6t` (8a0469d: portraits, record, KOs, age, height from the drawn size, weight, stance, style, guard, OVR, 10 stat bars with the edge lit, "Ring the bell"). Left to do: stretch the bar scale (40-99), check the `same.js` hash, then Ed's calls: reach (wait for the Size step?), a favorite line, every fight or only New fight.
+  - Fight poster after the result (names, records, result, round) to save and share.
+  - Highlight reel: knockdowns, hurt spells and the comeback round cut from the replay, ~30 s.
+  - CompuBox-style live stats bar during the fight.
+  - Haptics on knockdowns and big shots (phone vibrate).
+  - Pick 'em / odds board: odds before the fight, call the winner and the method, keep a record of calls.
+  - Tournament bracket: 8 men, single elimination (career-lite).
+  - Fight of the Day: one seeded fight a day, the same for everyone, to argue over.
+  - Balance dashboard: an artifact charting every `check.sh` run over time (stops, connect, style spread).
+  - GitHub Action: `tsc` + the `same.js` hash on every push.
+  - Broadcast voice: TTS commentary, a ring announcer for the intro and the decision.
+- **Coach's voice and tone (Ed, Oct 21, idea only).** Corner talk already turns words into a plan and a call (`talkPrompt`, `talkClaude`, keyword fallback `talkWords`); the phone's keyboard mic already works. Missing: how he says it.
+  - Tone tag: the prompt also returns `tone` (calm, steady, urgent, angry, fire-up) from the words, cursing, CAPS, "!!!". The coach may swear; the fighter still answers clean.
+  - Voice stand-in: an in-game mic button reads loudness and pace (Web Audio) as a hint for yelling vs calm. Check first that the published page gets mic access.
+  - The flowchart (Ed): the call fits the moment and the man. Hurt, panicking or gassed -> calm and steady ("breathe, hands up, get through it") settles him, yelling rattles him. Losing rounds, flat, sure he's fine -> urgent ("YOU'RE LOSING ROUNDS, PICK IT UP") lights him up. A proud, high-heart man takes fire well (more output, more gas); a low-composure man gets scared by it (fear up, worse choices). Engine side: tone pushes the brain's `emo` (fear, frus, conf). Reading your fighter becomes the coaching skill. Moves the hash: design pass first (high effort), sims before and after.
+  - Later: voice for the live yells ("JAB! JAB!" -> the jab call); needs a fast, always-on mic.
+  - Research: `research/corners.md` has 26 real corners; **`research/corners_tone.md` (Oct 21): 34 corner moments, tone vs state vs outcome, backfires included, ~34 game lines.** Rules it backs: calm + one order for a hurt man; urgent with a clock for a healthy man behind; anger works on a healthy man who coasts (3/3); tone never fixes gas or a skill gap (0/4); a push fades over ~2 rounds and the same tone again is weaker, a deeper second call can land; a call that doesn't match the fight ("perfect" while losing, "finish him" while getting beaten) backfires: trust is a stat. Tone (volume) and words are two dials (the whisper). Pt 5 (6P9Pz7JYsnM) still missing (rate-limited).
 - Headbutts and fouls (Ed parked it Oct 18): a clash of heads opens a cut (more often orthodox vs southpaw, the lead feet fighting for the same spot), low blows, rabbit punches; the ref warns and docks for them like holding (`foul()`).
 - The brain may lead too much: in `tests/scar.js` less initiative + a longer range won ~9 points more vs the same man (Oct 17). Worth a look in a balance pass.
 - L4 leftovers (small): a loser's rematch lesson that works (read the punch that hurt him earlier, a plan that holds 3+ rounds), stale tape that misleads a dumb man a little.

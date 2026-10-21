@@ -38,7 +38,8 @@ def get(vid):
     if os.path.exists(base + '.txt'):
         print(f'{vid}: already pulled'); return False
     r = ytdlp('--skip-download', '--write-subs', '--write-auto-subs', '--sub-langs', 'en.*,en',
-              '--sub-format', 'vtt', '--print', 'before_dl:%(channel)s | %(title)s',
+              '--sub-format', 'vtt', '--extractor-args', 'youtube:player_client=android',  # gets past the bot wall (Oct 21)
+              '--print', 'before_dl:%(channel)s | %(title)s',
               '-o', base, f'https://www.youtube.com/watch?v={vid}')
     vtts = sorted(f for f in os.listdir(RAW) if f.startswith(vid + '.') and f.endswith('.vtt'))
     if not vtts:
