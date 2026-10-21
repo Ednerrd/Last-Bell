@@ -1,6 +1,6 @@
 # Corner tone vs fighter state (SmB Boxing corner moments, Oct 21)
 
-Source: SmB Boxing "10 Memorable Corner Moments In Boxing" series, pts 1-5 (ids 7_78hpsKnAg, SFe9L6S2eqc, BFQKDQCmaEU, fk7jw-OWuaA, 6P9Pz7JYsnM). **Only Pt 3 (BFQKDQCmaEU) came through.** Pts 1, 2, 4, 5 are bot-walled ("sign in to confirm you're not a bot", yt.py and the yt-dlp fallback both, rerun once). So this file has 12 moments from Pt 3, not ~50. Nothing was filled in from memory for the missing parts. Rerun `python3 tools/yt/yt.py get 7_78hpsKnAg SFe9L6S2eqc fk7jw-OWuaA 6P9Pz7JYsnM` later (or paste the transcripts) to fill the rest. Notes are in our own words; the video is a highlight reel, so it favors corners that worked (survivorship, see `corners_video.md` caveat). Outcome source marked video (the narration) or known (boxing knowledge).
+Source: SmB Boxing "10 Memorable Corner Moments In Boxing" series, pts 1-5 (ids 7_78hpsKnAg, SFe9L6S2eqc, BFQKDQCmaEU, fk7jw-OWuaA, 6P9Pz7JYsnM). **Pt 3 (BFQKDQCmaEU) came through; Ed pasted Pt 4 (fk7jw-OWuaA) by hand.** Pts 1, 2, 5 are bot-walled ("sign in to confirm you're not a bot", yt.py and the yt-dlp fallback both, rerun once). So this file has Pt 3 and Pt 4 only. Nothing was filled in from memory for the missing parts. Rerun `python3 tools/yt/yt.py get 7_78hpsKnAg SFe9L6S2eqc 6P9Pz7JYsnM` later (or paste the transcripts) to fill the rest. Notes are in our own words; the video is a highlight reel, so it favors corners that worked (survivorship, see `corners_video.md` caveat). Outcome source marked video (the narration) or known (boxing knowledge).
 
 ## Moments (Pt 3)
 
@@ -20,7 +20,22 @@ Source: SmB Boxing "10 Memorable Corner Moments In Boxing" series, pts 1-5 (ids 
 
 Pt 3 also names a 10th clip (Matthew Saad Muhammad) but the caption cuts off there. Unknown.
 
-## Patterns (n = 9 usable moments, all from Pt 3)
+## Moments (Pt 4, pasted by Ed)
+
+| # | Fight, round, trainer | State going in | Tone | Key line (paraphrased) | Next / outcome | Fit |
+|---|---|---|---|---|---|---|
+| 10 | Matthysse fight, after R7, his corner | Unknown | Cursing, confused (they argue which round is next) | Whatever round it is, you'd better win it | Unknown | unclear (comedy: a corner that doesn't know the round) |
+| 11 | Peterson-Dierry Jean, mid-fight, Barry Hunter | Ahead but sloppy, hands low, letting it get close | Angry/cursing + a slap on the face | I'm done repeating myself: stay behind the jab, hands up, you're making this close | Video: Peterson won on points | worked (anger on a healthy man who is ahead and lazy) |
+| 12 | Cotto-Bazan, after R8, Bazan's trainer | Losing every round, taking a beating | Fire-up that ignores reality | Go out and finish him | Video: Bazan laughed at it. Known: Cotto stopped him R11 | **backfired** (the fighter stops believing the corner) |
+| 13 | Hagler-Mugabe, after R8-9, Mickey Duff (brings a priest in) | Gassed after a toe-to-toe war | Pleading / encouragement: you won't listen to me, listen to the father, two rounds, you can do it | Two rounds to go, you can always do two rounds | Video: no second wind, KO'd R11 | **backfired / no effect** (words can't refill an empty tank) |
+| 14 | Ruiz-Golota, R1-R8, Norman Stone | Ruiz fine | Angry, aimed at the ref and the other corner, not the fighter | Rants at the ref, gets ejected (a first) | Video: Ruiz won the decision without him | unclear (the corner's anger at the ref did nothing for the fighter) |
+| 15 | Pryor-Arguello I, after R13, Panama Lewis | Tiring late | (Not tone: the "mixed bottle", suspected stimulant) | Give me the bottle I mixed | Video: Pryor stopped him R14 | skip (cheating, not coaching) |
+| 16 | Seldon fight, after R5, his corner | Unknown | Fire-up by mocking the other man's body | You can't lose to a guy built like that, you've got him | Unknown | unclear |
+| 17 | Pacquiao-Algieri, every round, Tim Lane | Losing every round, down in R2 and twice in R6 | Calm, steady, reassuring: perfect, everything stays the same, he's fading, I'm letting you loose in round 10 | Everything is perfect, two more like this | Video: Pacquiao stayed in control. Known: wide decision loss, six KDs | **backfired** (calm on a man who is losing badly = he never changes anything) |
+| 18 | Bradley-Rios, after R7, Teddy Atlas | Healthy, ahead, focus slipping | Instructions first, then a fire-up speech (we're firemen, the heat is home) | Fix two things (knees bent, go around him), then: the fire is coming, it's where we live | Video: Bradley turned it up in R8, body-shot stop in R9 ("like flipping a switch") | worked (strong) |
+| 19 | Leonard-Hearns I, after R12, Angelo Dundee | Behind on all three cards, left eye nearly shut | Urgent, repeated: you're blowing it, son, nine minutes | You're blowing it, take it away from him | Video: Leonard hurt Hearns in R13, stopped him R14 | worked (strong; note `corners.md` read it as not turning the fight: this footage says it did) |
+
+## Patterns (n = 9 from Pt 3 + 9 usable from Pt 4 = 18)
 
 - **Anger / threat at a flat, behind, healthy man: 2 of 2 worked** (Atlas on Moorer, rows 3 and 4), and **angry/urgent at a cruising-but-passive man: 1 of 1** (Steward, row 7). Anger worked here because the man was healthy and had the tools. Total angry/urgent on a healthy man: 3 of 3 worked, but this is a highlight reel, so backfires are missing. Rule: anger pays when he is fresh and passive; in `corners.md` Moorer-Holyfield also worked and the Hearns "you're blowing it" line did not turn the fight. Flag: no backfire cases in this pt.
 - **Calm / one instruction on a hurt man: 2 of 2 worked** (rows 8, 2). Mouthpiece in, one thing: get inside. And "you've got control" to a man who was outfought.
@@ -29,7 +44,16 @@ Pt 3 also names a 10th clip (Matthew Saad Muhammad) but the caption cuts off the
 - **Steady-instructional on a cruising man: 2 of 2 worked** (rows 5, 1). Little needed.
 - **Cursing:** the captions blank the swearing; angry rows 3 and 7 are loud and have strong words. No cursing at a proud, healthy, ahead fighter in this pt (nothing to count).
 - **Same tone, different result:** none in Pt 3. Atlas used the same anger twice (rows 3, 4) and the first did not change him much (just kept coming); the second (with stakes) did. So repeating one tone loses effect; changing it to pride/stakes got the surge.
-- **Big caveat:** n = 9, one pt, a highlight reel. Do not set odds from this. The use is the order: threat then stakes, calm on hurt, loud on fresh-passive, and a gentle finality for the stop.
+- **Pt 4 adds the backfires Pt 3 lacked (3 of them), and they line up with Ed's flowchart:**
+  - **Calm on a man losing badly backfires** (row 17, Algieri): "everything is perfect" while he loses every round, so he never changes. Calm is for the hurt man, not the losing man.
+  - **Fire-up that ignores reality backfires** (row 12, Bazan laughs at "finish him"). The fighter has to believe the read. In game: a call that doesn't match the fight costs trust.
+  - **Encouragement can't fix gas** (row 13, Mugabe). Tone moves will and focus, not the tank. In game: tone never refills stamina.
+- **Urgent with a clock on a man behind on the cards: 2 of 2 more** (rows 19, and Atlas row 18). "Nine minutes", "you're blowing it". With Pt 3 rows 4 and 7: urgent/stakes with a clock is 4 of 4.
+- **Anger on a healthy man who is ahead but lazy: 1 of 1** (row 11, Hunter). Angry or urgent on a healthy man: now 5 of 5 total.
+- **Instructions first, then fire** (row 18): Atlas fixes two things, then the speech. Same order as Moorer-Botha (threat, then stakes). The fire carries the fix.
+- **Anger at the ref, not the fighter, does nothing** (row 14).
+
+- **Big caveat:** n = 18, two pts, a highlight reel. Do not set odds from this. The use is the order: threat then stakes, calm on hurt, loud on fresh-passive, and a gentle finality for the stop.
 
 ## Lines for the game (our own words, no names)
 
@@ -65,3 +89,13 @@ Stopping / pleading
 19. I'm not letting you take more. I'm calling it.
 20. You gave me everything. That's enough, champ.
 21. No more. This one is mine to decide.
+
+Backfire lines (what NOT to say, for the AI corner's bad nights)
+22. Perfect, everything stays the same. (He's losing every round.)
+23. Go finish him. (He's the one getting finished.)
+24. Two rounds, you can do two rounds. (On an empty tank.)
+
+More urgent / fire (Pt 4)
+25. You're blowing it, son. Nine minutes. Take it from him.
+26. Fix two things, then the fire: knees bent, go around him. The heat is where we live.
+27. I'm not saying it again. Hands up. You're making this close.
