@@ -269,6 +269,7 @@ const BoxerBrain = (() => { const module = { exports: {} };
  * @property {number} [bluff]    0..1 hurt and hiding it (1f): the host shows a smaller wobble and sends Look.sell
  * @property {?{ s: string, k: number }} [cover]  his bad eye covered (1e): the side, and how much (the glove stays up there, he moves off it)
  * @property {?{ k: number, zone?: string, cat?: string }} [hole]  f3 easy flaw: punches (of that zone / PUNCHES cat, or all) he's open to right now; the host's own defense vs them x (1 - k)
+ * @property {number} [post]    0..1 the long guard (1b): his lead hand left posted out at the end of the jab at long range. The host jams the other man's jab (and some of his lead hook) off it; it costs gas, opens the lead-side body, and a man who walks in under it gets a beat before it comes home
  * @property {number} [bait]    f2: an id while he shows the opening on purpose (World class: hands low, the defense and the counter ready for the punch he's sure is coming), else 0. The host sends it as Look.bait
  */
 /**
@@ -492,6 +493,8 @@ const BR = {
   cl: { on: 1, norm: 4, span: 4, range: 10, rush: 4, rushV: .5 }, // he ties up every time he gets close (his clinches in memory over norm, out of span): keep him on the end of the jab (range), meet him on the way in (rush: the check hook fires more, and on a slower walk-in, rushV x BR.rushV)
   // f1b, the hands tell the truth (Ed): a body-hurt man clamps his elbows to his ribs, the head opens. at .. full: how far his body meter is gone before it starts .. in full; hit: each power shot
   // that lands downstairs (fades, tau s of clock, hitMax at most); the other man: see (the guard he sees drops this much at a full clamp seen), up (go upstairs), open (an opening)
+  // 1b, the long guard (research/longguard.md): by style (a trait: profile.traits.post wins), only out at long range (near .. far), not hurt, gas over gas; how well: his jab + range skill (q, low .. high)
+  post: { on: 1, by: { outboxer: .8, boxerpuncher: .25, counter: .2 }, near: 56, far: 84, gas: .35, q: [.5, 1] },
   clamp: { on: 1, at: .35, full: .85, hit: .12, hitMax: .6, tau: 45, see: .15, up: .2, open: .25 },
   // f2, the World-class bait (Ed, Oct 19; Atlas: jab, step back, invite the right, counter the miss). Once he's sure of the other man's lead (sure, the lead read), at mid-range (d) he drops the hands (guard)
   // for win s: the defense for that punch picked (the best of DEF_THRU vs it, chosen x def), seen sooner (rd), the counter loaded (ctr x). Only World class: (read + counter) mastery over at, full at World.
@@ -658,6 +661,7 @@ class Brain {
     this.lvUpd();
     this.famSet(opts.fam); this.fx = { u: 0, s: 0 };
     this.tr = Object.assign({}, STYLES.boxerpuncher.t, profile.traits);
+    this.pst = profile.traits.post != null ? profile.traits.post : BR.post.by[profile.style] || 0; // 1b: how much he likes the long guard
     this.scarSet(opts.scar);
     const k = this.k;
     this.iq = (k.read + k.counter + k.pacing + k.adjust) / 4;
@@ -924,6 +928,8 @@ class Brain {
   }
   // 1e: his own cut or closing eye: cover that side and move off it. The corner tells him at the break; before that, a smart man thinks of it himself
   // f1b: his own body's hurt, the elbows clamp to the ribs and the gloves come down with them: the meter going, and the last few that really landed down there
+  // 1b: the long guard, the lead hand left out at the end of the jab while the man is out at the end of it; pulled home when he comes inside, when hurt, when the tank's low
+  postOf(P) { const L = BR.post; if (!L.on || !this.pst || P.me.hurt || P.me.clinch || this.mode === 'survive' || P.dist < L.near || P.dist > L.far || P.me.stam / Math.max(1, P.me.stamMax) < L.gas) return 0; return this.pst * lerp(L.q[0], L.q[1], (this.k.jab + this.k.range) / 2); }
   clampOf(P) { const C = BR.clamp; return !C.on || P.me.body == null ? 0 : clamp(clamp((1 - P.me.body - C.at) / (C.full - C.at), 0, 1) + Math.min(C.hitMax, (this.bp || 0) * C.hit), 0, 1); }
   coverOf(P) {
     const e = P.me.eye, C = BR.cover; if (!C.on || !e || !e.s || e.v < C.at) return null;
@@ -1507,6 +1513,7 @@ class Brain {
     this.out.bluff = this.mode === 'survive' && this.sell ? this.sell : 0; // 1f: how well he's selling 'I'm fine'
     this.out.low = BR.body.on ? clamp((this.bRd || 0) * lerp(.6, 1.2, this.k.block), 0, 1) : 0; // he's read a body digger: elbows in
     this.out.clamp = this.clampOf(P);
+    this.out.post = this.postOf(P);
     this.out.bait = this.wb.p && this.t < this.wb.until ? this.wb.id : 0; // f2: the hands down on purpose
     if (this.out.bait) this.out.guard = Math.min(this.out.guard, BR.wb.guard);
     if (this.t < this.flT) this.out.guard = Math.max(this.out.guard, BR.flaw.fold.guard); // f3: folded behind the gloves
@@ -1806,6 +1813,12 @@ const CUT = { fresh: .004, worn: .06, wearPow: 1.2, reopen: .25, crit: .006, wid
 // and the punches on that side come from where he can't see (BR.eyeShut). ice: the cutman takes this much down between rounds (x his skill). doc / docSpan: the doctor on a shut eye
 // covering a bad eye (1e): blk more blocks on that side at full cover, move more when he's circling off it, cost fewer on the other side; feet: cover past this and he moves off it, circ at least this much
 const COV = { blk: .5, cost: .2, move: .3, feet: .2, circ: .35 };
+// the tight jab (1b, research/jabsafe.md): while his jab is out and for rec s after it (novice .. world: the fast retract) the lead shoulder's up and the rear hand's on the chin.
+// A head shot over it (the rear straight; hooks x hook) is caught with chance p x tightness: lo (a novice) .. 1 (jab + block skill), x his gas, x his guard (low hands keep the hole)
+const JT = { p: .3, hook: .5, rec: [.15, .3], lo: .35, guard: { handslow: .4, philly: .7, high: 1.1, peekaboo: 1.1 } };
+// the long guard (1b, research/longguard.md; Action.post): his lead hand posted out jams the other man's jab (jab, x post), some lead hooks (hook) and a few rear hands (cross), leak: what gets through a jam.
+// Costs: gas a second (x feint while the other man feints at the arm), the lead-side body (body: his body block x (1 - body x post)), and the walk-in: pulled home from inside near, it's back after back s (less with skill), hooks and uppercuts find the guard open (x (1 - open))
+const LG = { jab: .35, hook: .15, cross: .06, leak: .12, gas: .5, feint: 2, body: .3, near: 56, back: .3, open: .6 };
 const SW = { on: 1, k: .06, jab: 1.3, hook: 1.15, up: .5, wear: 1.5, at: 4, full: 8.5, ice: 1.5, doc: 9, docSpan: 2.5 };
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
 // A smaller tank refills slower (regen) and a worn man hits softer, slower and less even fresh off the stool (tank)
@@ -1924,6 +1937,13 @@ function extRaw(P, d) {
 // how well a punch fits the distance, against its own best (1 = sweet spot): the AI reads this before he throws
 const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
+function tightJ(D, P, t) { // 1b: the tight jab, his block chance on this punch over his jab (0: not jabbing, not a shot that comes over it)
+  if (P.zone !== 'head' || P.kind === 'upper' || (P.kind === 'straight' && P.arm !== 'rear')) return 0;
+  const k = D.brain ? D.brain.k : null, sk = k ? k.jab * .6 + k.block * .4 : .5, a = D.act;
+  if (!(D.state === 'punch' && a && a.type === 'jab' && !a.feint) && !(D.state !== 'punch' && D.lastP === 'jab' && t - D.pEnd < lerp(JT.rec[0], JT.rec[1], sk))) return 0;
+  return JT.p * (P.kind === 'hook' ? JT.hook : 1) * lerp(JT.lo, 1, sk) * stamFac(D) * (JT.guard[D.guard] || 1);
+}
+function tightRoll(D, P, t) { const k = tightJ(D, P, t); if (!k) return false; D.rs.tjN = (D.rs.tjN || 0) + 1; if (R() < k) { D.rs.tj = (D.rs.tj || 0) + 1; return true; } return false; }
 function holeF(D, P) { const h = D.hole; return h && (!h.zone || h.zone === P.zone) && (!h.cat || h.cat === P.cat) ? h.k : 0; } // f3: the brain's easy flaw opens him to these punches (plug-in only: the game never sets one)
 function lowB(F, head) { return Math.max(F.low || 0, (F.clamp || 0) * (head ? 1 : BODY.clampBody)); } // elbows in over the body: he read a digger (low), or his own body's hurt (clamp, f1b: the head opens in full, the body's only partly covered)
 function stamFac(F) { const f = F.stam / Math.max(1, F.stamMax); return 0.55 + 0.45 * Math.min(1, f * 1.4); }
@@ -1978,7 +1998,7 @@ function laneOf(A, P) {
 // The angle man thinks like a boxer-puncher who keeps turning (as an out-boxer at his short range he lived on the ropes: 44.6 -> 52.7)
 const AI_MAP = { volume: ['swarmer', { combo: .1, patience: .15, range: .25, legs: .15 }, { pacing: 8 }], angle: ['boxerpuncher', { circle: .3, legs: .2, combo: .1 }, { angles: 8, ropes: 8 }], awkward: ['counter', { patience: -.1 }],
   switch: ['boxerpuncher', {}], body: ['swarmer', { body: .25, output: -.2, patience: .15 }, { body: 10 }], pboxer: ['slugger', { jab: .3, output: .1, range: .1 }],
-  spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1 }], feinter: ['boxerpuncher', { patience: .15 }] };
+  spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1, post: 1 }], feinter: ['boxerpuncher', { patience: .15 }] };
 // the guard is a defense habit: what he reaches for when one comes (shell: gloves and arms, slip: head movement, legs: gets out of range)
 const AI_GUARD = { high: { shell: .12, slip: -.05 }, cross: { shell: .3, slip: -.2, legs: -.05 }, peekaboo: { slip: .25, shell: .1, legs: -.1 }, philly: { shell: .15, slip: .2 }, handslow: { shell: -.3, slip: .15, legs: .2 } };
 // a special style thinks like its base style: [base key, its brain style, its AI_MAP entry]
@@ -2000,6 +2020,7 @@ function brainProfile(F) {
   const sty = F.sk, [base, S, m] = brainStyle(sty), sk = F.sheet.sk, skills = brainSkills(F.s, F.iq, sty);
   if (sk) for (const k in skills) if (sk[k] != null) skills[k] = Math.round(clamp(sk[k], 5, 99));
   const traits = {}, gt = AI_GUARD[F.guard] || {}; for (const k in S.t) traits[k] = clamp(S.t[k] + (m && m[1][k] || 0) + (gt[k] || 0) + gauss() * .09, 0, 1);
+  if (m && m[1].post != null) traits.post = m[1].post; // 1b: the long guard is his whole game (jab-and-grab)
   return BoxerBrain.makeProfile({ style: base, skills, traits, name: F.sheet.name, uniq: 0 });
 }
 /* ---------- skill sheet (skill levels L1, data only). Stats are the body; skills are what he knows how to do with it ----------
@@ -2223,6 +2244,7 @@ class Fight {
     const O = F.op;
     for (const X of this.f) { if (X.state === 'punch') X.pOn = 1; else if (X.pOn) { X.pOn = 0; X.pEnd = this.t; } }
     const o = F.brain.think(this.perceive(F), dt); F.bev = []; F.bg = o.guard; F.hole = o.hole || null; F.low = o.low || 0; F.clamp = o.clamp || 0; F.cover = o.cover || null;
+    { const p = F.state === 'punch' && F.act && F.act.type !== 'jab' ? 0 : o.post || 0; if (!p && F.post > .2 && dist(F, O) < LG.near) F.postOffT = this.t + LG.back * (1.2 - (F.brain.k.jab + F.brain.k.range) / 2); F.post = p; } // 1b: the long guard; pulled home with him inside, it takes a beat
     { const b = o.bait || 0; if (b && b !== F.baitId) { this.emit('wcBait', { a: F.side, d: F.op.side }); F.rs.bait = (F.rs.bait || 0) + 1; } F.baitId = b; // f2: hands down on purpose (World class)
       const T = F.brain.tel; if ((T.wbBit || 0) > (F.wbB || 0)) { F.rs.baitBit = (F.rs.baitBit || 0) + 1; F.rs.baitP = F.brain.wb.p; this.emit('wcBit', { a: F.side, d: F.op.side }); } F.wbB = T.wbBit || 0;
       if ((T.wbThru || 0) > (F.wbT || 0)) { F.rs.baitThru = (F.rs.baitThru || 0) + 1; this.emit('wcThru', { a: F.side, d: F.op.side }); } F.wbT = T.wbThru || 0; } // he took it, or he saw through it
@@ -2478,6 +2500,7 @@ class Fight {
     if (F.unT > 0) { F.unT -= dt; if (F.unT <= 0) F.unanswered = 0; }
     const regen = (1.3 + F.s.stamina / 100 * 2.9) * (0.45 + 0.55 * Math.max(0, F.body) / 100) * (1 - STAM.regen * (1 - F.stamMax / 100));
     if (F.state !== 'punch') F.stam = Math.min(F.stamMax, F.stam + regen * dt);
+    if (F.post) { F.stam = Math.max(0, F.stam - LG.gas * F.post * (O.act && O.act.feint ? LG.feint : 1) * dt); F.rs.postT = (F.rs.postT || 0) + F.post * dt; } // 1b: holding the arm out; feints at it wear it
     if (F.state !== 'stun' && F.head > 0) F.head = Math.min(F.headMax, F.head + (0.25 + F.s.recovery / 100 * 0.5) * TUNE.regen * dt * (F.hitT > 0 ? 0 : 1) * (F.kdR ? TUNE.kdRegen : 1)); // off the floor: the legs and the head come back slow the rest of the round
     // guard integrity comes back once the pressure stops; a tired fighter can't get his hands all the way back up
     { const cap = .5 + .5 * stamFac(F) * (F.head > F.headMax * .3 ? 1 : .8);
@@ -2629,7 +2652,10 @@ class Fight {
     let def = D.def;
     if (def && D.state !== 'stun' && R() > D.defQ * AI.defQ) def = null; // late or sloppy: the brain's defense didn't come off
     if (def === 'block' && a.look && D.defZ && D.defZ !== P.zone) def = null; // a changed ending (brain traps): he covered where it always went, it came somewhere else
-    if (def && D.state !== 'stun') {
+    { const pj = D.post && D.state !== 'stun' && D.state !== 'clinch' && P.zone === 'head' ? D.post * (a.type === 'jab' ? LG.jab : a.type === 'hook' ? LG.hook : a.type === 'cross' ? LG.cross : 0) : 0;
+      if (pj && R() < pj) { blocked = true; mult = blockLeak(D, P, LG.leak); D.rs.jam = (D.rs.jam || 0) + 1; } } // 1b: jammed off his posted lead hand
+    if (blocked) { /* jammed */ }
+    else if (def && D.state !== 'stun') {
       if (def === 'block') { mult = blockLeak(D, P, P.zone === 'body' ? .6 * BODY.elbow * (1 - BODY.lowLeak * lowB(D)) : P.kind === 'upper' ? .65 : P.kind === 'hook' ? .35 : .25); blocked = true; }
       else if (def === 'roll') { // shoulder roll: straights glance off, hooks get half caught, uppercuts split it
         if (P.zone === 'body') { mult = blockLeak(D, P, .5 * BODY.elbow); blocked = true; }
@@ -2657,10 +2683,11 @@ class Fight {
       ev *= 1 - AI.guardK * (D.bg - .6); // hands high: harder to slip, easier to catch
       ev *= 1 - holeF(D, P); // f3: an easy man's hole (plug-in only)
       if (R() < ev) evaded = true;
-      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 * (1 + BODY.lowBlk * lowB(D)) : (1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * (1 - BODY.lowHead * lowB(D, 1))) * stamFac(D) * coverF(D, P) * coverEye(D, A, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (1 + AI.guardK * (D.bg - .6)) * (1 - holeF(D, P)))) {
+      else if (D.state !== 'punch' && (P.kind !== 'upper' || D.guard === 'cross') && R() < Math.min(.8, (TUNE.guard + D.s.defense / 500) * (P.zone === 'body' ? .6 * (1 + BODY.lowBlk * lowB(D)) : (1 - BODY.elbows * (1 - clamp(D.body, 0, 100) / 100)) * (1 - BODY.lowHead * lowB(D, 1))) * stamFac(D) * coverF(D, P) * coverEye(D, A, P) * (.45 + .55 * D.gi) * (P.kind === 'upper' ? .5 : 1) * (P.cat === 'jab' ? TUNE.jabBlk : 1) * setup * (D.lostT > 0 ? STYLE_ANGLE.blk : 1) * (1 - atkEdge(A, P)) * (1 + defEdge(D)) * (1 + AI.guardK * (D.bg - .6)) * (1 - holeF(D, P)) * (P.zone === 'body' ? 1 - LG.body * (D.post || 0) : 1) * (P.kind !== 'straight' && this.t < (D.postOffT || 0) ? 1 - LG.open : 1))) {
         blocked = true; mult = blockLeak(D, P, P.zone === 'body' ? .55 * BODY.elbow * (1 - BODY.lowLeak * lowB(D)) : P.kind === 'hook' ? .4 : P.kind === 'upper' ? .6 : .3);
         D.def = 'block'; D.defZ = P.zone; D.defT = .16; D.defD = .16; D.defP = .6; D.defQ = AI.reflexQ; // show the guard catching it (a reflex guard on the next shot holds with chance reflexQ x defQ)
       }
+      else if (tightRoll(D, P, this.t)) { blocked = true; mult = blockLeak(D, P, .3); } // 1b: caught on the shoulder or the rear glove, over his jab
     }
     if (evaded) { this.miss(A, D, a, 'evade', rolled ? 'roll' : def); return; }
     A.lastRes = blocked ? 'blocked' : 'landed';
