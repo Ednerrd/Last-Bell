@@ -428,9 +428,9 @@ const BR = {
   rushV: 48, rushP: 1,  // a man coming in faster than this (units/s) can be met with a check hook: chance per second at full counter skill
   jabCtr: .5,             // counter chance off a jab (it's back before you are)
   // 1c, the parry (research/skillr.md 10, jab.md 2): the rear hand turns his straight aside, mostly the jab. Weight vs the other defenses by (block + read) mastery [N, I, P, W]
-  // (a novice rarely, a World-class man often), x (lo + shell trait) (the philly catches and parries), x cross for a rear straight. A parry clears the lane: counter chance x ctr.
+  // (a novice rarely, a World-class man often), x (lo + (shell + jab traits) / 2) (the philly catches and parries, a jabber knows the jab), x cross for a rear straight. A parry clears the lane: counter chance x ctr.
   // reflex: a jab he didn't answer (never saw it, didn't try, the defense didn't come off) his hand turns aside anyway, chance by the same mastery (Action-free: the engine reads mast.parry)
-  parry: { on: 1, w: [.08, .3, .75, 1.3], lo: .5, cross: .35, ctr: 1.6, reflex: [.2, .32, .42, .48] },
+  parry: { on: 1, w: [.08, .3, .75, 1.3], lo: .5, cross: .35, ctr: 1.6, reflex: [.22, .35, .46, .53] },
   shortCtr: .5,           // a punch that fell short is a counter chance this often (the pull counter)
   stealT: 30,             // the last 30 s, where rounds get stolen
   hurtQ: .6,              // a hurt man's defense works this much worse
@@ -1069,7 +1069,7 @@ class Brain {
       duck: kd === 'hook' ? (tr.slip * 1.2 + .1) * (.3 + k.slip) : kd === 'straight' ? tr.slip * .3 : 0,
       pull: (tr.legs * 1.1 + .1) * (.3 + k.footwork),
       roll: kd === 'body' ? 0 : tr.shell * tr.slip * .8 * (.3 + k.block),
-      parry: kd === 'straight' && BR.parry.on ? tierV((this.m.block + this.m.read) / 2, BR.parry.w) * (BR.parry.lo + tr.shell) * (seenAs === 'jab' ? 1 : BR.parry.cross) : 0 // 1c
+      parry: kd === 'straight' && BR.parry.on ? tierV((this.m.block + this.m.read) / 2, BR.parry.w) * (BR.parry.lo + (tr.shell + tr.jab) / 2) * (seenAs === 'jab' ? 1 : BR.parry.cross) : 0 // 1c
     };
     if (this.mode === 'survive' && (this.hurtResp === 'shell' || this.hurtResp === 'steady')) w.block *= this.hurtResp === 'shell' ? 3 : 1.6;
     if (this.mode === 'survive' && this.hurtResp === 'run') w.pull *= 3;
@@ -1832,8 +1832,10 @@ const JT = { p: .22, hook: .5, rec: [.15, .3], lo: .35, guard: { handslow: .4, p
 // Costs: gas a second (x feint while the other man feints at the arm), the lead-side body (body: his body block x (1 - body x post)), and the walk-in: pulled home from inside near, it's back after ~back s (x 1.3 .. .7 by skill),
 // hooks and uppercuts find the guard open (x (1 - open x how far out it was, full at full)); after a punch that isn't the jab it goes back out only repost s after that punch ends
 // the parry (1c, research/skillr.md 10, jab.md 2; the brain picks it, BR.parry): turns a jab aside with chance jab (a rear straight: cross), else it lands x miss (his hand was out of place).
-// A jab nobody answered: turned aside anyway with chance mast.parry (BR.parry.reflex, by mastery) x (lo + shell trait) x his gas, x busy while he throws with his lead hand (the rear one catches it; a rear-hand punch: none). A parried man's head is open for win s: the parrier's power shots (not his jab) find him easier (his slip and guard x (1 - open)), and his own defense comes off less (x (1 - open))
-const PAR = { jab: .95, cross: .6, miss: 1.1, win: .45, open: .25, lo: .5, busy: .7 };
+// A jab nobody answered: turned aside anyway with chance mast.parry (BR.parry.reflex, by mastery) x (lo + (shell + jab traits) / 2) x his gas x parJ (the jabber's own jab), x busy while he throws with his lead hand (the rear one catches it; a rear-hand punch: none). A parried man's head is open for win s: the parrier's power shots (not his jab) find him easier (his slip and guard x (1 - open)), and his own defense comes off less (x (1 - open))
+const PAR = { jab: .95, cross: .6, miss: 1.1, win: .45, open: .25, lo: .5, busy: .7, atk: 1.5, mid: .55 };
+// a jab you can time gets parried (Lerner: he jabs on one rhythm); a real jabber's varies (speed, doubles, feints): x (1 - atk x (his (jab skill + jab trait) / 2 - mid)), .3 .. 1.6
+const parJ = A => clamp(1 - PAR.atk * ((A.brain.k.jab + A.brain.tr.jab) / 2 - PAR.mid), .3, 1.6);
 const LG = { jab: .25, hook: .15, cross: .06, leak: .12, gas: .5, feint: 2, body: .3, near: 68, back: .3, open: .6, full: .8, repost: .4 };
 const SW = { on: 1, k: .06, jab: 1.3, hook: 1.15, up: .5, wear: 1.5, at: 4, full: 8.5, ice: 1.5, doc: 9, docSpan: 2.5 };
 // gas. Work wears the tank: stamina spent past an easy pace (free per round) costs stamMax at the bell (wear, less with a good stamina stat).
@@ -2683,10 +2685,10 @@ class Fight {
       else if (def === 'duck') { if (P.zone === 'head' && P.kind !== 'upper') evaded = true; else if (P.kind === 'upper') mult = D.guard === 'peekaboo' ? 1.6 : 1.4; }
       else if (def === 'slip') { if (P.zone === 'head' && P.kind === 'straight') evaded = true; else if (P.kind === 'hook') mult = 1.15; }
       else if (def === 'pull') { if (R() < (P.zone === 'head' ? .8 : .5 + BODY.lowEv * .3 * (D.low || 0))) evaded = true; }
-      else if (def === 'parry') { if (P.zone === 'head' && P.kind === 'straight' && R() < (P.cat === 'jab' ? PAR.jab : PAR.cross)) { evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; D.parV = this.t; } else mult = PAR.miss; } // 1c
+      else if (def === 'parry') { if (P.zone === 'head' && P.kind === 'straight' && R() < (P.cat === 'jab' ? Math.min(1, PAR.jab * Math.sqrt(parJ(A))) : PAR.cross)) { evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; D.parV = this.t; } else mult = PAR.miss; } // 1c
     } else if (D.state !== 'stun' && D.state !== 'clinch') {
       const parB = D.state !== 'punch' ? 1 : D.act && PUNCH[D.act.type].arm === 'lead' ? PAR.busy : 0; // throwing with the lead hand, the rear one is still home on the chin: it catches his jab (jab vs jab)
-      if (P.cat === 'jab' && parB && R() < parB * D.brain.mast.parry * (PAR.lo + D.brain.tr.shell) * stamFac(D) * parO * (1 - atkEdge(A, P)) * (1 - holeF(D, P))) { def = 'parry'; evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; D.parV = this.t; } // 1c: the guard hand turns it aside
+      if (P.cat === 'jab' && parB && R() < parB * D.brain.mast.parry * (PAR.lo + (D.brain.tr.shell + D.brain.tr.jab) / 2) * parJ(A) * stamFac(D) * parO * (1 - atkEdge(A, P)) * (1 - holeF(D, P))) { def = 'parry'; evaded = true; A.parT = this.t + PAR.win; D.rs.parry = (D.rs.parry || 0) + 1; D.parV = this.t; } // 1c: the guard hand turns it aside
       let ev = TUNE.ev + (P.cat === 'jab' ? TUNE.jabEv : 0) + (D.s.defense * .5 + D.s.footwork * .3 - A.s.accuracy * .5 - A.s.speed * .3) / TUNE.evDiv;
       ev = clamp(ev, .06, .5) * stamFac(D) * (this.atRopes(D) ? .75 : 1) * gf(D, 'ev') * (D.guard === 'handslow' ? stamFac(D) * tankF(D) : 1);
       if (D.state === 'punch') ev *= .45;

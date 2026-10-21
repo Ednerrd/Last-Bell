@@ -226,9 +226,9 @@ const BR = {
   rushV: 48, rushP: 1,  // a man coming in faster than this (units/s) can be met with a check hook: chance per second at full counter skill
   jabCtr: .5,             // counter chance off a jab (it's back before you are)
   // 1c, the parry (research/skillr.md 10, jab.md 2): the rear hand turns his straight aside, mostly the jab. Weight vs the other defenses by (block + read) mastery [N, I, P, W]
-  // (a novice rarely, a World-class man often), x (lo + shell trait) (the philly catches and parries), x cross for a rear straight. A parry clears the lane: counter chance x ctr.
+  // (a novice rarely, a World-class man often), x (lo + (shell + jab traits) / 2) (the philly catches and parries, a jabber knows the jab), x cross for a rear straight. A parry clears the lane: counter chance x ctr.
   // reflex: a jab he didn't answer (never saw it, didn't try, the defense didn't come off) his hand turns aside anyway, chance by the same mastery (Action-free: the engine reads mast.parry)
-  parry: { on: 1, w: [.08, .3, .75, 1.3], lo: .5, cross: .35, ctr: 1.6, reflex: [.2, .32, .42, .48] },
+  parry: { on: 1, w: [.08, .3, .75, 1.3], lo: .5, cross: .35, ctr: 1.6, reflex: [.22, .35, .46, .53] },
   shortCtr: .5,           // a punch that fell short is a counter chance this often (the pull counter)
   stealT: 30,             // the last 30 s, where rounds get stolen
   hurtQ: .6,              // a hurt man's defense works this much worse
@@ -867,7 +867,7 @@ class Brain {
       duck: kd === 'hook' ? (tr.slip * 1.2 + .1) * (.3 + k.slip) : kd === 'straight' ? tr.slip * .3 : 0,
       pull: (tr.legs * 1.1 + .1) * (.3 + k.footwork),
       roll: kd === 'body' ? 0 : tr.shell * tr.slip * .8 * (.3 + k.block),
-      parry: kd === 'straight' && BR.parry.on ? tierV((this.m.block + this.m.read) / 2, BR.parry.w) * (BR.parry.lo + tr.shell) * (seenAs === 'jab' ? 1 : BR.parry.cross) : 0 // 1c
+      parry: kd === 'straight' && BR.parry.on ? tierV((this.m.block + this.m.read) / 2, BR.parry.w) * (BR.parry.lo + (tr.shell + tr.jab) / 2) * (seenAs === 'jab' ? 1 : BR.parry.cross) : 0 // 1c
     };
     if (this.mode === 'survive' && (this.hurtResp === 'shell' || this.hurtResp === 'steady')) w.block *= this.hurtResp === 'shell' ? 3 : 1.6;
     if (this.mode === 'survive' && this.hurtResp === 'run') w.pull *= 3;
