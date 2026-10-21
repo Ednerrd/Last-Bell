@@ -2,6 +2,8 @@
 
 Ed, Oct 19: "I want to circle back to that." Paste transcripts into any session; notes go in `research/`, our own words, no raw transcripts kept.
 
+**Claude can pull clips itself now (Oct 20):** `python3 tools/yt/yt.py search "Usyk vs Dubois breakdown"` lists id / length / channel / title; `python3 tools/yt/yt.py get ID ...` saves the auto-captions as text in `tools/yt/raw/` (gitignored). Ed picks matchups, Claude searches, picks the breakdowns and writes the notes.
+
 ## What makes a clip useful
 - **Decisions, not technique**: "when he does X, you do Y, because Z". The engine/animation handles form.
 - Good titles: "how to beat", "when", "why", "vs". Usually skip: "fix", "drill", "workout", "power", conditioning, bag work.
@@ -16,4 +18,4 @@ Ed, Oct 19: "I want to circle back to that." Paste transcripts into any session;
 5. **Jab defense**: how pros shut down the jab. Our jab connect ~27% vs real ~17%.
 
 ## Already done
-- The Arena batch 1 (`research/arena.md`), Precision Boxing batch 1 (`research/precision.md`), Skillr Boxing batches 1-4 (`research/skillr.md`: anticipation, the clinch, guards, rhythm, styles, Four Kings, Philly shell, counters, pressure, parrying, blocking; shortlist in its header), Top Rank batch 1 (`research/toprank.md`: levels reel, Porter's towel, Loma-Commey; shortlist in its header), The Ring batch 1 (`research/ring.md`: Crawford-Canelo, Shakur-Teofimo, Thomas Taylor's rules talk; shortlist in its header). Shortlists: `tools/arena/`, `tools/precision/`.
+- The Arena batch 1 (`research/arena.md`), Precision Boxing batch 1 (`research/precision.md`), Skillr Boxing batches 1-4 (`research/skillr.md`: anticipation, the clinch, guards, rhythm, styles, Four Kings, Philly shell, counters, pressure, parrying, blocking; shortlist in its header), Top Rank batches 1-2 (`research/toprank.md`: levels reel, Porter's towel, Loma-Commey, Cotto-Margarito I and II; shortlist in its header), The Ring batch 1 (`research/ring.md`: Crawford-Canelo, Shakur-Teofimo, Thomas Taylor's rules talk; shortlist in its header). Shortlists: `tools/arena/`, `tools/precision/`.

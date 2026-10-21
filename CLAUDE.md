@@ -71,6 +71,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - Hurt man's danger: `TAG=x node tests/danger.js 300 [on|off] [N,I,P,W]` then `node tests/danger.js agg x`: a Pro hunting a hurt man of each level, stung and caught per hunt.
 - Finishing: `TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
+- YouTube research: `tools/yt/yt.py search "query"` / `get ID` (captions to `tools/yt/raw/`, gitignored; `research/CLIPS_WANTED.md`).
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
 
 ## Targets (check after engine changes)
