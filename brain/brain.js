@@ -306,11 +306,11 @@ const BR = {
   wb: { on: 1, at: .82, sure: .5, d: [58, 82], p: .02, gap: 10, win: 1.5, after: .8, quit: 2, guard: .3, rd: .7, def: 6, try: .95, ctr: 3,
     thru: [.05, .1, .25, .5], wary: .15, hold: .2, seeG: .6, modes: { work: 1, counter: 1, feelout: 1, press: 1, reset: 1 } },
   // f3 easy flaws (plug-in only: preset('easy') sets profile.flaw by his style; the game never does): one hole a player can spot and beat, never fixed in the fight. in: he's closing = his own feet bring him in faster than this (units/s, smoothed)
-  // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): crowded (the man inside near) for build s running, he shells for hold s: guard, output x out and no counters, slides off x lat, fights for room x push, blocks x blk, the body open (hole).
+  // jab (slugger): walks in behind no jab defense, tries to defend a jab x try while he closes. fold (outboxer): crowded (the man inside near, or inside far with his back past rope on the ropes: 2 = off) for build s running, he shells for hold s: guard, output x out and no counters, slides off x lat, fights for room x push, blocks x blk, the body open (hole).
   // straight (swarmer): head comes in straight, lunging in (his feet faster than v) he tries to defend a power shot x try at quality x q. same (counter, Ed Oct 20: a habit to find): every counter he throws is the same punch (p), and for t s after it his guard's at guard and he defends head shots x try: slip that one and come back.
   // drop (boxer-puncher): the jab hand comes back low, t s after a jab the guard's at guard and he defends head shots x try. hole: what the host's own (passive) defense loses to those punches meanwhile (Action.hole)
   flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'same', boxerpuncher: 'drop' }, in: 8, k: .6, // k: how open the holes are, all of them (the defense he loses x k; .6, Ed Oct 20: easy vs a Pro ~15%, was 11% at 1)
-    jab: { try: .2, hole: .7, hold: 0 }, fold: { near: 48, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, push: .3, blk: 3, hole: .4 }, straight: { try: .3, q: .7, hole: .8, v: 25, hold: 0 },
+    jab: { try: .2, hole: .7, hold: 0 }, fold: { near: 48, rope: 2, far: 70, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, push: .3, blk: 3, hole: .4 }, straight: { try: .3, q: .7, hole: .8, v: 25, hold: 0 },
     same: { p: 'cross', t: .5, guard: .35, try: .45, hole: .5 }, drop: { t: .4, guard: .3, try: .45, hole: .4 } },
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
@@ -1288,7 +1288,7 @@ class Brain {
     this.updMode(P, sdt);
     if (this.fl) { const v = this.pD == null ? 0 : (this.pD - P.dist) / Math.max(dt, 1e-3) - P.him.closing; this.myV = this.myV * .8 + v * .2; this.pD = P.dist;
       if (this.myV > BR.flaw.in) this.inT = this.t + BR.flaw.jab.hold; if (this.myV > BR.flaw.straight.v) this.lgT = this.t + BR.flaw.straight.hold; } // the hole stays open hold s after his feet slow: he's still arriving, the hands not set // f3: how fast his own feet bring him in
-    if (this.fl === 'fold') { const F = BR.flaw.fold; this.pr = P.dist < F.near ? this.pr + dt : Math.max(0, this.pr - 2 * dt); if (this.pr > F.build) this.flT = this.t + F.hold; } // f3: crowded, he folds
+    if (this.fl === 'fold') { const F = BR.flaw.fold; this.pr = P.dist < F.near || (P.ropes.me > F.rope && P.dist < F.far) ? this.pr + dt : Math.max(0, this.pr - 2 * dt); if (this.pr > F.build) this.flT = this.t + F.hold; } // f3: crowded, he folds
     this.see(P);
     // he's rushing in head first: a counterpuncher meets him with the check hook and pivots off the line (Mayweather vs Hatton)
     const clr = this.clR || 0; // a grabber walking in to tie up: meet him on the way
