@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (now **17165c80**, Oct 21: step d KDs, closed Oct 22, `same.js 40` = 42da74e7; before it 4b4792b9 / c9e5d6ec, 1c the parry).
+- Render-only changes must keep the `same.js` hash (now **f61e10ca**, Oct 22: step e, the judges, `same.js 40` = 75856492; before it 17165c80 / 42da74e7, step d KDs).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -62,6 +62,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - Easy flaws (f3): `TAG=x node tests/flaws.js 150 [styles]` (x4, resumable: rerun the same line) then `node tests/flaws.js agg x`: an easy man (Intermediate) of each style vs an Intermediate player who plays straight or runs the exploit for that flaw (jabMove, pressure, stepCounter, slipCounter, overJab), flaw on vs off: what finding the hole is worth (target +15-25, straight small), and flaw on, the trick vs boxing him (+10-20).
 - Eyes: `TAG=x node tests/eyes.js 40` (x4) then `node tests/eyes.js agg x`: what each level notices of the other man (cut, swell, body, arms, fold, legs, wobble), seen % and delay (`docs/PLUGIN.md`).
 - Bluff (1f): `TAG=x node tests/fakes.js 300` then `node tests/fakes.js agg x`: hurt spells by the hurt man's and the watcher's level, bluffed or plain, seen, caught (still hunting after the stun), KDs, stops.
+- Judges: `TAG=x node tests/judges.js 500` (x4) then `node tests/judges.js agg x`: split rounds, 10-10s, UD/SD/MD, draws, card margins, late lead changes vs the Sloan cards.
 - Damage: `node tests/cut.js 600`: cut and eye stops, bad cuts, doctor looks, swelling and shut eyes, clean head shots onto the damaged eye once he's spotted it, by level (cut stops are rare: 600+ fights, read 'bad cut').
 - Hurt man's danger: `TAG=x node tests/danger.js 300 [on|off] [N,I,P,W]` then `node tests/danger.js agg x`: a Pro hunting a hurt man of each level, stung and caught per hunt.
 - Finishing: `TAG=x node tests/finish.js 150` (x4 processes) then `node tests/finish.js agg x`: stoppages, KDs both ways, same-round stop after a KD, late comebacks, hunts and hurt answers.
@@ -76,6 +77,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 ## Targets (check after engine changes)
 Audit: ~52 thrown / ~15 landed / ~29% connect per round (Ed, Oct 14). "Thrown" = punches that really start: one his own defense pulls back before 30% is un-counted (gas still spent), audit prints it as "unthrown /rd".
 - Stops **30–35%** (Ed, Oct 21: ~32%), spread earlier (`research/numbers.md`). KDs a fight real .4–.6, body KDs 5–8%. Cut stops ~1.2–1.7%, eye stops ~0.3%.
+- Decisions (`tests/judges.js`): split rounds ~27%, split+majority ~28% of decisions, draws ~5% (Sloan cards, `research/numbers.md` 5).
 - Styles 48–53% vs the field, specials 48–54, guards @82 vs standard ~48–58. One level down wins 15–20%. Drama (close fights): a lead change ~40%, comebacks ~11% (Ed). AI corner vs a silent one ~+3.6.
 - **Latest full check** (`check.sh d1`, hash 17165c80, Oct 22, step d KDs): 51.5 / 14.5 / 28.2% (jab 22.3%, head power 29.7), stops 29.9% (finish 30.8), KDs .43, body KDs 10.1% (5-7% on reruns: noise), styles 47.8–51.9, one level down (300) IvN 12.7 (low: watch) / PvI 15.0 / WvP 16.7. History: `docs/BRAIN.md`, `docs/NOTES.md` "Balance history".
 

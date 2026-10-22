@@ -1050,3 +1050,14 @@ The nudges (one each, frozen copies, finish 600 + audit 2x500):
 So both knobs are weak where they sit now (flash is a small slice once crit KDs are gone; `STOP.p` only gates the roll once `at` is reached). KDs and stops are inside the CLAUDE.md bands at the low edge; if Ed wants them higher, try `kdBase`/`kdDiv` (accum KDs) or `kdHurt` (KD -> stop), not these two. The body share swings 5-10% run to run at ~260 KDs: noise.
 Cheese at hard (4x40, 160 a bot): none 47.0, jabSpam 98.7, oneTwo 80.7, pullCounter 100, shell 95.6, **bodyOnly 55.0** (60.5), **haymaker 60.0** (61.6), runner 100, clinch 74.8. Target 65+: still low after d, so it's the brain (high effort), not KDs.
 Next: balance pass step e (decisions).
+
+### Oct 22, step e: decisions (the judges)
+Hash 17165c80 -> **f61e10ca** (40 = 75856492). New probe `tests/judges.js` (audit field: gaps 0/3/6/10, 8/10/12 rounds). Real (Sloan cards, `research/numbers.md` 5): split rounds 26.9%, UD 72 / SD 16.4 / MD 11.5 (of UD+SD+MD), draws 5.2%, late lead change 11.5% of decisions (10 rd 8.4, 12 rd 12.9).
+- Base (2000 fights): split rounds 11.2%, UD 79.4 SD 4.1 MD 8.3 (split+majority 12.4), draws 8.2, margins UD 6.9 / SD 1.2 / MD 2.2 (real 6.7 / 1.2 / 2.1: already right).
+- Why: a round's plain score gap is big (median 4.5, 75th pct 8.7) next to each judge's own noise (.63): all three see the same round. `jShare` .1 alone or `jNoise` 1.3 alone: split rounds ~12-13, nothing. `jNoise` 3: split rounds 25.7, UD 70.8, but SD 6.5 and draws 10.2 (ties eat the splits).
+- Ties: all rounds 10-9 over an even number of rounds = even cards come easy. 10-10s break the parity: `evenAt` 1.2 + `even` .3: draws 4.7 but 10.5% of rounds carry a 10-10 (too many); `.15`: ~5%.
+- Per-round noise averages out over a fight, so the SDs stayed low (~10). New `TUNE.jLean`: each judge's lean for the night, gauss x jLean added to his `judgeBias` (rolled only when on). 1: SD 10.8; 2: SD 17.3 / MD 9.9 (27.3), draws 6.3.
+- Taken (e11): `jShare` .1, `jNoise` 2.2, `jLean` 2.2, `evenAt` 1.2, `even` .15. judges.js 1000: split rounds 29.0, 10-10 in 5.3% of rounds, UD 66.0 SD 19.2 MD 8.6 (27.8), draws 6.2, margins 7.0 / 1.9 / 3.3, late lead change 8.5% of decisions. e12 (`jNoise` 2, `jLean` 2.4, `evenAt` 1.4) read the same (draws 5.5).
+- Side effects (e2, frozen copy): audit 3x500 UD 64 / SD 19 / MD 10, draws 6.7, favorite wins by gap 0/3/6/10: 45 / 66 / 75 / 90 (d1 ~45 / 61 / 75 / 90), totals 51.3 / 14.4 / 28.0, stops 28.8; finish 600 stops 31.0, KDs .45; levels 300: IvN 14.0, PvI 19.0, WvP 18.3, PvN 4.0; drama close 500: lead change 34.6 (2+ 12.0), late 5.6% of fights (~7.4% of decisions), comebacks 11.0, winner lost 0 rounds 8.7%.
+- Not rerun: styles (the judges are symmetric; Wanda/Rocco tastes unchanged), cheese. Next full check covers styles.
+Next: the balance pass steps are done; next roadmap item is 2a (real flaws, high effort: ask Ed to switch).
