@@ -1,6 +1,6 @@
 # Size: height, reach, leverage (design draft, Oct 22)
 
-ROADMAP item 3. The last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1); **new since this draft: `research/dynamic.md`** (Oct 22, Teddy Atlas batch 1 + Ed's paste: Fundora-Tszyu's full-extension jab and step-back double, Fury-Ngannou geography, the short man's two ways in (jab in, or draw the tall man in), around the mountain, the head-on-cheek inside position, ring cutting): not yet folded into this plan. s1 is built (Oct 22, section "s1, built" below); next is s2 (the brain, high effort), which should fold in `research/dynamic.md` first.
+ROADMAP item 3. The last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1); `research/dynamic.md` (Teddy Atlas batch 1 + Ed's paste), folded into "The brain: s2 design" below (Oct 22). s1 is built (section "s1, built"); s2 (the brain, high effort) is next.
 
 ## What's in today
 - Every man has the same arms. The jab reaches 78, the cross 76, hooks 56-60, uppercuts 50-54 (`PUNCH` in the engine, `PUNCHES` in the brain, the same numbers twice).
@@ -28,20 +28,36 @@ Reach stretches every punch a man throws. The long man gets a strip of floor whe
 
   Size stays well under one skill level (one level down still wins 15-20%). A typical fight's gap is ~3 in, 7+ in maybe 1 fight in 12.
 
-## The brain (where the fight actually changes)
-Perception gets `me.rs` and `him.rs` (he can see the other man's arms; it's on the tale of the tape). Every "does it reach" check uses his own `rs`. The danger line is the other man's jab x his `rs`.
+## The brain: s2 design (folded from `research/dynamic.md`, Oct 22)
+**The scale problem first.** `per` .005 makes the free band tiny: a 3 in gap (the typical fight) is ~1.2 units of jab, 8 in ~3 units, about the brain's own range noise (`rangeJit` 2-5, `dSeen`). So the old plan's "range target between his jab + 2 and my jab - 1, if the edge is 4+ units" never fires (4 units = a 10 in gap). The fix: **the brain thinks in inches, the ring in units.** A fighter knows "he's got 6 inches on me" off the tale of the tape and picks his plan off that; the plans then change his feet and his punches by amounts that don't depend on how tiny the geometry is. The geometry (own-reach checks) stays exact.
 
-**The long man** (any style with `range` trait over ~.5, and a real edge, ~4+ units): his range target moves into the band, between the other man's jab + 2 and his own jab - 1. Jab share up (Klitschko threw 75% jabs). Rushed: pivot out and rebuild the band (uses the existing step-out), or tie up (the clinch he already has). Back on the ropes: the edge halves (he can't step back).
+**Perception** (typed, `tsc`): `me.rs`, `me.reach`, `him.rs`, `him.reach` (reach in inches, rs the host's scale). The brain's `gap` = `me.reach - him.reach` (+ = he's the long man). `BR.size.on = 0` must give back the s1 brain exactly (hash 118b22b1): every new roll sits behind the gate.
 
-**The short man, two plans** (all four sources: don't chase):
-1. **Get through it** (swarmer, slugger, the pressure plans): don't walk in straight; enter behind his jab (his hand's out, the recovery window), behind feints, or slipping under it; once in, stay on the chest, body share up, hooks and uppercuts. It costs: each entry eats a jab about as often as the long man lands at range. Never free.
-2. **Don't stand in it** (counter, out-boxer, short): sit just outside his reach, make him step in, counter as he comes (Romero, Inoue, Pacquiao). His output drops, and so does the tall man's.
+**1. Own arms (every level, through his eye for distance).** The brain's punch table is scaled by his own rs: `this.pu[p].max = PUNCHES[p].max x rs` (combo min/max too). Every "does it reach" check reads it: `fits`, the counter picks (`counterFor`, the reply that reaches), `pickCombo` (first punch, the rest, the working range), `fitReach`. A Novice's `dSeen` noise already blurs it; nothing extra.
+- **The danger line** = his jab x `him.rs` (+ a step). Read where the brain asks "can he hit me from here": the counterman's draw bait, the long man's band, the short man's waiting spot.
 
-**By level** (`k.range`, the eye for distance): a Novice ignores the size and walks straight in (or stands in the band); a Pro uses the plan; a World-class man picks the plan by what's working and feints the entry many times (video batch 1, Usyk/Loma).
+**2. The long man: own the geography** (Fundora-Tszyu, Fury-Ngannou). Gate: gap >= `BR.size.long` (3 in), the eye `k.range`, and a style that lives outside (`tr.range` > .5) or a plan that says so.
+- **Full extension:** his range target moves out to the end of his own jab (`pu.jab.max - 1`), never past it (no three-quarter jabs from too close). Jab share up a little (Klitschko's 75% is the far end).
+- **The double step:** when the short man walks in (`him.closing` fast, inside the danger line), he fights harder for the distance (`push` up) and steps back more than the man steps in. Uses the step-out he already has; an out-boxer's tool, a slugger's barely.
+- **Rushed / on the ropes:** pivot out (`lateral` up) or tie up (the clinch he has). On the ropes the edge halves (he can't step back): the double step is off.
+- **The mistake (Ed's call, Oct 22: in s2, by level):** a tall man who forgets his size and **fights small** (Fundora before Tszyu): per round, chance by level (Novice ~.5, Intermediate ~.3, Pro ~.1, World 0, `BR.size.small`), his range target comes in like a pressure man's and the band logic is off that round. A World-class man never does it; the corner's "jab" or "move" call ends it (the corner already pushes range).
+
+**3. The short man: two plans** (all four sources: don't chase). Gate: gap <= -`BR.size.long` and the eye. The plan is picked once a fight by style, then by what's working (World class switches mid-fight on `punchVal`):
+- **a. Get through it** (swarmer, slugger, pressure plans, `tr.initiative` high): **jab his way in** (Atlas on Tszyu: you don't have to out-jab him, make him respect yours): the jab-in step gets more likely when he's between his own reach and the danger line; feint the entry (World class, video batch 1); once inside, **around the mountain**: `lateral` up while he's inside the long man's reach (never parked in front), body share up, hooks and uppercuts. Never free: each entry walks through the danger line.
+- **b. Don't stand in it** (counter, out-boxer, `tr.initiative` low): his range target sits just outside the danger line (a step past his jab x him.rs), output down a little, the draw bait (`dlBait`) more often: make him come, make him miss, counter (Romero, Inoue, Crawford "walk in the rain"). The tall man's output drops too.
+- **Standing in the band** (the middle, where only the long man lands) is what a Novice does: no plan, walks straight in or stands at his own style range.
+
+**4. By level** (`k.range`, plus the `lv` sheet): a Novice ignores the size (no plans, own arms through his blurry eye); an Intermediate half-runs a plan; a Pro runs the plan for his style; a World-class man picks the plan by what's working and feints the entry. The plan strength scales `lerp(0, 1, k.range)` like the other range knobs.
+
+**5. The counter-puncher (46.7 after s1) first.** Measure before building: his counters by rs (thrown, short misses, landed) on a frozen copy. His game is exact range: own-arm counters and the danger line in the draw bait should bring him back to ~48.
+
+**Sims** (`tests/size.js`, mirror, forced gap): the table above (4 in 52-53, 8 in ~56), now with the brain on; the styles (counter back to 48+, nobody out of 48-53); the hash with `BR.size.on=0` = 118b22b1. If the long man's plan makes size worth more than the table, `per` comes down first (the brain stays), s3 rechecks it all.
+
+**Folded in, built later** (`research/dynamic.md` For Last Bell 3-7): read the feet (attack when his weight drifts back, Inoue), exit or commit (the man who stays in the middle after his punch, Tank-Cruz), feints by temperament, ring cutting as a parallel step (check `cutK`), the corner's "two lies" line. The head-on-cheek inside lock stays parked (the short man's inside home, after 3D with the clinch rework).
 
 ## Left out on purpose
 - **Leaning in the clinch, leverage, weight** (`research/size.md` F): it lives in the clinch rework, which moved after 3D. Inside one division the weights are close anyway (only heavyweight has real gaps).
-- **The tall man inside on purpose** (Fundora, section E): a trait, so it goes with traits (after 3D).
+- **The tall man inside on purpose** (Fundora, section E) as a trait: after 3D. The mistake version (he forgets his size) is in s2 (Ed, Oct 22).
 - **The tall man's retaliation** (he loses the range fight and comes forward square, the counter window): a brain idea for the design pass after 3D (`emo.frus`).
 - Tale of the tape, "reach +6" on screen: parked WIP, not part of this step (Ed's call 5).
 
@@ -66,3 +82,4 @@ Hash 40 118b22b1 (`SIZE.on=0` gives back 4fba7bcf).
 4. **Leverage, the lean and Fundora wait** for the clinch rework and traits (after 3D).
 5. **No intro line**: the reach shows when the tale of the tape comes back (parked WIP, `claude/bold-faraday-bryk6t`). Nothing on screen in this step but the drawn height.
 6. **The P4P stars get their real sizes**: a small table on `P4P_2026` (Inoue 65/67.5, Usyk 75/78, Bivol 72/72 ...), Wikipedia infobox figures.
+7. **The tall man fighting inside (Fundora before Tszyu) is a mistake in s2, by level** (Ed, Oct 22): a Novice or Intermediate tall man forgets his size some rounds; the trait version waits for traits.
