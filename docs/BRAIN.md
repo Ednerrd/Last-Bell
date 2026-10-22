@@ -1072,3 +1072,8 @@ Full check `r1` (s a l f) + judges 4x500 + cheese hard 4x40:
 - Cheese hard (160 a bot): none 53.2, jabSpam 92.9, oneTwo 79.1, pullCounter 98.1, shell 96.9, **bodyOnly 64.5** (55.0 at d1: back at the line), **haymaker 61.9** (60.0), runner 98.8, clinch 71.9.
 For Ed (no knob changed): KDs/stops at the low edge stay a watch (the levers are `kdBase`/`kdDiv`/`kdHurt`); haymaker is the one real miss, a brain fix. Also: with `jLean` 2.2 the 2% "robbery" judge (bias 2.6) is barely apart from a normal lean (~24% of judges lean past 2.6) and nothing reads `robbery`: fold it into hometown judging (parking lot) or drop it later (the drop moves the hash).
 Next: 2a (real flaws), high effort.
+
+### Oct 22, 2a started: f3 retune part 2 (handoff)
+Same session as the review (Ed: high effort, "start in this session"). Plug-in only: hash f61e10ca holds (40 = 75856492). Numbers and the tries: `docs/PLUGIN.md` "f3 retune, part 2". New probe `tests/trick.js` (why a trick lands or not: the hole at launch vs impact).
+- Done: the holes now open when the trick comes (holds on the walk-in/lunge holes; the outboxer folds on the ropes, a looser shell, a bigger body hole). Outboxer and counter in band; easy vs a Pro 15.3%.
+- Left (next session, high): slugger, swarmer and boxer-puncher: the trick beats boxing him by +6 or less (target +10-20). The hole works (on - off exploit +8 / +25 / +6, noisy at ±5); the bots cost (no flaw: jabIn2 -6, lungeCounter2 -8 vs straight: parried spare jabs, gas). Make those bots fair first (trick.js shows where their punches end), then the boxer-puncher's `drop` hole (right hand over the jab; overJab works as a counter, not through the hole), then the build into the game (moves the hash: full check after).
