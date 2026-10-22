@@ -1,6 +1,6 @@
 # Size: height, reach, leverage (design draft, Oct 22)
 
-ROADMAP item 3. The last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1); `research/dynamic.md` (Teddy Atlas batch 1 + Ed's paste), folded into "The brain: s2 design" below (Oct 22). s1 is built (section "s1, built"); s2 (the brain, high effort) is next.
+ROADMAP: the last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1); `research/dynamic.md` (Teddy Atlas batch 1 + Ed's paste), folded into "The brain: s2 design" below (Oct 22). s1 and s2 are built (sections "s1, built", "s2, built"); s3, the pre-3D baseline, is next.
 
 ## What's in today
 - Every man has the same arms. The jab reaches 78, the cross 76, hooks 56-60, uppercuts 50-54 (`PUNCH` in the engine, `PUNCHES` in the brain, the same numbers twice).

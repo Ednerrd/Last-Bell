@@ -71,6 +71,6 @@ Parking lot for the brain pass after 3D, unless s2 (Size) wants the short man's 
 2. **Short man inside: keep moving** (around the mountain / step around), never parked in front of the bigger man. Fits the head-on-cheek lock above as the inside home.
 3. **Read the feet**: attack when the other man's weight drifts back (Inoue). A cue the brain can see; maybe already in `perceive`: check before building.
 4. **Exit or commit**: after his punch, a man who stays in the middle is a counter target (Tank-Cruz). A brain habit by level.
-5. **Feints by temperament**: the come-in feint vs an aggressive man (fits the clips pile, `docs/BRAIN.md` handoff Oct 21).
+5. **Feints by temperament**: the come-in feint vs an aggressive man (fits the clips pile, `docs/NOTES.md` "Handoff (Oct 21, research...)").
 6. **Ring cutting as a parallel step** (cut-off angle, not chase): check what `cutK` does today.
 7. Corner line: the two lies, for a hurt or rattled man between rounds.
