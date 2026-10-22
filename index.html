@@ -221,8 +221,8 @@ const BoxerBrain = (() => { const module = { exports: {} };
  * @property {number} dist       distance between the two men
  * @property {{ me: number, him: number }} ropes  0 = center of the ring .. 1 = on the ropes
  * @property {{ head: number, headMax: number, stam: number, stamMax: number, hurt: boolean, down: boolean, clinch: boolean, punching: boolean, busy: boolean,
- *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean, eye?: ?{ s: string, v: number }, body?: number }} me   his own body (body: the meter, 1 fresh .. 0 gone), the corner's plan and live shout, his stance (south: a southpaw), his worse eye (a cut or a swelling: side, 0..1)
- * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number, look?: Look }} him
+ *   strat?: string, order?: ?{ k: string, q: number, left: number, age: number }, south?: boolean, eye?: ?{ s: string, v: number }, body?: number, rs?: number, reach?: number }} me   his own body (body: the meter, 1 fresh .. 0 gone), the corner's plan and live shout, his stance (south: a southpaw), his worse eye (a cut or a swelling: side, 0..1)
+ * @property {{ closing: number, punch: ?SeenPunch, recover: ?number, lastRes: ?string, guard: number, gas: number, hurt: boolean, head: number, look?: Look, rs?: number, reach?: number }} him  (rs: his reach scale, every punch's range x rs; reach: inches, off the tale of the tape. Same on me: Size s2)
  * @property {Array<{ type: string, by: 'me' | 'him', [k: string]: any }>} events  what happened since last frame (landed, blocked, evaded, feinted, thrown...)
  */
 /**
@@ -501,6 +501,7 @@ const BR = {
   // f1b, the hands tell the truth (Ed): a body-hurt man clamps his elbows to his ribs, the head opens. at .. full: how far his body meter is gone before it starts .. in full; hit: each power shot
   // that lands downstairs (fades, tau s of clock, hitMax at most); the other man: see (the guard he sees drops this much at a full clamp seen), up (go upstairs), open (an opening)
   // 1b, the long guard (research/longguard.md): by style (a trait: profile.traits.post wins), only out at long range (near .. far), not hurt, gas over gas; how well: his jab + range skill (q, low .. high)
+  size: { on: 1 }, // Size s2 (docs/SIZE.md): the brain knows his own reach and the other man's (0: everyone reaches 78, the s1 brain)
   post: { on: 1, by: { outboxer: .8, boxerpuncher: .25, counter: .2 }, near: 56, far: 84, gas: .35, q: [.5, 1], close: 30 }, // close: a man walking in faster than this (units/s): the hand comes home
   clamp: { on: 1, at: .35, full: .85, hit: .12, hitMax: .6, tau: 45, see: .15, up: .2, open: .25 },
   // f2, the World-class bait (Ed, Oct 19; Atlas: jab, step back, invite the right, counter the miss). Once he's sure of the other man's lead (sure, the lead read), at mid-range (d) he drops the hands (guard)
@@ -874,7 +875,7 @@ class Brain {
   changeFor(ps, ans) {
     const last = ps[ps.length - 1], out = ps.slice();
     if (ans === 'block' || ans === 'roll') { const sw = { jab: 'bodyJab', cross: 'bodyCross', hook: 'bodyHook', rhook: 'bodyHook', uppercut: 'hook', lupper: 'cross', bodyJab: 'jab', bodyCross: 'hook', bodyHook: 'hook' }; out[out.length - 1] = sw[last]; return out; } // he covers where it always goes: go where the guard isn't
-    const d = this.dNow == null ? 60 : this.dNow, fits = p => PUNCHES[p].max + BR.reachStep >= d;
+    const d = this.dNow == null ? 60 : this.dNow, fits = p => this.mx(p) + BR.reachStep >= d;
     if (ans === 'slip') { if (last !== 'hook' && fits('hook')) out.push('hook'); else out[out.length - 1] = PUNCHES[last].zone === 'head' ? (last === 'jab' ? 'bodyJab' : 'bodyCross') : 'hook'; return out; } // he slips the last one: the hook where he slips to (from long range: the head moves, the body doesn't)
     if (ans === 'duck') { out.push(['uppercut', 'bodyHook', 'bodyCross'].find(fits) || 'bodyCross'); return out; }  // he ducks it: come up the middle
     if (ans === 'parry') { if (last === 'jab' && fits('hook')) out.push('hook'); else out.unshift('jab'); return out; } // 1c: he parries it: the hook over the hand that reached for it, or double it up and beat his timing
@@ -1005,7 +1006,7 @@ class Brain {
     if (this.R() > ch) return;
     let c, why = 'counter';
     if (this.R() < .25 + .7 * k.counter) { const o = this.counterFor(def, p); if (o) { c = o[0].slice(); why = 'counter: ' + o[2]; if (c.length > 1 && this.R() > .3 + .6 * k.combos) c = c.slice(0, 1); } }
-    if (!c) { const d = this.dNow == null ? 60 : this.dNow, ok = PTYPES.filter(x => PUNCHES[x].max + BR.reachStep >= d); c = [ok.length ? ok[Math.floor(this.R() * ok.length)] : 'jab']; } // he knows he should fire back, not with what (but he can see what reaches)
+    if (!c) { const d = this.dNow == null ? 60 : this.dNow, ok = PTYPES.filter(x => this.mx(x) + BR.reachStep >= d); c = [ok.length ? ok[Math.floor(this.R() * ok.length)] : 'jab']; } // he knows he should fire back, not with what (but he can see what reaches)
     if (this.fl === 'same') { c = [BR.flaw.same.p]; why = 'counter (always the ' + c[0] + ')'; } // f3: the habit
     this.queue = { ps: c, why, ctr: 1, at: this.t + lerp(.18, .02, k.counter) };
     this.tel.counters++;
@@ -1021,7 +1022,7 @@ class Brain {
     else if (P.kind === 'upper') row = B.upper.any;
     else if (P.kind === 'hook') row = B.hook[def] || B.hook.block;
     else { const t = p === 'jab' ? B.jab : B.straight; row = (t[def] || t.block).concat(p !== 'jab' && k.counter > .6 ? B.straight.jab : []); }
-    return wpickR(this.R, row, o => Math.pow(o[1], .5 + 1.5 * k.counter) * (d > PUNCHES[o[0][0]].max + BR.reachStep ? .1 : 1));
+    return wpickR(this.R, row, o => Math.pow(o[1], .5 + 1.5 * k.counter) * (d > this.mx(o[0][0]) + BR.reachStep ? .1 : 1));
   }
 
   /* ---------- the eyes: a punch is coming ---------- */
@@ -1327,12 +1328,12 @@ class Brain {
     /** @type {[any, number][]} */ const ws = [];
     for (const c of COMBOS) {
       // range: the first punch has to reach (as far as he can tell)
-      if (dSeen > c.max + 4 || dSeen < c.min - 12) { if (this.R() > .12 * (1 - k.range)) continue; }
+      if (dSeen > c.max * this.rs + 4 || dSeen < c.min * this.rs - 12) { if (this.R() > .12 * (1 - k.range)) continue; }
       let w = 1;
       // the rest of it has to reach too: a hook from where only the jab lands is wasted (a man with a good eye for range knows it)
-      for (let i = 1; i < c.n; i++) if (dSeen > PUNCHES[c.ps[i]].max + BR.reachStep) w *= lerp(.6, BR.reachLo, k.range);
+      for (let i = 1; i < c.n; i++) if (dSeen > this.mx(c.ps[i]) + BR.reachStep) w *= lerp(.6, BR.reachLo, k.range);
       { // every combo has a working range: a hook wants to be well inside its reach (he only has to lean back from one at the end of it), a straight at the end of the arm
-        const P0 = PUNCHES[c.ps[0]], ideal = P0.max - (P0.kind === 'straight' ? BR.workS : BR.workH);
+        const P0 = PUNCHES[c.ps[0]], ideal = P0.max * this.rs - (P0.kind === 'straight' ? BR.workS : BR.workH);
         w *= lerp(1, BR.workLo + Math.exp(-Math.pow((dSeen - ideal) / BR.workW, 2)), k.range); }
       { const jt = clamp(tr.jab + this.pv('jab'), 0, 1); w *= c.jab ? lerp(.5, 4, jt) * (.5 + c.jab) : lerp(1.6, .3, jt); }
       w *= 1 + c.power * (clamp(tr.power + this.pv('power'), 0, 1) * 2 - .6);
@@ -1386,9 +1387,9 @@ class Brain {
   // a counter or a planned shot from where it can't reach: a man with an eye for range turns the hook into a straight, or lets it go
   fitReach(ps, dSeen) {
     const k = this.k, P0 = PUNCHES[ps[0]];
-    if (dSeen <= P0.max + BR.reachStep || this.R() > k.range) return ps;
-    if (P0.kind === 'straight' || dSeen > PUNCHES.cross.max + BR.reachStep) return null;
-    return [P0.zone === 'body' ? 'bodyCross' : 'cross'].concat(ps.slice(1).filter(p => PUNCHES[p].max + BR.reachStep >= dSeen));
+    if (dSeen <= P0.max * this.rs + BR.reachStep || this.R() > k.range) return ps;
+    if (P0.kind === 'straight' || dSeen > this.mx('cross') + BR.reachStep) return null;
+    return [P0.zone === 'body' ? 'bodyCross' : 'cross'].concat(ps.slice(1).filter(p => this.mx(p) + BR.reachStep >= dSeen));
   }
   // planned sequences: the smart man's tricks
   startSetup(P, dSeen) {
@@ -1455,6 +1456,11 @@ class Brain {
     return { type: ps[0], combo: ps, feint: false, tech, tell, commit, counter: !!ctr, why, num: id };
   }
 
+  /* ---------- size (s2, docs/SIZE.md): his own arms, the other man's, the gap in inches ---------- */
+  size(P) { const on = BR.size.on; this.rs = on && P.me.rs || 1; this.hrs = on && P.him.rs || 1; this.gap = on && P.me.reach && P.him.reach ? P.me.reach - P.him.reach : 0; }
+  mx(p) { return PUNCHES[p].max * (this.rs || 1); } // how far his own punch reaches
+  danger() { return PUNCHES.jab.max * (this.hrs || 1); } // how far the other man's jab reaches
+
   /* ---------- the feet ---------- */
   move(P) {
     const k = this.k, tr = this.tr, md = this.mm(), E = this.emo, fat = this.fat, sv = this.mode === 'survive' ? this.hurtResp : null;
@@ -1490,7 +1496,7 @@ class Brain {
   /* ---------- the one call: perception in, action out ---------- */
   /** @param {Perception} P @param {number} dt @returns {Action} */
   think(P, dt) {
-    this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist; this.hisHurt = this.ph ? this.ph.hurt : !!P.him.hurt;
+    this.t = P.t; this.rd = P.round; this.out.punch = null; this.out.defend = null; this.dNow = P.dist; this.size(P); this.hisHurt = this.ph ? this.ph.hurt : !!P.him.hurt;
     if (P.events) for (const ev of P.events) this.hear(ev);
     const E = this.emo, comp = this.tr.composure;
     const sdt = dt * this.pace; // slow time: moods and intent
@@ -2319,10 +2325,11 @@ class Fight {
     return {
       t: this.t, clock: this.clock, roundLen: ROUND_LEN, round: this.round, rounds: this.rounds, dist: dist(F, O), ropes: { me: ropesK(F), him: ropesK(O) },
       me: { head: F.head, headMax: F.headMax, stam: F.stam, stamMax: F.stamMax, hurt: hurtNow(F), down: F.state === 'down', clinch: F.state === 'clinch', punching: F.state === 'punch', busy,
-        south: F.stance === 'southpaw', eye: eyeOf(F), body: clamp(F.body, 0, 100) / 100, strat: F.strategy, order: F.order ? { k: F.order.k, q: F.order.q, left: F.order.t / SHOUT_LEN, age: (SHOUT_LEN - F.order.t) * CLOCK } : null }, // the corner: this round's plan and the live shout (the brain reads them when BR.coach is on)
+        south: F.stance === 'southpaw', rs: F.size.rs, reach: F.size.reach, eye: eyeOf(F), body: clamp(F.body, 0, 100) / 100, strat: F.strategy, order: F.order ? { k: F.order.k, q: F.order.q, left: F.order.t / SHOUT_LEN, age: (SHOUT_LEN - F.order.t) * CLOCK } : null }, // the corner: this round's plan and the live shout (the brain reads them when BR.coach is on)
       him: { closing: (() => { const v = vec(F, O); return -(O.vx * v.ux + O.vz * v.uz); })(), punch: live ? { id: a.id, type: a.type, t: a.t, impactIn: a.feint ? 99 : Math.max(0, a.dur * .6 - a.t), feint: !!a.feint, sell: a.sell || 0, look: a.look || null, tell: (a.tell || 0) - AI.odd * (O.st.odd || 0), blind: blindTo(F, laneOf(O, PUNCH[a.type])) } : null, // an awkward man's punches come from where you don't look: seen later
         recover: O.state === 'punch' ? null : this.t - O.pEnd, lastRes: O.lastRes === 'evaded' || O.lastRes === 'countered' ? 'missed' : O.lastRes,
-        guard: O.bg * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100,
+        guard: O.bg * (.5 + .5 * O.gi), gas: O.stam / Math.max(1, O.stamMax), hurt: hurtNow(O), head: O.head / 100, rs: O.size.rs, reach: O.size.reach, // s2: his arms (the tale of the tape)
+        
         look: { cut: O.cut / 10, cutS: O.cutS, swell: Math.max(O.sw.L, O.sw.R) / 10, swS: O.sw.L > O.sw.R ? 'L' : 'R', body: clamp(O.body, 0, 100) / 100, arms: O.gi, // what's on screen (the eyes, E1): the face (the cut and the worse eye, each with its side), the body meter, worn arms
           fold: O.liverT > 0 || (O.state === 'stun' && O.hitZone === 'body') ? 1 : O.hitZone === 'body' && O.hitKind !== 'block' ? O.hitT * clamp(O.hitPow, 0, 1) : 0, // bent over a body shot
           legs: clamp(1 - O.stam / Math.max(1, O.stamMax) - .4, 0, .6) / .6 * .6 + (1 - clamp(O.body, 0, 100) / 100) * BODY.legs * 2, // heavy, flat feet: the tank and a sinking body
