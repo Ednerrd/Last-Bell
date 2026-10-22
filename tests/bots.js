@@ -65,6 +65,17 @@ module.exports = PU => {
     lungeCounter3: (o, P, s, dt) => { // vs the swarmer, take 4: the right hand on him lunging in; the brain's next power shot is the one it replaced
       if (o.punch && !o.punch.feint && PU[o.punch.type].cat !== 'jab' && s.owe && P.t - s.ctr < 1.5 && !o.punch.counter) { o.punch = null; s.owe = 0; }
       if (!o.punch && P.him.closing > 25 && P.dist < 72 && clear(P) && P.t - (s.ctr || -9) > .8 && R() < 6 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; s.owe = 1; } return o; },
+    // take 6 / 5: timed to the step in (BR.flaw step: the hole opens as each step in starts): he sees the step start (closing over v, after under half of it) and fires inside the beat
+    jabIn5: (o, P, s, dt) => { const c = P.him.closing; if (c > 8 && !s.c) s.e = P.t; s.c = c > 8 || (s.c && c > 4);
+      if (o.punch && !o.punch.feint && PU[o.punch.type].cat === 'jab' && s.owe && P.t - s.j < 1.5 && !o.punch.counter) { o.punch = null; s.owe = 0; }
+      if (!o.punch && P.t - (s.e || -9) < .25 && P.dist < 78 && P.dist > 46 && clear(P) && P.t - (s.j || -9) > .8 && R() < 12 * dt) { o.punch = mk(['jab']); s.j = P.t; s.owe = 1; } return o; },
+    lungeCounter4: (o, P, s, dt) => { const c = P.him.closing; if (c > 25 && !s.c) s.e = P.t; s.c = c > 25 || (s.c && c > 12.5);
+      if (o.punch && !o.punch.feint && PU[o.punch.type].cat !== 'jab' && s.owe && P.t - s.ctr < 1.5 && !o.punch.counter) { o.punch = null; s.owe = 0; }
+      if (!o.punch && P.t - (s.e || -9) < .25 && P.dist < 72 && clear(P) && P.t - (s.ctr || -9) > .8 && R() < 12 * dt) { o.punch = mk([P.dist < 52 ? 'hook' : 'cross'], { counter: true, commit: .6 }); s.ctr = P.t; s.owe = 1; } return o; },
+    overJab2: (o, P, s, dt) => { // take 2: fair (the right hand over his jab replaces the brain's next power shot)
+      if (his(P, e => e.p === 'jab' && e.type !== 'thrown' && e.type !== 'pulled' && e.type !== 'feinted')) s.ctr = P.t;
+      if (o.punch && !o.punch.feint && PU[o.punch.type].cat !== 'jab' && s.owe && P.t - s.go < 1.5 && !o.punch.counter) { o.punch = null; s.owe = 0; }
+      if (P.t - (s.ctr || -9) < .35 && free(P)) { o.punch = mk(['cross'], { counter: true, commit: .6 }); s.ctr = -9; s.go = P.t; s.owe = 1; } return o; },
     overJab: (o, P, s, dt) => { // vs the boxer-puncher: the right hand over his jab (the rest is his own fight)
       if (his(P, e => e.p === 'jab' && e.type !== 'thrown' && e.type !== 'pulled' && e.type !== 'feinted')) s.ctr = P.t;
       if (P.t - (s.ctr || -9) < .35 && free(P)) { o.punch = mk(['cross'], { counter: true, commit: .6 }); s.ctr = -9; } return o; }

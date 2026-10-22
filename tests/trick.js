@@ -4,7 +4,7 @@
 //   TAG=x node tests/trick.js 60 [styles] [on|off|both]   (x4: one line per style/arm to /tmp/trick_x.txt)    node tests/trick.js agg x
 // Also the hole itself: how many times a fight it opens, how long it stays open (s a fight), and the share of the player's punches that land in it.
 const fs = require('fs'), OUT = t => '/tmp/trick_' + t + '.txt';
-const BOT = { slugger: 'jabIn2', outboxer: 'crowd4', swarmer: 'lungeCounter2', counter: 'slipCounter', boxerpuncher: 'overJab' };
+const BOT = { slugger: 'jabIn5', outboxer: 'crowd4', swarmer: 'lungeCounter3', counter: 'slipCounter', boxerpuncher: 'overJab2' };
 for (const x of (process.env.BOTX || '').split(',').filter(Boolean)) { const [st, b] = x.split(':'); BOT[st] = b; }
 if (process.argv[2] === 'agg') { const L = fs.readFileSync(OUT(process.argv[3]), 'utf8').trim().split('\n').map(JSON.parse), A = {};
   for (const o of L) { const k = o.st + ' ' + o.fl + ' ' + o.bot; A[k] = add(A[k] || { st: o.st, fl: o.fl, bot: o.bot }, o); } report(A); return; }
