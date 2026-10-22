@@ -89,3 +89,13 @@ Ed's references are 5 stock images, not committed (watermarked stock). Kept in w
   - **Clean vs blocked vs missed** reads different at a glance: impact flash and sweat spray on clean, a dull glove-on-glove pop on blocked, a whiff and an off-balance step on a miss.
 - **The engine already has most of this.** `resolve()` knows the zone (`P.zone` head/body), the kind (jab, cross, hook, upper), blocked or not, rolled/evaded, and how much leaked (`mult`). Missing: a finer spot (chin vs temple, liver vs ribs). Pick it in render from kind + side, so no engine change.
 - **Where it fits:** Phase 1 (reactions by punch type, contact) and Phase 2 (look, impact FX). Not now: 3D waits for the engine work (ROADMAP item 7).
+
+## Bodies and movement: loose but ready (Ed, Oct 22 2026)
+Ed on the first 3D try: the camera was fine; **the bodies and the movement were the problem: too stiff.** A boxer is relaxed, light on his feet, always moving; the hands are loose but ready, and the guard is only tight when something's coming. Plan for Phase 1-2:
+- **Layers, not poses.** Base guard pose + a rhythm layer (bounce, weight shifting foot to foot, knees soft) + a "life" layer (head never still, shoulders rolling, hands floating and pumping a little, breathing) + punches/defense on top.
+- **A tension dial (0 loose .. 1 shell)** drives the blend: low at range, rising as he closes or reads a punch coming, snaps to full on a block, eases back after. Read off the brain's state (threat, `him.closing`, `him.punch`, hurt, `emo.fear`). Loose hands sit lower and wider and drift; tight hands lock to the chin.
+- **Rhythm by man:** an out-boxer bounces on his toes, a slugger is flat-footed and heavy, a counter man is still but loose, a swarmer bobs and weaves. A gassed man's bounce dies, hands sag, he breathes through the mouth. Hurt: the legs wobble, the rhythm breaks.
+- **Feet never planted for long:** small steps and resets between real moves; planted only to punch.
+- **Snap from loose:** punches start from the relaxed hand and snap, then come home to the guard (the snap reads better from loose).
+- **Bodies:** proper shapes (cel shading, outlines), shoulders and lats, a torso that twists into punches, not tubes.
+- Test: plain gray models first; if they look like boxers when nobody's punching, the rest follows.
