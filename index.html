@@ -1962,6 +1962,10 @@ const AIC = { on: 1, look: .5, bar: .55, gap: 8, hold: 20, workAggr: 1.3, workGa
 const TEACH = { step: .18, keep: .7 };
 // 2a: every fighter has one flaw (BoxerBrain.BR.flaw: the hole, how open by his level). own: the chance it's his style's own (else one of the other four). sheet.flaw sets it (null = none); on 0 = nobody has one
 const FLW = { on: 1, own: .6 };
+// Size s1 (docs/SIZE.md): every man rolls his height and reach (in) off his division (sizeOf, his own dice). rs = 1 + per x (reach - the division's mean reach): every punch's min and max x rs (F.pun), so only the gap between the two men matters
+// div: [height, reach] means by DIVS (research/size.md 7); sd: height sd; ape: reach minus height sd, clamped lo..hi (1.6 with height 2.3 gives the real reach sd ~2.8: a typical gap ~3 in, 7+ about 1 fight in 12); heavy: the fat tail (sd x); lean: reach by style; def: the division when the sheet has none (welter). on 0 = everyone the same arms (the old hash)
+const SIZE = { on: 1, per: .005, sd: 2.3, ape: 1.6, lo: -3, hi: 9, heavy: 1.3, lean: { outboxer: 1.5, swarmer: -1.5 }, def: 4,
+  div: [[64.5, 65.5], [65.5, 67.5], [66.5, 68.5], [67.5, 69], [69.5, 71.5], [71.5, 73.5], [72.5, 74.5], [74, 76], [75.8, 79]] };
 const TEMPO = { at: .3 }; // an exchange is over when the ring has been quiet this long (sim s)
 const STYLE_IN = { at: 54, ev: .4, ctr: .65 };
 const STYLE_ANGLE = { check: .5, p: .17, lost: .32, ev: .8, blk: .85 };   // angle fighter: chance to step off after a combo, how long the other man loses him
@@ -2000,6 +2004,20 @@ function extRaw(P, d) {
 }
 // how well a punch fits the distance, against its own best (1 = sweet spot): the AI reads this before he throws
 const extFit = (P, d) => extRaw(P, d) / (P.kind === 'straight' ? EXT.peak : 1);
+// Size s1: his height and reach, from the sheet (sheet.ht / sheet.reach: the stars, tests) or rolled off the man himself (name, style, stats: the same man is always the same size; no fight dice)
+function sizeOf(sheet) {
+  const dv = SIZE.div[sheet.div] ? sheet.div : SIZE.def, d = SIZE.div[dv], tail = dv === SIZE.div.length - 1 ? SIZE.heavy : 1;
+  let ht = sheet.ht, reach = sheet.reach;
+  if (ht == null || reach == null) {
+    let h = 7; for (const c of String(sheet.name || '') + (sheet.style || '')) h = Math.imul(h ^ c.charCodeAt(0), 0x85EBCA77); for (const k in sheet.stats || {}) h = Math.imul(h ^ (sheet.stats[k] | 0), 0x9E3779B1) + 1;
+    const r = BoxerBrain.mulberry32(h);
+    if (ht == null) ht = d[0] + gaussW(r) * SIZE.sd * tail;
+    if (reach == null) reach = ht + clamp(d[1] - d[0] + gaussW(r) * SIZE.ape * tail, SIZE.lo, SIZE.hi) + (SIZE.lean[sheet.style] || 0);
+  }
+  return { ht, reach, rs: SIZE.on ? 1 + SIZE.per * (reach - d[1]) : 1, h: clamp(ht / d[0], .9, 1.1) };
+}
+// his own punches: every range x his reach scale
+function punOf(rs) { const o = {}; for (const k in PUNCH) o[k] = Object.assign({}, PUNCH[k], { min: PUNCH[k].min * rs, max: PUNCH[k].max * rs }); return o; }
 function extF(P, d) { return EXT.on ? extRaw(P, d) * EXT.k : 1; } // EXT.k keeps the average shot where it was
 function tightJ(D, P, t) { // 1b: the tight jab, his block chance on this punch over his jab (0: not jabbing, not a shot that comes over it)
   if (P.zone !== 'head' || P.kind === 'upper' || (P.kind === 'straight' && P.arm !== 'rear')) return 0;
@@ -2039,7 +2057,7 @@ function mkF(sheet, side) {
     kdR: 0, kd: 0, cut: 0, cutS: null, sw: { L: 0, R: 0 }, unanswered: 0, unT: 0, counterWin: 0, downP: 0,
     strategy: 'auto', bob: R() * 6,
     tot: { thrown: { jab: 0, power: 0, body: 0 }, landed: { jab: 0, power: 0, body: 0 }, dmg: 0, taken: 0 },
-    rs: null,
+    rs: null, ...(z => ({ size: z, pun: punOf(z.rs) }))(sizeOf(sheet)),
     // guard + ring IQ
     guard: GUARDS[sheet.guard] ? sheet.guard : 'standard', gSkill: 1, iq: ringIQ(sheet), gi: 1, giWarn: 0, defZ: 'head',
     trapT: 0, spin: false, esc: null, resetT: 0, lastRes: null, lastCombo: null,
@@ -2658,7 +2676,7 @@ class Fight {
   stickJab(F, dt) {
     const st = F.st; if (!st.stick || F.slideT > 0) return false;
     const O = F.op, v = vec(F, O), d = v.d, appr = -(O.vx * v.ux + O.vz * v.uz);
-    if (appr < 18 || d > Math.min(F.want, PUNCH.jab.max + 4) || d < PUNCH.jab.min + 10 || O.state === 'stun' || O.state === 'clinch') return false;
+    if (appr < 18 || d > Math.min(F.want, F.pun.jab.max + 4) || d < F.pun.jab.min + 10 || O.state === 'stun' || O.state === 'clinch') return false;
     if (R() > st.stick * STYLE_STICK * (.5 + .5 * iqK(F)) * stamFac(F) * dt) return false;
     F.stickT = .7; F.queue = R() < .3 ? ['jab'] : [];
     this.startPunch(F, 'jab'); if (F.act) F.act.stick = true; R(); // the old AI's next-decision roll (same.js hash)
@@ -2684,7 +2702,7 @@ class Fight {
     else if (last === 'evaded' && F.lastDef === 'slip' && d < 60 && R() < .5 * k) nx = 'hook';                 // hook where he slipped to
     else if (last === 'evaded' && F.lastDef === 'duck' && d < 54 && R() < .5 * k) nx = 'uppercut';             // he ducks, come up the middle
     // too close to get the straight off: a smart man turns it into a hook or an uppercut
-    { const P = PUNCH[nx]; if (P.kind === 'straight' && extFit(P, d) < .8 && R() < EXT.swap * k) nx = P.zone === 'body' ? 'bodyHook' : P.arm === 'lead' ? 'hook' : d < 54 ? 'uppercut' : 'rhook'; }
+    { const P = F.pun[nx]; if (P.kind === 'straight' && extFit(P, d) < .8 && R() < EXT.swap * k) nx = P.zone === 'body' ? 'bodyHook' : P.arm === 'lead' ? 'hook' : d < 54 ? 'uppercut' : 'rhook'; }
     // he is hurt: keep the punches coming
     if (last === 'landed' && (O.state === 'stun' || O.head < O.headMax * .25) && F.queue.length === 0 && F.stam > 12 && R() < .35 + .45 * k)
       F.queue.push(d < 58 ? pick(['hook', 'uppercut', 'cross']) : 'cross');
@@ -2711,7 +2729,7 @@ class Fight {
     if (A.queue.length && dist(A, D) < 58 && R() < STYLE_SPOIL.tie * D.st.spoil * (.5 + .5 * iqK(D))) this.startClinch(D);
   }
   resolve(A, D, a) {
-    const P = PUNCH[a.type]; const d = dist(A, D);
+    const P = A.pun[a.type]; const d = dist(A, D);
     if (D.state === 'down') return;
     if (d > P.max + 4 + (P.cat !== 'jab' ? A.st.leap || 0 : 0) || d < P.min - 10) { this.miss(A, D, a, 'range'); return; }
     // raw skill: low accuracy/speed fighters throw wild and miss clean air, worse when tired
@@ -2870,7 +2888,7 @@ class Fight {
     }
   }
   miss(A, D, a, why, def) {
-    const P = PUNCH[a.type];
+    const P = A.pun[a.type];
     A.stam = Math.max(0, A.stam - P.cost * .35); A.work = (A.work || 0) + P.cost * .35;
     { // how it missed: short / jammed (range), wild, or what he did with it. Straights are slipped to the side they arrive on
       const ln = laneOf(A, P), dd = dist(A, D);
@@ -3207,7 +3225,7 @@ function genFighter(divIdx, rating, points, age) {
   return {
     id: uid('f'), name: pick(FIRST) + ' ' + pick(LAST), nick: R() < .7 ? pick(NICKS) : '',
     style, guard: rollGuard(style), stance: R() < .22 ? 'southpaw' : 'orthodox', rating, stats: genStats(rating, style),
-    points: Math.round(points), age: age || ri(22, 34), record: genRecord(points), look: randLook(divIdx)
+    points: Math.round(points), age: age || ri(22, 34), record: genRecord(points), look: randLook(divIdx), div: divIdx
   };
 }
 // ---------- legends: one per division, the only man in the world who fights his style. Beat him and it is yours to learn ----------
@@ -3217,20 +3235,20 @@ function gearItem(kind, id) { return GEAR[kind].find(g => g.id === id) || GEAR[k
 /* ---------- the gym: you are the coach. A stable of fighters, one calendar, a week at a time ---------- */
 // the 2026 pound-for-pound top 10 (The Ring, June 2026), names changed a little. Each one sits near the top of his division
 const P4P_2026 = [
-  { name: 'Naoki Inouye', nick: 'The Monster', div: 2, style: 'boxerpuncher', guard: 'standard', stance: 'orthodox', rating: 95, age: 33, rec: [33, 0, 27] },
-  { name: 'Aleksandr Usykov', nick: 'The Cat', div: 8, style: 'feinter', guard: 'standard', stance: 'southpaw', rating: 94, age: 39, rec: [25, 0, 17] },
-  { name: 'Shakir Stephenson', nick: '', div: 3, style: 'counter', guard: 'philly', stance: 'southpaw', rating: 93, age: 29, rec: [25, 0, 11] },
-  { name: 'Jessie Rodrigues', nick: 'Bam', div: 1, style: 'boxerpuncher', guard: 'standard', stance: 'southpaw', rating: 93, age: 26, rec: [24, 0, 17] },
-  { name: 'Daniel Benavides', nick: 'The Mexican Monster', div: 7, style: 'swarmer', guard: 'high', stance: 'orthodox', rating: 92, age: 29, rec: [32, 0, 26] },
-  { name: 'Dmitri Bivolov', nick: '', div: 6, style: 'outboxer', guard: 'standard', stance: 'orthodox', rating: 92, age: 35, rec: [25, 1, 12] },
-  { name: 'Junta Nakatano', nick: 'Big Bang', div: 1, style: 'boxerpuncher', guard: 'standard', stance: 'southpaw', rating: 91, age: 28, rec: [32, 1, 24] },
-  { name: 'Devon Haynie', nick: 'The Dream', div: 4, style: 'jabgrab', guard: 'standard', stance: 'orthodox', rating: 91, age: 27, rec: [33, 0, 15] },
-  { name: 'Jaren Ennison', nick: 'Boots', div: 5, style: 'switch', guard: 'standard', stance: 'orthodox', rating: 92, age: 29, rec: [36, 0, 32] },
-  { name: 'Oscar Collado', nick: 'El Pupilo', div: 0, style: 'body', guard: 'standard', stance: 'southpaw', rating: 90, age: 29, rec: [15, 0, 12] }
+  { name: 'Naoki Inouye', nick: 'The Monster', div: 2, style: 'boxerpuncher', guard: 'standard', stance: 'orthodox', rating: 95, age: 33, rec: [33, 0, 27], ht: 65, reach: 67.5 },
+  { name: 'Aleksandr Usykov', nick: 'The Cat', div: 8, style: 'feinter', guard: 'standard', stance: 'southpaw', rating: 94, age: 39, rec: [25, 0, 17], ht: 75, reach: 78 },
+  { name: 'Shakir Stephenson', nick: '', div: 3, style: 'counter', guard: 'philly', stance: 'southpaw', rating: 93, age: 29, rec: [25, 0, 11], ht: 68, reach: 68 },
+  { name: 'Jessie Rodrigues', nick: 'Bam', div: 1, style: 'boxerpuncher', guard: 'standard', stance: 'southpaw', rating: 93, age: 26, rec: [24, 0, 17], ht: 64, reach: 67 },
+  { name: 'Daniel Benavides', nick: 'The Mexican Monster', div: 7, style: 'swarmer', guard: 'high', stance: 'orthodox', rating: 92, age: 29, rec: [32, 0, 26], ht: 74, reach: 74.5 },
+  { name: 'Dmitri Bivolov', nick: '', div: 6, style: 'outboxer', guard: 'standard', stance: 'orthodox', rating: 92, age: 35, rec: [25, 1, 12], ht: 72, reach: 72 },
+  { name: 'Junta Nakatano', nick: 'Big Bang', div: 1, style: 'boxerpuncher', guard: 'standard', stance: 'southpaw', rating: 91, age: 28, rec: [32, 1, 24], ht: 68, reach: 68.5 },
+  { name: 'Devon Haynie', nick: 'The Dream', div: 4, style: 'jabgrab', guard: 'standard', stance: 'orthodox', rating: 91, age: 27, rec: [33, 0, 15], ht: 68, reach: 71 },
+  { name: 'Jaren Ennison', nick: 'Boots', div: 5, style: 'switch', guard: 'standard', stance: 'orthodox', rating: 92, age: 29, rec: [36, 0, 32], ht: 70, reach: 74 },
+  { name: 'Oscar Collado', nick: 'El Pupilo', div: 0, style: 'body', guard: 'standard', stance: 'southpaw', rating: 90, age: 29, rec: [15, 0, 12], ht: 62, reach: 61 }
 ];
 function genStar(i) {
   const S = P4P_2026[i], f = genFighter(S.div, S.rating, 410 + rnd(0, 30), S.age);
-  return Object.assign(f, { id: 'S' + i, name: S.name, nick: S.nick, style: S.style, guard: S.guard, stance: S.stance, legend: true, star: true, stats: genStats(S.rating, S.style), record: { w: S.rec[0], l: S.rec[1], d: 0, ko: S.rec[2] } });
+  return Object.assign(f, { id: 'S' + i, name: S.name, nick: S.nick, style: S.style, guard: S.guard, stance: S.stance, legend: true, star: true, ht: S.ht, reach: S.reach, stats: genStats(S.rating, S.style), record: { w: S.rec[0], l: S.rec[1], d: 0, ko: S.rec[2] } });
 }
 /* ===== LAST BELL : render ===== */
 const Render = (() => {
@@ -4983,7 +5001,7 @@ function labMake(pickV, guardV, div) {
   f.look = randLook(div);
   return f;
 }
-function labSheet(f) { return { name: f.name, nick: f.nick, style: f.style, guard: f.guard, stance: f.stance, stats: f.stats, look: f.look, wear: 0, record: f.record || { w: 0, l: 0, d: 0 }, exp: f.record ? f.record.w + f.record.l + f.record.d : 0 }; }
+function labSheet(f, div) { return { name: f.name, nick: f.nick, style: f.style, guard: f.guard, stance: f.stance, stats: f.stats, look: f.look, div, ht: f.ht, reach: f.reach, wear: 0, record: f.record || { w: 0, l: 0, d: 0 }, exp: f.record ? f.record.w + f.record.l + f.record.d : 0 }; }
 function labDesc(f) { return `${esc(STYLES[f.style].label)}, ${esc(gLabel(f.guard).toLowerCase())}, ${f.stance}, OVR ${Math.round(f.rating)}`; }
 function labNew(rematch) {
   if (!rematch || !LAB.last) {
@@ -4996,7 +5014,7 @@ function labNew(rematch) {
 function labFight(L) {
   if (rafId) cancelAnimationFrame(rafId);
   Comm.stop && Comm.stop();
-  const A = labSheet(L.A), B = labSheet(L.B), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
+  const A = labSheet(L.A, L.div), B = labSheet(L.B, L.div), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
   F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6 });
   F.f.forEach(X => { X.brain.debug = true; }); // the thought log for the debug panel (no dice: the fight plays the same)
   FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null, calls: [], gas0: 1 };
@@ -5004,7 +5022,7 @@ function labFight(L) {
   if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
   const ga = gearItem('gloves', A.look.gloves).c;
   if (colorDist(ga, gearItem('gloves', B.look.gloves).c) < CLASH) { const alt = GEAR.gloves.filter(g => colorDist(g.c, ga) >= CLASH); if (alt.length) B.look = Object.assign({}, B.look, { gloves: pick(alt).id }); }
-  FX.looks = [A.look, B.look];
+  FX.looks = [A.look, B.look].map((l, i) => Object.assign({}, l, { h: F.f[i].size.h })); // Size s1: drawn at his real height
   Render.reset(); Comm.reset();
   const nm = s => esc(s.name.split(' ').slice(-1)[0]);
   show(`<div class="fight">
