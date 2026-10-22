@@ -99,3 +99,13 @@ Ed on the first 3D try: the camera was fine; **the bodies and the movement were 
 - **Snap from loose:** punches start from the relaxed hand and snap, then come home to the guard (the snap reads better from loose).
 - **Bodies:** proper shapes (cel shading, outlines), shoulders and lats, a torso that twists into punches, not tubes.
 - Test: plain gray models first; if they look like boxers when nobody's punching, the rest follows.
+
+## Code first, plug-and-play later (Ed, Oct 22 2026)
+Ed's call: Claude builds the whole 3D fight in code first (bodies, motion, camera, the show), no downloads. Real models and recorded motion come later, only where they make it look better, and they must drop in with no rewrite.
+- **The skeleton contract.** The code-built man uses a standard humanoid skeleton (Mixamo bone names: hips, spine, spine1, spine2, neck, head, shoulder/arm/forearm/hand, upleg/leg/foot/toe, both sides). Any rigged model on that skeleton (Mixamo, MakeHuman/MPFB, a bought pack) swaps in as the body.
+- **Three layers, each swappable:**
+  1. *Body*: the mesh. Code-built now; a model file later.
+  2. *Motion source per move*: a code pose curve now (load, snap, hold, retract; the loose-but-ready layers above). Later any single move (a hook, a knockdown) can be a recorded clip instead; the rest stays code. One table maps move -> source.
+  3. *On top, always code*: timing stretched to the engine's punch (impact at the 60% resolve), the glove steered onto the spot the engine says it hit, feet planted, springs on the head and shoulders, guard and style tweaks, hurt and gas.
+- **Later options, ranked:** filmed clips (Ed shadowboxing or a real boxer on video, turned into motion data by Rokoko Vision / DeepMotion; Claude reads the numbers, doesn't need to watch), Mixamo (free, Adobe login, generic moves, no guards like peekaboo/philly), Quaternius (free, cartoony), paid boxing packs (Fab, ActorCore; check the license for web).
+- **Engine untouched throughout:** render only, the hash holds.
