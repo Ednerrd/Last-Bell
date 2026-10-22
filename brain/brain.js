@@ -733,7 +733,7 @@ class Brain {
   find(P, sdt) { const F = BR.find, L = P.him.look; if (!F.on || this.fnd || !L) return;
     this.fz *= Math.exp(-sdt / F.tau); this.fzL = this.fW(P); const h = L.hole; if (!h || !F.vis[h.f]) return;
     this.fzF = h.f; this.fzK = Math.max(this.fzK || 0, Math.min(1, h.k / F.k0)); this.fz += F.rate * F.vis[h.f] * this.fzL * Math.min(1, h.k / F.k0) * sdt; this.sure(P.round); }
-  sure(rd) { if (this.fz < 1 || this.fnd) return; this.fnd = { f: this.fzF, t: this.t, ct: this.ct, rd, k: this.fzK || .5 }; this.note('found his flaw: ' + this.fzF); } // k: the biggest he saw it open (x k0): a small hole isn't worth changing his fight for (BR.work)
+  sure(rd) { if (this.fz < 1 || this.fnd) return; this.fnd = { f: this.fzF, t: this.t, ct: this.ct, rd, k: this.fzK || .5 }; this.note('found his flaw: ' + this.fzF); if (this.eyeLog.length < 40) this.eyeLog.push({ c: 'flaw_' + this.fzF, v: 1, t: this.t, round: rd, clock: null, first: true, big: true }); } // k: the biggest he saw it open (x k0): a small hole isn't worth changing his fight for (BR.work)
   // E4: what he believes about the other man, from his eyes (BR.eye.e4) or the truth
   perc(P) {
     const H = P.him, L = H.look, B = BR.eye;
