@@ -1,6 +1,6 @@
 # Size: height, reach, leverage (design draft, Oct 22)
 
-ROADMAP item 3. The last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1). This is the plan; nothing is built. **Ed's calls are at the bottom.**
+ROADMAP item 3. The last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1). This is the plan; nothing is built. Ed's calls answered (bottom): next is s1.
 
 ## What's in today
 - Every man has the same arms. The jab reaches 78, the cross 76, hooks 56-60, uppercuts 50-54 (`PUNCH` in the engine, `PUNCHES` in the brain, the same numbers twice).
@@ -43,17 +43,17 @@ Perception gets `me.rs` and `him.rs` (he can see the other man's arms; it's on t
 - **Leaning in the clinch, leverage, weight** (`research/size.md` F): it lives in the clinch rework, which moved after 3D. Inside one division the weights are close anyway (only heavyweight has real gaps).
 - **The tall man inside on purpose** (Fundora, section E): a trait, so it goes with traits (after 3D).
 - **The tall man's retaliation** (he loses the range fight and comes forward square, the counter window): a brain idea for the design pass after 3D (`emo.frus`).
-- Tale of the tape, "reach +6" on screen: parked WIP, not part of this step (Ed's call 5 below).
+- Tale of the tape, "reach +6" on screen: parked WIP, not part of this step (Ed's call 5).
 
 ## The steps (one per session)
 - **s1, sizes and arms (medium effort).** Roll `ht`/`reach` (own dice, overrides), `rs` scales every punch's range in the host, `look.h` from `ht`. The brain still thinks everyone is 78: this measures the raw effect of longer arms alone. New `tests/size.js`: mirror matches with a forced gap 0/4/8/12 in, by division band. Moves the hash.
 - **s2, the brain knows (high effort).** `me.rs`/`him.rs` in Perception (typed, `tsc`), own-reach checks, the danger line, the band for the long man, the two short-man plans, gated by level. Sims vs the table above.
 - **s3, the balance re-check (medium).** The full `check.sh` (styles 48-53, one level down 15-20, audit 52/15/29, stops 30-35), `size.js` on the table, swarmer short vs outboxer tall at equal skill: 42-50% for the short man (over 50 = entry too cheap, under 38 = too costly). Then CLAUDE.md, ROADMAP, and 3D is next.
 
-## Ed's calls (answer on the phone, short is fine)
-1. **How strong:** the table above (half the raw boxing numbers, under one skill level)? *My pick: yes.*
-2. **Reach relative to the division** (every division averages the same 78 jab, only the gap matters) or **absolute** (a flyweight's jab is 71, a heavyweight's 85, same ring)? *My pick: relative. Absolute changes every division's fights and the ring isn't scaled.*
-3. **Style and size:** do out-boxers roll a bit longer and swarmers a bit shorter (real life leans that way), or no link? *My pick: no link for now. A link stacks on the style balance we just finished.*
-4. **Leverage, the lean and Fundora** wait for the clinch rework and traits (after 3D). OK?
-5. **Show the reach** before the fight: one line at the intro ("Reach: +6 for Reyes"), or wait for the tale of the tape? *My pick: one intro line in s1, so you can coach for it. It's tiny and render-only.*
-6. **The P4P stars** get their real heights and reaches (Inoue 65/67.5, Usyk 75/78, Bivol 72/72...)? *My pick: yes, it's a data table.*
+## Ed's calls (answered Oct 22)
+1. **Strength: half of real** (the table above, well under one skill level).
+2. **Reach relative to the division**: every division averages the 78 jab, only the gap matters.
+3. **Style and size: the realistic lean** (Ed: "the realistic choice based on research"). Out-fighters need reach, in-fighters are the short men who bob under it (`research/size.md` 2-3: Wikipedia, Tyson, Frazier; no hard numbers, so keep it small): the reach mean by style, out-boxer +1.5 in, swarmer -1.5, the rest 0 (the field's mean holds). The ape and height rolls stay as they are. s3 checks styles 48-53 with it on; if it knocks one out, shrink it before touching anything else.
+4. **Leverage, the lean and Fundora wait** for the clinch rework and traits (after 3D).
+5. **No intro line**: the reach shows when the tale of the tape comes back (parked WIP, `claude/bold-faraday-bryk6t`). Nothing on screen in this step but the drawn height.
+6. **The P4P stars get their real sizes**: a small table on `P4P_2026` (Inoue 65/67.5, Usyk 75/78, Bivol 72/72 ...), Wikipedia infobox figures.
