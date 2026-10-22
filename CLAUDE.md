@@ -4,7 +4,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 
 **The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the only AI: the old engine AI (`decide()`/`react()`) was retired Oct 16. `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
-**What to do next: `ROADMAP.md`** (the only to-do list). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
+**What to do next: `ROADMAP.md`** (the only to-do list; next: the Size design pass at max, design only). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (`same.js 40` now **a7e40673**, Oct 22: 2a b3, he works the flaw he found; `BR.work.on=0` gives back 378e647f (b1/b2), `FLW.on=0` the flawless 75856492 / full f61e10ca, step e the judges).
+- Render-only changes must keep the `same.js` hash (`same.js 40` now **4fba7bcf**, Oct 22: 2a done, he finds and works the flaw; `BR.work.on=0` gives back 378e647f (b1/b2), `FLW.on=0` the flawless 75856492 / full f61e10ca, step e the judges).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -81,7 +81,7 @@ Audit: ~52 thrown / ~15 landed / ~29% connect per round (Ed, Oct 14). "Thrown" =
 - Stops **30–35%** (Ed, Oct 21: ~32%), spread earlier (`research/numbers.md`). KDs a fight real .4–.6, body KDs 5–8%. Cut stops ~1.2–1.7%, eye stops ~0.3%.
 - Decisions (`tests/judges.js`): split rounds ~27%, split+majority ~28% of decisions, draws ~5% (Sloan cards, `research/numbers.md` 5).
 - Styles 48–53% vs the field, specials 48–54, guards @82 vs standard ~48–58. One level down wins 15–20%. Drama (close fights): a lead change ~40%, comebacks ~11% (Ed). AI corner vs a silent one ~+3.6.
-- **Latest full check** (2a b1, flaws on, 40 = 378e647f, Oct 22; two checks on the same code, `b1` here and in a parallel session, pooled): audit ~51.2 / 14.8 / 28.9%, stops ~30.5, KDs .43-.47, styles 47.2-52.7 (swarmer 48.9 / 47.2: ~48, at the edge; slugger 51.3 / 52.7), one level down IvN 15.2 (900, Novice hole .6; flaws off 15.3: r1's 18.3 read high) / PvI 16.0 and 13.3 (~14.6, a hair under) / WvP 17.7 and 17.0. Watch the swarmer and PvI through b2-b4. Before it, flaws off (`check.sh r1`, hash f61e10ca, Oct 22, review after step e): 51.1 / 14.4 / 28.2% (jab 22.1%, head power 29.6), stops 29.2% (finish 33.5), KDs .43, body KDs 3.8% (swings 4-10% run to run: noise), styles 49.3–51.4, one level down (300) IvN 18.3 / PvI 16.0 / WvP 19.7. Judges 2000: split rounds 28.5, split+majority 26.2, draws 4.9. Cheese hard: haymaker 61.9 (low), bodyOnly 64.5. History: `docs/BRAIN.md`, `docs/NOTES.md` "Balance history".
+- **Latest full check** (2a done, hash 4fba7bcf, Oct 22; check `b3b` + reruns after the last fix): styles 48.3-53.0 (outboxer 53.0, 51.4 on his pairs after the dig fix; swarmer 48.7, counter 48.3), audit 51.6 / 15.0 / 29.1%, stops 33.3-33.5, KDs .49, body KDs 7.1%, one level down IvN 15.6 (900) / PvI 15.0 / WvP 19.3. Before (2a b1, 378e647f): 51.2 / 14.8 / 28.9%, stops ~30.5, styles 47.2-52.7. Flaws off (`r1`, f61e10ca): 51.1 / 14.4 / 28.2%, stops 29.2, styles 49.3-51.4. Judges 2000 (r1): split rounds 28.5, split+majority 26.2, draws 4.9. Cheese hard (r1): haymaker 61.9 (low), bodyOnly 64.5. History: `docs/BRAIN.md`, `docs/NOTES.md` "Balance history".
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
