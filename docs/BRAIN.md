@@ -1107,6 +1107,13 @@ Hash 4fba7bcf (`same.js 40`; `BR.work.on=0` gives back 378e647f, the b1/b2 hash)
 - Other sessions today, all on main: the research session above (`claude/trusting-goldberg-l32aqq`, branch = main); this session's cleanup (11 archived). Still idle, not archived (Ed's call): Weekly Resets countdown (it drafted Ed's 2a prompt: done), YouTube video links (YT blocked there), Brain interface with Fight Night Champion, Planet escape factory game, and the YouTube videos to pull session (done, pushed).
 
 
+### Oct 22, Size s2 done (handoff)
+Hash 40 37081a79 (`BoxerBrain.BR.size.on=0` gives back s1, 118b22b1). Build and numbers: `docs/SIZE.md` "s2, built"; design (with `research/dynamic.md` folded in): "The brain: s2 design".
+- The brain thinks in inches (the gap, off the tale of the tape), the ring in units (own-reach checks exact). Ed's call: the tall man fighting inside is a level-gated mistake now (`BR.size.small`), the trait waits for traits.
+- Counter-puncher 47.4 -> 49.1 on his pairs (48.5 in the full styles). Check `s2b`: styles 48.5-52.1, audit 51.7 / 14.9 / 28.7%, stops 30.7, KDs .4-.5. `size.js`: 4 in 50.3, 8 in 54.2 (the short man's plans took ~2 back; the table wants 52-53 / 56).
+- **Next: s3, the pre-3D baseline (medium):** the whole check (`check.sh` s a l f sp g, judges, cheese, drama, size), knobs only for what's out of band (`per` .006 if size should come up; stops sit at 30.7, KDs at the low edge). Not checked in s2: one level down (the plans are gated by level), finish, specials, guards.
+- New research since the design (another session, Oct 22): `research/skillr.md` #22 (the long man probes, posts and pins, clinches to reset) and #23 (the short man's lunge with a level change): after 3D with the brain pass.
+
 ### Oct 22, Size s1 done (handoff)
 Hash 40 118b22b1 (`SIZE.on=0` gives back 4fba7bcf). Numbers and the build: `docs/SIZE.md` "s1, built".
 - Every man rolls ht/reach (own dice), the host scales every punch's range by `rs` (`F.pun`), drawn at his height; the P4P stars carry real sizes. The brain still thinks everyone reaches 78.

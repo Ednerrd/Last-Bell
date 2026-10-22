@@ -78,6 +78,15 @@ Hash 40 118b22b1 (`SIZE.on=0` gives back 4fba7bcf).
 - **The counter-puncher drops ~2 with size whatever the lean** (48.3 before s1): his game is exact range, and his brain still thinks every man reaches 78. Short, his counters fall short; long, he passes on counters he'd land. s2 (own reach in the brain) is the fix; re-read him first in s2.
 - KDs .39 at the bottom edge of .4-.6 (was .49): watch in s3.
 
+## s2, built (Oct 22)
+Hash 40 **37081a79** (`BoxerBrain.BR.size.on=0` gives back s1, 118b22b1).
+- Perception `me.rs/reach`, `him.rs/reach` (typed). Brain: `size(P)` each frame (rs, hrs, the gap in inches, the plans once a round), `mx(p)` his own reach, `danger()` the other man's jab x his rs. Own-reach checks in `changeFor`, the counters (`counterFor`, the fallback that reaches), `pickCombo` (first punch, the rest, the working range), `fitReach`.
+- Knobs `BR.size`: plan from a 3 in gap (`long`, sure by `full` 6), strength by the eye (`k.range` .35 -> .85: Novice none, World class all). The long man: `szL` (jab share x `jab` .6), `szO` = szL x how outside his style is (range target to the end of his jab - `end` 1, the double step `dbl` .8 when the man walks in inside `danger + step`, pivot `piv`); on the ropes it halves. The mistake: `small` .5 x (1 - eye) a round, range to `smallR` 54. The short man: plan by style (`tr.range` < .5 'in', else 'out'), World class flips after a lost round (`sw` x eye^2); 'in': jab at the door (`jabIn`), inside the danger line - `inD` around the mountain (`mount`) and dig (`dig`); 'out': range to `danger + out` 2, output x (1 - `wait` .15), the draw bait x (1 + `draw`).
+- **Counter-puncher** (his 4 pairs, 300 each, size on vs off): **47.4 -> 49.1**. His counters know his arms.
+- **`size.js`** (rating 80, 1200 a gap, brain on): 4 in **50.3**, 8 in **54.2** (off, pooled with s1: 52.7 / 55.9). The short man's plans take ~2 points back; a touch under the table (52-53 / 56). s3's knob if it wants it: `per` up a hair (.006), not the plans.
+- **Check `s2b`** (styles 2x300/pair + audit 3x500): **styles 48.5-52.1** (bp 52.1, outboxer 50.5, slugger 50.2, swarmer 48.7, counter 48.5: all in band, tighter than s1's 46.7-53.8), audit 51.7 / 14.9 / 28.7%, stops 30.7 (low half of 30-35), KDs .4-.5. Levels, finish, specials, guards not run: s3 (the pre-3D baseline) runs them all.
+- Not built (kept for after 3D): the short man's lunge as a size tool (`research/skillr.md` #23), probing the distance with the lead hand and pinning (#22), the long man's roughness inside, read the feet, exit or commit.
+
 ## Ed's calls (answered Oct 22)
 1. **Strength: half of real** (the table above, well under one skill level).
 2. **Reach relative to the division**: every division averages the 78 jab, only the gap matters.
