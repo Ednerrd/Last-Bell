@@ -64,7 +64,10 @@ Reach stretches every punch a man throws. The long man gets a strip of floor whe
 ## The steps (one per session)
 - **s1, sizes and arms (medium effort).** Roll `ht`/`reach` (own dice, overrides), `rs` scales every punch's range in the host, `look.h` from `ht`. The brain still thinks everyone is 78: this measures the raw effect of longer arms alone. New `tests/size.js`: mirror matches with a forced gap 0/4/8/12 in, by division band. Moves the hash.
 - **s2, the brain knows (high effort).** `me.rs`/`him.rs` in Perception (typed, `tsc`), own-reach checks, the danger line, the band for the long man, the two short-man plans, gated by level. Sims vs the table above.
-- **s3, the balance re-check (medium).** The full `check.sh` (styles 48-53, one level down 15-20, audit 52/15/29, stops 30-35), `size.js` on the table, swarmer short vs outboxer tall at equal skill: 42-50% for the short man (over 50 = entry too cheap, under 38 = too costly). Then CLAUDE.md, ROADMAP, and 3D is next.
+- **s3, the pre-3D baseline (medium; Ed, Oct 22: a full test + a light review, one session).** 3D is render only, so these numbers stand until the brain pass after 3D: make them complete.
+  - Full test: `check.sh` with every part (s a l f sp g: styles 48-53, specials 48-54, guards ~48-58, one level down 15-20, audit 52/15/29, stops 30-35, KDs .4-.6), judges (`judges.js`), cheese hard + expert (haymaker not rechecked since 2a), drama (lead change ~40%, comebacks ~11%), `size.js` on the table, swarmer short vs outboxer tall at equal skill: 42-50% for the short man (over 50 = entry too cheap, under 38 = too costly).
+  - Light review (no new features): anything out of band gets a knob only (the counter-puncher, KDs); docs and ROADMAP agree; branch list current; `tsc` clean; the hash written down as the pre-3D baseline. No deep code review (3D doesn't touch the engine).
+  - Then CLAUDE.md, ROADMAP, and 3D is next.
 
 ## s1, built (Oct 22)
 Hash 40 118b22b1 (`SIZE.on=0` gives back 4fba7bcf).
