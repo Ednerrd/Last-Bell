@@ -1964,7 +1964,7 @@ const TEACH = { step: .18, keep: .7 };
 const FLW = { on: 1, own: .6 };
 // Size s1 (docs/SIZE.md): every man rolls his height and reach (in) off his division (sizeOf, his own dice). rs = 1 + per x (reach - the division's mean reach): every punch's min and max x rs (F.pun), so only the gap between the two men matters
 // div: [height, reach] means by DIVS (research/size.md 7); sd: height sd; ape: reach minus height sd, clamped lo..hi (1.6 with height 2.3 gives the real reach sd ~2.8: a typical gap ~3 in, 7+ about 1 fight in 12); heavy: the fat tail (sd x); lean: reach by style; def: the division when the sheet has none (welter). on 0 = everyone the same arms (the old hash)
-const SIZE = { on: 1, per: .005, sd: 2.3, ape: 1.6, lo: -3, hi: 9, heavy: 1.3, lean: { outboxer: 1.5, swarmer: -1.5 }, def: 4,
+const SIZE = { on: 1, per: .005, sd: 2.3, ape: 1.6, lo: -3, hi: 9, heavy: 1.3, lean: { outboxer: .75, swarmer: -.75 }, def: 4,
   div: [[64.5, 65.5], [65.5, 67.5], [66.5, 68.5], [67.5, 69], [69.5, 71.5], [71.5, 73.5], [72.5, 74.5], [74, 76], [75.8, 79]] };
 const TEMPO = { at: .3 }; // an exchange is over when the ring has been quiet this long (sim s)
 const STYLE_IN = { at: 54, ev: .4, ctr: .65 };
