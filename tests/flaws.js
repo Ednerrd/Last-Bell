@@ -6,14 +6,14 @@
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) : '-';
 const fs = require('fs'), OUT = t => '/tmp/flaws_' + t + '.txt';
 const BOT = { slugger: 'jabIn2', outboxer: 'crowd4', swarmer: 'lungeCounter2', counter: 'slipCounter', boxerpuncher: 'overJab' };
-for (const x of (process.env.BOTX || '').split(',').filter(Boolean)) { const [st, b] = x.split(':'); BOT[st] = b; } // BOTX=slugger:jabIn tries another bot; ARMS=X skips the straight arms
+for (const x of (process.env.BOTX || '').split(',').filter(Boolean)) { const [st, b] = x.split(':'); BOT[st] = b; } // BOTX=slugger:jabIn tries another bot; ARMS=X skips the straight arms (S: the exploit's); FL=1 only the flaw-on arms (0: off)
 if (process.argv[2] === 'agg') { const L = fs.readFileSync(OUT(process.argv[3]), 'utf8').trim().split('\n').map(JSON.parse), A = {};
   for (const o of L) { const k = o.st + ' ' + o.fl + ' ' + o.bot, a = A[k] = A[k] || { st: o.st, fl: o.fl, bot: o.bot }; for (const q in o) if (typeof o[q] === 'number') a[q] = (a[q] || 0) + o[q]; } report(A); return; }
 process.env.PATCH = (process.env.PATCH || '') + ';globalThis.__BB=BoxerBrain;';
 const S = require('./sim.js'), BB = globalThis.__BB, BOTS = require('./bots.js')(BB.PUNCHES);
 const N = +process.argv[2] || 150, STS = (process.argv[3] || Object.keys(BOT).join(',')).split(',');
 const had = {}; if (process.env.TAG && fs.existsSync(OUT(process.env.TAG))) for (const l of fs.readFileSync(OUT(process.env.TAG), 'utf8').trim().split('\n')) if (l) { const o = JSON.parse(l), k = o.st + ' ' + o.fl + ' ' + o.bot; had[k] = (had[k] || 0) + 1; }
-for (const st of STS) for (const fl of [0, 1]) for (const bot of ['none', BOT[st]].filter(b => !process.env.ARMS || (b === 'none') === (process.env.ARMS === 'S'))) {
+for (const st of STS) for (const fl of (process.env.FL ? [+process.env.FL] : [0, 1])) for (const bot of ['none', BOT[st]].filter(b => !process.env.ARMS || (b === 'none') === (process.env.ARMS === 'S'))) {
   if ((had[st + ' ' + fl + ' ' + bot] || 0) >= (+process.env.PROCS || 4)) continue; // resumable: after a restart, rerun the same line (PROCS = how many processes you run)
   const o = { st, fl, bot, n: 0, pw: 0, d: 0, ko: 0, pL: 0, bL: 0, pT: 0, bT: 0 };
   for (let i = 0; i < N; i++) {
