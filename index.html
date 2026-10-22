@@ -501,7 +501,13 @@ const BR = {
   // f1b, the hands tell the truth (Ed): a body-hurt man clamps his elbows to his ribs, the head opens. at .. full: how far his body meter is gone before it starts .. in full; hit: each power shot
   // that lands downstairs (fades, tau s of clock, hitMax at most); the other man: see (the guard he sees drops this much at a full clamp seen), up (go upstairs), open (an opening)
   // 1b, the long guard (research/longguard.md): by style (a trait: profile.traits.post wins), only out at long range (near .. far), not hurt, gas over gas; how well: his jab + range skill (q, low .. high)
-  size: { on: 1 }, // Size s2 (docs/SIZE.md): the brain knows his own reach and the other man's (0: everyone reaches 78, the s1 brain)
+  size: { on: 1, // Size s2 (docs/SIZE.md): the brain knows his own reach and the other man's (0: everyone reaches 78, the s1 brain)
+    long: 3, full: 6, eye: [.35, .85], // a plan from a 3 in gap (sure of it by 6), by his eye for distance (k.range: a Novice none, World class all of it)
+    small: .5, smallR: 54,             // the long man's mistake (Fundora before Tszyu): chance a round he fights small, x (1 - eye); he comes in to here
+    end: 1, inV: 15, step: 6, dbl: .8, piv: .3, jab: .6, // the long man: stands at the end of his own jab - end; he walks in (closing > inV, inside his jab + step): fight harder for the room (push), pivot; jab share up
+    jabIn: .8, inD: 16, mount: .5, dig: .6, // the short man getting through: jab his way in, then inside (inD under the danger line) around the mountain (lateral), dig (body, hooks)
+    out: 2, wait: .15, draw: 1, sw: .5 },   // the short man who won't stand in it: just past the danger line, a bit less output, the draw bait more; a World-class man flips the plan after a lost round (sw x eye^2)
+
   post: { on: 1, by: { outboxer: .8, boxerpuncher: .25, counter: .2 }, near: 56, far: 84, gas: .35, q: [.5, 1], close: 30 }, // close: a man walking in faster than this (units/s): the hand comes home
   clamp: { on: 1, at: .35, full: .85, hit: .12, hitMax: .6, tau: 45, see: .15, up: .2, open: .25 },
   // f2, the World-class bait (Ed, Oct 19; Atlas: jab, step back, invite the right, counter the miss). Once he's sure of the other man's lead (sure, the lead read), at mid-range (d) he drops the hands (guard)
@@ -1289,10 +1295,11 @@ class Brain {
     if (this.t < this.wbS.thru) p *= BR.wb.hold; // f2: I see the bait for what it is: I don't take it
     if (this.t < this.flT) p *= this.fb(BR.flaw.fold.out); // f3: folded, the hands stop
     if (this.t < this.stT) p *= this.fb(this.stK.out); // f3: stopped coming in, he starts over
+    if (this.szS && this.szPlan === 'out') p *= 1 - BR.size.wait * this.szS; // s2: he waits for the big man to come
     if (this.R() > p) { if (dSeen < 80) this.tel.holds++; return null; }
     // the bait: a counterman shows the jab and steps back, to draw the lead
     if (BR.trap.on.draw && this.t > this.dl.next && dSeen > 58 && dSeen < 82 && this.k.counter >= BR.trap.drawCtr && (this.mode === 'counter' || this.mode === 'work' || this.mode === 'feelout')
-      && this.R() < trV('draw', (this.m.counter + this.m.read) / 2) * (1.3 - this.ini())) return this.dlBait(dSeen);
+      && this.R() < trV('draw', (this.m.counter + this.m.read) / 2) * (1.3 - this.ini()) * (this.szS && this.szPlan === 'out' ? 1 + BR.size.draw * this.szS : 1)) return this.dlBait(dSeen);
     // feint, a planned sequence, or a combo
     if (this.R() < BR.feintP * (.4 + k.feints * 1.5) * lvV('feint', this.m.feints) * (.5 + tr.patience) / Math.max(.3, m.aggr) * (this.mode === 'feelout' || this.mode === 'reset' ? 2 : 1)) return this.feint(dSeen);
     if (this.mode !== 'survive' && !HUNTS[this.mode] && this.R() < BR.setupP * k.read * (.5 + k.feints * .5 + k.combos * .5) * (this.mode === 'burst' ? .4 : 1)) { const s = this.startSetup(P, dSeen); if (s) return s; }
@@ -1336,6 +1343,7 @@ class Brain {
         const P0 = PUNCHES[c.ps[0]], ideal = P0.max * this.rs - (P0.kind === 'straight' ? BR.workS : BR.workH);
         w *= lerp(1, BR.workLo + Math.exp(-Math.pow((dSeen - ideal) / BR.workW, 2)), k.range); }
       { const jt = clamp(tr.jab + this.pv('jab'), 0, 1); w *= c.jab ? lerp(.5, 4, jt) * (.5 + c.jab) : lerp(1.6, .3, jt); }
+      if (this.szL || this.szS) w *= this.szW(c, dSeen); // s2: size
       w *= 1 + c.power * (clamp(tr.power + this.pv('power'), 0, 1) * 2 - .6);
       w *= 1 + c.body * (clamp(tr.body + this.pv('body'), 0, 1) * 2.4 - .7);
       w *= c.n === 1 ? 1.5 - tr.combo : c.n === 2 ? 1 : (.2 + tr.combo * 1.3) * (c.n > 3 ? .6 : 1);
@@ -1457,7 +1465,18 @@ class Brain {
   }
 
   /* ---------- size (s2, docs/SIZE.md): his own arms, the other man's, the gap in inches ---------- */
-  size(P) { const on = BR.size.on; this.rs = on && P.me.rs || 1; this.hrs = on && P.him.rs || 1; this.gap = on && P.me.reach && P.him.reach ? P.me.reach - P.him.reach : 0; }
+  size(P) { const S = BR.size, on = S.on; this.rs = on && P.me.rs || 1; this.hrs = on && P.him.rs || 1; this.gap = on && P.me.reach && P.him.reach ? P.me.reach - P.him.reach : 0;
+    this.szL = this.szS = this.szO = 0; if (Math.abs(this.gap) < S.long) return;
+    const eye = clamp((this.k.range - S.eye[0]) / (S.eye[1] - S.eye[0]), 0, 1), gw = clamp(.5 + (Math.abs(this.gap) - S.long) / (2 * (S.full - S.long)), .5, 1); // a bigger gap, a surer plan
+    if (P.round !== this.szRd) { this.szRd = P.round; // once a round
+      if (this.gap > 0) { this.small = this.R() < S.small * (1 - eye); if (this.small) this.note('fights small this round (forgets his reach)'); }
+      else if (!this.szPlan) this.szPlan = this.tr.range < .5 ? 'in' : 'out';
+      else if (this.sc.rounds[this.sc.rounds.length - 1] < 0 && this.R() < S.sw * eye * eye) { this.szPlan = this.szPlan === 'in' ? 'out' : 'in'; this.note('size: switches to ' + this.szPlan); } } // it isn't working: the other plan
+    if (this.mode === 'survive') return;
+    if (this.gap > 0) { this.szL = this.small ? 0 : eye * gw * (P.ropes.me > .5 ? .5 : 1); this.szO = this.szL * clamp((this.tr.range - .3) / .4, 0, 1); } else this.szS = eye * gw; } // szO: the long man who lives outside (the band, the double step); an inside man only jabs more
+  szPush(P) { const S = BR.size; return this.szO && P.him.closing > S.inV && P.dist < this.danger() + S.step ? 1 + S.dbl * this.szO : 1; } // the double step: he comes in 6, I go back 12
+  szW(c, dSeen) { const S = BR.size; if (this.szL) return c.jab ? 1 + S.jab * this.szL : 1; if (this.szPlan !== 'in') return 1;
+    return dSeen > this.danger() - S.inD ? (c.jab ? 1 + S.jabIn * this.szS : 1) : 1 + S.dig * this.szS * (c.body + (c.inside ? .5 : 0)); } // at the door: jab his way in; inside: dig
   mx(p) { return PUNCHES[p].max * (this.rs || 1); } // how far his own punch reaches
   danger() { return PUNCHES.jab.max * (this.hrs || 1); } // how far the other man's jab reaches
 
@@ -1471,12 +1490,17 @@ class Brain {
     if (BR.body.on) { if (!(this.t < this.bRdT)) { this.bRd = this.bodyRead(); this.bRdT = this.t + .5; } range += BR.body.range * this.bRd; } // he digs from close: make him reach
     if (BR.cl.on) { if (!(this.t < this.clT)) { this.clR = this.clRead(); this.clT = this.t + .5; } range += BR.cl.range * this.clR; } // he grabs when it's close: box him at the end of the jab
     if (this.t < this.dl.back) range += BR.trap.drawBack; // the step back after the bait
+    if (this.small && this.gap > 0 && !sv) range = Math.min(range, BR.size.smallR); // s2: the tall man fights small
+    else if (this.szO) range = Math.max(range, lerp(range, this.mx('jab') - BR.size.end, this.szO)); // s2: the long man at the end of his jab
+    else if (this.szS && this.szPlan === 'out') range = Math.max(range, lerp(range, this.danger() + BR.size.out, this.szS)); // s2: the short man just outside his reach
     if (sv === 'clinch') range = 30;
     if (sv === 'fire') range = 50;
     if (sv === 'freeze' || sv === 'bait') range = P.dist;
     let lateral = tr.circle * lerp(.4, 1, k.angles) * (md.lat || .5);
     // on the ropes: get off them (a man without ring craft stays there and covers up; hurt, the runner and the steady man push off first)
     if (P.ropes.me > .4) lateral = Math.max(lateral, P.ropes.me * lerp(BR.ropes.lo, BR.ropes.hi, k.ropes) * lerp(BR.ropes.legs[0], BR.ropes.legs[1], tr.legs) * (sv === 'shell' ? .3 : sv === 'run' || sv === 'steady' ? 1.5 : 1));
+    if (this.szS && this.szPlan === 'in' && P.dist < this.danger() - BR.size.inD) lateral = Math.max(lateral, BR.size.mount * this.szS); // s2: inside on the big man, around the mountain
+    else if (this.szO && P.him.closing > BR.size.inV && P.dist < this.danger() + BR.size.step) lateral = Math.max(lateral, BR.size.piv * this.szO); // s2: rushed, the long man pivots
     const fold = this.t < this.flT; if (fold) lateral *= this.fb(BR.flaw.fold.lat); // f3: folded, he slides off weakly
     if (this.t < this.stT) range = Math.max(range, lerp(range, this.stK.range, this.flB)); // f3: stopped, he backs out to start the walk again
     let cut = (md.cut || (this.tr.initiative > .6 && tr.range < .5) || P.ropes.him > .4) ? lerp(.2, 1, k.cutoff) * (md.cut ? 1 : .6) : 0;
@@ -1489,7 +1513,7 @@ class Brain {
       else if (tr.range > .7 && P.dist < 40 && this.R() < .015 * tr.clinch) clinch = true;      // an out-boxer doesn't want it in there
     }
     // push: how hard he fights for that distance. A mover who lives outside fights for room; a pressure man fights to close it. Footwork and range skill win the tug of war
-    const out = range > P.dist, push = (out ? lerp(.4, 2, tr.legs) * lerp(.6, 1.3, k.footwork) : lerp(.4, 2, this.tr.initiative * (1 - tr.range)) * lerp(.6, 1.3, k.cutoff)) * lerp(.7, 1.2, k.range) * (this.mode === 'survive' ? 1.3 : 1);
+    const out = range > P.dist, push = this.szPush(P) * (out ? lerp(.4, 2, tr.legs) * lerp(.6, 1.3, k.footwork) : lerp(.4, 2, this.tr.initiative * (1 - tr.range)) * lerp(.6, 1.3, k.cutoff)) * lerp(.7, 1.2, k.range) * (this.mode === 'survive' ? 1.3 : 1);
     return { range: clamp(range, 28, 90), lateral: clamp(lateral, 0, 1) * this.lat, cut, clinch, feet: lerp(.75, 1.1, k.footwork), push: fold ? push * this.fb(BR.flaw.fold.push) : this.t < this.stT ? push * this.fb(this.stK.push) : push }; // feet: how well he moves (no crossed feet, small steps)
   }
 
