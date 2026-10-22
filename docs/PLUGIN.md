@@ -272,3 +272,10 @@ Build order: f1 bluff, f1b hands (engine, then the render), f2 bait (each a comm
 
 ## Build order
 P1 cheese bots + baseline (`tests/cheese.js`), P2 presets (`BoxerBrain.preset`, the ladder test), P3 fix holes, P4 guide. Each a commit; P1, P2 and P4 hold the hash, P3 moves it on purpose.
+
+**2a, the build: flaws in the game (Oct 22; Ed's calls: everyone has one, smaller by level; mostly his style's; spotted by level, then worked).** Four bites, one a session:
+- **b1 (done Oct 22): everyone rolls one, the hole by level, passive.** `FLW` (TUNING: `on`, `own` .6) and `flawOf(sheet, base, skills)`: `sheet.flaw` if set (null = none), else rolled off the man himself (name, base style, skills: the same man, the same hole; its own dice, the fight rng never moves). His style's own flaw 60%, else one of the other four. `BR.flaw.lvl` replaces the flat `k` .6: Novice 1, Intermediate .6 (the easy preset: unchanged), Pro .3, World .12; the habits (fold's output, slide, push, blocks, guard; the stop; drop's guard; the lunge's defense quality) scale with `fb()` = k / .6, capped 1 (a Pro does half of it). `flawSet(f, k)` takes a k. `FLW.on = 0` gives back the old hash (40 = 75856492); with it on, 40 = 378e647f. The f3 tests (`flaws.js`, `trick.js`, `cheese.js` easy) set the sheets' flaw to null so their numbers stay comparable.
+- b2: the eyes find it. A new eye cue per flaw (the walk-in with no jab defense, the shell when crowded, the lunge, the same counter, the jab hand low), seen by level (World fast, Novice rarely), held all fight once he's sure.
+- b3: he works it. The bots' tricks (`jabIn5`, `crowd4`, `lungeCounter3`, `slipCounter`, `overJab2`) move into the brain, fair (the trick replaces his own next punch of that kind), on only once b2 says he's found it.
+- b4: you see it. A commentary line when he finds it and a corner note between rounds (yours: "He drops the right after the jab, come over it"; his: "they've found your X").
+- Then: `flaws.js`-style check by level (found %, worth when found), audit, styles 48-53, one level down 15-20, the full check.
