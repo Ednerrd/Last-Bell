@@ -44,6 +44,7 @@ The only to-do list. When something is done, delete its line here, add a short l
 - Older: `docs/NOTES.md` "Done log".
 
 ## Decided (don't reopen)
+- Ed, Oct 22: **3D is code first**: Claude builds the bodies, motion and camera in code; models and recorded clips plug in later where they look better (`proto/PLAN.md` "Code first, plug-and-play later").
 - Ed, Oct 22: **finish the list, stop adding to it.** Before 3D only what 3D needs (2a, Size); everything else moves after 3D. New ideas go to the parking lot, not the numbered list, unless a bug or a target out of band. Replaces Oct 15's "3D waits until the engine is done".
 - Ed, Oct 21: no lab or live republish for now, keep dialing in the engine.
 - Ed, Oct 14 (project review): keep v1, v2 (`claude/brave-einstein-ojkyzm`) parked. Focus is the AI, the brain and the fight sim; career, camp and the rest of the game come after. Live game stays as is until then. The brain is the default AI. Brain thrown target ~52/rd. Skill-sheet walk-in defaults OK as they are.
