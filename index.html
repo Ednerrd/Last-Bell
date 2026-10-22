@@ -520,8 +520,8 @@ const BR = {
   // 2a b2, the eyes find the other man's flaw (P.him.look.hole): evidence a second of clock while it's open = rate x vis (how much that one shows: the jab hole hardly shows till you jab him) x where he looks (nov .. vet by his read, his state like the eyes) x the hole's size (k / k0, capped 1);
   // land: proof when a shot of his lands in it (x where he looks). Short of sure (1) it fades (tau s of clock); once sure he has it for the fight (b3 works it)
   // 2a b3, he works the flaw he's found (the f3 bots' tricks, fair: each costs him his own next punch of that kind, owed for owe s): jab: a jab as the slugger's step in starts (in the first beat s, at rate a second); straight: the right hand on the swarmer lunging in (v);
-  // the trick rate (and the chance he takes each one: same, drop) x the hole's size as he saw it (found.k); fold: crowd the out-boxer (range) and dig the body once he's shelled up (guard over shell), only for a hole over min; same: slip the counter he always throws (q) and come back over it; drop: the right hand over the jab, inside over s of it
-  work: { on: 1, owe: 1.5, gap: .8, beat: .25, rate: 12, jab: { v: 8, d: [46, 78] }, straight: { v: 25, d: 72, hook: 52 }, fold: { range: 46, near: 54, shell: .7, min: .3 }, same: { q: .85 }, drop: { over: .35 } },
+  // the trick rate (and the chance he takes each one: same, drop) x the hole's size as he saw it (found.k); fold: crowd the out-boxer (range) and dig the body once he's shelled up (guard over shell: dig x found.k of his punches; all of them made body KDs 17% of KDs), only for a hole over min; same: slip the counter he always throws (q) and come back over it; drop: the right hand over the jab, inside over s of it
+  work: { on: 1, owe: 1.5, gap: .8, beat: .25, rate: 12, jab: { v: 8, d: [46, 78] }, straight: { v: 25, d: 72, hook: 52 }, fold: { range: 46, near: 54, shell: .7, min: .3, dig: .4 }, same: { q: .85 }, drop: { over: .35 } },
   find: { on: 1, rate: .045, land: .25, vis: { jab: .4, fold: 1.6, straight: .5, same: 1.1, drop: 2.5 }, nov: .2, vet: 1, k0: .6, tau: 90 }, // tests/find.js (320 a row): found vs an Intermediate N 0 / I 29 / P 61 / W 66% (W often stops him first), vs a Pro 0 / 8 / 38 / 59, vs World 0 / 0 / 20 / 30
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
@@ -702,7 +702,7 @@ class Brain {
     { let h = 7; for (const s of SKILL_KEYS) h = Math.imul(h ^ (profile.skills[s] || 0), 0x9E3779B1) + 1; for (const c of String(profile.name || '')) h = Math.imul(h ^ c.charCodeAt(0), 0x85EBCA77);
       this.eR = mulberry32(h); } // the eyes roll their own dice: noticing never moves the fight's rng
     this.wb = { p: null, until: -9, next: 0, id: 0, bit: 0, bitT: -9, right: 0, miss: 0, off: 0, def: null }; this.wbS = { id: 0, thru: -9, bites: 0, live: 0 }; // f2: my bait, and his (what I saw of it)
-    this.eye = {}; this.eyeLog = []; this.fz = 0; this.fnd = null; this.fzL = 0; this.wk = { owe: null, at: -9, e: -9, c: 0, id: 0, go: 0, jab: -9 }; // what he's seen of the other man: cue -> { v, t, first }; eyeLog: first sightings and big moments, for the game to show (E3)
+    this.eye = {}; this.eyeLog = []; this.fz = 0; this.fnd = null; this.fzL = 0; this.wk = { owe: null, at: -9, e: -9, c: 0, id: 0, go: 0, jab: -9, dug: null }; // what he's seen of the other man: cue -> { v, t, first }; eyeLog: first sightings and big moments, for the game to show (E3)
     this.priorSet(opts.prior); this.flawSet(profile.flaw);
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
@@ -1569,7 +1569,7 @@ class Brain {
         if (f === 'jab' && P.dist > J.d[0] && P.dist < J.d[1]) go(['jab'], false, 'jab');
         else if (f === 'straight' && P.dist < J.d) go([P.dist < J.hook ? 'hook' : 'cross'], true, 'power'); } }
     else if (f === 'fold' && this.fnd.k > W.fold.min) { const F = W.fold; o.move = Object.assign({}, o.move, { range: Math.min(o.move.range, F.range), cut: 1 }); // crowd him, and dig when he shells
-      if (own && P.dist < F.near && P.him.guard > F.shell) { const c = o.punch.combo.map(p => PUNCHES[p].zone === 'body' ? p : BODYOF[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } }
+      if (own && P.dist < F.near && P.him.guard > F.shell && o.punch !== S.dug && (S.dug = o.punch) && this.R() < F.dig * this.fnd.k) { const c = o.punch.combo.map(p => PUNCHES[p].zone === 'body' ? p : BODYOF[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } }
     else if (f === 'same') { const p = BR.flaw.same.p, H = P.him.punch; // slip his one counter, come back over it
       if (H && !H.feint && H.type === p && H.id !== S.id && this.R() < this.fnd.k) { S.id = H.id; o.defend = { kind: 'slip', zone: PUNCHES[p].zone, vs: p, quality: Math.max(o.defend ? o.defend.quality : 0, W.same.q) }; S.go = t + (H.impactIn || .2) + .05; }
       if (S.go && t >= S.go) { if (free) { S.go = 0; go(['cross', 'hook'], true, 'power'); } else if (t > S.go + .4) S.go = 0; } }
