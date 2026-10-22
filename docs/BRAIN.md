@@ -1038,3 +1038,15 @@ What the sims said (kdwhy 4x125, audit-style field; finish 4x150; ±.04 KDs, ±2
 - Body KDs ~.04-.05 a fight whatever the head side does (share ~10% at .45 KDs): the liver path is nearly all of it, hence `liverKd`.
 - Built (d2 = this commit): kdwhy KDs .43, stops 31.4, stop rounds with a KD 59%, body share 5.6%; finish 600: stops 26.7, KDs .41, body 6.1%, dropped first wins 19.7%.
 Next (fresh session, Ed: evaluate before we continue): `tests/check.sh d1` (s a l f, ~25 min), read audit totals (52/15/29), stops 30-35, KDs .45-.55, styles 48-53, one level down 15-20 (PvI was 13.3). KDs read a hair low and stops low-ish on finish: if the check agrees, `TUNE.flash` toward .009 (KDs) and `STOP.p` .35 or `STOP.low` up (stops), one nudge each. Then `cheese.js 40 hard` (x4): haymaker 61.6 / bodyOnly 60.5, target 65+. Then close d (ROADMAP line out, CLAUDE.md latest full check).
+
+### Oct 22, step d closed: full check, the nudges, cheese
+Hash 17165c80 (40 = 42da74e7), no code change. Full check `d1` (s a l f):
+- Audit 3x500: 51.5 / 14.5 / 28.2% (jab 18.8/rd at 22.3%, head power 22.5 at 29.7%, body 10.1 at 36.0%), stops 29.9% (27.6-33.2 per run), KDs .4.
+- Finish 600: stops 30.8%, KDs .43 (body 10.1%), stopped the round of the first KD 51.3%, dropped first wins 20.3%.
+- Styles 47.8 (counter) - 51.9 (outboxer). One level down (300): IvN 12.7, PvI 15.0, WvP 16.7, PvN 1.0.
+The nudges (one each, frozen copies, finish 600 + audit 2x500):
+- `TUNE.flash` .0081 -> .009: KDs .43 (same), stops 30.7 / audit 31.6, body share 6.9% (bodykd 300: 9 of 101). Flat: dropped.
+- `STOP.p` .3 -> .35: stops 29.5 / audit 30.3, KDs .40. Flat: dropped.
+So both knobs are weak where they sit now (flash is a small slice once crit KDs are gone; `STOP.p` only gates the roll once `at` is reached). KDs and stops are inside the CLAUDE.md bands at the low edge; if Ed wants them higher, try `kdBase`/`kdDiv` (accum KDs) or `kdHurt` (KD -> stop), not these two. The body share swings 5-10% run to run at ~260 KDs: noise.
+Cheese at hard (4x40, 160 a bot): none 47.0, jabSpam 98.7, oneTwo 80.7, pullCounter 100, shell 95.6, **bodyOnly 55.0** (60.5), **haymaker 60.0** (61.6), runner 100, clinch 74.8. Target 65+: still low after d, so it's the brain (high effort), not KDs.
+Next: balance pass step e (decisions).
