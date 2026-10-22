@@ -1,6 +1,6 @@
 # Size: height, reach, leverage (design draft, Oct 22)
 
-ROADMAP item 3. The last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1). This is the plan; nothing is built. Ed's calls answered (bottom): next is s1.
+ROADMAP item 3. The last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1); **new since this draft: `research/dynamic.md`** (Oct 22, Teddy Atlas batch 1 + Ed's paste: Fundora-Tszyu's full-extension jab and step-back double, Fury-Ngannou geography, the short man's two ways in (jab in, or draw the tall man in), around the mountain, the head-on-cheek inside position, ring cutting): not yet folded into this plan. This is the plan; nothing is built. Ed's calls answered (bottom): next is s1.
 
 ## What's in today
 - Every man has the same arms. The jab reaches 78, the cross 76, hooks 56-60, uppercuts 50-54 (`PUNCH` in the engine, `PUNCHES` in the brain, the same numbers twice).
