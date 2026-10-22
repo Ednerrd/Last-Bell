@@ -88,7 +88,7 @@ Ed's references are 5 stock images, not committed (watermarked stock). Kept in w
   - **Through the guard.** A blocked shot thuds into the gloves and the arms give. A leaky block (engine `blockLeak`) shows the glove pushing *through* the guard into the face. A clean one hits open space.
   - **Clean vs blocked vs missed** reads different at a glance: impact flash and sweat spray on clean, a dull glove-on-glove pop on blocked, a whiff and an off-balance step on a miss.
 - **The engine already has most of this.** `resolve()` knows the zone (`P.zone` head/body), the kind (jab, cross, hook, upper), blocked or not, rolled/evaded, and how much leaked (`mult`). Missing: a finer spot (chin vs temple, liver vs ribs). Pick it in render from kind + side, so no engine change.
-- **Where it fits:** Phase 1 (reactions by punch type, contact) and Phase 2 (look, impact FX). Not now: 3D waits for the engine work (ROADMAP item 7).
+- **Where it fits:** Phase 1 (reactions by punch type, contact) and Phase 2 (look, impact FX). Not now: 3D comes right after Size (ROADMAP item 4; Ed, Oct 22).
 
 ## Bodies and movement: loose but ready (Ed, Oct 22 2026)
 Ed on the first 3D try: the camera was fine; **the bodies and the movement were the problem: too stiff.** A boxer is relaxed, light on his feet, always moving; the hands are loose but ready, and the guard is only tight when something's coming. Plan for Phase 1-2:
