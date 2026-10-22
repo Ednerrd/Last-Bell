@@ -117,6 +117,7 @@ Cases where it failed
 ## 4. The tall man who fights inside on purpose
 
 Fundora (6'6", 80 reach, southpaw) [S unless marked]
+- Atlas on Fundora-Tszyu (2024) and the tall man's plan by the book: `dynamic.md` batch 1, Size.
 - Reputation: "a fighter who rarely jabs, instead preferring to fight inside." Uses the long arms to make right angles, uppercuts and hooks. [Q, CBS] https://www.cbssports.com/boxing/news/sebastian-fundora-vs-carlos-ocampo-result-towering-inferno-outpoints-challenger-for-unanimous-decision-win
 - His reason: opponents expect to work inside and rip the body, so he meets them there. Quote: "at first the opponents were surprised... I'm sure we're starting to think of plans for more of an outside game... that's fine too because then we can utilise our reach." [Q, Bad Left Hook] https://www.badlefthook.com/2020/9/9/21428612/sebastian-fundora-interview-life-junior-middleweight-inside-fighting-boxing-news
 - Lubin: "I hit him with one uppercut and I saw that it rocked him. So, I did it again and again." Lubin dropped in round 2 by a right uppercut; Fundora dropped in 7. [Q, Round By Round] https://roundbyroundboxing.com/news/fonfora-stops-lubin-in-thriller/
