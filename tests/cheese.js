@@ -15,7 +15,7 @@ const CHEESE = require('./bots.js')(PU);
 for (const c of CS) {
   const o = { lvl: LVL, c, n: 0, bw: 0, d: 0, cE: 0, bE: 0, cL: 0, bL: 0, fN: 0, fD: 0, fC: 0, rN: 0, rD: 0, rC: 0, rs: 0, rn: 0 };
   for (let i = 0; i < N; i++) {
-    const side = i & 1, bst = pick(ALL), b = S.sheet(78, bst, S.rollGuard(bst)), ch = S.sheet(78, 'boxerpuncher', 'standard'); b.sk = S.skMake(SK, bst); ch.sk = S.skMake(74, 'boxerpuncher');
+    const side = i & 1, bst = pick(ALL), b = S.sheet(78, bst, S.rollGuard(bst)), ch = S.sheet(78, 'boxerpuncher', 'standard'); b.sk = S.skMake(SK, bst); ch.sk = S.skMake(74, 'boxerpuncher'); ch.flaw = null; if (LVL === 'easy') b.flaw = null; // 2a: the cheese man has no flaw; easy gets his style's below (hard, expert: the game's rolled one)
     const f = new S.Fight(side ? ch : b, side ? b : ch, { rounds: 10 }), C = f.f[1 - side], st = {}, real = C.brain.think.bind(C.brain);
     if (LVL === 'easy' && process.env.FLAW !== '0') f.f[side].brain.flawSet(BB.BR.flaw.by[bst]); // f3: easy has his style's hole, like preset('easy') (FLAW=0: the old rung, no hole)
     C.brain.think = (P, dt) => CHEESE[c](real(P, dt), P, st, dt);

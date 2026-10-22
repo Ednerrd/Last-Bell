@@ -19,7 +19,7 @@ S.Fight.prototype.resolve = function (A, D, a) { a.hR = E.holeF(D, E.PUNCH[a.typ
 for (const st of STS) for (const fl of FL) {
   const bot = BOT[st], o = { st, fl, bot, n: 0, pw: 0, d: 0, open: 0, openT: 0, P: {} };
   for (let i = 0; i < N; i++) {
-    const side = i & 1, b = S.sheet(78, st, S.rollGuard(st)), pl = S.sheet(78, 'boxerpuncher', 'standard'); b.sk = S.skMake(56, st); pl.sk = S.skMake(56, 'boxerpuncher');
+    const side = i & 1, b = S.sheet(78, st, S.rollGuard(st)), pl = S.sheet(78, 'boxerpuncher', 'standard'); b.sk = S.skMake(56, st); pl.sk = S.skMake(56, 'boxerpuncher'); pl.flaw = b.flaw = null; // 2a: no rolled flaw (the test sets his)
     const f = new S.Fight(side ? pl : b, side ? b : pl, { rounds: 10 }), Pf = f.f[1 - side], Ef = f.f[side], st0 = {}, real = Pf.brain.think.bind(Pf.brain);
     Ef.brain.flawSet(fl ? BB.BR.flaw.by[st] : null);
     Pf.brain.think = (P, dt) => BOTS[bot](real(P, dt), P, st0, dt);
