@@ -79,7 +79,7 @@ Audit: ~52 thrown / ~15 landed / ~29% connect per round (Ed, Oct 14). "Thrown" =
 - Stops **30–35%** (Ed, Oct 21: ~32%), spread earlier (`research/numbers.md`). KDs a fight real .4–.6, body KDs 5–8%. Cut stops ~1.2–1.7%, eye stops ~0.3%.
 - Decisions (`tests/judges.js`): split rounds ~27%, split+majority ~28% of decisions, draws ~5% (Sloan cards, `research/numbers.md` 5).
 - Styles 48–53% vs the field, specials 48–54, guards @82 vs standard ~48–58. One level down wins 15–20%. Drama (close fights): a lead change ~40%, comebacks ~11% (Ed). AI corner vs a silent one ~+3.6.
-- **Latest full check** (`check.sh d1`, hash 17165c80, Oct 22, step d KDs): 51.5 / 14.5 / 28.2% (jab 22.3%, head power 29.7), stops 29.9% (finish 30.8), KDs .43, body KDs 10.1% (5-7% on reruns: noise), styles 47.8–51.9, one level down (300) IvN 12.7 (low: watch) / PvI 15.0 / WvP 16.7. History: `docs/BRAIN.md`, `docs/NOTES.md` "Balance history".
+- **Latest full check** (`check.sh r1`, hash f61e10ca, Oct 22, review after step e): 51.1 / 14.4 / 28.2% (jab 22.1%, head power 29.6), stops 29.2% (finish 33.5), KDs .43, body KDs 3.8% (swings 4-10% run to run: noise), styles 49.3–51.4, one level down (300) IvN 18.3 / PvI 16.0 / WvP 19.7. Judges 2000: split rounds 28.5, split+majority 26.2, draws 4.9. Cheese hard: haymaker 61.9 (low), bodyOnly 64.5. History: `docs/BRAIN.md`, `docs/NOTES.md` "Balance history".
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.

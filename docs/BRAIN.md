@@ -1061,3 +1061,14 @@ Hash 17165c80 -> **f61e10ca** (40 = 75856492). New probe `tests/judges.js` (audi
 - Side effects (e2, frozen copy): audit 3x500 UD 64 / SD 19 / MD 10, draws 6.7, favorite wins by gap 0/3/6/10: 45 / 66 / 75 / 90 (d1 ~45 / 61 / 75 / 90), totals 51.3 / 14.4 / 28.0, stops 28.8; finish 600 stops 31.0, KDs .45; levels 300: IvN 14.0, PvI 19.0, WvP 18.3, PvN 4.0; drama close 500: lead change 34.6 (2+ 12.0), late 5.6% of fights (~7.4% of decisions), comebacks 11.0, winner lost 0 rounds 8.7%.
 - Not rerun: styles (the judges are symmetric; Wanda/Rocco tastes unchanged), cheese. Next full check covers styles.
 Next: the balance pass steps are done; next roadmap item is 2a (real flaws, high effort: ask Ed to switch).
+
+### Oct 22, review before 2a (no code)
+Hash f61e10ca (40 = 75856492 checked), `tsc -p .` clean. Steps d/e diffs (984e0fe..86f36f7) do what the docs say: `jLean` rolls only when on (gauss eats R(), so 0 keeps the old stream), the robbery bias still adds 2.6 on top of the lean, JUDGES tastes untouched. Doc numbers match the commit messages.
+Full check `r1` (s a l f) + judges 4x500 + cheese hard 4x40:
+- Audit 3x500: 51.1 / 14.4 / 28.2% (jab 18.5/rd at 22.1%, head power 22.5 at 29.6%, body 10.1 at 36.0%), stops 29.2% (28.6-29.8), KDs .4-.5.
+- Finish 600: stops 33.5%, KDs .43 (body 3.8%: noise, it swung 5-10 before), stopped the round of the first KD 50.3%, dropped first wins 18.5%.
+- Styles 49.3 (outboxer) - 51.4 (slugger): the tightest spread yet. One level down (300): IvN 18.3, PvI 16.0, WvP 19.7, PvN 2.7: all in 15-20 (IvN 12.7 at d1 was noise, or the judges' close rounds).
+- Judges 2000: split rounds 28.5 (real 26.9), 10-10 5.5% of rounds, UD 68.9 SD 17.6 MD 8.6 (split+majority 26.2, real 27.9), draws 4.9 (5.2), margins 7.0 / 2.1 / 3.2 (real 6.7 / 1.2 / 2.1: MD a bit wide), late lead change 8.4% of decisions (real 11.5).
+- Cheese hard (160 a bot): none 53.2, jabSpam 92.9, oneTwo 79.1, pullCounter 98.1, shell 96.9, **bodyOnly 64.5** (55.0 at d1: back at the line), **haymaker 61.9** (60.0), runner 98.8, clinch 71.9.
+For Ed (no knob changed): KDs/stops at the low edge stay a watch (the levers are `kdBase`/`kdDiv`/`kdHurt`); haymaker is the one real miss, a brain fix. Also: with `jLean` 2.2 the 2% "robbery" judge (bias 2.6) is barely apart from a normal lean (~24% of judges lean past 2.6) and nothing reads `robbery`: fold it into hometown judging (parking lot) or drop it later (the drop moves the hash).
+Next: 2a (real flaws), high effort.
