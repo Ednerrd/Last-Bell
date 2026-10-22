@@ -39,6 +39,7 @@
  * @property {number} [elbows]  elbows clamped to his ribs, gloves low (f1b: his body's hurt; the bluff can't hide it)
  * @property {number} [bait]    f2: he's dropped his hands on purpose to invite one (an id per bait, 0 = not baiting). The low hands show in `guard`; this lets a reader roll to see through it
  * @property {number} [post]    his lead hand posted out (the long guard, 1b), 0..1 as far out as it is. Nothing reads it yet (the answers: body jab, walk under, peel and straight over)
+ * @property {?{ f: string, k: number }} [hole]  his flaw (BR.flaw.by) open right now, k as open as it is (his Action.hole k); null = shut. Step b2 of 2a
  */
 /**
  * A punch in the air, as it truly is (his eyes add the error).
@@ -313,6 +314,9 @@ const BR = {
   flaw: { by: { slugger: 'jab', outboxer: 'fold', swarmer: 'straight', counter: 'same', boxerpuncher: 'drop' }, in: 8, lvl: { novice: .6, intermediate: .6, pro: .3, world: .12 }, // lvl: how open the holes are by his level (Novice 1 cost him a level-down upset: IvN 12.3, .6 = 15.2 at 900, flaws off 15.3) (the defense he loses x k; Intermediate .6, Ed Oct 20: easy vs a Pro ~15%, was 11% at 1). The habits (fold, stop, drop, the lunge's quality) scale with k / .6, capped 1: a Pro does half of it
     jab: { try: .2, hole: .7, hold: .5, step: 1, stop: { t: 1, range: 76, out: .3, push: .5 } }, fold: { near: 48, rope: .7, far: 70, build: 1, hold: 2.5, guard: .95, out: .25, lat: .15, push: .3, blk: 2, hole: .6 }, straight: { try: .3, q: .7, hole: .8, v: 25, hold: .35, step: 0, stop: { t: 1, range: 76, out: .3, push: .5 } },
     same: { p: 'cross', t: .5, guard: .35, try: .45, hole: .5 }, drop: { t: .4, guard: .3, try: .3, hole: .6, arm: 'rear' } },
+  // 2a b2, the eyes find the other man's flaw (P.him.look.hole): evidence a second of clock while it's open = rate x vis (how much that one shows: the jab hole hardly shows till you jab him) x where he looks (nov .. vet by his read, his state like the eyes) x the hole's size (k / k0, capped 1);
+  // land: proof when a shot of his lands in it (x where he looks). Short of sure (1) it fades (tau s of clock); once sure he has it for the fight (b3 works it)
+  find: { on: 1, rate: .045, land: .25, vis: { jab: .4, fold: 1.6, straight: .5, same: 1.1, drop: 2.5 }, nov: .2, vet: 1, k0: .6, tau: 90 }, // tests/find.js (320 a row): found vs an Intermediate N 0 / I 29 / P 61 / W 66% (W often stops him first), vs a Pro 0 / 8 / 38 / 59, vs World 0 / 0 / 20 / 30
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
   prior: { on: 1, k: .6, won: .6, lost: 1.6, odd: .5, drop: .08, back: .25, adjust: 1 }, // adjust: how many times the loser makes his change before the bell (it fades like any round's change)
   fam: { on: 1, at: .45, atS: .9, full: 1, gone: [4.5, 3], keep: .2, // atS: the stance bar (southpaws are rare, most men sit under it); keep: the part that never fades in the fight
@@ -492,7 +496,7 @@ class Brain {
     { let h = 7; for (const s of SKILL_KEYS) h = Math.imul(h ^ (profile.skills[s] || 0), 0x9E3779B1) + 1; for (const c of String(profile.name || '')) h = Math.imul(h ^ c.charCodeAt(0), 0x85EBCA77);
       this.eR = mulberry32(h); } // the eyes roll their own dice: noticing never moves the fight's rng
     this.wb = { p: null, until: -9, next: 0, id: 0, bit: 0, bitT: -9, right: 0, miss: 0, off: 0, def: null }; this.wbS = { id: 0, thru: -9, bites: 0, live: 0 }; // f2: my bait, and his (what I saw of it)
-    this.eye = {}; this.eyeLog = []; // what he's seen of the other man: cue -> { v, t, first }; eyeLog: first sightings and big moments, for the game to show (E3)
+    this.eye = {}; this.eyeLog = []; this.fz = 0; this.fnd = null; this.fzL = 0; // what he's seen of the other man: cue -> { v, t, first }; eyeLog: first sightings and big moments, for the game to show (E3)
     this.priorSet(opts.prior); this.flawSet(profile.flaw);
     this.out = { intent: 'feelout', move: { range: 64, lateral: 0, cut: 0, clinch: false }, guard: .6, punch: null, defend: null, why: '' };
   }
@@ -613,6 +617,7 @@ class Brain {
       if (ev.def) this.madd(this.mem.def, kd, { n: 1, [ev.def]: 1 }); else if (ev.type === 'landed') this.madd(this.mem.def, kd, { n: 1, none: 1 });
       this.lastMine = { p, t: this.t }; if (this.fl === 'drop' && p === 'jab') this.dropT = this.t + BR.flaw.drop.t; // f3: and the hand comes back low
       if (this.lf && (BR.trap.on.show || BR.trap.on.draw)) this.lfHear(ev);
+      if (ev.type === 'landed' && ev.hole && BR.find.on && !this.fnd) { this.fzF = ev.hole; this.fz += BR.find.land * this.fzL; this.sure(this.rd); } // b2: it landed in his hole: proof
       if (ev.type === 'landed' && PUNCHES[p].zone === 'body') { this.bodyL = (this.bodyL || 0) + 1; this.bank = (this.bank || 0) + 1; } // body work in the bank
       if (ev.type === 'landed') {
         E.conf = clamp(E.conf + .05 * (ev.dmg || 2) / 3, -1, 1); E.frus = Math.max(0, E.frus - .04); this.sc.me += guess(pts(p)); if (ev.hurt) this.oppHurtT = this.t;
@@ -705,7 +710,7 @@ class Brain {
     const L = P.him.look, B = BR.eye; if (!B.on || !L) return;
     const val = { cut: L.cut, swell: L.swell, body: L.body == null ? null : 1 - L.body, arms: L.arms == null ? null : 1 - L.arms, fold: L.fold, legs: L.legs, wobble: L.wobble, elbows: L.elbows };
     const gaze = clamp((this.m.read - .3) / .6, 0, 1), tun = HUNTS[this.mode] ? B.tunnel : 0;
-    const st = (1 - B.blur * this.blur) * (1 - B.fear * this.emo.fear) * (P.me.hurt ? 1 - B.hurt : 1) * (1 - B.fat * this.fat);
+    const st = this.eSt(P);
     for (const c in val) {
       const v = val[c]; if (v == null || v < B.thr[c] * .5) continue;
       const w = lerp(c === 'wobble' && L.sell ? lerp(B.nov.wobble, B.nov.legs, L.sell) : B.nov[c], B.vet[c], gaze) * st * (tun && c !== 'wobble' && c !== 'legs' ? 1 - tun : 1), sal = Math.min(1.5, v / B.thr[c]);
@@ -718,6 +723,13 @@ class Brain {
       }
     }
   }
+  eSt(P) { const B = BR.eye; return (1 - B.blur * this.blur) * (1 - B.fear * this.emo.fear) * (P && P.me.hurt ? 1 - B.hurt : 1) * (1 - B.fat * this.fat); } // how clear his eyes are: blur, fear, hurt, gas
+  fW(P) { const F = BR.find; return lerp(F.nov, F.vet, clamp((this.m.read - .3) / .6, 0, 1)) * this.eSt(P); }
+  // 2a b2: he finds the other man's flaw (BR.find): it shows while it's open, a shot that lands in it proves it; sure at 1, then it's his all fight
+  find(P, sdt) { const F = BR.find, L = P.him.look; if (!F.on || this.fnd || !L) return;
+    this.fz *= Math.exp(-sdt / F.tau); this.fzL = this.fW(P); const h = L.hole; if (!h || !F.vis[h.f]) return;
+    this.fzF = h.f; this.fz += F.rate * F.vis[h.f] * this.fzL * Math.min(1, h.k / F.k0) * sdt; this.sure(P.round); }
+  sure(rd) { if (this.fz < 1 || this.fnd) return; this.fnd = { f: this.fzF, t: this.t, ct: this.ct, rd }; this.note('found his flaw: ' + this.fzF); }
   // E4: what he believes about the other man, from his eyes (BR.eye.e4) or the truth
   perc(P) {
     const H = P.him, L = H.look, B = BR.eye;
@@ -1283,7 +1295,7 @@ class Brain {
     { const B = BR.blur, cur = Math.max(0, 1 - P.me.head / Math.max(1, P.me.headMax) - B.at) / (1 - B.at); // only real damage counts: a jab here and there doesn't blur anything
       this.blur = clamp((cur * B.cur + (1 - (P.me.headMax || 100) / 100) * B.wear + (P.round - 1) / Math.max(1, P.rounds - 1) * B.late + this.kds * B.kd) * (1.3 - .6 * this.tr.composure), 0, 1); }
     this.famUpd(P);
-    this.look(P, sdt); this.ph = this.perc(P);
+    this.look(P, sdt); this.find(P, sdt); this.ph = this.perc(P);
     { const W = BR.wb, S = this.wbS, Lb = W.on && P.him.look ? P.him.look.bait || 0 : 0; // f2: his hands are down on purpose: do I see it?
       if (Lb && Lb !== S.id) { S.id = Lb; S.live = 1; const ch = Math.min(.9, tierV(this.m.read, W.thru) * (1 + W.wary * S.bites)); this.tel.wbRoll = (this.tel.wbRoll || 0) + 1; this.tel.wbP = (this.tel.wbP || 0) + ch; if (this.R() < ch) { S.thru = this.t + W.win; S.live = 0; this.tel.wbThru = (this.tel.wbThru || 0) + 1; this.note('sees the bait: not taking it'); } }
       if (!Lb) S.live = 0; else if (this.t < S.thru) this.ph.guard = Math.max(this.ph.guard, W.seeG);
