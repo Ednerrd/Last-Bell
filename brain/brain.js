@@ -318,7 +318,7 @@ const BR = {
   // 2a b2, the eyes find the other man's flaw (P.him.look.hole): evidence a second of clock while it's open = rate x vis (how much that one shows: the jab hole hardly shows till you jab him) x where he looks (nov .. vet by his read, his state like the eyes) x the hole's size (k / k0, capped 1);
   // land: proof when a shot of his lands in it (x where he looks). Short of sure (1) it fades (tau s of clock); once sure he has it for the fight (b3 works it)
   // 2a b3, he works the flaw he's found (the f3 bots' tricks, fair: each costs him his own next punch of that kind, owed for owe s): jab: a jab as the slugger's step in starts (in the first beat s, at rate a second); straight: the right hand on the swarmer lunging in (v);
-  // the trick rate x the hole's size as he saw it (found.k); fold: crowd the out-boxer (range) and dig the body once he's shelled up (guard over shell), only for a hole over min; same: slip the counter he always throws (q) and come back over it; drop: the right hand over the jab, inside over s of it
+  // the trick rate (and the chance he takes each one: same, drop) x the hole's size as he saw it (found.k); fold: crowd the out-boxer (range) and dig the body once he's shelled up (guard over shell), only for a hole over min; same: slip the counter he always throws (q) and come back over it; drop: the right hand over the jab, inside over s of it
   work: { on: 1, owe: 1.5, gap: .8, beat: .25, rate: 12, jab: { v: 8, d: [46, 78] }, straight: { v: 25, d: 72, hook: 52 }, fold: { range: 46, near: 54, shell: .7, min: .3 }, same: { q: .85 }, drop: { over: .35 } },
   find: { on: 1, rate: .045, land: .25, vis: { jab: .4, fold: 1.6, straight: .5, same: 1.1, drop: 2.5 }, nov: .2, vet: 1, k0: .6, tau: 90 }, // tests/find.js (320 a row): found vs an Intermediate N 0 / I 29 / P 61 / W 66% (W often stops him first), vs a Pro 0 / 8 / 38 / 59, vs World 0 / 0 / 20 / 30
   body: { on: 1, k: 1, norm: .5, min: 20, ctr: 1.5, trade: .6, def: .5, range: 8, out: .3 }, // he lives downstairs (his body share over norm): counter over the top, even when it lands (trade), cover low (def: more tries), keep him on the end of the jab (range), and nothing's coming at the head: let the hands go (out)
@@ -1369,10 +1369,10 @@ class Brain {
     else if (f === 'fold' && this.fnd.k > W.fold.min) { const F = W.fold; o.move = Object.assign({}, o.move, { range: Math.min(o.move.range, F.range), cut: 1 }); // crowd him, and dig when he shells
       if (own && P.dist < F.near && P.him.guard > F.shell) { const c = o.punch.combo.map(p => PUNCHES[p].zone === 'body' ? p : BODYOF[p] || 'bodyHook'); o.punch = Object.assign({}, o.punch, { type: c[0], combo: c }); } }
     else if (f === 'same') { const p = BR.flaw.same.p, H = P.him.punch; // slip his one counter, come back over it
-      if (H && !H.feint && H.type === p && H.id !== S.id) { S.id = H.id; o.defend = { kind: 'slip', zone: PUNCHES[p].zone, vs: p, quality: Math.max(o.defend ? o.defend.quality : 0, W.same.q) }; S.go = t + (H.impactIn || .2) + .05; }
+      if (H && !H.feint && H.type === p && H.id !== S.id && this.R() < this.fnd.k) { S.id = H.id; o.defend = { kind: 'slip', zone: PUNCHES[p].zone, vs: p, quality: Math.max(o.defend ? o.defend.quality : 0, W.same.q) }; S.go = t + (H.impactIn || .2) + .05; }
       if (S.go && t >= S.go) { if (free) { S.go = 0; go(['cross', 'hook'], true, 'power'); } else if (t > S.go + .4) S.go = 0; } }
     else if (f === 'drop') { if (P.events.some(e => e.by === 'him' && e.p === 'jab' && e.type !== 'thrown' && e.type !== 'pulled' && e.type !== 'feinted')) S.jab = t; // the right hand over his jab
-      if (t - S.jab < W.drop.over && free) { S.jab = -9; go(['cross'], true, 'power'); } }
+      if (t - S.jab < W.drop.over && free) { S.jab = -9; if (this.R() < this.fnd.k) go(['cross'], true, 'power'); } }
   }
 
   /* ---------- between rounds: his own read of the round, and whether he changes anything ---------- */
