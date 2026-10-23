@@ -1,6 +1,6 @@
 # Size: height, reach, leverage (design draft, Oct 22)
 
-ROADMAP: the last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1); `research/dynamic.md` (Teddy Atlas batch 1 + Ed's paste), folded into "The brain: s2 design" below (Oct 22). s1 and s2 are built (sections "s1, built", "s2, built"); s3, the pre-3D baseline, is next.
+ROADMAP: the last engine step before 3D. Research: `research/size.md` (sections 1-7, "For Last Bell" A-H, video batch 1); `research/dynamic.md` (Teddy Atlas batch 1 + Ed's paste), folded into "The brain: s2 design" below (Oct 22). s1, s2 and s3 are done (sections "s1, built", "s2, built", "s3, the pre-3D baseline").
 
 ## What's in today
 - Every man has the same arms. The jab reaches 78, the cross 76, hooks 56-60, uppercuts 50-54 (`PUNCH` in the engine, `PUNCHES` in the brain, the same numbers twice).
@@ -87,6 +87,21 @@ Hash 40 **37081a79** (`BoxerBrain.BR.size.on=0` gives back s1, 118b22b1).
 - **Check `s2b`** (styles 2x300/pair + audit 3x500): **styles 48.5-52.1** (bp 52.1, outboxer 50.5, slugger 50.2, swarmer 48.7, counter 48.5: all in band, tighter than s1's 46.7-53.8), audit 51.7 / 14.9 / 28.7%, stops 30.7 (low half of 30-35), KDs .4-.5. Levels, finish, specials, guards not run: s3 (the pre-3D baseline) runs them all.
 - Not built (kept for after 3D): the short man's lunge as a size tool (`research/skillr.md` #23), probing the distance with the lead hand and pinning (#22), the long man's roughness inside, read the feet, exit or commit.
 
+## s3, the pre-3D baseline (Oct 23)
+One change: `SIZE.per` .005 -> .0055 (Ed's call 8). 3D is render only, so these numbers stand until the brain pass after 3D.
+Hash `same.js 40` **3fd3c667**, `same.js 200` **6c94c895** (Oct 23). Check `s3` on a frozen copy (`SIZE.per` .0055); `tsc -p .` clean.
+- **Audit** 3x500: 51.7 / 14.7 / 28.4% (jab 18.8/rd at 23.4%, head power 23.8 at 30.0%, body 9.3 at 35.4%), stops 29.7% (32.8 in one run), KDs .4.
+- **Finish** 600: stops 35.3%, KDs .44 (body 6.0%), stopped the round of the first KD 52.5%, dropped first wins 14.4%.
+- **Styles** (2x300/pair): bp 53.2, slugger 52.3, outboxer 49.5, swarmer 47.8, counter 47.1. Lean off (`s3n`): slugger 51.6, bp 51.6, outboxer 51.1, swarmer 48.6, counter 47.0 (Ed: keep the lean, realism).
+- **Specials** vs base (200/pair): angle 53.5, pboxer 51.4, jabgrab 51.2, switch 50.1, feinter 49.1, body 47.6, awkward 46.8, volume 46.3, spoiler 46.1.
+- **Guards** @82 vs standard: high 53.9, philly 50.4, handslow 48.6, cross 49.5 (900 pooled), **peekaboo 44.7** (900 pooled).
+- **One level down** (`levels sk`): IvN 16.7, PvI 14.6 (900 pooled), WvP 15.7, PvN 2.0.
+- **Judges** 2000: split rounds 28.4, 10-10 5.3% of rounds, UD 66.6 / SD 19.3 / MD 8.2 (split+majority 27.5), draws 5.9, margins 6.8 / 2.0 / 3.2, late lead change 7.3% of decisions.
+- **Drama** (500, close): a lead change 35.2% (2+ 13.0), comebacks 11.8%, rounds with a moment 28%, dead rounds 1.4%.
+- **Cheese** (160 a bot): hard none 52.3, jabSpam 88.6, oneTwo 68.2, pullCounter 96.8, shell 97.5, **bodyOnly 59.9**, **haymaker 64.4**, runner 98.8, clinch 68.2; expert passes all (haymaker 72.5, clinch 85.6).
+- **Size** (`size.js`, mirror): `per` .006 gave 4 in 54.5 / 8 in 58.1 (over the table); .0055 pooled ~53 at 4 in, ~53-54 at 8, ~60 at 12 (noisy: 1200 a gap swings ±1.5, one gap-0 read came out 54.3). **Outboxer long vs swarmer short** (`PAIR=outboxer:swarmer`, 600 each): the short man wins 42.7 at even reach, 39.3 at a 6 in gap (target 42-50, floor 38): the style matchup is most of it, the reach ~3.
+- **Known misses, parked for after 3D (Ed, Oct 23):** counter 47.0-47.1 (real at 2200 fights; his exact-range game pays for bigger arms), peekaboo 44.7, specials volume / spoiler / awkward / body 46-47.6 (specials and guards weren't run from Oct 17 to here: drift over the parry, tight jab, flaws and size), cheese haymaker 64.4 + bodyOnly 59.9 at hard, lead changes 35 (target ~40), PvI 14.6, audit stops 29.7 (finish 35.3).
+
 ## Ed's calls (answered Oct 22)
 1. **Strength: half of real** (the table above, well under one skill level).
 2. **Reach relative to the division**: every division averages the 78 jab, only the gap matters.
@@ -95,3 +110,5 @@ Hash 40 **37081a79** (`BoxerBrain.BR.size.on=0` gives back s1, 118b22b1).
 5. **No intro line**: the reach shows when the tale of the tape comes back (parked WIP, `claude/bold-faraday-bryk6t`). Nothing on screen in this step but the drawn height.
 6. **The P4P stars get their real sizes**: a small table on `P4P_2026` (Inoue 65/67.5, Usyk 75/78, Bivol 72/72 ...), Wikipedia infobox figures.
 7. **The tall man fighting inside (Fundora before Tszyu) is a mistake in s2, by level** (Ed, Oct 22): a Novice or Intermediate tall man forgets his size some rounds; the trait version waits for traits.
+8. **Size a touch stronger: `SIZE.per` .0055** (Ed, Oct 23; he picked .006, it overshot: 4 in 54.5 / 8 in 58.1).
+9. **The style lean stays** (Ed, Oct 23: realism) even with the swarmer at 47.8; counter, peekaboo and the low specials are parked for after 3D.

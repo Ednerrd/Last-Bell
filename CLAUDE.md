@@ -4,7 +4,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 
 **The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the only AI: the old engine AI (`decide()`/`react()`) was retired Oct 16. `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
-**What to do next: `ROADMAP.md`** (the only to-do list; next: Size s3, the pre-3D baseline at high (Ed, Oct 22): the full test + a light review, `docs/SIZE.md` s3; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
+**What to do next: `ROADMAP.md`** (the only to-do list; next: 3D phase 1, render only, `proto/PLAN.md`; the engine is frozen at the pre-3D baseline, `docs/SIZE.md` s3; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
@@ -27,7 +27,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 ## Working rules
 - Small, chunked edits. Commit after each working step, push.
 - Engine changes need sims before and after. 50 fights is noise (±8%). 300+ per guard/style for balance, 400–500 for the audit; pool 1500+ before trusting a 1–2% difference.
-- Render-only changes must keep the `same.js` hash (`same.js 40` now **37081a79**, Oct 22: Size s2, the brain knows reach; `BoxerBrain.BR.size.on=0` gives back 118b22b1 (s1), `SIZE.on=0` on top 4fba7bcf (2a done), plus `BR.work.on=0` 378e647f (b1/b2), `FLW.on=0` the flawless 75856492 / full f61e10ca, step e the judges).
+- Render-only changes must keep the `same.js` hash (`same.js 40` now **3fd3c667**, `same.js 200` **6c94c895**, Oct 23: the pre-3D baseline, Size s3 `SIZE.per` .0055; `SIZE.per` .005 gives back 37081a79 (s2), then `BoxerBrain.BR.size.on=0` 118b22b1 (s1), `SIZE.on=0` on top 4fba7bcf (2a done), plus `BR.work.on=0` 378e647f (b1/b2), `FLW.on=0` the flawless 75856492 / full f61e10ca, step e the judges).
 - Never change balance numbers and visuals in the same commit.
 - Ed's voice in any writing is his own. Commentary lines are fine to write.
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
@@ -82,7 +82,7 @@ Audit: ~52 thrown / ~15 landed / ~29% connect per round (Ed, Oct 14). "Thrown" =
 - Stops **30–35%** (Ed, Oct 21: ~32%), spread earlier (`research/numbers.md`). KDs a fight real .4–.6, body KDs 5–8%. Cut stops ~1.2–1.7%, eye stops ~0.3%.
 - Decisions (`tests/judges.js`): split rounds ~27%, split+majority ~28% of decisions, draws ~5% (Sloan cards, `research/numbers.md` 5).
 - Styles 48–53% vs the field, specials 48–54, guards @82 vs standard ~48–58. One level down wins 15–20%. Drama (close fights): a lead change ~40%, comebacks ~11% (Ed). AI corner vs a silent one ~+3.6.
-- **Latest check** (Size s2, check `s2b`, Oct 22, styles + audit only): styles 48.5-52.1 (bp 52.1, outboxer 50.5, slugger 50.2, swarmer 48.7, counter 48.5), audit 51.7 / 14.9 / 28.7%, stops 30.7, KDs .4-.5. Size (`tests/size.js`, brain on): 4 in 50.3, 8 in 54.2. Stale since then (s3 reruns them): one level down / finish (`s1c`: 15.7 / 16.0 / 15.7, finish 33.0, body KDs 5.5%), specials + guards (before 2a), judges + cheese (`r1`: split rounds 28.5, draws 4.9; haymaker 61.9 low), drama (`e2`). Watch list: `docs/BRAIN.md` "Where we are". History: `docs/NOTES.md` "Targets history".
+- **Latest check: the pre-3D baseline** (Size s3, check `s3`, Oct 23, everything): audit 51.7 / 14.7 / 28.4%, stops 29.7 (finish 35.3), KDs .4-.44, body KDs 6.0%; styles 47.1-53.2 (bp 53.2, slugger 52.3, outboxer 49.5, swarmer 47.8, counter 47.1); specials 46.1-53.5; guards 44.7 (peekaboo)-53.9; one level down 16.7 / 14.6 / 15.7; judges split rounds 28.4, split+majority 27.5, draws 5.9; drama lead change 35.2, comebacks 11.8; cheese hard haymaker 64.4, bodyOnly 59.9, expert passes all; size ~53 at 4 in. Misses parked for after 3D (Ed): `docs/BRAIN.md` "Where we are". History: `docs/NOTES.md` "Targets history".
 
 ## Env
 - Playwright: if it asks for `playwright install`, launch with `executable_path='/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`.
