@@ -4,7 +4,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 
 **The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the only AI: the old engine AI (`decide()`/`react()`) was retired Oct 16. `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
-**What to do next: `ROADMAP.md`** (the only to-do list; next: 3D phase 1 round 2 after Ed's look at the first iteration, render only, `proto/PLAN.md` "Phase 1, first iteration"; the engine is frozen at the pre-3D baseline, `docs/SIZE.md` s3; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
+**What to do next: `ROADMAP.md`** (the only to-do list; next: Ed's notes on 3D phase 1 round 2 (punch flow + step-drag feet), more motion polish, render only, `proto/PLAN.md` "Phase 1, first iteration" + "Round 2"; the engine is frozen at the pre-3D baseline, `docs/SIZE.md` s3; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
@@ -21,7 +21,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 - **Private preview** (sample + db + user): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo.
 - **Brain lab** (private): https://claude.ai/artifact/5UhTsjMSCTqhtRnCfdZBSV. `node brain/build-lab.js`, publish `brain/lab.html` (build output, gitignored) to that URL.
 - **3D phone test**: https://claude.ai/artifact/5kVb4PyywgDcPBHSVSc3cu. `node proto/build.js`, publish a copy of `proto/ring3d.html` with the doctype/html/head/body tags stripped.
-- `proto/ring3d.html` is a build output: rebuild, don't edit. The 3D boxer lives in `proto/boxer3d.js` (skeleton, cel body, motion layers; inlined by `build.js`); headless 3D tools in `proto/tools/` (README).
+- `proto/ring3d.html` is a build output: rebuild, don't edit. The 3D boxer lives in `proto/boxer3d.js` (skeleton, cel body, motion layers; inlined by `build.js`); headless 3D tools in `proto/tools/` (README; `feet.js` and `FAST=seed` run seeded at a fixed 30 fps with no rendering).
 - Published-page rules: scripts only from cdnjs/jsdelivr/tailwind/jquery, fonts from Google Fonts, no other network calls, one file.
 
 ## Working rules
