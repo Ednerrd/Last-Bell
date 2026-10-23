@@ -74,6 +74,13 @@ So **crouch comes in two kinds**: knees (Tyson, Ball, peekaboo) and a waist hing
 7. **Tired hands** lower round by round (the Dunn numbers).
 Each step: Ed's screenshots side by side, `proto/tools/clip.js` (glove-in-head stays ~.1%), `same.js 40` = 3fd3c667.
 
+## 7b. What the photos say (Oct 23, sheets v2)
+Real-fight photos (2025-26: Usyk, Inoue-Nakatani, Canelo-Crawford, Bivol-Beterbiev 2, Dubois-Wardley, Paro-Crocker, Stevenson; classics: Ali, Norton, Roy Jones; local only in `shots/stance/`, gitignored, copyright, reference only) next to ours standing:
+- **The stride is the big miss.** Real men stand with the feet far apart front to back, roughly 1.3-1.6x shoulder width by eye (ours 19 units = ~.75x), and **hips sit low** off deep knee bend. Ours look tall with the feet under the hips. So change 1 is **knees + a longer stance together** (`stanceL` 9.5 -> ~14-17 by eye), not knees alone; the [gen] "about shoulder width" line undersells it.
+- The rear leg runs long and straight-ish behind with the heel up; the lead knee is over the lead foot.
+- Hands-low men (Ali, Roy) lean far back off that long stance. Norton's cross stack is low with the trunk hunched over it.
+- The sheets are by-eye: a measured pass (feet apart / height on 3-4 full-body side shots) before setting the numbers.
+
 ## 8. Gaps
 - No real foot width, toe angles or knee degrees from a source we could read: the [gen] lines are standard coaching. The bot-walled stance tutorials (ids in `research/stance.md`) would settle them; Ed can paste a transcript or two.
 - Southpaw: a mirror is all the research says.
