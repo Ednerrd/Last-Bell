@@ -2,23 +2,26 @@
 
 Ed's call (Oct 2026): **3D replaces the 2D side view as the live fight screen.** Target phone: Galaxy S25 Ultra.
 
+Plan checked against the code Oct 23 (pre-3D baseline): stale bits from before the Oct cut fixed (hub, careers, settings, Phase 0, size). The bench still builds and runs a fight on today's engine with no page errors.
+
 ## Ground rules
-- **Render only.** Engine, career, balance, saves and UI flow are not touched, so no sims are needed except to prove nothing moved.
+- **Render only.** Engine, balance and the fight screen's flow are not touched, so no sims are needed except the hash that proves nothing moved: the pre-3D baseline, `same.js 40` **3fd3c667** / `same.js 200` **6c94c895** (Oct 23).
 - **Same input.** The 3D renderer reads the same `view` object the fight loop already builds:
   - `{f, looks, t, venue, cam, zoom, excite, ref, replay, ev, flash}`
   - built by `liveView()` / `startReplay()`, with `spreadView` + `blendSnap`
 - **Same interface.** `Render3D` exposes the same functions as `Render`: `init`, `reset`, `resize`, `frame(view, dt)`. The fight loop picks one, so this swap is about 5 lines.
 - **2D stays.**
-  - `Render.portrait` keeps doing the hub, offers and locker portraits.
+  - The game is one fight screen now (the Oct cut removed career, hub, offers and locker): no menus to keep 2D for. `Render.portrait` is unused since the cut (dead code, leave it until the merge).
   - The 2D fight view stays as the fallback when WebGL is missing or three.js fails to load.
-  - Settings get a "Classic 2D view" toggle.
+  - There is no settings screen: the 3D/2D switch is a button in the fight screen's lab row (next to New fight / Rematch / Pick), remembered in localStorage.
 - **One file.**
   - New section `/* ===== LAST BELL : render3d ===== */` in `index.html`.
-  - three.js comes from jsdelivr through a dynamic `import()` at fight start. It's allowed by the publishing rules and is cached after the first load. The title and hub screens never wait on it.
-  - Expected size: +1,000–1,400 lines.
+  - three.js comes from jsdelivr through a dynamic `import()` at fight start. It's allowed by the publishing rules and is cached after the first load. The 2D view draws until it's loaded, then hands over.
+  - Expected size: +1,000–1,400 lines (index.html 5,164 today, so ~6,200–6,600).
 - **Dev bench.** `proto/ring3d.src.html` + `build.js` stays the bench until the merge. Each phase is published to a **preview** artifact for Ed. It goes to the live URL only when Ed says so.
 
-## Phase 0: phone check (do first, short)
+## Phase 0: phone check (moved to the end of Phase 1)
+- **Done once, Oct 9, on the v2 bench** (`claude/brave-einstein-ojkyzm`): 60 fps on the S25 Ultra on every setting, shadows on; defaults res 2 / shadows on / cap 60 (`docs/NOTES.md`). The Phase 1 bodies (layers, more bones, outlines) cost more, so **rerun it on the new bench at the end of Phase 1**, not first. The bench's "Phone test" button already has the overlay below.
 - Build a perf page: the current proto plus an overlay showing fps, frame ms and draw calls, and a quality switch (shadows on/off, pixel ratio 1.5 / 2 / native).
 - Ed runs a full fight on the S25 Ultra and reports:
   - fps on each setting
@@ -35,10 +38,11 @@ Ed's call (Oct 2026): **3D replaces the 2D side view as the live fight screen.**
 Research (FNC + Thrill of the Fight) and the items it adds to each phase: `proto/RESEARCH.md` → "What Last Bell takes from this".
 
 ## Phase 1: foundation (fix the duct tape before adding looks)
-1. **Spacing.**
+1. **Spacing and size.**
    - The engine's distances were tuned for 2D, so the proto spreads them apart (`spad`, up to +26) and lunges punches in (up to 30–34).
    - Replace this with one clean mapping: engine distance → 3D distance between the men, sized so a jab at the engine's jab range lands with the arm about 95% straight.
    - Keep `lunge` only for real step-in shots.
+  - **Size (s1-s3) shows.** The bench ignores it today. Each man is drawn at his height, arms at his reach (`rs`: every punch reaches x `rs`), so a 4 in reach gap reads on screen; the spacing mapping uses each man's own arm, not one jab length.
 2. **Animation system.**
    - Swap the per-frame formulas for keyed poses with blending.
    - Poses per guard (6 guards). Punches by kind with load → snap → hold → retract curves.
@@ -47,7 +51,8 @@ Research (FNC + Thrill of the Fight) and the items it adds to each phase: `proto
    - Everything 2D learned carries over: straights land nearly locked out, contact pushes the man getting hit (not the puncher), the back heel rolls up, elbows bend the right way on the walk.
 3. **Footwork.** Feet plant and step instead of sliding. Steps are driven by how far the hips move. Pivots on hooks. The back foot follows on a lunge.
 4. **Anti-clip.** Keep `settle()` (glove in head 80 → 2). Add stat tools that work headless (swiftshader) to measure it, like `clip2d.py` does for 2D.
-- **Exit:** clip stats around 0, straights at about 0.9 extension at contact, Ed approves the motion on the preview.
+- **First look for Ed:** plain gray men, no punches: standing loose, bouncing, breathing ("Bodies and movement" below). If they look like boxers standing still, punches go on top.
+- **Exit:** clip stats around 0, straights at about 0.9 extension at contact, the height/reach gap visible, Ed approves the motion on the preview, then the Phase 0 phone rerun.
 
 ## Phase 2: look
 - **Fighters.** Better heads and faces, and muscle by build (flyweight wiry, heavyweight thick, same `G = build^1.5` idea). Skin tones, hair, trunks/gloves/boots from `looks`, including the kit-clash swap.
@@ -67,13 +72,13 @@ Research (FNC + Thrill of the Fight) and the items it adds to each phase: `proto
 
 ## Phase 4: merge and ship
 - Merge into `index.html` behind the 3D/2D toggle, with 3D as the default.
-- Ed plays it on the **preview** artifact for a few days of careers.
+- Ed plays it on the **preview** artifact for a few days of fights (random and picked).
 - Headless check: run 1800 frames for clip stats and catch page errors.
 - When Ed says go, update CLAUDE.md, and Ed publishes it live.
 
 ## Risks
 - **Heat and battery** in long idle sessions. That's why Phase 0 comes first and the 30 fps option exists.
-- **File size and complexity.** index.html grows to about 5,000 lines. The render3d section must stay self-contained.
+- **File size and complexity.** index.html grows to about 6,200–6,600 lines. The render3d section must stay self-contained.
 - **Two renderers to maintain.** 2D gets frozen and becomes fallback only. No new 2D features after the merge.
 
 ## Guard reference for the 3D models (Ed, Oct 6 2026)
@@ -88,7 +93,7 @@ Ed's references are 5 stock images, not committed (watermarked stock). Kept in w
   - **Through the guard.** A blocked shot thuds into the gloves and the arms give. A leaky block (engine `blockLeak`) shows the glove pushing *through* the guard into the face. A clean one hits open space.
   - **Clean vs blocked vs missed** reads different at a glance: impact flash and sweat spray on clean, a dull glove-on-glove pop on blocked, a whiff and an off-balance step on a miss.
 - **The engine already has most of this.** `resolve()` knows the zone (`P.zone` head/body), the kind (jab, cross, hook, upper), blocked or not, rolled/evaded, and how much leaked (`mult`). Missing: a finer spot (chin vs temple, liver vs ribs). Pick it in render from kind + side, so no engine change.
-- **Where it fits:** Phase 1 (reactions by punch type, contact) and Phase 2 (look, impact FX). Not now: 3D comes right after Size (ROADMAP item 4; Ed, Oct 22).
+- **Where it fits:** Phase 1 (reactions by punch type, contact) and Phase 2 (look, impact FX).
 
 ## Bodies and movement: loose but ready (Ed, Oct 22 2026)
 Ed on the first 3D try: the camera was fine; **the bodies and the movement were the problem: too stiff.** A boxer is relaxed, light on his feet, always moving; the hands are loose but ready, and the guard is only tight when something's coming. Plan for Phase 1-2:
