@@ -17,12 +17,12 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui
 .nm.r .bars i{margin-left:auto}
 .clock{text-align:center;font-family:var(--disp);font-size:24px;line-height:1;text-shadow:0 1px 3px #000}.clock small{display:block;font-family:var(--ui);font-size:13px;color:var(--mute)}
 .ctl{position:fixed;left:0;right:0;bottom:0;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.ctl button{font:700 16px var(--ui);color:var(--ink);background:rgba(20,15,11,.78);border:1.5px solid rgba(240,184,90,.45);border-radius:6px;padding:10px 14px;min-width:84px;backdrop-filter:blur(4px)}
+.ctl button{font:700 16px var(--ui);color:var(--ink);background:rgba(20,15,11,.78);border:1.5px solid rgba(240,184,90,.45);border-radius:6px;padding:10px 12px;min-width:76px;min-height:44px;backdrop-filter:blur(4px)}
 .ctl button:active{background:rgba(240,184,90,.25)}
 .big{position:fixed;left:16px;right:16px;top:38%;text-align:center;font-family:var(--disp);font-size:clamp(34px,11vw,64px);letter-spacing:.03em;color:var(--accent);text-shadow:0 3px 14px #000;opacity:0;transition:opacity .25s;pointer-events:none;text-transform:uppercase}
 .big small{display:block;font-family:var(--ui);font-size:18px;color:var(--ink);letter-spacing:0;text-transform:none}
 .big.on{opacity:1}
-.hint{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 66px);text-align:center;font-size:14px;color:var(--mute);pointer-events:none;transition:opacity .6s}
+.hint{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 122px);text-align:center;font-size:14px;color:var(--mute);pointer-events:none;transition:opacity .6s}
 .err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:18px}
 .perf{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 66px);display:none;font:500 14px/1.35 var(--ui);background:rgba(12,9,7,.82);border:1px solid rgba(240,184,90,.35);border-radius:8px;padding:8px 10px;max-width:440px;margin:0 auto}
 .perf.on{display:block}.perf b{font-family:var(--disp);font-weight:400;font-size:22px;color:var(--accent);letter-spacing:.02em}
@@ -40,7 +40,7 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui
 </div>
 <div class="big" id="big"></div>
 <div class="hint" id="hint">Drag to move the camera</div>
-<div class="ctl"><button id="bCam">Cam: TV</button><button id="bSpd">Speed 1x</button><button id="bNew">New fight</button><button id="bPerf">Phone test</button></div>
+<div class="ctl"><button id="bCam">Cam: TV</button><button id="bSpd">Speed 1x</button><button id="bNew">New fight</button><button id="bStand">Stand</button><button id="bGray">Gray</button><button id="bPerf">Phone test</button></div>
 <div class="perf" id="perf" aria-live="polite"></div>
 <div class="err" id="err">This test needs WebGL. Try another browser.</div>
 <script>
@@ -57,542 +57,149 @@ catch (e) { document.getElementById('err').style.display = 'flex'; throw e; }
 renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0c0907);
-scene.fog = new THREE.Fog(0x0c0907, 700, 1500);
+scene.background = new THREE.Color(0x0b0806);
+scene.fog = new THREE.Fog(0x0b0806, 650, 1500);
 const camera = new THREE.PerspectiveCamera(34, 1, 5, 4000);
 
-scene.add(new THREE.HemisphereLight(0xfff0dc, 0x20160f, .75));
-const key = new THREE.SpotLight(0xfff1de, 3.2, 0, .62, .55, 0);
-key.position.set(0, 620, 80); key.target.position.set(0, 0, 0);
-key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.camera.near = 300; key.shadow.camera.far = 900; key.shadow.bias = -.0004; key.shadow.normalBias = .9; key.shadow.radius = 3;
+// cel lighting: one hot key over the ring (the shadows), a soft fill, warm and cold rims. The crowd sits in the dark
+scene.add(new THREE.HemisphereLight(0xfff0dc, 0x2a2018, 1.1));
+const key = new THREE.SpotLight(0xfff1de, 2.6, 0, .66, .5, 0);
+key.position.set(40, 640, 160); key.target.position.set(0, 0, 0);
+key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.camera.near = 300; key.shadow.camera.far = 900; key.shadow.bias = -.0005; key.shadow.normalBias = .6; key.shadow.radius = 2;
 scene.add(key, key.target);
-const rimW = new THREE.DirectionalLight(0xffc98a, .55); rimW.position.set(-500, 220, -300); scene.add(rimW);
-const rimC = new THREE.DirectionalLight(0x8fb3ff, .35); rimC.position.set(500, 160, -200); scene.add(rimC);
-const fill = new THREE.DirectionalLight(0xfff4e6, .35); fill.position.set(0, 200, 600); scene.add(fill);
+const rimW = new THREE.DirectionalLight(0xffc98a, .7); rimW.position.set(-500, 220, -300); scene.add(rimW);
+const rimC = new THREE.DirectionalLight(0x8fb3ff, .5); rimC.position.set(500, 160, -200); scene.add(rimC);
+const fill = new THREE.DirectionalLight(0xfff4e6, .55); fill.position.set(0, 200, 600); scene.add(fill);
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const UP = V(0, 1, 0), Y = V(0, 1, 0);
-const std = (c, r, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r == null ? .6 : r, metalness: 0 }, extra || {}));
-function shade(m) { m.castShadow = true; m.receiveShadow = true; return m; }
-
-/* ---------- helpers ---------- */
-const _d = new THREE.Vector3();
-function placeSeg(m, a, b) { _d.subVectors(b, a); const L = _d.length() || 1e-4; m.position.addVectors(a, b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(Y, _d.multiplyScalar(1 / L)); m.scale.set(1, L, 1); }
-const _m4 = new THREE.Matrix4(), _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3();
-// orient an object so local +Y = up, +Z = fwd (orthogonalized), +X = up x fwd
-function orient(o, up, fwd) {
-  _y.copy(up).normalize(); _z.copy(fwd).addScaledVector(_y, -fwd.dot(_y)); if (_z.lengthSq() < 1e-6) _z.set(0, 0, 1); _z.normalize();
-  _x.crossVectors(_y, _z); _m4.makeBasis(_x, _y, _z); o.quaternion.setFromRotationMatrix(_m4);
-}
-// two-bone IK: root S, target T, lengths a/b, pole hint. Returns [joint, reachedTarget]
-function ik(S, T, a, b, pole) {
-  const d = T.clone().sub(S); let L = d.length(); const dn = d.clone().multiplyScalar(1 / (L || 1));
-  L = clamp(L, Math.abs(a - b) + .5, a + b - .05);
-  const T2 = S.clone().addScaledVector(dn, L);
-  const x = (a * a + L * L - b * b) / (2 * L), h = Math.sqrt(Math.max(0, a * a - x * x));
-  const p = pole.clone().addScaledVector(dn, -pole.dot(dn)); if (p.lengthSq() < 1e-6) p.set(0, -1, 0); p.normalize();
-  return [S.clone().addScaledVector(dn, x).addScaledVector(p, h), T2];
-}
 const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-const outC = t => 1 - Math.pow(1 - t, 3), outQ = t => 1 - Math.pow(1 - t, 4);
+const outC = t => 1 - Math.pow(1 - t, 3);
 const damp = (a, b, r, dt) => a + (b - a) * (1 - Math.exp(-r * dt));
 const dampV = (a, b, r, dt) => a.lerp(b, 1 - Math.exp(-r * dt));
-// a limb from y=0 (top joint) to y=L (bottom joint): rounded caps that sink into the next limb, taper r0 -> r1, a muscle belly
-function limbGeo(L, r0, r1, belly, at, wid) {
-  const pts = [], cap = 5, N = 12;
-  for (let i = 0; i <= cap; i++) { const a = -Math.PI / 2 + i / cap * Math.PI / 2; pts.push([Math.cos(a) * r0, Math.sin(a) * r0]); }
-  for (let i = 1; i < N; i++) { const t = i / N; pts.push([r0 + (r1 - r0) * t + belly * Math.exp(-Math.pow((t - at) / (wid || .3), 2)), t * L]); }
-  for (let i = 0; i <= cap; i++) { const a = i / cap * Math.PI / 2; pts.push([Math.cos(a) * r1, L + Math.sin(a) * r1]); }
-  pts[0][0] = pts[pts.length - 1][0] = .01;
-  const g = new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, -y)), 18); return g; // grows down -Y from the joint
-}
-// put a limb mesh at joint a pointing at b (twist from 'face')
-const _dn = new THREE.Vector3();
-function placeLimb(m, a, b, face) { m.position.copy(a); _dn.subVectors(a, b); orient(m, _dn, face); }
+const _d = new THREE.Vector3();
+function placeSeg(m, a, b) { _d.subVectors(b, a); const L = _d.length() || 1e-4; m.position.addVectors(a, b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(Y, _d.multiplyScalar(1 / L)); m.scale.set(1, L, 1); }
+function shade(m) { m.castShadow = true; m.receiveShadow = true; return m; }
+
+/*@BOXER@*/
+
+const toon = (c, extra) => toonMat(Object.assign({ color: c }, extra || {}));
 const gearC = (k, id) => (GEAR[k].find(g => g.id === id) || GEAR[k][0]);
 
 /* ---------- ring ---------- */
 const RX = RING + 14, RZ = ZR + 14, PX = RX + 4, PZ = RZ + 4, APRON = 26;
 function canvasTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d');
-  g.fillStyle = '#d8cdb9'; g.fillRect(0, 0, 1024, 1024);
-  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '60,40,20' : '255,250,240'},${Math.random() * .05})`; g.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2); }
-  g.strokeStyle = 'rgba(120,40,30,.18)'; g.lineWidth = 10; g.beginPath(); g.arc(512, 512, 170, 0, Math.PI * 2); g.stroke();
-  g.fillStyle = 'rgba(130,40,30,.22)'; g.font = '120px Anton, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAST BELL', 512, 520);
-  g.strokeStyle = 'rgba(60,40,25,.12)'; g.lineWidth = 6; g.strokeRect(30, 30, 964, 964);
+  g.fillStyle = '#ddd2be'; g.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 6000; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '60,40,20' : '255,250,240'},${Math.random() * .04})`; g.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2); }
+  g.strokeStyle = 'rgba(120,40,30,.2)'; g.lineWidth = 12; g.beginPath(); g.arc(512, 512, 170, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = 'rgba(130,40,30,.24)'; g.font = '120px Anton, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAST BELL', 512, 520);
+  g.strokeStyle = 'rgba(60,40,25,.14)'; g.lineWidth = 6; g.strokeRect(30, 30, 964, 964);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 const ring = new THREE.Group(); scene.add(ring);
+const lineM = new THREE.MeshBasicMaterial({ color: 0x140d09, side: THREE.BackSide });
 {
   const W = 2 * (PX + APRON), D = 2 * (PZ + APRON);
-  const top = new THREE.Mesh(new THREE.PlaneGeometry(W, D), std(0xffffff, .92, { map: canvasTexture() }));
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(W, D), toon(0xffffff, { map: canvasTexture() }));
   top.rotation.x = -Math.PI / 2; top.receiveShadow = true; ring.add(top);
-  const skirt = new THREE.Mesh(new THREE.BoxGeometry(W, 34, D), std(0x1b2235, .8)); skirt.position.y = -17.2; ring.add(skirt);
-  const band = new THREE.Mesh(new THREE.BoxGeometry(W + .5, 3, D + .5), std(0xb07a2a, .5)); band.position.y = -3; ring.add(band);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), std(0x15100c, 1)); floor.rotation.x = -Math.PI / 2; floor.position.y = -34; floor.receiveShadow = true; scene.add(floor);
-  const postM = std(0x2a2a2e, .35, { metalness: .6 });
+  const skirt = new THREE.Mesh(new THREE.BoxGeometry(W, 34, D), toon(0x1b2235)); skirt.position.y = -17.2; ring.add(skirt);
+  const band = new THREE.Mesh(new THREE.BoxGeometry(W + .5, 3, D + .5), toon(0xb07a2a)); band.position.y = -3; ring.add(band);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), toon(0x15100c)); floor.rotation.x = -Math.PI / 2; floor.position.y = -34; floor.receiveShadow = true; scene.add(floor);
+  const postM = toon(0x2a2a2e);
   const corners = [[-1, -1, 0xb8302a], [1, 1, 0x2f62a8], [1, -1, 0xe8e2d6], [-1, 1, 0xe8e2d6]];
   for (const [sx, sz, pc] of corners) {
     const p = shade(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3, 70, 12), postM)); p.position.set(sx * PX, 35, sz * PZ); ring.add(p);
-    const pad = shade(new THREE.Mesh(new THREE.BoxGeometry(9, 44, 9), std(pc, .55))); pad.position.set(sx * (PX - 4), 38, sz * (PZ - 4)); pad.rotation.y = Math.PI / 4; ring.add(pad);
+    const pad = shade(new THREE.Mesh(new THREE.BoxGeometry(9, 44, 9), toon(pc))); pad.position.set(sx * (PX - 4), 38, sz * (PZ - 4)); pad.rotation.y = Math.PI / 4; ring.add(pad);
   }
+  // ropes: one merged mesh per color (3 draw calls), dark outline hulls behind
   const ropeCols = [0x2f62a8, 0xece6da, 0xb8302a];
   [22, 40, 58].forEach((h, i) => {
-    const m = std(ropeCols[i], .45);
-    const segR = (a, b) => { const r = shade(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 1, 10), m)); placeSeg(r, a, b); ring.add(r); };
-    segR(V(-PX, h, -PZ), V(PX, h, -PZ)); segR(V(-PX, h, PZ), V(PX, h, PZ)); segR(V(-PX, h, -PZ), V(-PX, h, PZ)); segR(V(PX, h, -PZ), V(PX, h, PZ));
+    const segs = [[V(-PX, h, -PZ), V(PX, h, -PZ)], [V(-PX, h, PZ), V(PX, h, PZ)], [V(-PX, h, -PZ), V(-PX, h, PZ)], [V(PX, h, -PZ), V(PX, h, PZ)]];
+    const geos = segs.map(([a, b]) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 1, 10)); placeSeg(m, a, b); m.updateMatrix(); return m.geometry.clone().applyMatrix4(m.matrix); });
+    const all = new THREE.BufferGeometry(), P = [], N = [], I = []; let o = 0;
+    for (const g of geos) { const pa = g.attributes.position, na = g.attributes.normal; for (let k = 0; k < pa.count; k++) { P.push(pa.getX(k), pa.getY(k), pa.getZ(k)); N.push(na.getX(k), na.getY(k), na.getZ(k)); } for (let k = 0; k < g.index.count; k++) I.push(g.index.getX(k) + o); o += pa.count; }
+    all.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); all.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); all.setIndex(I);
+    ring.add(shade(new THREE.Mesh(all, toon(ropeCols[i]))));
   });
   // a lighting truss overhead and a few distant arena lights so the ring doesn't float in black
-  const truss = new THREE.Mesh(new THREE.BoxGeometry(2 * PX + 80, 6, 2 * PZ + 80), std(0x111111, .8)); truss.position.y = 430; scene.add(truss);
-  const lm = new THREE.MeshBasicMaterial({ color: 0xffe3b0 });
-  for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = 900 + (i % 3) * 60; const b = new THREE.Mesh(new THREE.SphereGeometry(5 + (i % 2) * 2, 8, 6), lm); b.position.set(Math.cos(a) * r, 120 + (i % 4) * 70, Math.sin(a) * r); scene.add(b); }
+  const truss = new THREE.Mesh(new THREE.BoxGeometry(2 * PX + 80, 6, 2 * PZ + 80), toon(0x111111)); truss.position.y = 430; scene.add(truss);
+  const lights = new THREE.InstancedMesh(new THREE.SphereGeometry(6, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe3b0 }), 40), m4 = new THREE.Matrix4();
+  for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = 900 + (i % 3) * 60; m4.makeTranslation(Math.cos(a) * r, 120 + (i % 4) * 70, Math.sin(a) * r); lights.setMatrixAt(i, m4); }
+  scene.add(lights);
 }
+// the crowd: dark silhouettes in rising rows around the ring, one instanced mesh; they bob with the action
+const CROWD = (() => {
+  const body = new THREE.CapsuleGeometry(10, 18, 3, 8).translate(0, 20, 0), head = new THREE.SphereGeometry(6.5, 8, 6).translate(0, 44, 0);
+  const geo = new THREE.BufferGeometry(); { const P = [], I = []; let o = 0; for (const g of [body, head]) { const pa = g.attributes.position; for (let k = 0; k < pa.count; k++) P.push(pa.getX(k), pa.getY(k), pa.getZ(k)); for (let k = 0; k < g.index.count; k++) I.push(g.index.getX(k) + o); o += pa.count; } geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setIndex(I); }
+  const n = 360, m = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }), n), base = [], m4 = new THREE.Matrix4(), c = new THREE.Color();
+  let i = 0;
+  for (let row = 0; row < 5 && i < n; row++) {
+    const ex = PX + APRON + 70 + row * 34, ez = PZ + APRON + 70 + row * 34, per = 2 * (ex + ez) / 22;
+    for (let k = 0; k < per && i < n; k++) {
+      const L = 4 * ex + 4 * ez; let u = (k + Math.random() * .5) / per * L, x, z;
+      if (u < 2 * ex) { x = -ex + u; z = -ez; } else if ((u -= 2 * ex) < 2 * ez) { x = ex; z = -ez + u; } else if ((u -= 2 * ez) < 2 * ex) { x = ex - u; z = ez; } else { u -= 2 * ex; x = -ex; z = ez - u; }
+      x += (Math.random() - .5) * 10; z += (Math.random() - .5) * 10;
+      base.push({ x, y: -34 + row * 16, z, ph: Math.random() * 7, s: .85 + Math.random() * .3 });
+      c.setHSL(.06 + Math.random() * .08, .35, .006 + Math.random() * .012 + row * .0015); m.setColorAt(i, c); i++;
+    }
+  }
+  m.count = i; scene.add(m);
+  let t = 0;
+  return { tick(dt, ex) { t += dt; for (let j = 0; j < m.count; j++) { const b = base[j], hop = Math.max(0, Math.sin(t * (3 + ex * 5) + b.ph)) * (1 + ex * 9); m4.makeScale(b.s, b.s, b.s).setPosition(b.x, b.y + hop, b.z); m.setMatrixAt(j, m4); } m.instanceMatrix.needsUpdate = true; } };
+})();
 // corner stools (shown between rounds)
 function mkStool() {
-  const g = new THREE.Group(), m = std(0x6b4a2e, .6), lm = std(0x2a2a2e, .4, { metalness: .5 });
+  const g = new THREE.Group(), m = toon(0x6b4a2e), lm = toon(0x2a2a2e);
   const seat = shade(new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 3, 16), m)); seat.position.y = 26; g.add(seat);
   for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; const l = shade(new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 6), lm)); placeSeg(l, V(Math.cos(a) * 7, 25, Math.sin(a) * 7), V(Math.cos(a) * 9, 0, Math.sin(a) * 9)); g.add(l); }
   g.visible = false; scene.add(g); return g;
 }
+const stools = [mkStool(), mkStool()];
 
-/* ================= the fighter ================= */
-const GUARD3 = { // glove spots in (forward, height, toward lead side), crouch, blade angle (deg), forward lean, elbow tuck
-  standard: { L: [20, 79, 5.5], R: [7, 81, -7.5], c: 3, bl: 32, lean: 3, tuck: .35 },
-  high:     { L: [12, 88, 6], R: [8, 88, -6.5], c: 4, bl: 26, lean: 3, tuck: .9 },
-  peekaboo: { L: [12, 85, 4], R: [11, 85, -4], c: 8, bl: 16, lean: 7, tuck: .95 },
-  philly:   { L: [9, 60, -3], R: [9, 86, -7], c: 2, bl: 52, lean: 1, tuck: .5 },
-  cross:    { L: [11, 84, -5], R: [12, 77, 5], c: 5, bl: 22, lean: 4, tuck: .8 },
-  handslow: { L: [20, 58, 8], R: [8, 75, -7], c: 1, bl: 36, lean: -1, tuck: .2 }
-};
-class Boxer {
-  constructor(look, side) {
-    this.side = side; this.look = look;
-    this.hs = (look.h || 1) * 1.04; this.G = Math.pow(look.build || 1, 1.5) * .95 + .05;
-    const G = this.G, hs = this.hs;
-    const skin = std(look.skin, .62), tr = gearC('trunks', look.trunks), gl = gearC('gloves', look.gloves), sh = gearC('shoes', look.shoes);
-    const trunkM = std(tr.c, .42), trimM = std(tr.trim || '#ddd', .5), gloveM = std(gl.c, .28), cuffM = std(gl.trim || '#eee', .45), bootM = std(sh.c, .5), hairM = std(look.hairCol, .85);
-    const g = this.g = new THREE.Group(); scene.add(g);
-    const add = (geo, m) => { const o = shade(new THREE.Mesh(geo, m)); g.add(o); return o; };
-    const cyl = (r1, r2, m, seg) => add(new THREE.CylinderGeometry(r1, r2, 1, seg || 14), m); // r1 at the far end (b), r2 at a
-    const ball = (r, m) => add(new THREE.SphereGeometry(r, 16, 12), m);
-    // torso: a lathe from the waist (y=0) to the neck (y=1), chest flaring wide at the lats/pecs
-    const prof = [[.01, 0], [.84, 0], [.84, .12], [.79, .3], [.83, .52], [.94, .74], [1, .85], [.88, .93], [.42, 1]].map(([r, y]) => new THREE.Vector2(r, y));
-    this.torso = new THREE.Group(); g.add(this.torso);
-    const tm = shade(new THREE.Mesh(new THREE.LatheGeometry(prof, 36), skin)); tm.scale.set(13 * G, 1, 13 * G * .62); this.torso.add(tm); this.torsoMesh = tm;
-    for (const s of [-1, 1]) { const pec = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); pec.scale.set(5.4 * G, 3.9 * G, 2.4 * G); pec.position.set(s * 4.6 * G, .76, 5.6 * G); this.torso.add(pec); (this.pecs = this.pecs || []).push(pec); }
-    const abs = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); abs.scale.set(5.6 * G, 9 * G, 2 * G); abs.position.set(0, .4, 4.6 * G); this.torso.add(abs); this.abs = abs;
-    // trunks: a lathe around the hips, with a waistband
-    const tp = [[.01, -.02], [.9, 0], [1, .35], [.98, .78], [.92, 1]].map(([r, y]) => new THREE.Vector2(r, y));
-    this.trunks = new THREE.Group(); g.add(this.trunks);
-    const tk = shade(new THREE.Mesh(new THREE.LatheGeometry(tp, 40), trunkM)); tk.scale.set(12.2 * G, 15 * hs, 12.2 * G * .78); tk.position.y = -9 * hs; this.trunks.add(tk);
-    const wb = shade(new THREE.Mesh(new THREE.CylinderGeometry(1, 1.02, 1, 40, 1, false), trimM)); wb.scale.set(12.6 * G, 3.4, 12.6 * G * .8); wb.position.y = 5.2 * hs; this.trunks.add(wb);
-    this.legSleeve = [cyl(7.6 * G, 8.2 * G, trunkM, 28), cyl(7.6 * G, 8.2 * G, trunkM, 28)];
-    const limb = (L, r0, r1, b, at, w, m) => add(limbGeo(L, r0, r1, b, at, w), m || skin);
-    const TH = 24.5 * hs, SH = 23.5 * hs, UA = 19.5 * hs, FA = 17.5 * hs; this.len = { TH, SH, UA, FA };
-    this.thigh = [0, 1].map(() => { const m = limb(TH, 7 * G, 5 * G, 1.2 * G, .3, .35); m.scale.z = .92; return m; });
-    this.shin = [0, 1].map(() => limb(SH, 4.4 * G, 3.1 * G, 1.4 * G, .25, .25));
-    this.bootShaft = [0, 1].map(() => limb(9 * hs, 4.3 * G, 4.1 * G, .2 * G, .5, .4, bootM));
-    this.foot = [0, 1].map(() => { const f = shade(new THREE.Mesh(new THREE.CapsuleGeometry(3.6 * G, 8.5, 6, 12), bootM)); g.add(f); return f; });
-    this.sole = [0, 1].map(() => { const f = shade(new THREE.Mesh(new THREE.BoxGeometry(7.4 * G, 1.2, 15.5), std(0xe8e2d6, .7))); g.add(f); return f; });
-    this.delt = [ball(5 * G, skin), ball(5 * G, skin)]; this.delt.forEach(d => d.scale.set(1.05, .8, 1.15));
-    this.trap = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), skin)); g.add(this.trap);
-    this.upper = [0, 1].map(() => limb(UA, 4.8 * G, 3.8 * G, 1.25 * G, .5, .28));
-    this.fore = [0, 1].map(() => limb(FA, 3.5 * G, 2.9 * G, 1 * G, .22, .3));
-    this.glove = [0, 1].map(() => {
-      const o = new THREE.Group(); g.add(o);
-      const m = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 14), gloveM)); m.scale.set(.86, .86, 1.14); m.position.z = 6; o.add(m);
-      const th = shade(new THREE.Mesh(new THREE.CapsuleGeometry(1.9, 4, 4, 8), gloveM)); th.position.set(4.1, 2.2, 5.6); th.rotation.x = Math.PI / 2.4; th.rotation.z = -.4; o.add(th); o.thumb = th;
-      const cuff = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.2, 6.5, 14), gloveM)); cuff.rotation.x = Math.PI / 2; cuff.position.z = 0; o.add(cuff);
-      const tr = shade(new THREE.Mesh(new THREE.CylinderGeometry(4.55, 4.55, 1.6, 14), cuffM)); tr.rotation.x = Math.PI / 2; tr.position.z = -1.8; o.add(tr);
-      return o;
-    });
-    this.neck = cyl(4.8 * G, 5.6 * G, skin);
-    // head, built facing +Z
-    const hd = this.head = new THREE.Group(); g.add(hd);
-    const skull = shade(new THREE.Mesh(new THREE.SphereGeometry(8.4, 28, 20), skin)); skull.scale.set(.84, 1.04, .96); hd.add(skull);
-    const jaw = shade(new THREE.Mesh(new THREE.SphereGeometry(6.4, 18, 12), skin)); jaw.scale.set(.95, .78, 1); jaw.position.set(0, -4.4, 2.4); hd.add(jaw);
-    // face: brow ridge, eyes set under it, a real nose (bridge + tip + nostrils), cheekbones, mouth
-    const ridge = shade(new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), skin)); ridge.scale.set(6.2, 1.5, 2); ridge.position.set(0, 2.5, 6.6); hd.add(ridge);
-    const bridge = shade(new THREE.Mesh(new THREE.CapsuleGeometry(1.05, 3, 4, 8), skin)); bridge.position.set(0, .2, 7.6); bridge.rotation.x = -.35; hd.add(bridge);
-    const nose = shade(new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 8), skin)); nose.scale.set(1.15, .9, 1); nose.position.set(0, -1.7, 8.1); hd.add(nose);
-    const lip = new THREE.Mesh(new THREE.CapsuleGeometry(.55, 3, 3, 8), std(0x5a2a22, .5)); lip.rotation.z = Math.PI / 2; lip.position.set(0, -4.6, 7.2); hd.add(lip); this.mouth = lip;
-    const eyeW = std(0xe8e0d4, .35), eyeI = new THREE.MeshStandardMaterial({ color: 0x1a120c, roughness: .2 }), browM = std(look.hairCol, .9);
-    for (const s of [-1, 1]) {
-      const sock = new THREE.Mesh(new THREE.SphereGeometry(1.25, 12, 8), eyeW); sock.scale.set(1.2, .7, .6); sock.position.set(s * 2.8, .9, 6.9); hd.add(sock);
-      const iris = new THREE.Mesh(new THREE.SphereGeometry(.62, 10, 8), eyeI); iris.position.set(s * 2.7, .9, 7.55); hd.add(iris);
-      const br = new THREE.Mesh(new THREE.CapsuleGeometry(.55, 3, 3, 8), browM); br.rotation.z = Math.PI / 2 + s * .14; br.position.set(s * 2.9, 2.75, 7.75); hd.add(br);
-      const cheek = shade(new THREE.Mesh(new THREE.SphereGeometry(2.2, 12, 8), skin)); cheek.scale.set(1, .8, .7); cheek.position.set(s * 4, -1.6, 5.4); hd.add(cheek);
-      const ear = shade(new THREE.Mesh(new THREE.SphereGeometry(1.7, 10, 8), skin)); ear.scale.set(.5, 1.05, .8); ear.position.set(s * 7.2, 0, .4); hd.add(ear);
-    }
-    if (look.hair !== 'bald') {
-      const kind = look.hair, cap = new THREE.Mesh(new THREE.SphereGeometry(8.55, 22, 14, 0, Math.PI * 2, 0, kind === 'fade' || kind === 'buzz' ? Math.PI * .4 : Math.PI * .5), hairM);
-      cap.scale.set(.89, kind === 'afro' ? 1.22 : 1.08, 1.01); cap.position.set(0, kind === 'afro' ? 1.2 : .25, -.5); cap.rotation.x = -.3; cap.castShadow = true; hd.add(cap);
-    }
-    if (look.beard) { const bd = new THREE.Mesh(new THREE.SphereGeometry(6.8, 18, 12, 0, Math.PI * 2, Math.PI * .45, Math.PI * .5), hairM); bd.scale.set(.96, .9, 1.05); bd.position.set(0, -3.6, 2.6); hd.add(bd); }
-    this.stool = mkStool();
-    this.sm = null; this.t = Math.random() * 10; this.heading = side ? Math.PI : 0;
-  }
-  // arms via IK from the shoulders to the gloves
-  arms(gls) {
-    const { shs, poles, fwd, chest, south } = this.armC, { UA, FA } = this.len;
-    for (let i = 0; i < 2; i++) {
-      const [el, wr] = ik(shs[i], gls[i], UA, FA, poles[i]);
-      placeLimb(this.upper[i], shs[i], el, fwd); placeLimb(this.fore[i], el, wr, fwd);
-      this.delt[i].position.copy(shs[i]).lerp(chest, .12).addScaledVector(UP, 1.2); orient(this.delt[i], UP, el.clone().sub(shs[i]).setY(0).add(fwd));
-      const gl = this.glove[i]; gl.position.copy(wr); orient(gl, UP.clone().addScaledVector(fwd, -.3), wr.clone().sub(el)); gl.thumb.position.x = (i ? 1 : -1) * (south ? -1 : 1) * 4.1;
-    }
-  }
-  // after both men are posed: push the gloves off where the other man is NOW (he moved after we aimed), redo the arms
-  settle(oc) {
-    if (!this.armC || !this.armC.free || this.armC.clinch || !oc) return;
-    const GR = 5.8, sm = this.sm, fwd = this.armC.fwd;
-    const push = (g, c, r) => { const d = g.clone().sub(c), L = d.length(); if (L < r) { g.addScaledVector(L > 1e-3 ? d.multiplyScalar(1 / L) : fwd.clone().negate(), r - L); return true; } return false; };
-    const pushCap = (g, a, b, r) => { const ab = b.clone().sub(a), t = clamp(g.clone().sub(a).dot(ab) / Math.max(1e-3, ab.lengthSq()), 0, 1); return push(g, a.clone().addScaledVector(ab, t), r); };
-    let moved = false;
-    for (let i = 0; i < 2; i++) {
-      const g = sm.gl[i];
-      moved = pushCap(g, oc.hip, oc.chest, oc.tr + GR * .8) | moved;
-      moved = push(g, oc.head, oc.hr + GR * .85) | moved;
-      for (const og of oc.gl) moved = push(g, og, GR * 1.75) | moved;
-    }
-    if (moved) { this.arms([sm.gl[0], sm.gl[1]]); this.col.gl = [sm.gl[0].clone(), sm.gl[1].clone()]; }
-  }
-  // build this frame's joint positions from the engine snapshot, then place every mesh
-  pose(s, op, opB, dt, cornerPt) {
-    const G = this.G, hs = this.hs, gd = GUARD3[s.guard] || GUARD3.standard; this.t += dt;
-    const pos = V(s.x, 0, s.z);
-    // facing: at the other man, or where he's walking
-    if (!this.prev) this.prev = pos.clone();
-    const vel = pos.clone().sub(this.prev).multiplyScalar(1 / Math.max(dt, 1e-3)); this.prev.copy(pos);
-    let want;
-    if (s.sit) want = Math.atan2(-s.x, -s.z);
-    else if (s.walk && vel.length() > 12) want = Math.atan2(vel.x, vel.z);
-    else want = Math.atan2(op.x - s.x, op.z - s.z);
-    let dh = want - this.heading; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
-    if (s.state !== 'down' && s.state !== 'slump') this.heading += dh * (1 - Math.exp(-(s.walk ? 6 : 14) * dt));
-    const fwd = V(Math.sin(this.heading), 0, Math.cos(this.heading)), left = V(fwd.z, 0, -fwd.x); // up x fwd
-    const lead = s.stance === 'southpaw' ? left.clone().negate() : left.clone();
-    const P = (f, u, l, base) => (base || pos).clone().addScaledVector(fwd, f).addScaledVector(UP, u * hs).addScaledVector(lead, l);
-    const sm = this.sm = this.sm || { c: gd.c, bl: gd.bl, lean: gd.lean, side: 0, back: 0, gl: [null, null], head: null, sit: 0, pole: [null, null] };
-    // ---- read the moment
-    const P_ = s.aT && PUNCH[s.aT] ? PUNCH[s.aT] : null, p = s.aP || 0;
-    let k = 0; if (P_) k = p < .16 ? -.12 * Math.sin(Math.PI * p / .16) : p < .46 ? outQ((p - .16) / .3) : p < .64 ? 1 : 1 - ease((p - .64) / .36);
-    if (s.feint) k *= .35;
-    const leadArm = P_ ? P_.arm === 'lead' : true, kind = P_ ? P_.kind : null;
-    // step in: if his arm can't reach from where he stands, the punch carries him in (and he gets back out after)
-    let lunge = 0;
-    if (P_ && s.state !== 'down' && s.state !== 'slump' && s.state !== 'clinch' && this.bSh) {
-      const body = P_.zone === 'body', tgt = body ? opB : op.head, sh0 = this.bSh[leadArm ? 0 : 1];
-      const R = body ? 4 : 8.6 + 5.8 * .8, f2 = kind === 'straight' ? 1 : .55, dH = Math.hypot(tgt.x - sh0.x, tgt.z - sh0.z) - R * f2, dV = tgt.y - sh0.y;
-      const need = clamp(Math.sqrt(Math.max(0, dH * dH + dV * dV)) - (this.len.UA + this.len.FA) * .97, 0, P_.cat === 'jab' ? 34 : 30);
-      if (this.lgA !== s.aT || p < (this.lgP || 0) - .05) { this.lgA = s.aT; this.lgN = need; } else if (p < .4) this.lgN = damp(this.lgN, need, 10, dt);
-      this.lgP = p;
-      const lk = p < .1 ? 0 : p < .42 ? ease((p - .1) / .32) : p < .66 ? 1 : 1 - ease((p - .66) / .34);
-      lunge = this.lgN * lk * (s.feint ? .3 : 1);
-    }
-    this.lg = lunge;
-    pos.addScaledVector(fwd, lunge * .85);
-    const defE = s.def ? clamp(s.defP || 0, 0, 1) * clamp((1 - (s.defU || 0)) / .3, 0, 1) : 0;
-    const hit = clamp(s.hitT || 0, 0, 1) * (s.hitPow != null ? clamp(.5 + s.hitPow * .5, .4, 1.3) : 1);
-    // the last shot that landed: snaps in fast, eases out (body shots fold a beat late and stay longer)
-    const rc = this.react; let env = 0, envB = 0;
-    if (rc) { rc.t += dt; const T = rc.t; env = T < .06 ? T / .06 : Math.exp(-(T - .06) * 6.5); envB = T < .12 ? T / .12 : Math.exp(-(T - .12) * 3.2); if (T > 1.5) this.react = null; }
-    const rH = rc && rc.zone !== 'body' ? env * rc.pow : 0, rB = rc && rc.zone === 'body' ? envB * rc.pow : 0, rPush = rc ? rc.push.clone().setY(0) : V(0, 0, 0);
-    const live = s.state !== 'down' && s.state !== 'slump';
-    const breathe = Math.sin(this.t * 2.2 + s.bob) * .6, bounce = (s.mv || s.walk) ? 0 : Math.sin(this.t * 7 + s.bob) * 1.1;
-    // ---- body targets
-    let c = gd.c + 3.5 + (s.tired || 0) * 2.5 + bounce, bl = gd.bl, lean = gd.lean + 4, sideL = 0, back = 0;
-    if (P_) {
-      if (!leadArm) bl -= k * 52; else if (kind === 'hook') bl -= k * 34; else bl += k * 10;
-      if (this.overhand && k > 0) { sideL -= 4 * k; c += 3 * k; }
-      lean += k * (P_.cat === 'power' ? 6 : 3) + lunge * .15; if (P_.zone === 'body') { c += k * 9; sideL += (leadArm ? 1 : -1) * k * 3; }
-      if (kind === 'upper') c += (p < .4 ? k * 6 : -k * 2);
-    }
-    if (s.def !== this.defWas) { this.defWas = s.def; this.defSide = Math.random() < .5 ? 1 : -1; }
-    const du = clamp(s.defU || 0, 0, 1);
-    if (s.def === 'slip') { sideL += this.defSide * 13 * defE; c += 4 * defE; lean += 2 * defE; }
-    if (s.def === 'roll') { c += (6 + 10 * Math.sin(Math.PI * du)) * defE; bl += 22 * defE; sideL += this.defSide * Math.cos(Math.PI * du) * 9 * defE; }
-    if (s.def === 'duck') { c += 17 * defE; lean += 8 * defE; }
-    if (s.def === 'pull') { back += 12 * defE; lean -= 8 * defE; }
-    if (s.def === 'block' && s.defZ === 'body') c += 4 * defE;
-    if (rH) { back += (rc.kind === 'hook' ? 3 : 6) * rH * (rc.blocked ? .5 : 1); lean -= 3 * rH; if (rc.kind === 'hook') sideL += -rc.side * 4 * rH; }
-    if (rB && !rc.blocked) { c += 9 * rB; lean += 8 * rB; sideL += -rc.side * 3 * rB; }
-    if (s.hurt && live) { c += 3 + Math.sin(this.t * 5) * 2.5; sideL += Math.sin(this.t * 2.6) * 3; }
-    if (s.state === 'clinch') { lean += 8; c += 3; }
-    const sit = sm.sit = damp(sm.sit, s.sit ? 1 : 0, s.sit ? 3.2 : 7, dt);
-    const rate = P_ ? 30 : 12;
-    sm.c = damp(sm.c, c, rate, dt); sm.bl = damp(sm.bl, bl, P_ ? 26 : 10, dt); sm.lean = damp(sm.lean, lean, rate, dt); sm.side = damp(sm.side, sideL, 14, dt); sm.back = damp(sm.back, back, 16, dt);
-    if (s.walk) { sm.c = damp(sm.c, 0, 8, dt); sm.bl = damp(sm.bl, 8, 8, dt); sm.lean = damp(sm.lean, 1, 8, dt); }
-    // ---- feet (gait while moving)
-    const mv = clamp((s.mv || 0) / 40, 0, 1), ph = (s.gait || 0) * .085;
-    const vl = vel.lengthSq() > 4 ? vel.clone().normalize() : fwd.clone();
-    let fL, fR;
-    if (s.walk) { fL = P(1, 0, 7); fR = P(-1, 0, -7); }
-    else { fL = P(12, 0, 9.5); fR = P(-12 - lunge * .45, 0, -10.5); if (P_ && P_.cat === 'jab' && k > 0) fL.addScaledVector(fwd, 6); }
-    // planted feet: each foot stays put on the canvas until it's too far from where it should be, then steps there
-    const ft = this.ft = this.ft || [fL, fR].map(f => ({ at: f.clone(), from: f.clone(), to: f.clone(), t: 1, dur: .14 }));
-    const spd = vel.length(), lead_t = clamp(spd * .1, 0, 14);
-    let lift = 0;
-    [fL, fR].forEach((want, i) => {
-      const f = ft[i], o = ft[1 - i], aim = want.clone().addScaledVector(vl, spd > 4 ? lead_t : 0); aim.y = 0;
-      if (f.t >= 1) {
-        const far = f.at.distanceTo(aim), thr = s.walk ? 9 : (P_ && P_.cat === 'jab' && i === 0) ? 3 : 5.5;
-        if (far > thr && (o.t >= .55 || far > 22)) { f.from.copy(f.at); f.to.copy(aim); f.t = 0; f.dur = clamp(.2 - spd * .0007, .1, .2) * (far > 22 ? .7 : 1); }
-      } else f.to.lerp(aim, 1 - Math.exp(-10 * dt)); // keep landing where he's going
-      if (f.t < 1) {
-        f.t = Math.min(1, f.t + dt / f.dur); const e = ease(f.t);
-        f.at.lerpVectors(f.from, f.to, e); f.at.y = Math.sin(Math.PI * f.t) * (s.walk ? 4 : 2.6) * clamp(f.from.distanceTo(f.to) / 8, .4, 1.2);
-        lift = Math.max(lift, f.at.y);
-      } else f.at.y = 0;
-    });
-    fL = ft[0].at.clone(); fR = ft[1].at.clone();
-    // ---- hips, chest, head
-    let hip = P(-1 + sm.lean * .25 - sm.back * .4, 52 - sm.c, sm.side * .4); hip.y += breathe * .2 - lift * .25;
-    const blR = THREE.MathUtils.degToRad(sm.bl);
-    const shLine = lead.clone().multiplyScalar(Math.cos(blR)).addScaledVector(fwd, Math.sin(blR)); // rear -> lead shoulder
-    let chest = hip.clone().addScaledVector(UP, 31 * hs).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side);
-    // knockdowns: buckle, sit, lie back. sitting on the stool between rounds
-    const dp = s.state === 'down' ? clamp(s.downP, 0, 1) : s.state === 'slump' ? clamp(s.downP, 0, .35) : 0;
-    let lie = 0;
-    let wK = 0, chestShift = null;
-    if (dp > 0) {
-      const c0 = chest.clone();
-      const kd = this.kd || {}, fd = kd.dir || fwd.clone().negate(), sd = V(fd.z, 0, -fd.x);
-      let wSit = 0, wLie = 0;
-      if (kd.body && !s.rise) wK = outC(clamp(dp / .35, 0, 1));
-      else if (!s.rise) { const a = clamp(dp / .35, 0, 1), b = clamp((dp - .35) / .65, 0, 1); wSit = outC(a) * (1 - b); wLie = b; }
-      else if (kd.body) wK = ease(clamp(dp / .35, 0, 1));
-      else if (dp > .6) { const u = (dp - .6) / .4; wLie = u; wSit = 1 - u; }
-      else if (dp > .3) { const u = (dp - .3) / .3; wSit = u; wK = 1 - u; }
-      else wK = ease(dp / .3);
-      lie = wLie;
-      const wSt = Math.max(0, 1 - wK - wSit - wLie);
-      // sitting and lying, along the fall
-      const hipD = pos.clone().addScaledVector(fd, 6).setY(9);
-      const tilt = wLie / Math.max(.001, wLie + wSit) * 1.35, up2 = UP.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(fd, Math.sin(tilt));
-      const chestD = hipD.clone().addScaledVector(up2, 30 * hs).addScaledVector(fd, -(1 - wLie) * 4);
-      const reach = 24 + 8 * wLie, fLD = pos.clone().addScaledVector(fd, -reach).addScaledVector(sd, 9).setY(3 * wSt), fRD = pos.clone().addScaledVector(fd, -reach + 5).addScaledVector(sd, -9).setY(3 * wSt);
-      // on one knee, facing his man: lead foot planted, rear knee on the canvas
-      const hipK = P(-3, 27, 0), chestK = hipK.clone().addScaledVector(UP.clone().multiplyScalar(Math.cos(.38)).addScaledVector(fwd, Math.sin(.38)), 30 * hs);
-      const fLK = P(15, 0, 8), fRK = P(-21, -2, -8);
-      const mix = (st, k, d) => st.clone().multiplyScalar(wSt).addScaledVector(k, wK).addScaledVector(d, wSit + wLie);
-      hip = mix(hip, hipK, hipD); chest = mix(chest, chestK, chestD); fL = mix(fL, fLK, fLD); fR = mix(fR, fRK, fRD); chestShift = chest.clone().sub(c0);
-      ft[0].at.copy(fL).setY(0); ft[1].at.copy(fR).setY(0); ft[0].t = ft[1].t = 1;
-    }
-    if (sit > .01 && cornerPt) {
-      const seat = V(cornerPt.x, 29, cornerPt.z).addScaledVector(fwd, -3);
-      hip.lerp(seat, sit); chest.lerp(seat.clone().addScaledVector(UP, 30 * hs).addScaledVector(fwd, -7), sit);
-      fL.lerp(seat.clone().addScaledVector(fwd, 22).addScaledVector(lead, 10).setY(0), sit); fR.lerp(seat.clone().addScaledVector(fwd, 22).addScaledVector(lead, -10).setY(0), sit);
-      if (sit > .5) { ft[0].at.copy(fL).setY(0); ft[1].at.copy(fR).setY(0); ft[0].t = ft[1].t = 1; }
-    }
-    const spineUp = chest.clone().sub(hip).normalize();
-    let headT = chest.clone().addScaledVector(spineUp, 11 * hs).addScaledVector(fwd, 1.5 - sm.back * .6);
-    if (rH && !rc.blocked) { headT.addScaledVector(rPush, (rc.kind === 'hook' ? 7 : 6) * rH).addScaledVector(UP, (rc.kind === 'upper' ? 5 : 1.2) * rH); }
-    if (rB && !rc.blocked) headT.addScaledVector(fwd, 3 * rB).addScaledVector(UP, -3 * rB);
-    if (s.def === 'slip' && defE) headT.addScaledVector(lead, this.defSide * 4 * defE);
-    if (live && !s.walk) headT.addScaledVector(UP, P_ ? -1.5 : -2.6).addScaledVector(fwd, 1.5); // chin down, eyes up
-    if (P_ && live) headT.addScaledVector(lead, leadArm ? -2 * k : 2 * k);
-    sm.head = sm.head ? dampV(sm.head, headT, 22, dt) : headT.clone();
-    const headP = lie > 0 || sit > .5 ? headT : sm.head;
-    const hunch = s.walk || sit > .3 || lie > 0 ? 0 : 1;
-    const shL = chest.clone().addScaledVector(shLine, 13.2 * G).addScaledVector(UP, -3.5 + 1.6 * hunch).addScaledVector(fwd, 1.2 * hunch), shR = chest.clone().addScaledVector(shLine, -13.2 * G).addScaledVector(UP, -3.5 - .4 * hunch).addScaledVector(fwd, .8 * hunch);
-    this.bSh = [shL.clone().addScaledVector(fwd, -lunge), shR.clone().addScaledVector(fwd, -lunge)]; // where his shoulders are without the step
-    // ---- gloves
-    const gp = (a) => P(a[0], a[1] - sm.c, a[2]).addScaledVector(fwd, sm.lean - sm.back).addScaledVector(lead, sm.side).addScaledVector(UP, breathe * .4);
-    let gL = gp(gd.L), gR = gp(gd.R);
-    if (chestShift) { gL.add(chestShift); gR.add(chestShift); } // the guard goes down with him
-    const tir = (s.tired || 0) * 7; gL.y -= tir; gR.y -= tir;
-    if (s.gi != null && s.gi < .5) { gL.y -= (.5 - s.gi) * 16; gR.y -= (.5 - s.gi) * 12; }
-    if (s.def === 'block' && defE > 0) {
-      const bz = s.defZ === 'body';
-      gL.lerp(P(12, (bz ? 64 : 88) - sm.c, 4.5), defE); gR.lerp(P(11, (bz ? 62 : 88) - sm.c, -4.5), defE);
-    }
-    if (rH && !rc.blocked && rc.pow > .7) { gL.addScaledVector(rPush, 4 * rH).addScaledVector(lead, 3 * rH); gR.addScaledVector(rPush, 4 * rH).addScaledVector(lead, -3 * rH); } // a clean shot knocks the guard loose
-    if (rc && rc.blocked) { const j = env * 3; gL.addScaledVector(rPush, j); gR.addScaledVector(rPush, j); } // the block takes the shot
-    if (rB && !rc.blocked) { gL.y -= 7 * rB; gR.y -= 7 * rB; gL.addScaledVector(fwd, -3 * rB); gR.addScaledVector(fwd, -3 * rB); } // elbows clamp down
-    const GR = 5.8;
-    if (P_ && live) {
-      if (this.aimT !== s.aT || p < (this.aimP || 0) - .05 || !this.aim) { this.aimT = s.aT; this.aim = (P_.zone === 'body' ? opB : op.head).clone(); this.pv = Math.random(); }
-      this.aimP = p;
-      const tgt = this.aim.clone().lerp(P_.zone === 'body' ? opB : op.head, .25);
-      const arm = leadArm ? 0 : 1, from = arm ? gR : gL, sh = arm ? shR : shL, out = arm ? lead.clone().negate() : lead.clone();
-      const dir = tgt.clone().sub(sh).normalize();
-      let gT;
-      // where the glove meets him: the face for straights, the side of the jaw for hooks, under the chin for uppercuts
-      const body = P_.zone === 'body', R = body ? 4 : 8.6 + GR * .8, dirH = dir.clone().setY(0).normalize();
-      let hit_;
-      if (kind === 'straight') hit_ = tgt.clone().addScaledVector(dir, -R);
-      else if (kind === 'hook') hit_ = tgt.clone().addScaledVector(out, R * .72).addScaledVector(dirH, -R * .55).addScaledVector(UP, body ? 0 : -2);
-      else hit_ = tgt.clone().addScaledVector(UP, -R * .78).addScaledVector(dirH, -R * .5);
-      const pv = this.pv || .5, overhand = kind === 'straight' && !leadArm && !body && pv < .3; this.overhand = overhand;
-      if (overhand) { gT = from.clone().lerp(hit_.clone().addScaledVector(UP, 2), ease(k)); gT.addScaledVector(UP, Math.sin(Math.PI * Math.max(0, k)) * 11).addScaledVector(out, Math.sin(Math.PI * Math.max(0, k)) * 6); } // loops over the top
-      else if (kind === 'straight') gT = from.clone().lerp(hit_, k);
-      else if (kind === 'hook') { gT = from.clone().lerp(hit_, ease(k)); gT.addScaledVector(out, Math.sin(Math.PI * Math.max(0, k)) * (7 + pv * 12)).addScaledVector(UP, body ? -2 : 2); } // tight to wide
-      else { gT = from.clone().lerp(hit_, ease(k)); gT.addScaledVector(UP, -Math.sin(Math.PI * clamp(k * 1.2, 0, 1)) * (8 + pv * 9)).addScaledVector(fwd, -Math.sin(Math.PI * Math.max(0, k)) * 3); }
-      if (arm) gR = gT; else gL = gT;
-    }
-    if (s.state === 'clinch' && op.chest) {
-      const toOp = op.chest.clone().sub(chest).setY(0).normalize(), side = V(toOp.z, 0, -toOp.x);
-      gL = op.chest.clone().addScaledVector(toOp, 8).addScaledVector(side, 12).addScaledVector(UP, -6);
-      gR = op.chest.clone().addScaledVector(toOp, 6).addScaledVector(side, -12).addScaledVector(UP, -14);
-      headT.addScaledVector(toOp, 5).addScaledVector(lead, 5);
-    }
-    if (s.walk || sit > .3) {
-      const sw = Math.sin(ph) * 5 * mv;
-      const hang = (sh, o, sg) => sh.clone().addScaledVector(UP, -33 * hs).addScaledVector(lead, o).addScaledVector(fwd, 3 + sg * sw);
-      const kneeL = sit > .3 ? fL.clone().lerp(hip, .45).setY(30).addScaledVector(lead, 2) : null;
-      const wL = hang(shL, 3, 1), wR = hang(shR, -3, -1);
-      gL = sit > .3 ? wL.lerp(kneeL.clone().addScaledVector(UP, 6), sit) : wL;
-      gR = sit > .3 ? wR.lerp(fR.clone().lerp(hip, .45).setY(30).addScaledVector(UP, 6).addScaledVector(lead, -2), sit) : wR;
-    }
-    if (wK > .05) {
-      const kneeG = hip.clone().lerp(fL, .5).setY(hip.y + 2).addScaledVector(fwd, 4), bodyG = chest.clone().lerp(hip, .45).addScaledVector(fwd, 9 * G).addScaledVector(lead, -4);
-      gL.lerp(kneeG, wK); gR.lerp((this.kd && this.kd.body) ? bodyG : kneeG.clone().addScaledVector(lead, -7).addScaledVector(UP, 2), wK);
-    }
-    if (lie > .5) { gL = chest.clone().addScaledVector(lead, 24).addScaledVector(fwd, 6).setY(4); gR = chest.clone().addScaledVector(lead, -24).addScaledVector(fwd, 6).setY(4); }
-    // smooth the guard, not the punch
-    const gr = P_ ? 40 : 16;
-    for (const [i, gT] of [[0, gL], [1, gR]]) { const punching = P_ && (i === 0) === leadArm; sm.gl[i] = sm.gl[i] ? dampV(sm.gl[i], gT, punching ? 60 : gr, dt) : gT.clone(); }
-    // gloves are solid: they stop on his head, body and gloves (and stay off your own face)
-    const oc = op.col;
-    const push = (g, c, r) => { const d = g.clone().sub(c), L = d.length(); if (L < r) g.addScaledVector(L > 1e-3 ? d.multiplyScalar(1 / L) : fwd.clone().negate(), r - L); };
-    const pushCap = (g, a, b, r) => { const ab = b.clone().sub(a), t = clamp(g.clone().sub(a).dot(ab) / Math.max(1e-3, ab.lengthSq()), 0, 1); push(g, a.clone().addScaledVector(ab, t), r); };
-    if (lie < .3 && sit < .3) for (let i = 0; i < 2; i++) {
-      const g = sm.gl[i];
-      if (oc && s.state !== 'clinch') {
-        pushCap(g, oc.hip, oc.chest, oc.tr + GR * .8);
-        push(g, oc.head, oc.hr + GR * .85);
-        for (const og of oc.gl) push(g, og, GR * 1.75);
-      }
-      push(g, headP, 8.6 + GR * .7);
-    }
-    gL = sm.gl[0]; gR = sm.gl[1];
-    // ---- arms via IK
-    const { UA, FA } = this.len, out0 = lead.clone(), out1 = lead.clone().negate();
-    const poleFor = (i) => {
-      const outS = i ? out1 : out0, punching = P_ && (i === 0) === leadArm;
-      if (punching && kind === 'hook') return outS.clone().addScaledVector(UP, .6);
-      if (punching && this.overhand) return outS.clone().addScaledVector(UP, .9);
-      if (punching && kind === 'upper') return UP.clone().negate().addScaledVector(fwd, -.4);
-      if (s.walk || sit > .3) return fwd.clone().negate().addScaledVector(outS, .3);
-      return UP.clone().negate().addScaledVector(outS, .12 + .3 * (1 - gd.tuck)).addScaledVector(fwd, -.3);
-    };
-    this.armC = { shs: [shL, shR], poles: [poleFor(0), poleFor(1)], fwd, chest, south: s.stance === 'southpaw', clinch: s.state === 'clinch', free: lie < .3 && sit < .3 };
-    this.arms([gL, gR]);
-    // ---- legs via IK (knees forward and a touch out)
-    const hipL = hip.clone().addScaledVector(lead, 6.5 * G).addScaledVector(fwd, 1), hipR = hip.clone().addScaledVector(lead, -6.5 * G).addScaledVector(fwd, -1);
-    const feet = [fL, fR], hips = [hipL, hipR];
-    const stance = !(s.walk || sit > .3 || dp > 0), rearPunch = P_ && !leadArm ? Math.max(0, k) : 0;
-    for (let i = 0; i < 2; i++) {
-      const heel = stance ? (i ? .8 + .5 * rearPunch : 0) : 0;
-      const ank = feet[i].clone().setY(feet[i].y + 6 + heel * 3.2);
-      const kp = (lie > .2 ? UP.clone() : fwd.clone()).addScaledVector(i ? out1 : out0, .4);
-      const [kn, an] = ik(hips[i], ank, this.len.TH, this.len.SH, kp);
-      placeLimb(this.thigh[i], hips[i], kn, fwd); placeLimb(this.shin[i], kn, an, fwd);
-      placeSeg(this.legSleeve[i], hips[i].clone().addScaledVector(UP, 3), hips[i].clone().lerp(kn, .42));
-      placeLimb(this.bootShaft[i], an.clone().addScaledVector(an.clone().sub(kn).normalize(), -7 * hs), an.clone().addScaledVector(an.clone().sub(kn).normalize(), 2 * hs), fwd);
-      let toeH = fwd.clone();
-      if (stance) toeH = i ? fwd.clone().multiplyScalar(.75 + .6 * rearPunch).addScaledVector(out1, .8 * (1 - rearPunch * .7)) : fwd.clone().addScaledVector(out0, .08);
-      else toeH.addScaledVector(i ? out1 : out0, .2);
-      toeH.normalize();
-      const pa = heel * .45, toe = lie > .2 ? fwd.clone().multiplyScalar(.2).add(UP).addScaledVector(i ? out1 : out0, .2).normalize() : toeH.clone().multiplyScalar(Math.cos(pa)).addScaledVector(UP, -Math.sin(pa));
-      const up2 = UP.clone().multiplyScalar(Math.cos(pa)).addScaledVector(toeH, Math.sin(pa));
-      const fc = an.clone().addScaledVector(up2, -2.6).addScaledVector(toe, 4.5);
-      if (lie <= .2) fc.y = Math.max(3.4 * G + Math.sin(pa) * 5, fc.y);
-      this.foot[i].position.copy(fc); orient(this.foot[i], toe, up2); this.foot[i].scale.set(.95, 1, .72); // capsule axis = Y, so point it along the foot
-      this.sole[i].position.copy(fc).addScaledVector(up2, -3.4 * G); this.sole[i].position.y = Math.max(.6, this.sole[i].position.y); orient(this.sole[i], up2, toe); this.sole[i].visible = lie <= .2;
-    }
-    // ---- torso, trunks, neck, head
-    const neck = chest.clone().addScaledVector(spineUp, 3);
-    this.torso.position.copy(hip).addScaledVector(spineUp, 6 * hs);
-    orient(this.torso, spineUp, V(0, 0, 0).crossVectors(shLine.clone().multiplyScalar(s.stance === 'southpaw' ? -1 : 1), spineUp));
-    this.torso.scale.set(1, chest.distanceTo(hip) - 3 * hs, 1);
-    for (const pc of this.pecs) pc.scale.y = 3.9 * G / Math.max(10, this.torso.scale.y);
-    this.abs.scale.y = 9 * G / Math.max(10, this.torso.scale.y);
-    const hipFwd = fwd.clone().lerp(V(0, 0, 0).crossVectors(shLine.clone().multiplyScalar(s.stance === 'southpaw' ? -1 : 1), UP), .45);
-    this.trunks.position.copy(hip); orient(this.trunks, spineUp.clone().lerp(UP, .5), hipFwd);
-    const headUp = UP.clone().lerp(spineUp, .6);
-    this.trap.position.copy(chest).addScaledVector(spineUp, -2.5).addScaledVector(fwd, -1.5); orient(this.trap, spineUp, fwd); this.trap.scale.set(9 * G, 4.2 * G, 5 * G);
-    placeSeg(this.neck, neck.clone().addScaledVector(spineUp, -4), headP.clone().addScaledVector(headUp, -4));
-    const hf = fwd.clone();
-    if (rH && !rc.blocked) { if (rc.kind === 'hook') hf.addScaledVector(rPush, .9 * rH); hf.addScaledVector(UP, (rc.kind === 'upper' ? .8 : rc.kind === 'hook' ? .1 : .4) * rH); }
-    this.head.position.copy(headP); orient(this.head, headUp, hf.addScaledVector(UP, lie > .5 ? 0 : -.05));
-    // stool
-    this.stool.visible = sit > .05 && !!cornerPt; if (cornerPt) this.stool.position.set(cornerPt.x, 0, cornerPt.z);
-    this.stool.scale.setScalar(clamp(sit * 1.4, .01, 1));
-    // what the other man aims at
-    this.col = { head: headP.clone(), hr: 8.6, chest: chest.clone().addScaledVector(spineUp, -4), hip: hip.clone().addScaledVector(spineUp, 6), tr: 10.5 * G, gl: [sm.gl[0].clone(), sm.gl[1].clone()] };
-    this.jHead = headP; this.jChest = chest; this.jBody = hip.clone().lerp(chest, .55).addScaledVector(fwd, 6 * G);
-  }
-}
-
-/* ================= the referee ================= */
+/* ================= the referee: the same skeleton and motion, his own kit and job ================= */
+GUARD3D.ref = { tL: [12, -40, 8], tR: [12, -40, -8], lL: [12, -40, 8], lR: [12, -40, -8], c: 1, bl: 0, lean: 2, tuck: .5 };
+RHY.ref = { b: 0, bf: 1, toe: 0, sw: .6, sf: .35, bob: 0, head: .5 };
 class Ref {
   constructor() {
-    const skin = std(0xc89a78, .62), shirt = std(0xece8e0, .75), pants = std(0x16161a, .7), shoe = std(0x0a0a0a, .3), tie = std(0x0b0b0d, .5);
-    const g = this.g = new THREE.Group(); scene.add(g);
-    const add = (geo, m) => { const o = shade(new THREE.Mesh(geo, m)); g.add(o); return o; };
-    const TH = 24 * 1.04, SH = 23 * 1.04, UA = 18.5, FA = 16.5; this.len = { TH, SH, UA, FA };
-    const prof = [[.01, 0], [.92, 0], [.95, .2], [.93, .45], [.95, .7], [1, .85], [.86, .94], [.4, 1]].map(([r, y]) => new THREE.Vector2(r, y));
-    this.torso = add(new THREE.LatheGeometry(prof, 28), shirt); this.torso.geometry.scale(12.5, 1, 12.5 * .7);
-    this.belt = add(new THREE.CylinderGeometry(11.8, 11.8, 2.4, 24), std(0x2a2420, .4)); this.belt.geometry.scale(1, 1, .72);
-    this.hips = add(new THREE.SphereGeometry(1, 20, 12), pants); this.hips.geometry.scale(11.6, 8, 8.6);
-    this.thigh = [0, 1].map(() => add(limbGeo(TH, 6.6, 5, .4, .3, .4), pants));
-    this.shin = [0, 1].map(() => add(limbGeo(SH, 5, 4.4, 0, .5, .3), pants));
-    this.foot = [0, 1].map(() => add(new THREE.CapsuleGeometry(3.2, 8, 6, 12), shoe));
-    this.delt = [0, 1].map(() => add(new THREE.SphereGeometry(5, 14, 10), shirt));
-    this.upper = [0, 1].map(() => add(limbGeo(UA, 4.8, 4.2, .2, .4, .3), shirt));
-    this.fore = [0, 1].map(() => add(limbGeo(FA, 3.2, 2.6, .7, .25, .3), skin));
-    this.hand = [0, 1].map(() => { const h = add(new THREE.SphereGeometry(2.9, 12, 10), skin); h.scale.set(.8, 1.15, 1); return h; });
-    this.neck = add(new THREE.CylinderGeometry(4.6, 5, 1, 14), skin);
-    const hd = this.head = new THREE.Group(); g.add(hd);
-    const sk = shade(new THREE.Mesh(new THREE.SphereGeometry(8.2, 24, 16), skin)); sk.scale.set(.84, 1.04, .96); hd.add(sk);
-    const jaw = shade(new THREE.Mesh(new THREE.SphereGeometry(6, 16, 12), skin)); jaw.scale.set(.95, .76, 1); jaw.position.set(0, -4.2, 2.3); hd.add(jaw);
-    const nose = shade(new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 8), skin)); nose.position.set(0, -1.4, 7.9); hd.add(nose);
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(8.35, 22, 14, 0, Math.PI * 2, 0, Math.PI * .45), std(0x8a8580, .9)); hair.scale.set(.88, 1.06, 1); hair.rotation.x = -.35; hair.position.set(0, .3, -.6); hd.add(hair);
-    for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.7, 8, 6), std(0x1a120c, .3)); e.position.set(s * 2.8, 1, 7.3); hd.add(e); const ear = shade(new THREE.Mesh(new THREE.SphereGeometry(1.6, 10, 8), skin)); ear.scale.set(.5, 1, .8); ear.position.set(s * 7, 0, .3); hd.add(ear); }
-    const bt = new THREE.Group(); g.add(bt); this.tie = bt;
-    for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.ConeGeometry(1.7, 3.4, 4), tie); w.rotation.z = s * Math.PI / 2; w.position.x = s * 1.6; bt.add(w); }
-    this.x = 0; this.z = -60; this.heading = 0; this.side = 1; this.sideT = 4; this.t = 0; this.prev = null; this.mode = 'watch';
-    this.ft = null;
+    this.b = new Boxer3(scene, { ref: true, skin: '#c89a78', hair: 'bald', hairCol: '#8a8580', shirt: '#e9e6df', pants: '#18181c' }, { h: 1, arm: 1, build: .98 });
+    this.x = 0; this.z = -60; this.side = 1; this.sideT = 4; this.t = 0; this.mode = 'watch';
   }
-  update(dt, F, B, snap) {
+  update(dt, F, B, snap, P) {
     this.t += dt;
-    const A = snap.f[0], Bs = snap.f[1], mx = (A.x + Bs.x) / 2, mz = (A.z + Bs.z) / 2;
+    const A = P[0], Bs = P[1], mx = (A.x + Bs.x) / 2, mz = (A.z + Bs.z) / 2;
     const ax = Bs.x - A.x, az = Bs.z - A.z, L = Math.hypot(ax, az) || 1, px = -az / L, pz = ax / L; // perpendicular to their line
     // the side farther from the camera, so he never stands in front of the action (with a little stickiness)
     const camS = (camera.position.x - mx) * px + (camera.position.z - mz) * pz > 0 ? -1 : 1;
     this.sideT -= dt; if (camS !== this.side && this.sideT <= 0) { this.side = camS; this.sideT = 2.5; }
-    let tx, tz, sp = 120, look = V(mx, 0, mz), mode = 'watch';
+    let tx, tz, sp = 120, look = V(mx, 80, mz), mode = 'watch';
     const K = F.kdState;
-    if (F.phase === 'kd' && K) {
-      // beside his chest (he's lying along his heading), on the side away from the camera
-      const bx = B[K.who], c = bx.jChest || V(snap.f[K.who].x, 0, snap.f[K.who].z), hx = Math.sin(bx.heading), hz = Math.cos(bx.heading), lx = hz, lz = -hx;
+    if (F.phase === 'kd' && K && B[K.who].col) {
+      // beside the man on the floor, on the side away from the camera
+      const bx = B[K.who], c = bx.J[BI.Spine2], hx = Math.sin(bx.heading), hz = Math.cos(bx.heading), lx = hz, lz = -hx;
       const cs = (camera.position.x - c.x) * lx + (camera.position.z - c.z) * lz > 0 ? -1 : 1;
-      const rr = snap.f[K.who].rise ? 40 : 30; tx = c.x + lx * cs * rr - hx * 6; tz = c.z + lz * cs * rr - hz * 6; sp = 160; look = V(c.x, 0, c.z); mode = 'count';
+      const rr = snap.f[K.who].rise ? 40 : 32; tx = c.x + lx * cs * rr - hx * 8; tz = c.z + lz * cs * rr - hz * 8; sp = 160; look = V(c.x, 20, c.z); mode = 'count';
       this.count = K.count; this.pulse = clamp(K.tick / .95, 0, 1);
     } else if (F.phase === 'over' && F.result && !F.result.decision && (this.overT = (this.overT || 0) + dt) < 4) {
-      const D = snap.f[1 - F.result.winner];
-      tx = D.x + px * this.side * 30; tz = D.z + pz * this.side * 30; sp = 170; look = V(D.x, 0, D.z); mode = 'wave';
-    } else if (F.phase === 'fight' && (F.clinchT > 0 || A.state === 'clinch')) {
-      tx = mx + px * camS * 22; tz = mz + pz * camS * 22; sp = 140; mode = 'break'; // always steps in from behind them
+      const D = P[1 - F.result.winner];
+      tx = D.x + px * this.side * 32; tz = D.z + pz * this.side * 32; sp = 170; look = V(D.x, 60, D.z); mode = 'wave';
+    } else if (F.phase === 'fight' && (F.clinchT > 0 || snap.f[0].state === 'clinch')) {
+      tx = mx + px * camS * 24; tz = mz + pz * camS * 24; sp = 140; mode = 'break'; // always steps in from behind them
     } else if (F.phase !== 'fight') {
-      tx = RING * .55; tz = -ZR * .62; sp = 60; look = V(0, 0, 0);
+      tx = RING * .55; tz = -ZR * .62; sp = 60; look = V(0, 70, 0);
     } else {
-      // pick a spot by where it lands on screen: off to one side of the pair (never between them or in front),
-      // far from both, inside the ropes. Re-pick twice a second, and only move for a clearly better spot
+      // a spot off to one side of the pair (never between them or in front), far from both, inside the ropes
       this.pickT = (this.pickT || 0) - dt;
       if (this.pickT <= 0 || this.tx == null) {
         this.pickT = .5;
-        const scr = (x, z) => { const v = V(x, 80, z).project(camera); return v; };
+        const scr = (x, z) => V(x, 80, z).project(camera);
         const fs = [scr(A.x, A.z), scr(Bs.x, Bs.z)], lo = Math.min(fs[0].x, fs[1].x) - .22, hi = Math.max(fs[0].x, fs[1].x) + .22;
         const score = (x, z) => {
           let sc = 0; const v = scr(x, z);
-          if (v.x > lo && v.x < hi) sc += 6 * Math.min(v.x - lo, hi - v.x); // on screen in the middle of the action
+          if (v.x > lo && v.x < hi) sc += 6 * Math.min(v.x - lo, hi - v.x);
           for (const f of [A, Bs]) sc += Math.max(0, 75 - Math.hypot(x - f.x, z - f.z)) * .05;
-          const camD = (camera.position.x - mx) * (x - mx) + (camera.position.z - mz) * (z - mz); if (camD > 0) sc += 2; // between them and the lens
+          const camD = (camera.position.x - mx) * (x - mx) + (camera.position.z - mz) * (z - mz); if (camD > 0) sc += 2;
           sc += Math.max(0, Math.abs(x) - (RING - 14)) * .2 + Math.max(0, Math.abs(z) - (ZR - 14)) * .2;
           return sc;
         };
@@ -607,70 +214,28 @@ class Ref {
     }
     if (F.phase !== 'over') this.overT = 0;
     tx = clamp(tx, -RING + 6, RING - 6); tz = clamp(tz, -ZR + 6, ZR - 6);
-    // move there, never through a fighter
     const dx = tx - this.x, dz = tz - this.z, dd = Math.hypot(dx, dz);
     if (dd > 3) { const m = Math.min(dd, sp * dt) / dd; this.x += dx * m; this.z += dz * m; }
-    const keep = [A, Bs].map(f => ({ x: f.x, z: f.z })); for (const bx of B) if (bx.jChest && bx.col) keep.push({ x: bx.jChest.x, z: bx.jChest.z }, { x: bx.col.head.x, z: bx.col.head.z });
-    for (const f of keep) { const ox = this.x - f.x, oz = this.z - f.z, od = Math.hypot(ox, oz), r = mode === 'break' ? 18 : mode === 'count' ? (K && snap.f[K.who].rise ? 34 : 24) : 30; if (od < r && od > .01) { this.x = f.x + ox / od * r; this.z = f.z + oz / od * r; } }
-    this.mode = mode; this.pose(dt, look, B);
-  }
-  pose(dt, look, B) {
-    const pos = V(this.x, 0, this.z);
-    if (!this.prev) this.prev = pos.clone();
-    const vel = pos.clone().sub(this.prev).multiplyScalar(1 / Math.max(dt, 1e-3)); this.prev.copy(pos);
-    const spd = vel.length(), moving = spd > 15;
-    const want = moving && this.mode === 'watch' && pos.distanceTo(look) > 40 && spd > 60 ? Math.atan2(vel.x, vel.z) : Math.atan2(look.x - this.x, look.z - this.z);
-    let dh = want - this.heading; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
-    this.heading += dh * (1 - Math.exp(-7 * dt));
-    const fwd = V(Math.sin(this.heading), 0, Math.cos(this.heading)), left = V(fwd.z, 0, -fwd.x);
-    const crouch = this.mode === 'count' ? 7 : this.mode === 'watch' ? 3 : this.mode === 'break' ? 2 : 0, lean = this.mode === 'count' ? 7 : this.mode === 'break' ? 4 : 2;
-    this.sc = this.sc == null ? crouch : damp(this.sc, crouch, 6, dt); this.sl = this.sl == null ? lean : damp(this.sl, lean, 6, dt);
-    // planted feet (same idea as the fighters)
-    const wantF = [pos.clone().addScaledVector(left, 8).addScaledVector(fwd, 2), pos.clone().addScaledVector(left, -8).addScaledVector(fwd, -2)];
-    const ft = this.ft = this.ft || wantF.map(f => ({ at: f.clone(), from: f.clone(), to: f.clone(), t: 1 }));
-    const vl = spd > 4 ? vel.clone().normalize() : fwd; let lift = 0;
-    wantF.forEach((w, i) => {
-      const f = ft[i], o = ft[1 - i], aim = w.clone().addScaledVector(vl, spd > 4 ? clamp(spd * .12, 0, 16) : 0);
-      if (f.t >= 1) { const far = f.at.distanceTo(aim); if (far > 7 && (o.t >= .6 || far > 26)) { f.from.copy(f.at); f.to.copy(aim); f.t = 0; } }
-      else f.to.lerp(aim, 1 - Math.exp(-10 * dt));
-      if (f.t < 1) { f.t = Math.min(1, f.t + dt / .2); f.at.lerpVectors(f.from, f.to, ease(f.t)); f.at.y = Math.sin(Math.PI * f.t) * 3.5; lift = Math.max(lift, f.at.y); } else f.at.y = 0;
-    });
-    const hip = pos.clone().addScaledVector(UP, 51 - this.sc - lift * .2).addScaledVector(fwd, -this.sl * .3);
-    const chest = hip.clone().addScaledVector(UP, 30).addScaledVector(fwd, this.sl);
-    const spineUp = chest.clone().sub(hip).normalize();
-    const head = chest.clone().addScaledVector(spineUp, 11).addScaledVector(fwd, 1.5);
-    const shs = [chest.clone().addScaledVector(left, 12).addScaledVector(UP, -3), chest.clone().addScaledVector(left, -12).addScaledVector(UP, -3)];
-    // hands
+    const keep = [A, Bs].map(f => ({ x: f.x, z: f.z })); for (const bx of B) if (bx.col) keep.push({ x: bx.col.chest.x, z: bx.col.chest.z }, { x: bx.col.head.x, z: bx.col.head.z });
+    for (const f of keep) { const ox = this.x - f.x, oz = this.z - f.z, od = Math.hypot(ox, oz), r = mode === 'break' ? 20 : mode === 'count' ? (K && snap.f[K.who].rise ? 34 : 26) : 30; if (od < r && od > .01) { this.x = f.x + ox / od * r; this.z = f.z + oz / od * r; } }
+    this.mode = mode;
+    // his hands, off his own shoulders and hips (last frame's)
+    const b = this.b, J = b.J, f = b.fwd || V(0, 0, 1), lf = V(f.z, 0, -f.x), sh = [J[BI.LeftArm], J[BI.RightArm]], hip = J[BI.Hips];
     let hands;
-    const sw = Math.sin((ft[0].t < 1 ? ft[0].t : 0) * Math.PI) * 6 - Math.sin((ft[1].t < 1 ? ft[1].t : 0) * Math.PI) * 6;
-    if (this.mode === 'count') {
-      const up = this.pulse < .25 ? 1 - this.pulse / .25 : this.pulse > .8 ? (this.pulse - .8) / .2 : 0; // chop down on each count
-      hands = [shs[0].clone().addScaledVector(fwd, 16).addScaledVector(UP, -16 + up * 26).addScaledVector(left, -3), hip.clone().addScaledVector(fwd, 12).addScaledVector(left, -9).addScaledVector(UP, -16)];
-    } else if (this.mode === 'wave') {
-      const w = Math.sin(this.t * 11) * 13;
-      hands = [shs[0].clone().addScaledVector(UP, 20).addScaledVector(left, -6 + w).addScaledVector(fwd, 6), shs[1].clone().addScaledVector(UP, 20).addScaledVector(left, 6 - w).addScaledVector(fwd, 6)];
-    } else if (this.mode === 'break' && B[0].jChest && B[1].jChest) {
-      hands = [0, 1].map(i => { const c = B[i].jChest.clone(), toMe = pos.clone().setY(c.y).sub(c).normalize(); return c.addScaledVector(toMe, 9).addScaledVector(UP, 2); });
-      if (hands[0].distanceTo(shs[0]) + hands[1].distanceTo(shs[1]) > hands[0].distanceTo(shs[1]) + hands[1].distanceTo(shs[0])) hands.reverse();
-    } else hands = [hip.clone().addScaledVector(fwd, 9 + sw).addScaledVector(left, 9).addScaledVector(UP, -6), hip.clone().addScaledVector(fwd, 9 - sw).addScaledVector(left, -9).addScaledVector(UP, -6)];
-    this.hs_ = this.hs_ || hands.map(h => h.clone()); hands.forEach((h, i) => dampV(this.hs_[i], h, this.mode === 'count' ? 22 : 10, dt));
-    for (let i = 0; i < 2; i++) {
-      const out = i ? left.clone().negate() : left, [el, wr] = ik(shs[i], this.hs_[i], this.len.UA, this.len.FA, UP.clone().negate().addScaledVector(out, .5).addScaledVector(fwd, -.4));
-      placeLimb(this.upper[i], shs[i], el, fwd); placeLimb(this.fore[i], el, wr, fwd); this.delt[i].position.copy(shs[i]);
-      this.hand[i].position.copy(wr).addScaledVector(wr.clone().sub(el).normalize(), 2.5);
-    }
-    for (let i = 0; i < 2; i++) {
-      const hp = hip.clone().addScaledVector(left, i ? -6 : 6), ank = ft[i].at.clone().setY(ft[i].at.y + 5.5);
-      const [kn, an] = ik(hp, ank, this.len.TH, this.len.SH, fwd.clone().addScaledVector(i ? left.clone().negate() : left, .2));
-      placeLimb(this.thigh[i], hp, kn, fwd); placeLimb(this.shin[i], kn, an, fwd);
-      this.foot[i].position.copy(an).addScaledVector(fwd, 4).setY(Math.max(3, an.y - 2.5)); orient(this.foot[i], fwd, UP); this.foot[i].scale.set(.95, 1, .7);
-    }
-    this.torso.position.copy(hip).addScaledVector(spineUp, 2); orient(this.torso, spineUp, fwd); this.torso.scale.set(1, chest.distanceTo(hip) + 1, 1);
-    this.belt.position.copy(hip).addScaledVector(spineUp, 2.5); orient(this.belt, spineUp, fwd);
-    this.hips.position.copy(hip); orient(this.hips, spineUp, fwd);
-    placeSeg(this.neck, chest.clone().addScaledVector(spineUp, -2), head.clone().addScaledVector(UP, -4));
-    this.head.position.copy(head); orient(this.head, UP.clone().lerp(spineUp, .5), fwd.clone().addScaledVector(UP, this.mode === 'count' ? -.35 : -.05));
-    this.tie.position.copy(chest).addScaledVector(spineUp, 2.5).addScaledVector(fwd, 8.2); orient(this.tie, spineUp, fwd);
+    if (!b.col) hands = null;
+    else if (mode === 'count') {
+      const u = this.pulse < .25 ? 1 - this.pulse / .25 : this.pulse > .8 ? (this.pulse - .8) / .2 : 0; // chop down on each count
+      hands = [hip.clone().addScaledVector(f, 12).addScaledVector(lf, 9).addScaledVector(UP, -4), sh[1].clone().addScaledVector(f, 18).addScaledVector(UP, -18 + u * 30).addScaledVector(lf, 3)];
+    } else if (mode === 'wave') { const w = Math.sin(this.t * 11) * 13; hands = [sh[0].clone().addScaledVector(UP, 22).addScaledVector(lf, -6 + w).addScaledVector(f, 6), sh[1].clone().addScaledVector(UP, 22).addScaledVector(lf, 6 - w).addScaledVector(f, 6)]; }
+    else if (mode === 'break' && B[0].col && B[1].col) {
+      const me = V(this.x, 0, this.z);
+      hands = [0, 1].map(i => { const c = B[i].col.chest.clone(), toMe = me.clone().setY(c.y).sub(c).normalize(); return c.addScaledVector(toMe, 10).addScaledVector(UP, 2); });
+      if (hands[0].distanceTo(sh[0]) + hands[1].distanceTo(sh[1]) > hands[0].distanceTo(sh[1]) + hands[1].distanceTo(sh[0])) hands.reverse();
+    } else hands = [hip.clone().addScaledVector(f, 10).addScaledVector(lf, 7).addScaledVector(UP, -3), hip.clone().addScaledVector(f, 10).addScaledVector(lf, -7).addScaledVector(UP, -3)];
+    const s = { x: this.x, z: this.z, state: 'idle', guard: 'ref', stance: 'orthodox', aT: null, def: null };
+    const crouch = mode === 'count' ? 9 : mode === 'break' ? 3 : 0;
+    GUARD3D.ref.c = damp(GUARD3D.ref.c, 1 + crouch, 6, dt); GUARD3D.ref.lean = damp(GUARD3D.ref.lean, mode === 'count' ? 14 : mode === 'break' ? 8 : 3, 6, dt);
+    b.pose(s, { pos: V(this.x, 0, this.z), opPos: look, look, style: 'ref', ref: true, hands }, dt);
   }
 }
 const ref = new Ref();
@@ -688,43 +253,49 @@ function spray(at, dir, n, pow) {
 function tickSpray(dt) { for (const s of SPRAY) if (s.life > 0) { s.life -= dt; s.v.y -= 260 * dt; s.m.position.addScaledVector(s.v, dt); s.m.material.opacity = clamp(s.life * 2, 0, .85); if (s.life <= 0) s.m.visible = false; } }
 
 /* ================= fight ================= */
-let fight = null, boxers = [], speed = 1, acc = 0, cornerWait = 0, overT = 0, shake = 0;
+let fight = null, boxers = [], speed = 1, acc = 0, cornerWait = 0, overT = 0, shake = 0, gray = false, stand = false, excite = 0;
 const $ = id => document.getElementById(id);
 function bigText(t, sub, ms) { const b = $('big'); b.innerHTML = t + (sub ? `<small>${sub}</small>` : ''); b.classList.add('on'); clearTimeout(bigText.h); if (ms) bigText.h = setTimeout(() => b.classList.remove('on'), ms); }
-function mkSheet(look) {
-  const style = pick(BASE_STYLES), guard = rollGuard(style);
-  return { name: pick(FIRST) + ' ' + pick(LAST), nick: '', style, guard, stance: R() < .25 ? 'southpaw' : 'orthodox', stats: genStats(ri(78, 86), style), wear: 0, exp: 20, look };
+function mkSheet(look, div, st) {
+  const style = st || pick(BASE_STYLES), guard = rollGuard(style);
+  return { name: pick(FIRST) + ' ' + pick(LAST), nick: '', style, guard, stance: R() < .25 ? 'southpaw' : 'orthodox', stats: genStats(ri(78, 86), style), wear: 0, exp: 20, look, div };
 }
-function newFight() {
-  boxers.forEach(b => { scene.remove(b.g); scene.remove(b.stool); });
+// his kit and his size off the sheet: drawn at his height, arms at his reach (Size s1-s3 shows)
+function kitOf(look) { return { skin: look.skin, hair: look.hair, hairCol: look.hairCol, beard: look.beard, trunks: gearC('trunks', look.trunks), gloves: gearC('gloves', look.gloves), boots: gearC('shoes', look.shoes) }; }
+function sizeOf3(F, look) { const z = F.size, d = SIZE.div[F.sheet.div] || SIZE.div[SIZE.def]; return { h: z.h, arm: (z.reach / z.ht) / (d[1] / d[0]), build: look.build || 1 }; }
+function newFight(o) {
+  o = o || {};
+  boxers.forEach(b => b.dispose());
   const div = ri(2, 7), la = randLook(div), lb = randLook(div);
   if (lb.trunks === la.trunks) lb.trunks = GEAR.trunks.find(t => t.id !== la.trunks && t.price === 0).id;
   if (lb.gloves === la.gloves) lb.gloves = GEAR.gloves.find(t => t.id !== la.gloves).id;
-  const A = mkSheet(la), B = mkSheet(lb);
+  const A = mkSheet(la, div, o.sa), B = mkSheet(lb, div, o.sb);
   fight = new Fight(A, B, { rounds: 4 });
-  boxers = [new Boxer(la, 0), new Boxer(lb, 1)];
-  const tag = (S, i) => `<span class="dot" style="background:${i ? 'var(--blue)' : 'var(--red)'}"></span>${S.name}<small>${STYLES[S.style].label}, ${GUARDS[S.guard].label.toLowerCase()}, ${S.stance}</small><div class="bars"><i id="hb${i}" style="width:100%"></i></div>`;
+  boxers = [la, lb].map((l, i) => { const b = new Boxer3(scene, kitOf(l), sizeOf3(fight.f[i], l), { heading: i ? -Math.PI / 2 : Math.PI / 2 }); b.setGray(gray); return b; });
+  const ft = z => { const i = Math.round(z.ht); return Math.floor(i / 12) + '′' + (i % 12) + '″'; };
+  const tag = (S, i) => `<span class="dot" style="background:${i ? 'var(--blue)' : 'var(--red)'}"></span>${S.name}<small>${STYLES[S.style].label}, ${GUARDS[S.guard].label.toLowerCase()}, ${S.stance}<br>${ft(fight.f[i].size)}, reach ${Math.round(fight.f[i].size.reach)}″</small><div class="bars"><i id="hb${i}" style="width:100%"></i></div>`;
   $('n0').innerHTML = tag(A, 0); $('n1').innerHTML = tag(B, 1);
-  acc = 0; cornerWait = 0; overT = 0; $('big').classList.remove('on');
+  acc = 0; cornerWait = 0; overT = 0; $('big').classList.remove('on'); sep = null;
 }
 function events() {
   for (const e of fight.events) {
-    if (e.type === 'hit' && boxers[e.a] && boxers[e.d]) {
+    if ((e.type === 'hit' || e.type === 'miss') && boxers[e.a] && boxers[e.d]) {
       const at = boxers[e.a], df = boxers[e.d], fa = V(Math.sin(at.heading), 0, Math.cos(at.heading)), sp = fight.f[e.a].stance === 'southpaw' ? -1 : 1;
       const leadA = V(fa.z, 0, -fa.x).multiplyScalar(sp), P0 = PUNCH[e.p] || {}, outS = P0.arm === 'rear' ? leadA.clone().negate() : leadA;
-      const push = e.kind === 'hook' ? outS.clone().multiplyScalar(-.85).addScaledVector(fa, .45) : e.kind === 'upper' ? fa.clone().multiplyScalar(.6).addScaledVector(UP, .8) : fa.clone();
-      df.react = { push: push.normalize(), kind: e.kind, zone: e.zone, t: 0, pow: e.blocked ? .25 : clamp(.45 + (e.dmg || 0) / 6 + (e.crit ? .3 : 0), .45, 1.4), blocked: !!e.blocked, side: Math.sign(push.dot(V(Math.cos(df.heading), 0, -Math.sin(df.heading)))) || 1 };
-    }
-    if (e.type === 'hit' && !e.blocked && (e.dmg || 0) > 0) {
-      const d = boxers[e.d];
-      const big = (e.dmg || 0) > 4 || e.crit;
-      if (d && d.jHead && e.zone !== 'body') spray(d.jHead, d.jHead.clone().sub(boxers[1 - d.side].jChest || d.jHead).setY(0).normalize(), big ? 10 : 4, big ? 1 : .4);
-      if (big) { shake = Math.max(shake, .35); if (speed === 1) hitstop = e.crit ? .09 : .05; }
+      if (e.type === 'miss') { at.shotDone(false, e, P0); continue; }
+      const push = e.kind === 'hook' ? outS.clone().multiplyScalar(-.85).addScaledVector(fa, .45) : fa.clone();
+      df.impact(push.setY(0).normalize(), e, P0); at.shotDone(true, e, P0);
+      if (window.__probe) __probe.push({ a: e.a, p: e.p, q: e.q, d: Math.hypot(fight.f[0].x - fight.f[1].x, fight.f[0].z - fight.f[1].z), rs: fight.f[e.a].size.rs, pend: 1 });
+      if (!e.blocked && (e.dmg || 0) > 0) {
+        const big = (e.dmg || 0) > 4 || e.crit;
+        if (df.col && e.zone !== 'body') spray(df.col.head, push, big ? 10 : 4, big ? 1 : .4);
+        if (big) { shake = Math.max(shake, .35); if (speed === 1) hitstop = e.crit ? .09 : .05; }
+        excite = Math.min(1, excite + (big ? .35 : .08));
+      }
     }
     if (e.type === 'count' && e.n >= 1) bigText(String(e.n), fight.f[e.d] ? fight.f[e.d].sheet.name : '', 900);
-    if (e.type === 'knockdown' && boxers[e.d]) { const r = boxers[e.d].react, d = r ? r.push.clone().setY(0) : null; boxers[e.d].kd = { dir: d && d.lengthSq() > .01 ? d.normalize() : null, body: e.zone === 'body' }; }
-    if (e.type === 'knockdown') { bigText('Down!', fight.f[e.d] ? fight.f[e.d].sheet.name + ' is down' : '', 1800); shake = .8; if (speed === 1) hitstop = .14; }
-    if (e.type === 'roundEnd' || e.type === 'corner') {}
+    if (e.type === 'knockdown' && boxers[e.d]) { boxers[e.d].kd = { body: e.zone === 'body' }; }
+    if (e.type === 'knockdown') { bigText('Down!', fight.f[e.d] ? fight.f[e.d].sheet.name + ' is down' : '', 1800); shake = .8; excite = 1; if (speed === 1) hitstop = .14; }
   }
   fight.events = [];
 }
@@ -739,14 +310,14 @@ const CAMS = [
 let sepS = 120, camI = 0, cam = { yaw: 0, pitch: .3, dist: 1, user: false }, tgt = V(0, 60, 0);
 function camFit(sep) { // distance so about 330 units of ring fit across the screen, portrait or landscape
   const asp = innerWidth / innerHeight, vf = THREE.MathUtils.degToRad(camera.fov), hf = 2 * Math.atan(Math.tan(vf / 2) * asp);
-  return Math.max(Math.max(asp < 1 ? 150 : 300, (sep || 0) * 1.15 + 60) / Math.tan(hf / 2) / 2, 230);
+  return Math.max(Math.max(asp < 1 ? 128 : 300, (sep || 0) * 1.15 + 60) / Math.tan(hf / 2) / 2, 230);
 }
 function updCam(dt) {
   const A = fight.f[0], B = fight.f[1], between = fight.phase === 'corner' || fight.phase === 'roundEnd';
-  const mid = rMid ? rMid.clone() : V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
+  const mid = window.__focus ? window.__focus() : rMid ? rMid.clone() : V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
   if (between) mid.set(0, 50, 0);
   tgt.lerp(mid, 1 - Math.exp(-3 * dt));
-  if (!cam.user) { const C = CAMS[camI], tall = innerWidth < innerHeight ? .14 : 0; cam.yaw = damp(cam.yaw, C.yaw, 2.5, dt); cam.pitch = damp(cam.pitch, C.pitch + tall, 2.5, dt); cam.dist = damp(cam.dist, C.dist, 2.5, dt); }
+  if (!cam.user) { const C = CAMS[camI], tall = innerWidth < innerHeight ? .07 : 0; cam.yaw = damp(cam.yaw, C.yaw, 2.5, dt); cam.pitch = damp(cam.pitch, C.pitch + tall, 2.5, dt); cam.dist = damp(cam.dist, C.dist, 2.5, dt); }
   sepS = damp(sepS, between ? 2 * RING : rSep, 2, dt);
   const D = camFit(sepS) * cam.dist;
   const sx = shake > 0 ? (Math.random() - .5) * shake * 4 : 0, sy = shake > 0 ? (Math.random() - .5) * shake * 4 : 0; shake = Math.max(0, shake - dt * 2);
@@ -892,14 +463,14 @@ $('bPerf').onclick = () => { PF.open = !PF.open; drawPF(); };
 /* ================= loop ================= */
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
+let sep = null, rMid = null, rSep = 60, bodyPush = 0, last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
 newFight();
-let spad = 0, sw = [.5, .5], rMid = null, rSep = 60, bodyPush = 0, last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
 const corners = [V(-RING + 8, 0, -ZR * .55 - 6), V(RING - 8, 0, ZR * .55 + 6)];
 // the sim ticks at 60 Hz; the screen draws between the last two ticks so motion is smooth at any frame rate
 function tick() { fight.step(DT); sPrev = sCur; sCur = fight.snap(); }
 const LERP_K = ['x', 'z', 'gait', 'mv', 'aP', 'defP', 'defU', 'tired', 'gi', 'hitT', 'downP'];
 function blendSnap(a, b, t) {
-  if (!b) b = fight.snap(); if (!a) a = b; // always a fresh copy (the renderer nudges positions)
+  if (!b) b = fight.snap(); if (!a) a = b;
   return { f: b.f.map((B, i) => {
     const A = a.f[i], o = Object.assign({}, B);
     for (const k of LERP_K) {
@@ -912,13 +483,15 @@ function blendSnap(a, b, t) {
     return o;
   }) };
 }
+// Stand: the fight holds still and they just stand there in their stance (the first look: do they look like boxers?)
+function standSnap(sn) { return { f: sn.f.map((F, i) => Object.assign({}, F, { x: i ? 37 : -37, z: 0, aT: null, aP: 0, def: null, state: 'idle', hitT: 0, walk: false, sit: 0, downP: 0, mv: 0, hurt: false, clamp: 0, post: 0, bait: 0, par: 0 })) }; }
 function frame(now) {
   requestAnimationFrame(frame);
   if (pfSkip(now)) return;
   const cpu0 = performance.now();
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (!sCur) sCur = sPrev = fight.snap();
-  if (window.__paused) { sPrev = sCur = fight.snap(); acc = 0; }
+  if (window.__paused || stand) { sPrev = sCur = fight.snap(); acc = 0; }
   else if (fight.phase === 'corner') {
     cornerWait += dt; sPrev = sCur = fight.snap(); acc = 0;
     if (cornerWait > 3.2) { cornerWait = 0; fight.nextRound(fight.aiStrategy(0), fight.aiStrategy(1)); bigText('Round ' + fight.round, '', 1300); }
@@ -932,51 +505,55 @@ function frame(now) {
     while (acc >= DT && fight.phase !== 'corner' && fight.phase !== 'over' && hitstop <= 0) { tick(); acc -= DT; events(); }
     if (hitstop > 0) acc = Math.min(acc, DT);
   }
-  const snap = blendSnap(sPrev, sCur, clamp(acc / DT, 0, 1));
+  let snap = blendSnap(sPrev, sCur, clamp(acc / DT, 0, 1));
+  if (stand) snap = standSnap(snap);
+  // engine distance -> 3D: one clean mapping about their midpoint (B3.map). The clinch pulls them chest to chest
+  const A = snap.f[0], B = snap.f[1], P = [V(A.x, 0, A.z), V(B.x, 0, B.z)];
   {
-    // the engine's distances were tuned for the 2D side view: at real arm length they'd stand nose to nose.
-    // Spread them out (less on the inside, none in a clinch); punches step in to land (Boxer.pose lunge)
-    const A = snap.f[0], B = snap.f[1], dx = B.x - A.x, dz = B.z - A.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
-    const kd = fight.phase === 'kd' || A.state === 'down' || B.state === 'down';
-    const want = A.sit || B.sit || A.state === 'clinch' || B.state === 'clinch' ? 0 : 26 * clamp((d - 34) / 26, 0, 1);
-    if (!kd) spad = damp(spad, want, want < spad ? 9 : 4, dt);
-    // who takes the room: both, or only the man still standing
-    const w0 = kd ? (A.state === 'down' ? 0 : B.state === 'down' ? 1 : .5) : .5;
-    sw[0] = damp(sw[0], w0, 5, dt); sw[1] = 1 - sw[0];
-    const XL = RING - 8, ZL = ZR - 8, cl = (f, s) => { const x = clamp(f.x + s * ux, -XL, XL), z = clamp(f.z + s * uz, -ZL, ZL), r = (s - ((x - f.x) * ux + (z - f.z) * uz)) * Math.sign(s || 1); f.x = x; f.z = z; return r; }; // returns the room it couldn't take (ropes)
-    const mA = cl(A, -spad * sw[0]), mB = cl(B, spad * sw[1] + Math.max(0, mA)); if (mB > 0) cl(A, -mB);
-    rSep = Math.hypot(B.x - A.x, B.z - A.z); rMid = V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
-  }
-  {
-    const [a, b] = boxers, A = snap.f[0], B = snap.f[1];
+    const dx = B.x - A.x, dz = B.z - A.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d, mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2;
+    const cl = A.state === 'clinch' || B.state === 'clinch', down = A.state === 'down' || B.state === 'down' || A.sit || B.sit;
+    let want = down ? d : Math.max(B3.map.min, d * B3.map.k); if (cl) want = B3.map.clinch;
+    sep = sep == null ? want : damp(sep, want, cl ? 6 : 14, dt);
+    const s = Math.min(sep, d + 30);
+    P[0].set(mx - ux * s / 2, 0, mz - uz * s / 2); P[1].set(mx + ux * s / 2, 0, mz + uz * s / 2);
+    // bodies never overlap: if chests, heads or hips touch, ease them apart
+    const [a, b] = boxers;
     if (a.col && b.col && !A.sit && !B.sit && A.state !== 'down' && B.state !== 'down') {
-      const hd = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
-      const cl = A.state === 'clinch' || B.state === 'clinch' ? 7 : 0;
-      const need = Math.max(a.col.tr + b.col.tr + 3 - cl - hd(a.col.chest, b.col.chest), a.col.hr + b.col.hr + 2 - cl - hd(a.col.head, b.col.head), a.col.tr + b.col.tr - cl - hd(a.col.hip, b.col.hip));
-      bodyPush = clamp(bodyPush + (need > 0 ? need * .5 : need * .08) , 0, 40);
+      const hd = (p, q) => Math.hypot(p.x - q.x, p.z - q.z), ci = cl ? 9 : 0;
+      const need = Math.max(a.col.tr + b.col.tr + 2 - ci - hd(a.col.chest, b.col.chest), a.col.hr + b.col.hr + 1 - ci - hd(a.col.head, b.col.head), a.col.tr + b.col.tr - 2 - ci - hd(a.col.hip, b.col.hip));
+      bodyPush = clamp(bodyPush + (need > 0 ? need * .5 : need * .08), 0, 30);
     } else bodyPush = Math.max(0, bodyPush - 60 * dt);
-    if (bodyPush > 0) {
-      const dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz) || 1, h = bodyPush / 2;
-      A.x -= dx / L * h; A.z -= dz / L * h; B.x += dx / L * h; B.z += dz / L * h;
-    }
+    if (bodyPush > 0) { P[0].x -= ux * bodyPush / 2; P[0].z -= uz * bodyPush / 2; P[1].x += ux * bodyPush / 2; P[1].z += uz * bodyPush / 2; }
+    rSep = P[0].distanceTo(P[1]); rMid = V((P[0].x + P[1].x) / 2, 58, (P[0].z + P[1].z) / 2);
   }
-  // poses: compute both, each aims at where the other was last frame
+  // poses: both men, each aims at where the other was last frame; then gloves settle off the other man where he is now
+  const res = fight.phase === 'over' && fight.result;
   for (let i = 0; i < 2; i++) {
-    const o = boxers[1 - i], os = snap.f[1 - i];
-    const opHead = o.jHead || V(os.x, 88, os.z), opBody = o.jBody || V(os.x, 66, os.z);
-    boxers[i].pose(snap.f[i], { x: os.x, z: os.z, head: opHead, chest: o.jChest, col: o.col }, opBody, dt, corners[i]);
+    const F = fight.f[i], won = res && res.winner === i && overT > 1.2 ? clamp((overT - 1.2) * 2, 0, 1) : 0;
+    boxers[i].pose(snap.f[i], { pos: P[i], op: boxers[1 - i], os: snap.f[1 - i], opPos: P[1 - i], corner: corners[i], style: F.sheet.style, winner: won }, dt);
   }
   boxers[0].settle(boxers[1].col); boxers[1].settle(boxers[0].col);
-  ref.update(dt, fight, boxers, snap);
+  if (window.__probe) for (const h of __probe) if (h.pend) { h.pend = 0; const b = boxers[h.a], P0 = PUNCH[h.p], hi = (P0.arm === 'lead') === (fight.f[h.a].stance !== 'southpaw') ? 0 : 1, J = b.J, sh = J[ARM[hi][1]], wr = J[ARM[hi][3]]; h.ext = sh.distanceTo(wr) / (b.d.UA + b.d.FA); h.want = (sh.distanceTo(b.spotOn({ op: boxers[1 - h.a] }, P0, hi)) - b.d.gl) / (b.d.UA + b.d.FA); h.lg = b.lgN || 0; h.d3 = rSep; }
+  if (window.__clip && boxers[0].col && boxers[1].col && !stand) { // anti-clip stats (headless): glove into the other man's head, chest into chest
+    const C = __clip; C.n++; let worst = 0;
+    for (let i = 0; i < 2; i++) { const me = boxers[i], o = boxers[1 - i].col; if (!me.armPose || me.armPose.down) continue; for (const g of me.col.gl) worst = Math.max(worst, o.hr + me.d.glR * .55 - g.distanceTo(o.head)); }
+    const a = boxers[0].col, b = boxers[1].col, ch = a.tr + b.tr - 4 - Math.hypot(a.chest.x - b.chest.x, a.chest.z - b.chest.z);
+    C.glove += worst > 0 ? 1 : 0; C.glove2 += worst > 2 ? 1 : 0; C.gmax = Math.max(C.gmax, worst); if (!(A.state === 'clinch' || B.state === 'clinch')) C.chest += ch > 0 ? 1 : 0;
+  }
+  for (let i = 0; i < 2; i++) { const st = stools[i], w = boxers[i].sitW || 0; st.visible = w > .05; st.position.set(corners[i].x, 0, corners[i].z); st.scale.setScalar(clamp(w * 1.4, .01, 1)); }
+  ref.update(dt, fight, boxers, snap, P);
+  excite = Math.max(0, excite - dt * .25); CROWD.tick(dt, excite);
   tickSpray(dt); updCam(dt);
   fight.f.forEach((X, i) => { const el = $('hb' + i); if (el) el.style.width = clamp(X.head / Math.max(1, X.headMax) * 100, 0, 100) + '%'; });
   const left = Math.max(0, ROUND_LEN - fight.clock); $('ck').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
-  $('rd').textContent = fight.phase === 'corner' ? 'Between rounds' : 'Round ' + fight.round + ' of ' + fight.rounds;
+  $('rd').textContent = stand ? 'Standing' : fight.phase === 'corner' ? 'Between rounds' : 'Round ' + fight.round + ' of ' + fight.rounds;
   renderer.render(scene, camera);
   pfAfter(now, performance.now() - cpu0);
   fpsN++; fpsT += dt; if (fpsT > 1) { window.__fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
 }
 requestAnimationFrame(frame);
-window.__dbg = { cam, get fight() { return fight; }, boxers: () => boxers, THREE, camera, renderer, setCam: (i) => { camI = i; cam.user = false; updCamBtn(); } };
+$('bStand').onclick = () => { stand = !stand; $('bStand').textContent = stand ? 'Fight' : 'Stand'; };
+$('bGray').onclick = () => { gray = !gray; boxers.forEach(b => b.setGray(gray)); $('bGray').textContent = gray ? 'Kit' : 'Gray'; };
+window.__dbg = { newFight: o => { newFight(o); sPrev = sCur = null; }, step: n => { for (let i = 0; i < n; i++) { tick(); events(); } }, cam, get fight() { return fight; }, boxers: () => boxers, ref, THREE, camera, renderer, B3, setCam: (i) => { camI = i; cam.user = false; updCamBtn(); }, set stand(v) { stand = v; }, set gray(v) { gray = v; boxers.forEach(b => b.setGray(v)); } };
 </script>
 </body></html>
