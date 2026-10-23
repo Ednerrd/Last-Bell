@@ -64,6 +64,7 @@ Ed: "start the 3D transition, use all the research, scratch the old one if you h
 - **Anti-clip:** the punching glove ignores his guard until the engine says *blocked* (then it stops on the gloves), and flies through on a miss. `proto/tools/clip.js`: glove-in-head 0% of frames, chest overlap 0%.
 - **The ref** runs on the same skeleton (his kit, square stance, hands for the count chop, the wave-off, the break).
 - **Phone first look:** Stand (the fight holds still, they just stand in their stance) and Gray (plain gray men) buttons. Portrait camera framed tighter.
+- **Ed's notes, round 1 (Oct 23):** stiff, crane-kick pose -> loosened (soft knees, heel down, shorter stance, fists forward, hips and shoulders swing, the guard drifts). Next: punch flow.
 - **Not yet:** Ed's eye on the motion (the gate), the Phase 0 phone rerun, damage on the face, faces close up, the clinch pose needs a look, a crowd beyond silhouettes. Tools: `proto/tools/README.md`.
 
 ## Phase 2: look
