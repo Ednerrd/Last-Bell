@@ -16,7 +16,8 @@ const B3 = {
   lunge: { jab: 13, other: 9 },           // a punch can carry him in this far when the man is out of reach
   pf: { out: .1, hit: .54, hold: .63, home: .88, whip: 1.5 }, // punch flow (share of the engine's punch): the hand leaves, lands, holds, is home; whip > 1 = fastest at the end
   step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24] }, // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims
-  stance: { L: 15, close: 3.5, low: 2 }  // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low
+  stance: { L: 15, close: 3.5, low: 2, back: .6 }  // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low;
+  // back: share of the hip blade over the old hips-at-.55-of-the-chest that a rear-hand shot turns back, so the hips still go through square
 };
 
 // ---------- small math ----------
@@ -215,13 +216,13 @@ function buildBody(d, kit) {
 
 // ---------- per-guard spots: gloves off the head center, in his frame (f fwd, u up, l toward his lead side) ----------
 const GUARD3D = {
-  //            tight lead     tight rear       loose lead      loose rear      crouch blade lean tuck
-  standard: { tL: [15, -5, 5], tR: [8, -8, -5], lL: [21, -15, 7.5], lR: [11, -17, -8], c: 4, bl: 34, lean: 7, tuck: .45 },
-  high:     { tL: [9, -1, 6.5], tR: [8, -1, -6.5], lL: [14, -10, 7.5], lR: [11, -11, -8], c: 5, bl: 26, lean: 8, tuck: .9 },
-  peekaboo: { tL: [9, -4.5, 4.6], tR: [9, -4.5, -4.6], lL: [13, -11, 6.5], lR: [12, -11, -6.5], c: 9, bl: 18, lean: 12, tuck: .95 },
-  philly:   { tL: [9, -31, -1], tR: [8, -6, -6.5], lL: [12, -34, 3], lR: [10, -12, -7.5], c: 3, bl: 52, lean: 5, tuck: .5 },
-  cross:    { tL: [10, -24, -8], tR: [8, -11, 8], lL: [12, -28, -5], lR: [10, -15, 5], c: 6, bl: 24, lean: 9, tuck: .85 },
-  handslow: { tL: [17, -31, 8], tR: [8, -8, -6], lL: [19, -36, 9], lR: [10, -14, -8], c: 2, bl: 38, lean: 3, tuck: .2 }
+  //            tight lead     tight rear       loose lead      loose rear      crouch blade hips lean tuck (hips: as bladed as the chest, square for high, peekaboo, cross: proto/STANCE.md 2-3)
+  standard: { tL: [15, -5, 5], tR: [8, -8, -5], lL: [21, -15, 7.5], lR: [11, -17, -8], c: 4, bl: 40, hb: 40, lean: 7, tuck: .45 },
+  high:     { tL: [9, -1, 6.5], tR: [8, -1, -6.5], lL: [14, -10, 7.5], lR: [11, -11, -8], c: 5, bl: 26, hb: 16, lean: 8, tuck: .9 },
+  peekaboo: { tL: [9, -4.5, 4.6], tR: [9, -4.5, -4.6], lL: [13, -11, 6.5], lR: [12, -11, -6.5], c: 9, bl: 18, hb: 10, lean: 12, tuck: .95 },
+  philly:   { tL: [9, -31, -1], tR: [8, -6, -6.5], lL: [12, -34, 3], lR: [10, -12, -7.5], c: 3, bl: 52, hb: 50, lean: 5, tuck: .5 },
+  cross:    { tL: [10, -24, -8], tR: [8, -11, 8], lL: [12, -28, -5], lR: [10, -15, 5], c: 6, bl: 24, hb: 14, lean: 9, tuck: .85 },
+  handslow: { tL: [17, -31, 8], tR: [8, -8, -6], lL: [19, -36, 9], lR: [10, -14, -8], c: 2, bl: 38, hb: 38, lean: 3, tuck: .2 }
 };
 // rhythm by style: bounce (amp, Hz), on his toes, weight shift (amp, Hz), bob-and-weave, head always moving
 const RHY = {
@@ -352,7 +353,7 @@ class Boxer3 {
     const bobA = (rh.bob + (s.guard === 'peekaboo' ? .6 : 0)) * (1 - tired * .7) * (P_ ? .2 : 1) * (s.def ? 0 : 1), weave = Math.sin(this.ph.w);
     // ---- the body's numbers: crouch, blade, lean, side bend, hips (all in his frame), each layer adds on
     let crouch = gd.c * .3 + 1.2 + B3.stance.low + 1.5 * ten + bobA * 2.2 * (.5 - .5 * Math.cos(this.ph.w * 2)) - bounce + tired * 1.5; // knees soft, not a squat
-    let blade = gd.bl, hipBlade = gd.bl * .55, pitch = gd.lean * .55 + 2 * ten + tired * 3, roll = -sg * bobA * 7 * weave, hipF = shift * .8, hipL = shiftL + bobA * 3 * weave; // roll: + bends him to his right
+    let blade = gd.bl, hipBlade = gd.hb, pitch = gd.lean * .55 + 2 * ten + tired * 3, roll = -sg * bobA * 7 * weave, hipF = shift * .8, hipL = shiftL + bobA * 3 * weave; // roll: + bends him to his right
     let headYaw = rh.head * 7 * nz(t * .6, this.seed) * life, headDown = 7 + 4 * ten + rh.head * 2.5 * nz(t * .5, this.seed + 3), headRoll = rh.head * 5 * nz(t * .45, this.seed + 7) * life;
     blade += 6 * nz(t * .55, this.seed + 11) * life + shift * 2.2; hipBlade += shift * 3; pitch += 2 * nz(t * .4, this.seed + 13);
     let clavLift = [0, 0], clavFwd = [0, 0];
@@ -364,11 +365,12 @@ class Boxer3 {
     // the punch on the body: hips and shoulders turn into it, the back heel turns over, uppercuts drive up off a dip
     if (P_ && live) {
       const ld = p < .12 ? Math.sin(Math.PI * p / .12) * .5 : 0; // the load
+      const hx = Math.max(0, gd.hb - gd.bl * .55) * B3.stance.back; // the bladed hips turn back further on the rear hand
       if (kind === 'straight' && leadArm) { blade += 8 * kS; pitch += 4 * kS; clavLift[hi] += 2.2 * kp; clavFwd[hi] += 2.5 * kp; heel[1] += .3 * kB; }
-      else if (kind === 'straight') { blade -= 64 * kS; hipBlade -= 42 * kB; pitch += 6 * kS; hipF += 4 * kB; hipL += 2 * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .8 * kB; clavFwd[hi] += 3 * kp; clavLift[hi] += 1.2 * kp; }
+      else if (kind === 'straight') { blade -= 64 * kS; hipBlade -= (42 + hx) * kB; pitch += 6 * kS; hipF += 4 * kB; hipL += 2 * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .8 * kB; clavFwd[hi] += 3 * kp; clavLift[hi] += 1.2 * kp; }
       else if (kind === 'hook' && leadArm) { blade += -12 * ld + 36 * kS; hipBlade += 24 * kB; heel[0] += .7 * kB; toeYaw[0] += .9 * kB; clavLift[hi] += 2.4 * kp; pitch += 2 * kS; }
-      else if (kind === 'hook') { blade -= 74 * kS; hipBlade -= 46 * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .9 * kB; clavLift[hi] += 1.8 * kp; pitch += 4 * kS; }
-      else if (kind === 'upper') { crouch += 6 * ld * 2 - 3 * kp; pitch += 5 * ld - 4 * kp; if (leadArm) { blade += 14 * kS; roll -= sg * 8 * ld; } else { blade -= 44 * kS; hipBlade -= 30 * kB; heel[1] += .9 * kB; toeYaw[1] -= .6 * kB; } }
+      else if (kind === 'hook') { blade -= 74 * kS; hipBlade -= (46 + hx) * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .9 * kB; clavLift[hi] += 1.8 * kp; pitch += 4 * kS; }
+      else if (kind === 'upper') { crouch += 6 * ld * 2 - 3 * kp; pitch += 5 * ld - 4 * kp; if (leadArm) { blade += 14 * kS; roll -= sg * 8 * ld; } else { blade -= 44 * kS; hipBlade -= (30 + hx * .7) * kB; heel[1] += .9 * kB; toeYaw[1] -= .6 * kB; } }
       if (P_.zone === 'body') { crouch += 6 * kp; pitch += 8 * kS; roll -= (leadArm ? 1 : -1) * sg * 7 * kp; }
       if (feint) { clavLift[hi] += 1.5; }
     }
