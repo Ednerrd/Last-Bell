@@ -13,7 +13,9 @@ const B3 = {
   map: { k: .9, min: 25, clinch: 19 },   // engine distance -> 3D: d3 = d x k (a jab at its sweet spot, 72, lands ~95% straight)
   outline: .55,                           // cel outline width (world units)
   ten: { up: 14, down: 1.7 },             // tension dial: how fast he tightens up, how slow he lets go
-  lunge: { jab: 13, other: 9 }            // a punch can carry him in this far when the man is out of reach
+  lunge: { jab: 13, other: 9 },           // a punch can carry him in this far when the man is out of reach
+  pf: { out: .1, hit: .54, hold: .63, home: .88, whip: 1.5 }, // punch flow (share of the engine's punch): the hand leaves, lands, holds, is home; whip > 1 = fastest at the end
+  step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24] } // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims
 };
 
 // ---------- small math ----------
@@ -254,7 +256,7 @@ class Boxer3 {
     this.t = Math.random() * 20; this.seed = Math.random() * 100; this.heading = o.heading || 0;
     this.ten = .3; this.ph = { b: Math.random() * 6, s: Math.random() * 6, w: Math.random() * 6, pump: 0 };
     this.sp = { head: new Spr(3), hrot: new Spr(3), torso: new Spr(3), hip: new Spr(3), hand: [new Spr(3), new Spr(3)] }; // reactions
-    this.ft = null; this.prev = null; this.sm = null; this.react = null; this.kd = null;
+    this.ft = null; this.anc = null; this.pend = null; this.prev = null; this.sm = null; this.react = null; this.kd = null;
     this.col = null; // what the other man aims at and bumps into
   }
   setGray(on) { // the plain gray men (first look): flat gray, keep the outline
@@ -315,8 +317,16 @@ class Boxer3 {
     const dOp = Math.hypot(opP.x - pos.x, opP.z - pos.z);
     // ---- the punch (if any)
     const P_ = s.aT && PUNCH[s.aT] ? PUNCH[s.aT] : null, p = s.aP || 0, feint = !!s.feint;
-    let k = 0; if (P_) k = p < .1 ? -.1 * Math.sin(Math.PI * p / .1) : p < .58 ? 1 - Math.pow(1 - (p - .1) / .48, 2.2) : p < .68 ? 1 : 1 - ease((p - .68) / .32);
-    if (feint) k *= .3;
+    // the kinetic chain: the hips fire first, the shoulders follow, the hand whips out last (fastest at the end: the snap),
+    // lands at the engine's 60%, then the hand comes home fast and the body unwinds behind it
+    let k = 0, kB = 0, kS = 0;
+    if (P_) {
+      const u = (p - B3.pf.out) / (B3.pf.hit - B3.pf.out), r = (p - B3.pf.hold) / (B3.pf.home - B3.pf.hold);
+      k = p < B3.pf.out ? -.1 * Math.sin(Math.PI * p / B3.pf.out) : p < B3.pf.hit ? Math.pow(u, B3.pf.whip) : p < B3.pf.hold ? 1 : p < B3.pf.home ? Math.pow(1 - r, 2) : 0;
+      const body = (a, b) => p < a ? 0 : p < b ? 1 - Math.pow(1 - (p - a) / (b - a), 2) : p < .62 ? 1 : 1 - ease((p - .62) / .38);
+      kB = body(.02, .4); kS = body(.07, .5);
+    }
+    if (feint) { k *= .3; kB *= .3; kS *= .3; }
     const kp = Math.max(0, k), leadArm = P_ ? P_.arm === 'lead' : true, kind = P_ ? P_.kind : null;
     const hi = leadArm === !south ? 0 : 1; // which hand throws: 0 = his left
     const leadHand = south ? 1 : 0;
@@ -353,12 +363,12 @@ class Boxer3 {
     // the punch on the body: hips and shoulders turn into it, the back heel turns over, uppercuts drive up off a dip
     if (P_ && live) {
       const ld = p < .12 ? Math.sin(Math.PI * p / .12) * .5 : 0; // the load
-      if (kind === 'straight' && leadArm) { blade += 8 * k; pitch += 4 * kp; clavLift[hi] += 2.2 * kp; clavFwd[hi] += 2.5 * kp; heel[1] += .3 * kp; }
-      else if (kind === 'straight') { blade -= 64 * k; hipBlade -= 42 * k; pitch += 6 * kp; hipF += 4 * kp; hipL += 2 * kp; heel[1] += 1.1 * kp; toeYaw[1] -= .8 * kp; clavFwd[hi] += 3 * kp; clavLift[hi] += 1.2 * kp; }
-      else if (kind === 'hook' && leadArm) { blade += -12 * ld + 36 * kp; hipBlade += 24 * kp; heel[0] += .7 * kp; toeYaw[0] += .9 * kp; clavLift[hi] += 2.4 * kp; pitch += 2 * kp; }
-      else if (kind === 'hook') { blade -= 74 * k; hipBlade -= 46 * k; heel[1] += 1.1 * kp; toeYaw[1] -= .9 * kp; clavLift[hi] += 1.8 * kp; pitch += 4 * kp; }
-      else if (kind === 'upper') { crouch += 6 * ld * 2 - 3 * kp; pitch += 5 * ld - 4 * kp; if (leadArm) { blade += 14 * kp; roll -= sg * 8 * ld; } else { blade -= 44 * k; hipBlade -= 30 * k; heel[1] += .9 * kp; toeYaw[1] -= .6 * kp; } }
-      if (P_.zone === 'body') { crouch += 6 * kp; pitch += 8 * kp; roll -= (leadArm ? 1 : -1) * sg * 7 * kp; }
+      if (kind === 'straight' && leadArm) { blade += 8 * kS; pitch += 4 * kS; clavLift[hi] += 2.2 * kp; clavFwd[hi] += 2.5 * kp; heel[1] += .3 * kB; }
+      else if (kind === 'straight') { blade -= 64 * kS; hipBlade -= 42 * kB; pitch += 6 * kS; hipF += 4 * kB; hipL += 2 * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .8 * kB; clavFwd[hi] += 3 * kp; clavLift[hi] += 1.2 * kp; }
+      else if (kind === 'hook' && leadArm) { blade += -12 * ld + 36 * kS; hipBlade += 24 * kB; heel[0] += .7 * kB; toeYaw[0] += .9 * kB; clavLift[hi] += 2.4 * kp; pitch += 2 * kS; }
+      else if (kind === 'hook') { blade -= 74 * kS; hipBlade -= 46 * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .9 * kB; clavLift[hi] += 1.8 * kp; pitch += 4 * kS; }
+      else if (kind === 'upper') { crouch += 6 * ld * 2 - 3 * kp; pitch += 5 * ld - 4 * kp; if (leadArm) { blade += 14 * kS; roll -= sg * 8 * ld; } else { blade -= 44 * kS; hipBlade -= 30 * kB; heel[1] += .9 * kB; toeYaw[1] -= .6 * kB; } }
+      if (P_.zone === 'body') { crouch += 6 * kp; pitch += 8 * kS; roll -= (leadArm ? 1 : -1) * sg * 7 * kp; }
       if (feint) { clavLift[hi] += 1.5; }
     }
     // defense: slips, rolls, ducks, pulls, blocks
@@ -401,20 +411,45 @@ class Boxer3 {
     if (P_ && P_.cat === 'jab' && kp > 0 && lunge < 2) want0.addScaledVector(fwd, 3 * kp);
     const ft = this.ft = this.ft || [want0, want1].map(f => ({ at: f.clone(), from: f.clone(), to: f.clone(), t: 1, dur: .15, yaw: 0 }));
     this.resetT = (this.resetT || 0) - dt;
-    if (this.resetT <= 0 && !P_ && live && !s.walk && spd < 8) { this.resetT = 1 + Math.random() * 2.2 * (1 + rh.toe); this.nudge = [new THREE.Vector3((Math.random() - .5) * 4, 0, (Math.random() - .5) * 4), new THREE.Vector3((Math.random() - .5) * 4, 0, (Math.random() - .5) * 4)]; } // small resets: never planted long
+    if (this.resetT <= 0 && !P_ && live && !s.walk && spd < 8) { this.resetT = 2 + Math.random() * 3 * (1 + rh.toe); this.nudge = [new THREE.Vector3((Math.random() - .5) * 4, 0, (Math.random() - .5) * 4), new THREE.Vector3((Math.random() - .5) * 4, 0, (Math.random() - .5) * 4)]; } // small resets: never planted long
+    // step-drag (the boxer's step, never the pitter-patter): when his stance falls behind his body, the foot on the side he's
+    // going steps first and the other follows the same distance, so the stance holds its width and the feet never cross.
+    // Aimed where he'll be (the step leads the move), so steps come fewer and longer the faster he goes. A lone foot only
+    // steps for a pivot (he turns), the jab's lead step, or a small reset.
+    const st = B3.step, free = wSt > .9 && sit < .3, look = clamp(spd * st.look, 0, st.lead);
     const vl = spd > 4 ? vel.clone().multiplyScalar(1 / spd) : fwd; let lift = 0;
-    [want0, want1].forEach((w, i) => {
-      const f = ft[i], o = ft[1 - i], aim = w.clone(); if (this.nudge && !s.walk) aim.add(this.nudge[i]); if (spd > 4) aim.addScaledVector(vl, clamp(spd * .1, 0, 13)); aim.y = 0;
-      if (f.t >= 1) {
-        const far = f.at.distanceTo(aim), thr = s.walk ? 8 : (P_ && i === 0 && (P_.cat === 'jab' || lunge > 2)) ? 2.5 : 5;
-        if (far > thr && (o.t >= .6 || far > 20) && wSt > .9 && sit < .3) { f.from.copy(f.at); f.to.copy(aim); f.t = 0; f.dur = clamp(.19 - spd * .0006, .1, .19) * (far > 20 ? .75 : 1); }
-      } else f.to.lerp(aim, 1 - Math.exp(-10 * dt));
-      if (f.t < 1) { f.t = Math.min(1, f.t + dt / f.dur); const e = ease(f.t); f.at.lerpVectors(f.from, f.to, e); f.at.y = Math.sin(Math.PI * f.t) * (s.walk ? 4 : 2.4) * clamp(f.from.distanceTo(f.to) / 8, .4, 1.2); lift = Math.max(lift, f.at.y); }
-      else f.at.y = 0;
+    const anc = this.anc = this.anc ? this.anc.lerp(pos, 1 - Math.exp(-st.anc * dt)) : pos.clone(), ancOff = anc.clone().sub(pos); // the feet follow his body smoothed: the jitter rides in the hips
+    const aims = [want0, want1].map((w, i) => { const a = w.clone().add(ancOff); if (this.nudge && !s.walk) a.add(this.nudge[i]); if (spd > 4) a.addScaledVector(vl, look); a.y = 0; return a; });
+    const go = (i, a, why) => { const f = ft[i], far = f.at.distanceTo(a); f.from.copy(f.at); f.to.copy(a); f.t = 0; f.dur = clamp(st.dur[0] + far * st.dur[1] - spd * .0008, st.dur[2], st.dur[3]); if (window.__feet) __feet.push({ i, far, spd, why }); };
+    this.stepCd = (this.stepCd || 0) - dt;
+    const planted = ft[0].t >= 1 && ft[1].t >= 1;
+    if (this.pend && (!free || ft[1 - this.pend.i].t >= st.lag || ft[1 - this.pend.i].t >= 1)) { if (free && ft[this.pend.i].at.distanceTo(aims[this.pend.i]) > 1.5) go(this.pend.i, aims[this.pend.i], 'drag'); this.pend = null; }
+    if (free && s.walk) { // walking: one foot after the other
+      const i = ft[0].at.distanceTo(aims[0]) > ft[1].at.distanceTo(aims[1]) ? 0 : 1, o = ft[1 - i];
+      if (ft[i].t >= 1 && o.t >= .6 && ft[i].at.distanceTo(aims[i]) > 8) go(i, aims[i], 'walk');
+    } else if (free && planted && !this.pend && this.stepCd <= 0) {
+      const eT = aims[0].clone().add(aims[1]).sub(ft[0].at).sub(ft[1].at).multiplyScalar(.5).setY(0);
+      const thrT = P_ ? st.thr * .6 : st.thr;
+      if (eT.length() > thrT) {
+        const ef = eT.dot(fwd), el = eT.dot(lead), first = Math.abs(ef) >= Math.abs(el) ? (ef > 0 ? 0 : 1) : (el > 0 ? 0 : 1);
+        go(first, aims[first], 'push'); this.pend = { i: 1 - first }; this.stepCd = st.gap;
+      } else {
+        const er = [0, 1].map(i => ft[i].at.clone().add(eT).distanceTo(aims[i])); // his stance's shape, not where it is: a pivot
+        const thr1 = i => (P_ && i === 0 && (P_.cat === 'jab' || lunge > 2)) ? 2.5 : st.one;
+        const i = er[0] - thr1(0) > er[1] - thr1(1) ? 0 : 1;
+        if (er[i] > thr1(i)) { go(i, aims[i], P_ ? 'punch' : 'one'); this.stepCd = st.gap; }
+      }
+    }
+    ft.forEach((f, i) => {
+      if (f.t < 1) {
+        f.to.lerp(aims[i], 1 - Math.exp(-6 * dt));
+        f.t = Math.min(1, f.t + dt / f.dur); const e = ease(f.t); f.at.lerpVectors(f.from, f.to, e);
+        f.at.y = Math.sin(Math.PI * f.t) * (s.walk ? 4 : st.lift) * clamp(f.from.distanceTo(f.to) / 10, .3, 1); lift = Math.max(lift, f.at.y);
+      } else f.at.y = 0;
     });
     // ---- hips: between the feet, down by the crouch; the knockdown and the stool take over
     const mid = ft[0].at.clone().add(ft[1].at).multiplyScalar(.5); mid.y = 0;
-    const base = pos.clone().lerp(mid, .6);
+    const base = pos.clone().lerp(mid, .4);
     let hip = BF(hipF - 1.5, d.hipY - crouch, hipL - .5, base); hip.y -= lift * .2;
     hip.x += S.hip.x[0]; hip.z += S.hip.x[2];
     if (clinch) hip.addScaledVector(fwd, -3);
@@ -515,8 +550,8 @@ class Boxer3 {
       let gT;
       const arc = Math.sin(Math.PI * clamp(kp, 0, 1));
       if (kind === 'straight') { const over = !leadArm && !body && this.pv < .25; gT = from.clone().lerp(tgt, kp); if (over) gT.addScaledVector(up, arc * 7).addScaledVector(out, arc * 4); }
-      else if (kind === 'hook') { gT = from.clone().lerp(tgt, ease(kp)); gT.addScaledVector(out, arc * (8 + this.pv * 9)).addScaledVector(dirH, -arc * 4); }
-      else { gT = from.clone().lerp(tgt, ease(kp)); gT.addScaledVector(up, -arc * (8 + this.pv * 6)).addScaledVector(dirH, -arc * 3); }
+      else if (kind === 'hook') { gT = from.clone().lerp(tgt, kp); gT.addScaledVector(out, arc * (8 + this.pv * 9)).addScaledVector(dirH, -arc * 4); }
+      else { gT = from.clone().lerp(tgt, kp); gT.addScaledVector(up, -arc * (8 + this.pv * 6)).addScaledVector(dirH, -arc * 3); }
       if (k < 0) gT = from.clone().addScaledVector(dirH, k * 20); // the load: a hair back first
       gl[hi] = gT;
     } else this.lgN = damp(this.lgN || 0, 0, 8, dt);
@@ -540,7 +575,7 @@ class Boxer3 {
     if (X.winner) { const w = clamp(X.winner, 0, 1); gl[0].lerp(J[ARM[0][1]].clone().addScaledVector(up, 34 * hs).addScaledVector(left, 8), w); gl[1].lerp(J[ARM[1][1]].clone().addScaledVector(up, 34 * hs).addScaledVector(left, -8), w); }
     // smooth the guard, not the punch
     const sm = this.sm = this.sm || { gl: gl.map(g => g.clone()) };
-    for (let i = 0; i < 2; i++) { const r = P_ && i === hi ? 70 : handsOver && handsOver.w > .5 ? 10 : 8 + 14 * ten; sm.gl[i].lerp(gl[i], 1 - Math.exp(-r * dt)); }
+    for (let i = 0; i < 2; i++) { const r = P_ && i === hi ? 140 : handsOver && handsOver.w > .5 ? 10 : 8 + 14 * ten; sm.gl[i].lerp(gl[i], 1 - Math.exp(-r * dt)); }
     this.glT = sm.gl.map(g => g.clone());
     this.armPose = { P_, hi, kp, kind, leadArm, out: [left.clone(), left.clone().negate()], tuck: gd.tuck, walk: !!(handsOver && handsOver.hang), down: dp > 0 || sit > .3, clinch, fwd, up, left, qCh };
     this.solveArms(this.glT);
