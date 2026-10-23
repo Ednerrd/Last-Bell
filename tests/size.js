@@ -2,6 +2,7 @@
 // the long man gets reach + gap/2, the short man reach - gap/2 (around the division's mean, so rs = 1 +- per x gap/2). Same height.
 //   TAG=x node tests/size.js 300 [gaps 0,4,8,12] [rating 80] [div 4]   (run x4, one process a core)
 //   node tests/size.js agg x                                          pool every run with that TAG
+//   PAIR=outboxer:swarmer   not a mirror: the long man is the first style, the short man the second (own sheets, same rating; s3)
 // Prints by gap: the long man's win %, stops, KDs and landed a fight both ways, connect %, jab share of his landed. Since s1 rs reads only
 // the gap (not the division), a division changes nothing here but the noise: run one.
 const fs = require('fs');
@@ -23,13 +24,15 @@ const S = require('./sim.js');
 const N = +process.argv[2] || 100, GAPS = (process.argv[3] || '0,4,8,12').split(',').map(Number), RT = +process.argv[4] || 80, DIV = process.argv[5] != null ? +process.argv[5] : 4;
 const styles = Object.keys(S.STYLES).filter(k => !S.STYLES[k].special);
 const MEAN = [[64.5, 65.5], [65.5, 67.5], [66.5, 68.5], [67.5, 69], [69.5, 71.5], [71.5, 73.5], [72.5, 74.5], [74, 76], [75.8, 79]][DIV];
+const PAIR = process.env.PAIR ? process.env.PAIR.split(':') : null;
 const tot = (F, w) => F.tot[w].jab + F.tot[w].power + F.tot[w].body;
 for (const gap of GAPS) {
   const row = { gap, n: 0, w: 0, l: 0, dw: 0, dl: 0, stop: 0, kdL: 0, kdS: 0, ldL: 0, ldS: 0, thL: 0, thS: 0, jL: 0, jS: 0 };
   for (let i = 0; i < N; i++) {
-    const st = styles[i % 5], g = S.rollGuard(st);
+    const st = PAIR ? PAIR[0] : styles[i % 5], g = S.rollGuard(st);
     const L = Object.assign(S.sheet(RT, st, g), { name: 'm' + i, div: DIV, ht: MEAN[0], reach: MEAN[1] + gap / 2 });
-    const Sh = Object.assign({}, L, { stats: Object.assign({}, L.stats), reach: MEAN[1] - gap / 2 });
+    const Sh = PAIR ? Object.assign(S.sheet(RT, PAIR[1], S.rollGuard(PAIR[1])), { name: 's' + i, div: DIV, ht: MEAN[0], reach: MEAN[1] - gap / 2 })
+      : Object.assign({}, L, { stats: Object.assign({}, L.stats), reach: MEAN[1] - gap / 2 });
     const side = i % 2, f = side ? S.run(Sh, L, { rounds: 10 }) : S.run(L, Sh, { rounds: 10 });
     const FL = f.f[side], FS = f.f[1 - side], win = f.result.winner;
     row.n++; if (win === side) { row.w++; if (f.result.decision) row.dw++; } else if (win != null) { row.l++; if (f.result.decision) row.dl++; }
