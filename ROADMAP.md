@@ -9,7 +9,7 @@ The only to-do list. When something is done, delete its line here, add a short l
 4. **On the phone, next time you upload `index.html`:** the 6a impact cues (block pop, whoosh, parry pat) and the 2a flaw lines ("We've found his hole...").
 
 ## Claude, in this order
-1. **3D phase 1** (next; Ed, Oct 22: 3D goes right after Size). `proto/PLAN.md` phases 0-2, code first (Decided), the loose-but-ready movement notes. It is the TV camera too (6b folds in). Render only: the pre-3D baseline hash (`same.js 40` 3fd3c667 / 200 6c94c895) must hold.
+1. **3D phase 1** (next; Ed, Oct 22: 3D goes right after Size). `proto/PLAN.md` phases 0-2, code first (Decided), the loose-but-ready movement notes. It is the TV camera too (6b folds in). Render only: the pre-3D baseline hash (`same.js 40` 3fd3c667 / 200 6c94c895) must hold. Build on the bench, merge in phase 4; high effort for the animation-layer design (Ed, Oct 23).
 
 Done before 3D (numbers in the design docs): the balance pass (a, c, d, e; b skipped), 2a flaws (`docs/PLUGIN.md`), Size s1-s3 (`docs/SIZE.md`; s3 = the pre-3D baseline), 6a impact cues. Keep: 52/15/29 totals, body ~24% of landed, comebacks ~11%, lead changes ~40%, split rounds ~27-29% / split+majority ~26-28% / draws ~5%, styles 48-53, one level down 15-20. Worth a look some day: thrown by division (~52 at 135 and under, ~40 at heavyweight).
 
