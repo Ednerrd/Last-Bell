@@ -15,7 +15,8 @@ const B3 = {
   ten: { up: 14, down: 1.7 },             // tension dial: how fast he tightens up, how slow he lets go
   lunge: { jab: 13, other: 9 },           // a punch can carry him in this far when the man is out of reach
   pf: { out: .1, hit: .54, hold: .63, home: .88, whip: 1.5 }, // punch flow (share of the engine's punch): the hand leaves, lands, holds, is home; whip > 1 = fastest at the end
-  step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24] } // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims
+  step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24] }, // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims
+  stance: { L: 15, close: 3.5, low: 2 }  // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low
 };
 
 // ---------- small math ----------
@@ -350,7 +351,7 @@ class Boxer3 {
     const swA = rh.sw * (1 - .4 * moving) * (P_ ? .3 : 1), shift = swA * Math.sin(this.ph.s), shiftL = swA * .45 * Math.sin(this.ph.s * .5 + 1);
     const bobA = (rh.bob + (s.guard === 'peekaboo' ? .6 : 0)) * (1 - tired * .7) * (P_ ? .2 : 1) * (s.def ? 0 : 1), weave = Math.sin(this.ph.w);
     // ---- the body's numbers: crouch, blade, lean, side bend, hips (all in his frame), each layer adds on
-    let crouch = gd.c * .3 + 1.2 + 1.5 * ten + bobA * 2.2 * (.5 - .5 * Math.cos(this.ph.w * 2)) - bounce + tired * 1.5; // knees soft, not a squat
+    let crouch = gd.c * .3 + 1.2 + B3.stance.low + 1.5 * ten + bobA * 2.2 * (.5 - .5 * Math.cos(this.ph.w * 2)) - bounce + tired * 1.5; // knees soft, not a squat
     let blade = gd.bl, hipBlade = gd.bl * .55, pitch = gd.lean * .55 + 2 * ten + tired * 3, roll = -sg * bobA * 7 * weave, hipF = shift * .8, hipL = shiftL + bobA * 3 * weave; // roll: + bends him to his right
     let headYaw = rh.head * 7 * nz(t * .6, this.seed) * life, headDown = 7 + 4 * ten + rh.head * 2.5 * nz(t * .5, this.seed + 3), headRoll = rh.head * 5 * nz(t * .45, this.seed + 7) * life;
     blade += 6 * nz(t * .55, this.seed + 11) * life + shift * 2.2; hipBlade += shift * 3; pitch += 2 * nz(t * .4, this.seed + 13);
@@ -402,7 +403,7 @@ class Boxer3 {
     }
     const wSt = Math.max(0, 1 - wK - wSit - wLie), sit = this.sitW = damp(this.sitW || 0, s.sit ? 1 : 0, s.sit ? 3 : 7, dt);
     // ---- feet: planted until they're too far from where they belong, then a step
-    const stanceW = 7.6 * G * (.85 + .15 * hs), stanceL = 9.5 * hs;
+    const stanceW = 7.6 * G * (.85 + .15 * hs), stanceL = (B3.stance.L - B3.stance.close * smooth(45, 25, dOp)) * hs;
     if (P_ && live && this.lgN != null) lunge = this.lgN;
     let want0 = BF(stanceL + lunge * .9 + hipF * .2, 0, stanceW * .8), want1 = BF(-stanceL + lunge * .25, 0, -stanceW);
     if (s.walk) { want0 = BF(1, 0, 6.5); want1 = BF(-1, 0, -6.5); }

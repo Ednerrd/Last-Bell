@@ -8,7 +8,7 @@ Source tags: **[R]** our research files, **[YT]** coaching captions (ids in `res
 | | Today | Where |
 |---|---|---|
 | Feet | lead +9.5 fwd / +6.1 out, rear -9.5 / -7.6: 19 front-back, 13.7 across, 23.4 apart (shoulder joints 24.8) | `stanceL`, `stanceW` |
-| Lead knee | **~11° of bend: nearly locked** [geo] (hip drop ~2.4-3.9, `crouch`) | `crouch` line, `GUARD3D.c` |
+| Lead knee | measured standing (Oct 23): ~37° of bend (peekaboo 54); the ~11° [geo] guess was wrong, the knees were never the miss: the stride was | `crouch` line, `GUARD3D.c` |
 | Rear leg | too far for the leg at rest, so the rear heel has to come up to reach [geo] | IK |
 | Chest turn (blade) | std 34, high 26, peekaboo 18, philly 52, cross 24, low 38 | `GUARD3D.bl` |
 | Hips | x .55 of the chest: **hips squarer than shoulders** | `hipBlade` |
@@ -65,7 +65,7 @@ So **crouch comes in two kinds**: knees (Tyson, Ball, peekaboo) and a waist hing
 - **Inside**: square up, short hooks off a hip rhythm, head on his chest or cheek [R dynamic].
 
 ## 7. The changes, in order (for when Ed says go; render only, hash 3fd3c667 holds)
-1. **Knees**: base lead knee to ~25° (more crouch from the knees, not the hips folding), fix the rear leg's reach. One knob, biggest look change. Check with Stand + Gray.
+1. **DONE (Oct 23): the long stance.** `B3.stance` { L 15 (was 9.5), close 3.5 shorter when he's on top of his man (dOp 45 -> 25), low 2 more crouch }. Measured standing (scratch `measure.js`): feet front-back 17.3 -> 28.4 per 100 of height, hips 49.7 -> 47.5, head 86.6 -> 84.4, lead knee 37 -> 46°, rear 36 -> 40° (peekaboo 60 / 54). Fast seed 7, 120 s: glove-in-head >2 units .11 -> .14%, feet crossing 1.0 -> 1.8% of frames, steps unchanged; `same.js 40` 3fd3c667. Was: **Knees**: base lead knee to ~25° (more crouch from the knees, not the hips folding), fix the rear leg's reach. One knob, biggest look change. Check with Stand + Gray.
 2. **Blade split**: a hip blade per guard (`GUARD3D.hb`), standard toward 45°, hips at least as bladed as the chest; square hips for high, peekaboo, cross.
 3. **Rest weight + hinge per style** (`RHY.wt`, `RHY.hinge`): swarmer / peekaboo / cross forward, out-boxer / counter / Philly back; Frazier-type waist hinge vs Tyson-type knees.
 4. **Lead toe** straight or slightly in; rear heel set on purpose.
