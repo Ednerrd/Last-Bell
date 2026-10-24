@@ -1,3 +1,20 @@
+### F1, how they move in 2D (Oct 24, render only, hash 3fd3c667)
+The 3D stance work (`proto/STANCE.md` 2-7, `proto/PLAN.md` Round 2) ported to the side-view drawing (`body()`, `arms()`, `lunge()` in the render section). Tables right under `GUARD_POSE`:
+- `ST2`: knee 4 (the hips sit 4 lower: lead knee ~37°, rear ~42°; the old legs were locked straight, hip -54 on 58 of leg with the feet 20 / -22), feet 21 / -23, cap 12 (the resting crouch soft-caps), step 14 (ground per step-drag pair), hurtW 3, drop (the lazy-guard spells).
+- `STY2` by style (specials through `STY2_OF`): wt rest weight (+ toward him: swarmer 5.4, slugger 1.8, out-boxer -1.8, counter -2.4; half on the move), lo crouch, hinge at the waist (swarmer .16 rad Frazier, slugger .035; a peekaboo man takes it in the knees), heel (rear heel up at rest), b / bf / toe the bounce. `GST2` by guard: wt (peekaboo / cross 2.4 forward, Philly -2.4, hands low -1.8), knees, bl blade (std 40, high 26, peekaboo 18, Philly 52, cross 24, hands low 38).
+- The blade in side view: lead shoulder at neck -.5 + 7 sin bl, rear at -.5 - 7 sin bl (was rear +2 / lead -3 for everyone: a backwards blade), chest width x (1 + .28 (sin bl - .64)) via `torsoPts`; square in the clinch / walking / stool / down. A rear hand swings the rear shoulder 1.2 x the offset more, so it ends ~where it used to (reach and `lunge` about the same).
+- Punch flow: `bodyOf(p)` is the body's clock (twist, lean, hip drive, heel, pivot): from .8 of the coil, all in by 52%, ~3/4 in when a right hand's glove is 10% out; the glove keeps `gloveK` (contact at 60%). Power hands home by 88%.
+- Feet: step-drag off `gait` (ground) and `mvx` (forward share of the speed, in the view): the foot on the side he's going steps (0-.35 of the pair), the other drags (.28-.62); planted feet don't slide on the canvas; the stance opens to ~57 on the step at full speed and closes to 44; sideways the lead stays pinned and the rear swings in. Walking between rounds keeps the old alternating walk.
+- Tired hands: `ST2.drop` on the fight clock (view `ft`), spell state in `Render.sm()` (dOwe, dT, dK). The view also carries `sk` (style) and `rd` (round).
+- Not done: "close" (shorter stance when on top of his man), real pivots on the turn (side view hides most of it), the near / far leg convention (the lead leg is drawn near for both men; a mirror thing, left as is).
+
+### Handoff (Oct 24, the 2D game back: G1 + G2 built)
+- **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** (rechecked after the lab split). The brain inline is current.
+- **Built:** `game.html`, the full career on today's engine + brain (`docs/GAME.md` "Built"): `game/build.js` swaps the lab section of `index.html` for `game/career.js` + `game/ui.js`. The learning is live: skills, talent caps, know, rematch memory both ways, scars, film, camp picks. Published privately: https://claude.ai/artifact/RF3wctrjte4R63FyN28mC5.
+- **Next (Ed, Oct 24): the fights before the career** (ROADMAP Claude item 1): F1 how they move (the 3D stance research in the 2D drawing: render only, hash holds, high effort), F2 fight feel, F3 coaching, F4 fight IQ / balance. The career (G3, G4, the tuning reads) waits.
+- **3D (parked, Ed Oct 24):** all 7 stance changes built, waiting on Ed's phone notes.
+- **Parked for the brain pass (unchanged, Ed Oct 23):** counter 47.1, swarmer 47.8, peekaboo 44.7, specials 46-47.6, cheese haymaker 64.4 + bodyOnly 59.9 at hard, lead changes 35, PvI 14.6, the short man vs a long outboxer 39.3 at 6 in.
+
 ### Handoff (Oct 24, the 2D game back: planned, 3D parked)
 - **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667**, `same.js 200` = **6c94c895**. The brain inline in `index.html` is current (`node brain/inline.js` changes nothing).
 - **New (Ed, Oct 24):** the 2D game back, 3D parked. `docs/GAME.md`: where the old game is (`51ee63f^`, needs `git fetch --unshallow`), what the cut removed, what the engine grew since with no career to live in (skills, L4 `learn`/`camp`, rematch memory, scars, flaws, size), the plan G1-G5.

@@ -827,10 +827,10 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 - **The design holds from skill alone:** caught (the rare fight-ending counter) climbs with the hurt man's level, N .3 / I .55 / P .85 / W 1.0% pooled, ~3x. Stung (a clean counter) is flat ~16% at every level. A Pro hunts a hurt World man half as often as a hurt Novice (2.0 vs 4.8 a fight).
 - Kept as is (no hash change, d9fe6759). If Ed wants a hurt vet scarier, the lever is his counter chance in a hunt itself, not this multiplier; measure with danger.js.
 
-## Where we are (Oct 24, the 2D game back: G1 + G2 built)
+## Where we are (Oct 24, F1 built: how they move, in 2D)
 Read this first. Older handoffs: `docs/NOTES.md` "Handoff log"; the pre-3D baseline: `docs/SIZE.md` "s3, the pre-3D baseline".
-- **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** (rechecked after the lab split). The brain inline is current.
-- **Built:** `game.html`, the full career on today's engine + brain (`docs/GAME.md` "Built"): `game/build.js` swaps the lab section of `index.html` for `game/career.js` + `game/ui.js`. The learning is live: skills, talent caps, know, rematch memory both ways, scars, film, camp picks. Published privately: https://claude.ai/artifact/RF3wctrjte4R63FyN28mC5.
-- **Next (Ed, Oct 24): the fights before the career** (ROADMAP Claude item 1): F1 how they move (the 3D stance research in the 2D drawing: render only, hash holds, high effort), F2 fight feel, F3 coaching, F4 fight IQ / balance. The career (G3, G4, the tuning reads) waits.
+- **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** after every F1 step. `game.html` rebuilt.
+- **Built (F1, render only, `docs/NOTES.md` "F1, how they move in 2D"):** the 3D stance research in the 2D drawing, five commits: a soft knees + rest weight / hinge / heel / bounce by style and guard (`STY2`, `GST2`, `ST2`), b the blade (shoulders + chest width by guard), c punch flow (`bodyOf`: the body leads the hand, fast home), d step-drag feet, e tired-hands spells by round (12.6 / 14.9 / 13.9 / 19.4% of rounds 1-4, Dunn 13 / 17 / 19) + the hurt man sits back. Tools: `tests/stance2d.js` (stills, guards x styles, punch strips), `tests/live2d.js` (live fight grabs), `tests/hands2d.js` (drop share by round).
+- **Next:** Ed's eye on F1 in the lab (ROADMAP Ed item 00; the lab link needs a republish: new link, or read the live page first), then F2 fight feel.
 - **3D (parked, Ed Oct 24):** all 7 stance changes built, waiting on Ed's phone notes.
 - **Parked for the brain pass (unchanged, Ed Oct 23):** counter 47.1, swarmer 47.8, peekaboo 44.7, specials 46-47.6, cheese haymaker 64.4 + bodyOnly 59.9 at hard, lead changes 35, PvI 14.6, the short man vs a long outboxer 39.3 at 6 in.

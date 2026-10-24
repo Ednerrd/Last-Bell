@@ -4,7 +4,7 @@ Phone-first auto-boxing fight sim. `index.html` (~5,000 lines) is the fight lab:
 
 **The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the only AI: the old engine AI (`decide()`/`react()`) was retired Oct 16. `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
-**What to do next: `ROADMAP.md`** (the only to-do list; next (Ed, Oct 24): **the fights before the career**: F1 how they move (the 3D stance research in the 2D drawing, render only, high effort), F2 fight feel, F3 coaching, F4 fight IQ / balance; then the career (`docs/GAME.md`: G1+G2 built, then G3, G4 gym mode); 3D phase 1 is parked; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/GAME.md` (the 2D game back), `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `proto/STANCE.md` (the 3D stance spec; sources `research/stance.md`), `research/` (boxing research; `research/MIND.md` is the index).
+**What to do next: `ROADMAP.md`** (the only to-do list; next (Ed, Oct 24): **the fights before the career**: F1 how they move built Oct 24 (Ed's eye on it in the lab first), F2 fight feel, F3 coaching, F4 fight IQ / balance; then the career (`docs/GAME.md`: G1+G2 built, then G3, G4 gym mode); 3D phase 1 is parked; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/GAME.md` (the 2D game back), `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `proto/STANCE.md` (the 3D stance spec; sources `research/stance.md`), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
@@ -41,7 +41,7 @@ engine (~200, the brain inlined at ~203) → career (~3180: just fighter gen, di
 - Knobs: one marked block `TUNING` (STOP the ref's stoppages, TUNE combat, DMG damage, CUT cuts/doctor, SW swelling, COV covering a bad eye, STAM gas, BODY, EXT reach, AI the brain on this engine, SKL skill sheet, SHOUT_EDGE, AIC the AI corner, TEACH, STYLE_* tricks). Content tables stay with their code: `PUNCH`, `STYLES`, `GUARDS`, `STRATS` (labels), `SHOUTS`. The brain's own knobs: `BoxerBrain.BR` in `brain/brain.js`.
 - Brain wiring: `brainInit`, `perceive` (the contract is typed in `brain/brain.js`: Perception, Action; `tsc -p .` checks it), `brainTick`, `bev` (events to both brains), `brainProfile`/`brainSkills` (stats or `sheet.sk` → skills). Opponent memory lives in the brain. Corner lessons: `teach()`/`teachK` (F.read.les: only the 'learned' commentary reads them now). Ring IQ: `ringIQ(sheet)`, `iqK`.
 - Guards: standard, high, peekaboo, philly, cross, handslow. Fixed per career.
-- Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `carry()`, `blendSnap`, `spreadView()`.
+- Render: `drawFighter`, `body()`, `arms()` → `elbow()`, `lunge()`, `bodyPush()`, `settle()`, `carry()`, `blendSnap`, `spreadView()`. The stance tables `ST2` / `STY2` / `GST2` (under `GUARD_POSE`), the body's punch clock `bodyOf` (F1, `docs/NOTES.md` "F1, how they move in 2D").
 - More of the map (skill sheet, learning, damage zones, the jab, corner talk, officials, AI corner): `docs/NOTES.md` "Code map, the details".
 
 ## Tests (`tests/`, run from repo root)
@@ -78,6 +78,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
 - YouTube research: `tools/yt/yt.py search "query"` / `get ID` (captions to `tools/yt/raw/`, gitignored; `research/CLIPS_WANTED.md`).
 - The game: `node tests/career.js [careers] [fights] [div]` careers headless (offers, camp picks, learn, rankings; `SIZES=1` the save by part), `node tests/gameflow.js [drill|spar|tape]` clicks through `game.html` (shots in `shots/g_*`), `node tests/boot.js page.html [js] [shot]` loads any page and prints errors. `node game/build.js --check`: game.html current.
+- 2D drawing (F1): `node tests/stance2d.js [html] [out.png] [opts json]` stills (guards x styles, punch strips; `{"sel":[[guard,style,{view}]]}` big cells), `node tests/live2d.js [html] [prefix] [n] [ms]` live fight grabs, `node tests/hands2d.js [html] [rounds] [speed] [fights]` tired-hands share by round.
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
 
 ## Targets (check after engine changes)
