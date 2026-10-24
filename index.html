@@ -4613,6 +4613,9 @@ let F = null, FX = null, rafId = 0;
 // how different two colors look (weighted RGB distance, ~0..255)
 const CLASH = 70;
 function colorDist(a, b) { const p = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }; const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b), rm = (r1 + r2) / 2; return Math.sqrt((2 + rm / 256) * (r1 - r2) ** 2 + 4 * (g1 - g2) ** 2 + (2 + (255 - rm) / 256) * (b1 - b2) ** 2) / 3; }
+// big moments play at real speed: a knockdown (to the restart and 2 s after), a stun, the moment a man gets hurt. FX.speed stays what the coach picked
+const SLOW = { kd: 2, stun: 3, hurt: 3, again: 8 };
+const spd = () => FX.slowT > 0 || (F && F.phase === 'kd') ? 1 : FX.speed;
 ACT.speed = (d, b) => { FX.speed = +d.v; b.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
 let ovTimer = 0;
 function overlay(html, ms) { const o = $('#ov'); if (!o) return; o.innerHTML = html; o.classList.add('show'); clearTimeout(ovTimer); if (ms) ovTimer = setTimeout(() => o.classList.remove('show'), ms); }
@@ -4668,7 +4671,7 @@ function handleEvents() {
       case 'hit': {
         Sfx.punch(e.dmg, e.zone, e.blocked); FX.ev.push(e);
         { const jab = PUNCH[e.p] && PUNCH[e.p].cat === 'jab', hs = (HIT_STOP[e.q] || HIT_STOP.clean)[jab ? 0 : 1] + (e.crit ? .02 : 0); // freeze both men a beat, by how it landed
-          if (hs > 0) { FX.hitStop = Math.max(FX.hitStop, hs / Math.max(1, FX.speed)); FX.hsWho = e.d; FX.hsK = hs; }
+          if (hs > 0) { FX.hitStop = Math.max(FX.hitStop, hs / Math.max(1, spd())); FX.hsWho = e.d; FX.hsK = hs; }
           if (e.q === 'flush' && e.zone === 'head') FX.flash = Math.max(FX.flash, e.crit ? .25 : .14); }
         if (!e.blocked && e.zone === 'head' && (e.crit || e.dmg > 5.5)) { FX.excite = Math.min(1, FX.excite + .35); Sfx.swell(.25); }
         else if (!e.blocked && e.dmg > 3.5) FX.excite = Math.min(1, FX.excite + .12);
@@ -4676,10 +4679,11 @@ function handleEvents() {
       }
       case 'miss': if (Math.random() < .5) Sfx.whiff(); FX.ev.push(e); break;
       case 'bell': Sfx.bell(1); break;
-      case 'stun': case 'liver': case 'wind': FX.excite = 1; Sfx.swell(.4); break;
-      case 'knockdown': Sfx.floor(); Sfx.roar(); FX.excite = 1; FX.flash = .5; FX.hitStop = HIT_STOP.kd / Math.max(1, FX.speed); FX.hsK = .1; break;
+      case 'stun': case 'liver': case 'wind': FX.excite = 1; Sfx.swell(.4); FX.slowT = Math.max(FX.slowT || 0, SLOW.stun); break;
+      case 'knockdown': Sfx.floor(); Sfx.roar(); FX.excite = 1; FX.flash = .5; FX.hitStop = HIT_STOP.kd; FX.hsK = .1; break;
       case 'count': overlay(`<div class="count">${e.n}</div>`, 800); break;
       case 'up': overlay(`<div class="count small">Up at ${e.n}</div>`, 1200); Sfx.swell(.3); break;
+      case 'resume': FX.slowT = Math.max(FX.slowT || 0, SLOW.kd); break;
       case 'roundEnd': FX.excite = .2; break;
       case 'end': onEnd(e.result); break;
     }
@@ -4784,12 +4788,14 @@ function loop(ts) {
   if (!(FX.mode === 'live' && FX.hitStop > 0)) FX.tv = (FX.tv || 0) + dt; // the fighters' clock: stands still during hit-stop
   FX.excite = Math.max(0, FX.excite - dt * .25); FX.flash = Math.max(0, FX.flash - dt * 2);
   Sfx.crowd(CROWD_BASE[FX.venue] + FX.excite * .35, .8);
-  FX.rdt = dt * (FX.mode === 'live' ? FX.speed : FX.mode === 'replay' ? .4 : 1);
+  if (FX.mode === 'live' && F.phase === 'fight') { const H = FX.hurtAt || (FX.hurtAt = [-99, -99]); F.f.forEach((X, i) => { if (X.head >= X.headMax * .3) return; if (F.t - H[i] > SLOW.again) FX.slowT = Math.max(FX.slowT || 0, SLOW.hurt); H[i] = F.t; }); } // the snap's hurt; a man hovering on the line doesn't set it off again
+  if (FX.slowT > 0) FX.slowT -= dt;
+  FX.rdt = dt * (FX.mode === 'live' ? spd() : FX.mode === 'replay' ? .4 : 1);
   let view;
   if (FX.mode === 'live') {
     if (FX.hitStop > 0) FX.hitStop -= dt;
     else {
-      FX.acc += dt * FX.speed;
+      FX.acc += dt * spd();
       while (FX.acc >= DT && FX.mode === 'live') {
         FX.sPrev = FX.sCur; F.step(DT); FX.sCur = F.snap(); FX.acc -= DT; handleEvents();
         if (F.phase === 'corner') { openCorner(); break; }
