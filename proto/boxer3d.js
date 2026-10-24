@@ -217,21 +217,23 @@ function buildBody(d, kit) {
 // ---------- per-guard spots: gloves off the head center, in his frame (f fwd, u up, l toward his lead side) ----------
 const GUARD3D = {
   //            tight lead     tight rear       loose lead      loose rear      crouch blade hips lean tuck (hips: as bladed as the chest, square for high, peekaboo, cross: proto/STANCE.md 2-3)
-  standard: { tL: [15, -5, 5], tR: [8, -8, -5], lL: [21, -15, 7.5], lR: [11, -17, -8], c: 4, bl: 40, hb: 40, lean: 7, tuck: .45 },
-  high:     { tL: [9, -1, 6.5], tR: [8, -1, -6.5], lL: [14, -10, 7.5], lR: [11, -11, -8], c: 5, bl: 26, hb: 16, lean: 8, tuck: .9 },
-  peekaboo: { tL: [9, -4.5, 4.6], tR: [9, -4.5, -4.6], lL: [13, -11, 6.5], lR: [12, -11, -6.5], c: 9, bl: 18, hb: 10, lean: 12, tuck: .95 },
-  philly:   { tL: [9, -31, -1], tR: [8, -6, -6.5], lL: [12, -34, 3], lR: [10, -12, -7.5], c: 3, bl: 52, hb: 50, lean: 5, tuck: .5 },
-  cross:    { tL: [10, -24, -8], tR: [8, -11, 8], lL: [12, -28, -5], lR: [10, -15, 5], c: 6, bl: 24, hb: 14, lean: 9, tuck: .85 },
-  handslow: { tL: [17, -31, 8], tR: [8, -8, -6], lL: [19, -36, 9], lR: [10, -14, -8], c: 2, bl: 38, hb: 38, lean: 3, tuck: .2 }
+  //            wt: rest weight (+ forward), hinge: bent at the waist (deg) on top of his style's
+  standard: { tL: [15, -5, 5], tR: [8, -8, -5], lL: [21, -15, 7.5], lR: [11, -17, -8], c: 4, bl: 40, hb: 40, lean: 7, tuck: .45, wt: 0 },
+  high:     { tL: [9, -1, 6.5], tR: [8, -1, -6.5], lL: [14, -10, 7.5], lR: [11, -11, -8], c: 5, bl: 26, hb: 16, lean: 8, tuck: .9, wt: .5 },
+  peekaboo: { tL: [9, -4.5, 4.6], tR: [9, -4.5, -4.6], lL: [13, -11, 6.5], lR: [12, -11, -6.5], c: 9, bl: 18, hb: 10, lean: 12, tuck: .95, wt: 2, knees: 1 },
+  philly:   { tL: [9, -31, -1], tR: [8, -6, -6.5], lL: [12, -34, 3], lR: [10, -12, -7.5], c: 3, bl: 52, hb: 50, lean: 5, tuck: .5, wt: -2 },
+  cross:    { tL: [10, -24, -8], tR: [8, -11, 8], lL: [12, -28, -5], lR: [10, -15, 5], c: 6, bl: 24, hb: 14, lean: 9, tuck: .85, wt: 2, hinge: 7 },
+  handslow: { tL: [17, -31, 8], tR: [8, -8, -6], lL: [19, -36, 9], lR: [10, -14, -8], c: 2, bl: 38, hb: 38, lean: 3, tuck: .2, wt: -1.5 }
 };
-// rhythm by style: bounce (amp, Hz), on his toes, weight shift (amp, Hz), bob-and-weave, head always moving
+// rhythm by style: bounce (amp, Hz), on his toes, weight shift (amp, Hz), bob-and-weave, head always moving;
+// the stance by style (proto/STANCE.md 4): wt rest weight (+ forward), lo lower off the knees, hinge bent at the waist (Frazier; a peekaboo man bends the knees instead)
 const RHY = {
-  outboxer:     { b: 1.5, bf: 2.3, toe: .55, sw: 1.6, sf: 1.1, bob: 0, head: .5 },
-  boxerpuncher: { b: 1, bf: 2.05, toe: .3, sw: 2, sf: .9, bob: .15, head: .6 },
-  counter:      { b: .35, bf: 1.6, toe: .1, sw: 2.6, sf: .55, bob: .1, head: 1 },
-  slugger:      { b: .3, bf: 1.5, toe: 0, sw: 1.6, sf: .7, bob: 0, head: .3 },
-  swarmer:      { b: .7, bf: 2, toe: .2, sw: 1.4, sf: .9, bob: 1, head: .9 },
-  awkward:      { b: 1.2, bf: 1.7, toe: .35, sw: 2.8, sf: .75, bob: .4, head: 1.2, odd: 1 }
+  outboxer:     { b: 1.5, bf: 2.3, toe: .55, sw: 1.6, sf: 1.1, bob: 0, head: .5, wt: -1.5, lo: -1, hinge: 0 },
+  boxerpuncher: { b: 1, bf: 2.05, toe: .3, sw: 2, sf: .9, bob: .15, head: .6, wt: 0, lo: 0, hinge: 0 },
+  counter:      { b: .35, bf: 1.6, toe: .1, sw: 2.6, sf: .55, bob: .1, head: 1, wt: -2, lo: 1, hinge: 0 },
+  slugger:      { b: .3, bf: 1.5, toe: 0, sw: 1.6, sf: .7, bob: 0, head: .3, wt: 1.5, lo: 0, hinge: 2 },
+  swarmer:      { b: .7, bf: 2, toe: .2, sw: 1.4, sf: .9, bob: 1, head: .9, wt: 4.5, lo: 1.5, hinge: 9 },
+  awkward:      { b: 1.2, bf: 1.7, toe: .35, sw: 2.8, sf: .75, bob: .4, head: 1.2, odd: 1, wt: 0, lo: 0, hinge: 0 }
 };
 const RHY_OF = { volume: 'swarmer', angle: 'outboxer', awkward: 'awkward', switch: 'boxerpuncher', body: 'swarmer', pboxer: 'slugger', spoiler: 'counter', jabgrab: 'outboxer', feinter: 'boxerpuncher' };
 
@@ -356,6 +358,11 @@ class Boxer3 {
     let blade = gd.bl, hipBlade = gd.hb, pitch = gd.lean * .55 + 2 * ten + tired * 3, roll = -sg * bobA * 7 * weave, hipF = shift * .8, hipL = shiftL + bobA * 3 * weave; // roll: + bends him to his right
     let headYaw = rh.head * 7 * nz(t * .6, this.seed) * life, headDown = 7 + 4 * ten + rh.head * 2.5 * nz(t * .5, this.seed + 3), headRoll = rh.head * 5 * nz(t * .45, this.seed + 7) * life;
     blade += 6 * nz(t * .55, this.seed + 11) * life + shift * 2.2; hipBlade += shift * 3; pitch += 2 * nz(t * .4, this.seed + 13);
+    // rest weight + bent at the waist or the knees, by style and guard (proto/STANCE.md 4): moving evens the weight out, the awkward man drifts;
+    // a waist hinge tips the hips too and sits them back, a peekaboo man takes his style's hinge in the knees instead (Frazier vs Tyson)
+    const hinge = Math.min(12, (gd.knees ? 0 : rh.hinge) + (gd.hinge || 0));
+    const wt = ((rh.wt + gd.wt) * (1 - .5 * moving) + (rh.odd ? 2.5 * nz(t * .18, this.seed + 17) : 0) - hinge * .1) * hs;
+    crouch += rh.lo + (gd.knees ? rh.hinge * .2 : 0); pitch += hinge;
     let clavLift = [0, 0], clavFwd = [0, 0];
     const breath = Math.sin(t * (1.6 + 1.6 * tired) * Math.PI) * (.3 + 1.1 * tired);
     clavLift[0] += breath * .5; clavLift[1] += breath * .5;
@@ -453,11 +460,11 @@ class Boxer3 {
     // ---- hips: between the feet, down by the crouch; the knockdown and the stool take over
     const mid = ft[0].at.clone().add(ft[1].at).multiplyScalar(.5); mid.y = 0;
     const base = pos.clone().lerp(mid, .4);
-    let hip = BF(hipF - 1.5, d.hipY - crouch, hipL - .5, base); hip.y -= lift * .2;
+    let hip = BF(hipF + wt - 1.5, d.hipY - crouch, hipL - .5, base); hip.y -= lift * .2;
     hip.x += S.hip.x[0]; hip.z += S.hip.x[2];
     if (clinch) hip.addScaledVector(fwd, -3);
     // angles (radians): hips and chest, his frame
-    let hipYaw = -sg * hipBlade * D2R, hipPitch = (pitch * .25 - 4) * D2R, hipRoll = roll * .25 * D2R;
+    let hipYaw = -sg * hipBlade * D2R, hipPitch = (pitch * .25 + hinge * .3 - 4) * D2R, hipRoll = roll * .25 * D2R;
     let chYaw = -sg * blade * D2R, chPitch = pitch * D2R, chRoll = roll * D2R;
     let feet = [ft[0].at.clone(), ft[1].at.clone()], footYaw = [toeYaw[0], toeYaw[1]], kneeUp = [0, 0];
     let handsOver = null; // [left, right] world targets that replace the guard (down, stool, walk, clinch)
