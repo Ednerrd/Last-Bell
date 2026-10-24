@@ -10,7 +10,7 @@ Playwright comes from the global install (`PW=path` to override).
 - `node proto/tools/clip.js proto/ring3d.html [secs]`: anti-clip stats: % of frames with a glove in the other man's head (any, >2 units), chest overlap, draw calls, triangles.
 - `node proto/tools/feet.js proto/ring3d.html [secs] [seed] [setupJs]`: footwork: foot moves a second per man, step length, step-drag pairs, stance width, feet crossing, body speed; with `window.__feet=[]` as setup, steps a second by why (push, drag, one = pivot, punch, walk). Fast + deterministic.
 - **Fast mode** (`fast.js`): seeded `Math.random`, frames driven at a fixed 30 fps, rendering off, so two builds compare on the same fight and a minute of fight takes seconds. `feet.js` always; `FAST=seed node proto/tools/probe.js|clip.js ...` (secs = fight time; draw calls read 0).
-- `node proto/tools/stance.js proto/ring3d.html [styles|all] [guards|all] [secs]`: the stance measured standing, per style x guard: weight (hips along the feet, 0 rear .. 100 lead), hip height, head ahead of the lead foot, trunk lean, knee bends (per 100 of height). Fast.
+- `node proto/tools/stance.js proto/ring3d.html [styles|all] [guards|all] [secs]`: the stance measured standing, per style x guard: weight (hips along the feet, 0 rear .. 100 lead), hip height, head ahead of the lead foot, trunk lean, knee bends (per 100 of height), toe turn and heel lift per foot. Fast.
 - `node proto/tools/dbg.js proto/ring3d.html "cond" "evalJs" out.png [setupJs]`: catch + print an eval (default setup: spoiler vs jab-and-grab at 4x, for clinches).
 
 Page hooks: `__dbg.newFight({sa, sb})` picks styles, `__dbg.step(n)` runs n sim ticks, `window.__paused`, `window.__focus = () => Vector3` points the camera.

@@ -16,8 +16,9 @@ const B3 = {
   lunge: { jab: 13, other: 9 },           // a punch can carry him in this far when the man is out of reach
   pf: { out: .1, hit: .54, hold: .63, home: .88, whip: 1.5 }, // punch flow (share of the engine's punch): the hand leaves, lands, holds, is home; whip > 1 = fastest at the end
   step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24] }, // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims
-  stance: { L: 15, close: 3.5, low: 2, back: .6 }  // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low;
-  // back: share of the hip blade over the old hips-at-.55-of-the-chest that a rear-hand shot turns back, so the hips still go through square
+  stance: { L: 15, close: 3.5, low: 2, back: .6, rear: 5 }  // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low;
+  // back: share of the hip blade over the old hips-at-.55-of-the-chest that a rear-hand shot turns back, so the hips still go through square;
+  // rear: the rear foot sits further back x his resting heel lift, so the raised heel keeps the rear leg long, not folded
 };
 
 // ---------- small math ----------
@@ -226,14 +227,15 @@ const GUARD3D = {
   handslow: { tL: [17, -31, 8], tR: [8, -8, -6], lL: [19, -36, 9], lR: [10, -14, -8], c: 2, bl: 38, hb: 38, lean: 3, tuck: .2, wt: -1.5 }
 };
 // rhythm by style: bounce (amp, Hz), on his toes, weight shift (amp, Hz), bob-and-weave, head always moving;
-// the stance by style (proto/STANCE.md 4): wt rest weight (+ forward), lo lower off the knees, hinge bent at the waist (Frazier; a peekaboo man bends the knees instead)
+// the stance by style (proto/STANCE.md 4): wt rest weight (+ forward), lo lower off the knees, hinge bent at the waist (Frazier; a peekaboo man bends the knees instead),
+// heel the rear heel up at rest (0..1; the bounce adds on top: the toe men ride higher, the planted slugger sits lowest)
 const RHY = {
-  outboxer:     { b: 1.5, bf: 2.3, toe: .55, sw: 1.6, sf: 1.1, bob: 0, head: .5, wt: -1.5, lo: -1, hinge: 0 },
-  boxerpuncher: { b: 1, bf: 2.05, toe: .3, sw: 2, sf: .9, bob: .15, head: .6, wt: 0, lo: 0, hinge: 0 },
-  counter:      { b: .35, bf: 1.6, toe: .1, sw: 2.6, sf: .55, bob: .1, head: 1, wt: -2, lo: 1, hinge: 0 },
-  slugger:      { b: .3, bf: 1.5, toe: 0, sw: 1.6, sf: .7, bob: 0, head: .3, wt: 1.5, lo: 0, hinge: 2 },
-  swarmer:      { b: .7, bf: 2, toe: .2, sw: 1.4, sf: .9, bob: 1, head: .9, wt: 4.5, lo: 1.5, hinge: 9 },
-  awkward:      { b: 1.2, bf: 1.7, toe: .35, sw: 2.8, sf: .75, bob: .4, head: 1.2, odd: 1, wt: 0, lo: 0, hinge: 0 }
+  outboxer:     { b: 1.5, bf: 2.3, toe: .55, sw: 1.6, sf: 1.1, bob: 0, head: .5, wt: -1.5, lo: -1, hinge: 0, heel: .3 },
+  boxerpuncher: { b: 1, bf: 2.05, toe: .3, sw: 2, sf: .9, bob: .15, head: .6, wt: 0, lo: 0, hinge: 0, heel: .3 },
+  counter:      { b: .35, bf: 1.6, toe: .1, sw: 2.6, sf: .55, bob: .1, head: 1, wt: -2, lo: 1, hinge: 0, heel: .2 },
+  slugger:      { b: .3, bf: 1.5, toe: 0, sw: 1.6, sf: .7, bob: 0, head: .3, wt: 1.5, lo: 0, hinge: 2, heel: .15 },
+  swarmer:      { b: .7, bf: 2, toe: .2, sw: 1.4, sf: .9, bob: 1, head: .9, wt: 4.5, lo: 1.5, hinge: 9, heel: .35 },
+  awkward:      { b: 1.2, bf: 1.7, toe: .35, sw: 2.8, sf: .75, bob: .4, head: 1.2, odd: 1, wt: 0, lo: 0, hinge: 0, heel: .25 }
 };
 const RHY_OF = { volume: 'swarmer', angle: 'outboxer', awkward: 'awkward', switch: 'boxerpuncher', body: 'swarmer', pboxer: 'slugger', spoiler: 'counter', jabgrab: 'outboxer', feinter: 'boxerpuncher' };
 
@@ -366,7 +368,7 @@ class Boxer3 {
     let clavLift = [0, 0], clavFwd = [0, 0];
     const breath = Math.sin(t * (1.6 + 1.6 * tired) * Math.PI) * (.3 + 1.1 * tired);
     clavLift[0] += breath * .5; clavLift[1] += breath * .5;
-    let heel = [toe * .25, .1 + toe * .5], toeYaw = [.15, .8]; // heel lift (0..1) and toe turn (rad, + = out to his rear side) by foot: 0 lead, 1 rear
+    const heelR = rh.heel + .03 * gd.wt; let heel = [toe * .25, heelR + toe * .5], toeYaw = [.15, .8]; // heel lift (0..1) and toe turn (rad, + = toward his rear side: the lead toe 9° in, the rear 46° out) by foot: 0 lead, 1 rear; the rear heel up a little at rest, more with the weight forward
     let lunge = 0;
     if (hurt) { crouch += (2.5 + 2.5 * nz(t * 2.2, this.seed + 5)) * hurt; hipL += 3 * nz(t * 1.3, this.seed + 9) * hurt; headRoll += 6 * nz(t * 1.1, this.seed + 2) * hurt; headDown += 5 * hurt; }
     // the punch on the body: hips and shoulders turn into it, the back heel turns over, uppercuts drive up off a dip
@@ -375,7 +377,7 @@ class Boxer3 {
       const hx = Math.max(0, gd.hb - gd.bl * .55) * B3.stance.back; // the bladed hips turn back further on the rear hand
       if (kind === 'straight' && leadArm) { blade += 8 * kS; pitch += 4 * kS; clavLift[hi] += 2.2 * kp; clavFwd[hi] += 2.5 * kp; heel[1] += .3 * kB; }
       else if (kind === 'straight') { blade -= 64 * kS; hipBlade -= (42 + hx) * kB; pitch += 6 * kS; hipF += 4 * kB; hipL += 2 * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .8 * kB; clavFwd[hi] += 3 * kp; clavLift[hi] += 1.2 * kp; }
-      else if (kind === 'hook' && leadArm) { blade += -12 * ld + 36 * kS; hipBlade += 24 * kB; heel[0] += .7 * kB; toeYaw[0] += .9 * kB; clavLift[hi] += 2.4 * kp; pitch += 2 * kS; }
+      else if (kind === 'hook' && leadArm) { blade += -12 * ld + 36 * kS; hipBlade += 24 * kB; heel[0] += .7 * kB; heel[1] *= 1 - .7 * kB; toeYaw[0] += .9 * kB; clavLift[hi] += 2.4 * kp; pitch += 2 * kS; }
       else if (kind === 'hook') { blade -= 74 * kS; hipBlade -= (46 + hx) * kB; heel[1] += 1.1 * kB; toeYaw[1] -= .9 * kB; clavLift[hi] += 1.8 * kp; pitch += 4 * kS; }
       else if (kind === 'upper') { crouch += 6 * ld * 2 - 3 * kp; pitch += 5 * ld - 4 * kp; if (leadArm) { blade += 14 * kS; roll -= sg * 8 * ld; } else { blade -= 44 * kS; hipBlade -= (30 + hx * .7) * kB; heel[1] += .9 * kB; toeYaw[1] -= .6 * kB; } }
       if (P_.zone === 'body') { crouch += 6 * kp; pitch += 8 * kS; roll -= (leadArm ? 1 : -1) * sg * 7 * kp; }
@@ -414,7 +416,7 @@ class Boxer3 {
     // ---- feet: planted until they're too far from where they belong, then a step
     const stanceW = 7.6 * G * (.85 + .15 * hs), stanceL = (B3.stance.L - B3.stance.close * smooth(45, 25, dOp)) * hs;
     if (P_ && live && this.lgN != null) lunge = this.lgN;
-    let want0 = BF(stanceL + lunge * .9 + hipF * .2, 0, stanceW * .8), want1 = BF(-stanceL + lunge * .25, 0, -stanceW);
+    let want0 = BF(stanceL + lunge * .9 + hipF * .2, 0, stanceW * .8), want1 = BF(-stanceL - B3.stance.rear * (heelR + rh.toe * .4) * hs + lunge * .25, 0, -stanceW);
     if (s.walk) { want0 = BF(1, 0, 6.5); want1 = BF(-1, 0, -6.5); }
     if (X.ref) { want0 = BF(1.5, 0, 7.5); want1 = BF(-1.5, 0, -7.5); heel = [0, 0]; toeYaw = [-.25, .25]; } // the ref stands square
     if (clinch) { want0 = BF(8, 0, stanceW); want1 = BF(-12, 0, -stanceW); }
