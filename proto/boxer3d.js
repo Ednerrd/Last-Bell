@@ -15,7 +15,8 @@ const B3 = {
   ten: { up: 14, down: 1.7 },             // tension dial: how fast he tightens up, how slow he lets go
   lunge: { jab: 13, other: 9 },           // a punch can carry him in this far when the man is out of reach
   pf: { out: .1, hit: .54, hold: .63, home: .88, whip: 1.5 }, // punch flow (share of the engine's punch): the hand leaves, lands, holds, is home; whip > 1 = fastest at the end
-  step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24] }, // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims
+  step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24], piv: .26, sink: 1.5, land: .56 }, // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims;
+  // piv: the stance turned this far (rad) = a pivot: the lead foot stays pinned, the rear swings round it on an arc, the hips sink then rise; land: a punch's lead step lands at this share of the punch (with the hand)
   stance: { L: 15, close: 3.5, low: 2, back: .6, rear: 5 }  // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low;
   // back: share of the hip blade over the old hips-at-.55-of-the-chest that a rear-hand shot turns back, so the hips still go through square;
   // rear: the rear foot sits further back x his resting heel lift, so the raised heel keeps the rear leg long, not folded
@@ -437,7 +438,11 @@ class Boxer3 {
     const vl = spd > 4 ? vel.clone().multiplyScalar(1 / spd) : fwd; let lift = 0;
     const anc = this.anc = this.anc ? this.anc.lerp(pos, 1 - Math.exp(-st.anc * dt)) : pos.clone(), ancOff = anc.clone().sub(pos); // the feet follow his body smoothed: the jitter rides in the hips
     const aims = [want0, want1].map((w, i) => { const a = w.clone().add(ancOff); if (this.nudge && !s.walk) a.add(this.nudge[i]); if (spd > 4) a.addScaledVector(vl, look); a.y = 0; return a; });
-    const go = (i, a, why) => { const f = ft[i], far = f.at.distanceTo(a); f.from.copy(f.at); f.to.copy(a); f.t = 0; f.dur = clamp(st.dur[0] + far * st.dur[1] - spd * .0008, st.dur[2], st.dur[3]); if (window.__feet) __feet.push({ i, far, spd, why }); };
+    // the punch's pace (share a second), so a stepping shot's lead foot lands with the hand
+    if (P_ && this.lastP != null && p > this.lastP) this.pRate = damp(this.pRate || p / Math.max(dt, 1e-3), (p - this.lastP) / Math.max(dt, 1e-3), 10, dt); this.lastP = P_ ? p : null;
+    const sv = ft[0].at.clone().sub(ft[1].at).setY(0), av = aims[0].clone().sub(aims[1]).setY(0), turn = wrapA(Math.atan2(av.x, av.z) - Math.atan2(sv.x, sv.z));
+    const go = (i, a, why) => { const f = ft[i], far = f.at.distanceTo(a); f.from.copy(f.at); f.to.copy(a); f.t = 0; f.dur = clamp(st.dur[0] + far * st.dur[1] - spd * .0008, st.dur[2], st.dur[3]);
+      if (P_ && i === 0 && p < st.land - .05 && this.pRate > 0) f.dur = clamp((st.land - p) / this.pRate, .08, st.dur[3]); /* the stepping shot: the foot lands with the hand */ f.why = why; f.p0 = P_ ? p : -1; if (window.__feet) __feet.push({ i, far, spd, why, p: f.p0, cat: P_ ? P_.cat : null, kind, H: this.heading }); };
     this.stepCd = (this.stepCd || 0) - dt;
     const planted = ft[0].t >= 1 && ft[1].t >= 1;
     if (this.pend && (!free || ft[1 - this.pend.i].t >= st.lag || ft[1 - this.pend.i].t >= 1)) { if (free && ft[this.pend.i].at.distanceTo(aims[this.pend.i]) > 1.5) go(this.pend.i, aims[this.pend.i], 'drag'); this.pend = null; }
@@ -452,15 +457,20 @@ class Boxer3 {
         go(first, aims[first], 'push'); this.pend = { i: 1 - first }; this.stepCd = st.gap;
       } else {
         const er = [0, 1].map(i => ft[i].at.clone().add(eT).distanceTo(aims[i])); // his stance's shape, not where it is: a pivot
+        const pivA = ft[0].at.clone().sub(av); pivA.y = 0; // the pivot: the rear foot to where the turned stance puts it off the pinned lead foot
+        if (!P_ && Math.abs(turn) > st.piv && pivA.distanceTo(ft[1].at) > st.one * .5) { go(1, pivA, 'pivot'); ft[1].piv = true; this.stepCd = st.gap; } else {
         const thr1 = i => (P_ && i === 0 && (P_.cat === 'jab' || lunge > 2)) ? 2.5 : st.one;
         const i = er[0] - thr1(0) > er[1] - thr1(1) ? 0 : 1;
         if (er[i] > thr1(i)) { go(i, aims[i], P_ ? 'punch' : 'one'); this.stepCd = st.gap; }
+        }
       }
     }
     ft.forEach((f, i) => {
       if (f.t < 1) {
-        f.to.lerp(aims[i], 1 - Math.exp(-6 * dt));
-        f.t = Math.min(1, f.t + dt / f.dur); const e = ease(f.t); f.at.lerpVectors(f.from, f.to, e);
+        if (f.piv && f.t < 1) { f.to.copy(ft[0].at).sub(av).setY(0); } else f.to.lerp(aims[i], 1 - Math.exp(-6 * dt));
+        f.t = Math.min(1, f.t + dt / f.dur); if (f.t >= 1 && window.__land) __land.push({ i, why: f.why, p0: f.p0, p: P_ ? p : -1, cat: P_ ? P_.cat : null, kind, far: f.from.distanceTo(f.to) }); const e = ease(f.t); f.at.lerpVectors(f.from, f.to, e);
+        if (f.piv) { const c = ft[0].at, a0 = Math.atan2(f.from.x - c.x, f.from.z - c.z), a1 = Math.atan2(f.to.x - c.x, f.to.z - c.z), r = lerp(f.from.distanceTo(c), f.to.distanceTo(c), e), a = a0 + wrapA(a1 - a0) * e; f.at.set(c.x + Math.sin(a) * r, 0, c.z + Math.cos(a) * r); } // swings round the lead foot
+        if (f.t >= 1) f.piv = false;
         f.at.y = Math.sin(Math.PI * f.t) * (s.walk ? 4 : st.lift) * clamp(f.from.distanceTo(f.to) / 10, .3, 1); lift = Math.max(lift, f.at.y);
       } else f.at.y = 0;
     });
@@ -468,6 +478,7 @@ class Boxer3 {
     const mid = ft[0].at.clone().add(ft[1].at).multiplyScalar(.5); mid.y = 0;
     const base = pos.clone().lerp(mid, .4);
     let hip = BF(hipF + wt - 1.5, d.hipY - crouch, hipL - .5, base); hip.y -= lift * .2;
+    if (ft[1].piv) hip.y -= st.sink * hs * Math.sin(Math.PI * Math.min(1, ft[1].t * 1.4)); // sink into the pivot, rise out of it
     hip.x += S.hip.x[0]; hip.z += S.hip.x[2];
     if (clinch) hip.addScaledVector(fwd, -3);
     // angles (radians): hips and chest, his frame
