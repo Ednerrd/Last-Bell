@@ -22,7 +22,7 @@ Plan checked against the code Oct 23 (pre-3D baseline): stale bits from before t
 
 ## Phase 0: phone check (moved to the end of Phase 1)
 - **Done once, Oct 9, on the v2 bench** (`claude/brave-einstein-ojkyzm`): 60 fps on the S25 Ultra on every setting, shadows on; defaults res 2 / shadows on / cap 60 (`docs/NOTES.md`). The Phase 1 bodies (layers, more bones, outlines) cost more, so **rerun it on the new bench at the end of Phase 1**, not first. The bench's "Phone test" button already has the overlay below.
-- Build a perf page: the current proto plus an overlay showing fps, frame ms and draw calls, and a quality switch (shadows on/off, pixel ratio 1.5 / 2 / native).
+- The perf page is built (the bench's Phone test button): an overlay with fps, frame ms and draw calls, and a quality switch (shadows on/off, pixel ratio 1.5 / 2 / native).
 - Ed runs a full fight on the S25 Ultra and reports:
   - fps on each setting
   - whether the phone gets warm after 10 minutes
@@ -53,6 +53,7 @@ Research (FNC + Thrill of the Fight) and the items it adds to each phase: `proto
 4. **Anti-clip.** Keep `settle()` (glove in head 80 → 2). Add stat tools that work headless (swiftshader) to measure it, like `clip2d.py` does for 2D.
 - **First look for Ed:** plain gray men, no punches: standing loose, bouncing, breathing ("Bodies and movement" below). If they look like boxers standing still, punches go on top.
 - **Exit:** clip stats around 0, straights at about 0.9 extension at contact, the height/reach gap visible, Ed approves the motion on the preview, then the Phase 0 phone rerun.
+  - *Open (Oct 24):* `proto/tools/probe.js` puts the punch's target spot at ~.92 of the arm at the usual landing distance, but measures the arm at impact at ~.5-.6 (jab .55, cross .50). Settle which one the 0.9 means (and fix the gap if it's the arm) before Ed signs off.
 
 ### Phase 1, first iteration (Oct 23): built, on the 3D phone test
 Ed: "start the 3D transition, use all the research, scratch the old one if you have to." The old Boxer class is gone; the bench page keeps its ring, camera, phone test and fight loop.
@@ -68,7 +69,7 @@ Ed: "start the 3D transition, use all the research, scratch the old one if you h
 - **Round 2 (Oct 23), punch flow + feet** (Ed: "stepping like ducks, pitter-patter... use the research"):
   - *Punch flow* (`B3.pf`): the kinetic chain. Hips fire first (`kB`, full by 40% of the punch), shoulders next (`kS`, by 50%), the hand whips out last (`u^1.5`: fastest at the end, the snap), lands by 54% (the engine's impact is 60%), holds a beat, is home by 88% (fast out of the hold), the body unwinds behind it. On a right hand the hips are ~70% turned before the glove is 10% out.
   - *Feet* (`B3.step`): step-drag, the boxing step (`research/coach_*`: "step-drag, never cross"; Roach: balance first, never cross the feet). When his stance trails his body by 12 the foot on the side he's going steps first, the other follows the same distance (keeps the width); the step leads the move (aim ahead by speed x .25, max 14), low skims (lift 1.6). Lone-foot steps only for pivots (the stance's shape, not where it is), the jab's lead step, rare resets (2-5 s); walking alternates feet. The feet follow his body smoothed (`anc`), the jitter rides in the hips. `proto/tools/feet.js`, same seeded fight: foot moves 6.5-7.6 -> 4.5-5.0 a second per man (the engine moves them ~35 u/s, so it can't go much lower without the feet trailing), median step 6.2-6.9 -> 13.8-14.2, 99% as push + drag pairs (old: L-R-L-R alternating), lone pivots .07/s, feet crossing <1% of frames. Clip (fast, 300 s): glove-in-head .11% (was .2), chest 0. Probe: extension at impact about the same (jab .55 vs .60, cross .50 vs .48).
-- **Stance spec (Oct 23):** `proto/STANCE.md` (sources: `research/stance.md`): our man's lead knee bends ~11° (target ~25°), hips squarer than shoulders (should be the other way or even), no rest weight or waist hinge by style. 7 changes in order there, not built yet.
+- **Stance spec (Oct 23):** `proto/STANCE.md` (sources: `research/stance.md`): our man's lead knee bends ~11° (target ~25°), hips squarer than shoulders (should be the other way or even), no rest weight or waist hinge by style. 7 changes in order there, all built Oct 23-24: long stance, blade split, rest weight + waist hinge, lead toe + rear heel, guard details, pivot + punch-foot timing, tired hands (`docs/BRAIN.md` "Where we are").
 - **Not yet:** Ed's eye on the motion (the gate), the Phase 0 phone rerun, damage on the face, faces close up, the clinch pose needs a look, a crowd beyond silhouettes. Tools: `proto/tools/README.md`.
 
 ## Phase 2: look
@@ -80,7 +81,7 @@ Ed: "start the 3D transition, use all the research, scratch the old one if you h
 
 ## Phase 3: everything the 2D fight screen does
 - **Corner between rounds:** stool, trainer and cutman, and the camera zooming out.
-- **Knockdowns:** the ref counts beside the downed man, the knee drop on body shots, the wave-off.
+- **Knockdowns:** the motion is built in Phase 1 (sit -> back, body KD to a knee, the ref's count chop and wave-off, the get-up); Phase 3 only frames them (camera director, the ref beside the downed man).
 - **Replay:** the finishing sequence (`F.replay`) in slow-mo from a better camera angle, with the grey/letterbox look.
 - **Special styles:** stance switch, angle step-offs, spoiler holding and clinch fouls, and warnings/point deductions shown by the ref.
 - **Cameras:** TV (default), ringside, high, corner; drag to look around. Also a camera director that cuts to a close angle on big moments.
@@ -94,7 +95,7 @@ Ed: "start the 3D transition, use all the research, scratch the old one if you h
 - When Ed says go, update CLAUDE.md, and Ed publishes it live.
 
 ## Risks
-- **Heat and battery** in long idle sessions. That's why Phase 0 comes first and the 30 fps option exists.
+- **Heat and battery** in long idle sessions. That's why the Phase 0 rerun closes Phase 1 and the 30 fps option exists.
 - **File size and complexity.** index.html grows to about 6,200–6,600 lines. The render3d section must stay self-contained.
 - **Two renderers to maintain.** 2D gets frozen and becomes fallback only. No new 2D features after the merge.
 
