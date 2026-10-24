@@ -40,7 +40,7 @@ Ed's answers: `game.html` next to the lab, career first (gym mode later), a priv
 - **G2. The learning wired in** (built). After each fight `learn()` + `applyLearn` replace `learnRate`/`trainWeek` stat growth; the camp screen offers `camp()` picks (drill / spar / tape); `sheet.opp` memory for rematches; scars on a KO loss. Training weeks keep the body (stats) only. Check with `tests/grow.js`-style runs through the career loop: fights to each level, no snowball.
 - **G3. The world on today's fighters.** Rosters, rankings, the P4P stars with skills, size and flaws; the scouting tape reads today's brain (his flaw, his style's habits) instead of the old `GUARD_SCOUT` lines; offers, purses, belts. A headless career test (the old `tests/gym.js` back, updated).
 - **G4. Gym mode on top** (stable, walk-ins, weekly plan) the same way.
-- **G5. The 3D research in the 2D drawing** (render only, hash holds): stance by guard and style, punch flow, step-drag feet, tired hands.
+- **G5. The 3D research in the 2D drawing**: moved up to ROADMAP F1 (Ed, Oct 24: the fights before the career).
 
 ## Ed's answers (Oct 24)
 `game.html` + the lab, career first, a private link first (the live game only on his OK).
