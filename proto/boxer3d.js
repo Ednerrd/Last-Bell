@@ -223,12 +223,13 @@ const GUARD3D = {
   //            tight lead     tight rear       loose lead      loose rear      crouch blade hips lean tuck (hips: as bladed as the chest, square for high, peekaboo, cross: proto/STANCE.md 2-3)
   //            wt: rest weight (+ forward), hinge: bent at the waist (deg) on top of his style's;
   //            cl: shoulders at rest [lead up, lead fwd, rear up, rear fwd] (the Philly lead shoulder to the chin, the cross-arm hunch), chin: head tucked down (deg) (proto/STANCE.md 3)
-  standard: { tL: [15, -5, 5], tR: [8, -8, -5], lL: [21, -15, 7.5], lR: [11, -17, -8], c: 4, bl: 40, hb: 40, lean: 7, tuck: .45, wt: 0 },
-  high:     { tL: [9, -1, 6.5], tR: [8, -1, -6.5], lL: [14, -10, 7.5], lR: [11, -11, -8], c: 5, bl: 26, hb: 16, lean: 8, tuck: .9, wt: .5 },
-  peekaboo: { tL: [9, -4.5, 4.6], tR: [9, -4.5, -4.6], lL: [13, -11, 6.5], lR: [12, -11, -6.5], c: 13, bl: 18, hb: 10, lean: 7, tuck: .95, wt: 2, knees: 1, chin: 2 },
-  philly:   { tL: [9, -31, -1], tR: [8, -6, -6.5], lL: [12, -34, 3], lR: [10, -12, -7.5], c: 3, bl: 52, hb: 50, lean: 5, tuck: .5, wt: -2, cl: [7, 2, 0, 0], chin: 4 },
-  cross:    { tL: [10, -24, -8], tR: [8, -11, 8], lL: [12, -28, -5], lR: [10, -15, 5], c: 6, bl: 24, hb: 14, lean: 9, tuck: .85, wt: 2, hinge: 7, cl: [1.5, 2, 1.5, 2], chin: 4 },
-  handslow: { tL: [17, -31, 8], tR: [8, -8, -6], lL: [19, -36, 9], lR: [10, -14, -8], c: 2, bl: 38, hb: 38, lean: 3, tuck: .2, wt: -1.5 }
+//            pl: elbow pole [out, down, fwd] for the lead / rear arm where the forearm lies flat across the body (Philly lead, Norton's stack); else down and in, a bit forward (elbows on the ribs, never winged: Ed)
+  standard: { tL: [15, -3, 5], tR: [8, -5, -5.5], lL: [19, -8, 6.5], lR: [9, -7, -6.5], c: 4, bl: 40, hb: 40, lean: 7, tuck: .45, wt: 0 },
+  high:     { tL: [8, 3, 6.2], tR: [7.5, 3, -6.2], lL: [10, -1, 6.5], lR: [9, -1, -6.5], c: 5, bl: 26, hb: 16, lean: 8, tuck: .9, wt: .5 },
+  peekaboo: { tL: [8.5, -2, 4.6], tR: [8.5, -2, -4.6], lL: [10.5, -4.5, 5.5], lR: [10, -4.5, -5.5], c: 13, bl: 18, hb: 10, lean: 7, tuck: .95, wt: 2, knees: 1, chin: 2 },
+  philly:   { tL: [10, -29, -5], tR: [7.5, -3, -6.5], lL: [11, -31, -2], lR: [8.5, -6, -7], c: 3, bl: 52, hb: 50, lean: 5, tuck: .5, wt: -2, cl: [7, 2, 0, 0], chin: 4, pl: [[.7, .6, 0], null] },
+  cross:    { tL: [10, -25, -9], tR: [7, -11, 9.5], lL: [11, -27, -7], lR: [8, -12.5, 8.5], c: 6, bl: 24, hb: 14, lean: 9, tuck: .85, wt: 2, hinge: 7, cl: [1.5, 2, 1.5, 2], chin: 4, pl: [[.7, .6, 0], [.9, .45, 0]] },
+  handslow: { tL: [17, -31, 7], tR: [8, -5, -6], lL: [19, -36, 7.5], lR: [9, -8, -7], c: 2, bl: 38, hb: 38, lean: 3, tuck: .2, wt: -1.5 }
 };
 // rhythm by style: bounce (amp, Hz), on his toes, weight shift (amp, Hz), bob-and-weave, head always moving;
 // the stance by style (proto/STANCE.md 4): wt rest weight (+ forward), lo lower off the knees, hinge bent at the waist (Frazier; a peekaboo man bends the knees instead),
@@ -615,7 +616,7 @@ class Boxer3 {
     const sm = this.sm = this.sm || { gl: gl.map(g => g.clone()) };
     for (let i = 0; i < 2; i++) { const r = P_ && i === hi ? 140 : handsOver && handsOver.w > .5 ? 10 : 8 + 14 * ten; sm.gl[i].lerp(gl[i], 1 - Math.exp(-r * dt)); }
     this.glT = sm.gl.map(g => g.clone());
-    this.armPose = { P_, hi, kp, kind, leadArm, out: [left.clone(), left.clone().negate()], tuck: gd.tuck, walk: !!(handsOver && handsOver.hang), down: dp > 0 || sit > .3, clinch, fwd, up, left, qCh };
+    this.armPose = { P_, hi, kp, kind, leadArm, out: [left.clone(), left.clone().negate()], tuck: gd.tuck, pl: gd.pl, lh: leadHand, walk: !!(handsOver && handsOver.hang), down: dp > 0 || sit > .3, clinch, fwd, up, left, qCh };
     this.solveArms(this.glT);
     // ---- legs: IK from the hips to the feet, knees over the toes
     for (let i = 0; i < 2; i++) {
@@ -674,7 +675,7 @@ class Boxer3 {
       else if (punching && A.kind === 'upper') pole = up.clone().negate().addScaledVector(fwd, -.5);
       else if (A.walk || A.down) pole = fwd.clone().negate().addScaledVector(outS, .4).addScaledVector(up, -.3);
       else if (A.clinch) pole = outS.clone().addScaledVector(up, -.5);
-      else pole = up.clone().negate().addScaledVector(outS, .15 + .4 * (1 - A.tuck)).addScaledVector(fwd, -.2);
+      else { const pl = A.pl && A.pl[i === A.lh ? 0 : 1]; pole = pl ? outS.clone().multiplyScalar(pl[0]).addScaledVector(up, -pl[1]).addScaledVector(fwd, pl[2]) : up.clone().negate().addScaledVector(outS, .05 + .15 * (1 - A.tuck)).addScaledVector(fwd, .15); }
       const gc = gl[i], toG = gc.clone().sub(S), Lg = toG.length() || 1, inw = outS.clone().negate();
       // which way the fist points: knuckles forward-up in the guard (a boxer's fist, not a cobra hood), down the line of the punch
       // as it goes (hooks come across, uppercuts up); hanging or on the floor it follows the arm
