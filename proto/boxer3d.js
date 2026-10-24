@@ -218,12 +218,13 @@ function buildBody(d, kit) {
 // ---------- per-guard spots: gloves off the head center, in his frame (f fwd, u up, l toward his lead side) ----------
 const GUARD3D = {
   //            tight lead     tight rear       loose lead      loose rear      crouch blade hips lean tuck (hips: as bladed as the chest, square for high, peekaboo, cross: proto/STANCE.md 2-3)
-  //            wt: rest weight (+ forward), hinge: bent at the waist (deg) on top of his style's
+  //            wt: rest weight (+ forward), hinge: bent at the waist (deg) on top of his style's;
+  //            cl: shoulders at rest [lead up, lead fwd, rear up, rear fwd] (the Philly lead shoulder to the chin, the cross-arm hunch), chin: head tucked down (deg) (proto/STANCE.md 3)
   standard: { tL: [15, -5, 5], tR: [8, -8, -5], lL: [21, -15, 7.5], lR: [11, -17, -8], c: 4, bl: 40, hb: 40, lean: 7, tuck: .45, wt: 0 },
   high:     { tL: [9, -1, 6.5], tR: [8, -1, -6.5], lL: [14, -10, 7.5], lR: [11, -11, -8], c: 5, bl: 26, hb: 16, lean: 8, tuck: .9, wt: .5 },
-  peekaboo: { tL: [9, -4.5, 4.6], tR: [9, -4.5, -4.6], lL: [13, -11, 6.5], lR: [12, -11, -6.5], c: 9, bl: 18, hb: 10, lean: 12, tuck: .95, wt: 2, knees: 1 },
-  philly:   { tL: [9, -31, -1], tR: [8, -6, -6.5], lL: [12, -34, 3], lR: [10, -12, -7.5], c: 3, bl: 52, hb: 50, lean: 5, tuck: .5, wt: -2 },
-  cross:    { tL: [10, -24, -8], tR: [8, -11, 8], lL: [12, -28, -5], lR: [10, -15, 5], c: 6, bl: 24, hb: 14, lean: 9, tuck: .85, wt: 2, hinge: 7 },
+  peekaboo: { tL: [9, -4.5, 4.6], tR: [9, -4.5, -4.6], lL: [13, -11, 6.5], lR: [12, -11, -6.5], c: 13, bl: 18, hb: 10, lean: 7, tuck: .95, wt: 2, knees: 1, chin: 2 },
+  philly:   { tL: [9, -31, -1], tR: [8, -6, -6.5], lL: [12, -34, 3], lR: [10, -12, -7.5], c: 3, bl: 52, hb: 50, lean: 5, tuck: .5, wt: -2, cl: [7, 2, 0, 0], chin: 4 },
+  cross:    { tL: [10, -24, -8], tR: [8, -11, 8], lL: [12, -28, -5], lR: [10, -15, 5], c: 6, bl: 24, hb: 14, lean: 9, tuck: .85, wt: 2, hinge: 7, cl: [1.5, 2, 1.5, 2], chin: 4 },
   handslow: { tL: [17, -31, 8], tR: [8, -8, -6], lL: [19, -36, 9], lR: [10, -14, -8], c: 2, bl: 38, hb: 38, lean: 3, tuck: .2, wt: -1.5 }
 };
 // rhythm by style: bounce (amp, Hz), on his toes, weight shift (amp, Hz), bob-and-weave, head always moving;
@@ -400,6 +401,10 @@ class Boxer3 {
     // ---- special states: clinch, knockdown, stool, walk
     const clinch = s.state === 'clinch' && live;
     if (clinch) { pitch += 18; crouch += 3; blade = 10; hipBlade = 6; }
+    // the guard's own shoulders and chin (held harder when it's tight, sagging as he tires; not on the walk, in the clinch or down)
+    const gk = live && !clinch && !s.walk && !s.sit ? (.7 + .3 * ten) * (1 - .3 * tired) : 0;
+    if (gd.cl && gk) { clavLift[leadHand] += gd.cl[0] * gk; clavFwd[leadHand] += gd.cl[1] * gk; clavLift[1 - leadHand] += gd.cl[2] * gk; clavFwd[1 - leadHand] += gd.cl[3] * gk; }
+    headDown += (gd.chin || 0) * gk;
     // knockdowns: buckle to a knee (body), sit, lie back; the get-up runs it backwards
     const dp = s.state === 'down' ? clamp(s.downP, 0, 1) : s.state === 'slump' ? clamp(s.downP, 0, .35) : 0;
     let wK = 0, wSit = 0, wLie = 0;
