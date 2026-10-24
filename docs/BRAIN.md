@@ -827,10 +827,11 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 - **The design holds from skill alone:** caught (the rare fight-ending counter) climbs with the hurt man's level, N .3 / I .55 / P .85 / W 1.0% pooled, ~3x. Stung (a clean counter) is flat ~16% at every level. A Pro hunts a hurt World man half as often as a hurt Novice (2.0 vs 4.8 a fight).
 - Kept as is (no hash change, d9fe6759). If Ed wants a hurt vet scarier, the lever is his counter chance in a hunt itself, not this multiplier; measure with danger.js.
 
-## Where we are (Oct 24, F1 built: how they move, in 2D)
+## Where we are (Oct 24, F2 built: fight feel)
 Read this first. Older handoffs: `docs/NOTES.md` "Handoff log"; the pre-3D baseline: `docs/SIZE.md` "s3, the pre-3D baseline".
-- **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** after every F1 step. `game.html` rebuilt.
-- **Built (F1, render only, `docs/NOTES.md` "F1, how they move in 2D"):** the 3D stance research in the 2D drawing, five commits: a soft knees + rest weight / hinge / heel / bounce by style and guard (`STY2`, `GST2`, `ST2`), b the blade (shoulders + chest width by guard), c punch flow (`bodyOf`: the body leads the hand, fast home), d step-drag feet, e tired-hands spells by round (12.6 / 14.9 / 13.9 / 19.4% of rounds 1-4, Dunn 13 / 17 / 19) + the hurt man sits back. Tools: `tests/stance2d.js` (stills, guards x styles, punch strips), `tests/live2d.js` (live fight grabs), `tests/hands2d.js` (drop share by round).
-- **Next:** Ed's eye on F1 in the lab (ROADMAP Ed item 00; new lab link https://claude.ai/artifact/J6BQEyzXyLXvaSZjXiG5er, published Oct 24), then F2 fight feel.
+- **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** after every F1 and F2 step. `game.html` rebuilt (gameflow clean).
+- **Built (F2, UI only, Claude's pick: Ed hadn't sent lab notes; `docs/NOTES.md` "F2, fight feel"):** a big moments at 1x when watching at 2x/4x (the whole KD count + 2 s, stun / liver / wind 3 s, the moment a man gets hurt 3 s), b the camera pushes in (1.56 on the man down, 1.5 on the loser after a stop, 1.42 on a stunned / just-hurt man), c the knockdown replay (he beats the count: ~4.4 s slow-mo of the shot, tap to skip), d commentary paced on the watcher's clock (4x no longer means 4x the lines). Hit reactions were already full (snap, buckle, hook turn, hit-stop, shake): left alone.
+- **Lab:** new link https://claude.ai/artifact/PPgXS4fcYRSMTN74zDUYq3 (Oct 24, F2; J6BQEyzXyLXvaSZjXiG5er has F1 only).
+- **Next:** Ed's eye on F1 + F2 in the lab (ROADMAP Ed item 00), then F3 coaching. F2 leftovers if Ed wants them: a round-end replay of the best shot, a skip-to-the-bell button, a speed-drop toggle.
 - **3D (parked, Ed Oct 24):** all 7 stance changes built, waiting on Ed's phone notes.
 - **Parked for the brain pass (unchanged, Ed Oct 23):** counter 47.1, swarmer 47.8, peekaboo 44.7, specials 46-47.6, cheese haymaker 64.4 + bodyOnly 59.9 at hard, lead changes 35, PvI 14.6, the short man vs a long outboxer 39.3 at 6 in.

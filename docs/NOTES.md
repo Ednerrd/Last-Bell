@@ -1,3 +1,11 @@
+### F2, fight feel (Oct 24, UI only, hash 3fd3c667)
+All in ui part 3 (the fight loop), the shared fight screen, so the lab and `game.html` both get it. Ed sent no lab notes, so Claude picked the list; hit reactions were already full (head snap, knee buckle, hook turns the face, hit-stop by contact quality, screen shake, flash) and stayed as is.
+- **a, big moments at 1x:** `spd()` is the speed the loop runs; `FX.speed` stays the coach's pick (the buttons). 1x through the KD count (`F.phase === 'kd'`), then `SLOW.kd` 2 s after the restart; `SLOW.stun` 3 s on stun / liver / wind; `SLOW.hurt` 3 s the moment a man drops under 30% head (the snap's hurt), not again for that man inside `SLOW.again` 8 s (a man on the line kept setting it off). Hit-stop divides by `spd()`; the KD hit-stop is full length.
+- **b, the camera:** `CAM` above `liveView`: zoom 1.32 normal, 1.02 between rounds, `kd` 1.56 on the man down (`kdOn` .7 of the way from the pair's middle to him; the standing man walks out of frame to his corner, TV style), `stop` 1.5 on the loser in the erupt before the replay, `hurt` 1.42 (`hurtOn` .3) on a stunned man, or a hurt one while the a moment runs; in at `inRate` 2.6/s, out at the old 3.7 / 5; cam clamp `maxX` 76.
+- **c, the KD replay:** the engine already keeps `F.replay` (the last 280 steps, set 1.2 s after a KD or a stoppage). On `resume` (he beat the count) `startReplay(kdWho)` plays the last `RP.kdLen` 120 steps: slow `kdSlow` .3 within `kdNear` 22 steps of the blow (`kdAfter` 72 steps from the end), `kdRate` .65 around it: ~4.4 s at 60 fps; camera on the man who went down; "Knockdown replay, tap to skip". `endReplay()` goes back to live with the zoom cut back to 1.32 and the restart at 1x; `F.replay` is cleared after, so a later stoppage with no clip of its own (doctor, corner) replays its last moments, not the old KD. The fight-end replay is unchanged.
+- **d, commentary:** `Comm.handle(e, F, FX.t)`: the cooldowns and the color man's 14-24 s gap run on the watcher's clock, not fight time (at 4x it was 4x the lines). Speech already skips anything under pri 4 while it talks.
+- Tools: none committed; the scratch probes polled `F` / `FX` in Playwright (`F.phase`, `FX.mode`, `FX.slowT`, `FX.zoom`) on slugger vs slugger heavyweights at `FX.speed = 16` to catch KDs fast.
+
 ### F1, how they move in 2D (Oct 24, render only, hash 3fd3c667)
 The 3D stance work (`proto/STANCE.md` 2-7, `proto/PLAN.md` Round 2) ported to the side-view drawing (`body()`, `arms()`, `lunge()` in the render section). Tables right under `GUARD_POSE`:
 - `ST2`: knee 4 (the hips sit 4 lower: lead knee ~37°, rear ~42°; the old legs were locked straight, hip -54 on 58 of leg with the feet 20 / -22), feet 21 / -23, cap 12 (the resting crouch soft-caps), step 14 (ground per step-drag pair), hurtW 3, drop (the lazy-guard spells).
@@ -7,6 +15,14 @@ The 3D stance work (`proto/STANCE.md` 2-7, `proto/PLAN.md` Round 2) ported to th
 - Feet: step-drag off `gait` (ground) and `mvx` (forward share of the speed, in the view): the foot on the side he's going steps (0-.35 of the pair), the other drags (.28-.62); planted feet don't slide on the canvas; the stance opens to ~57 on the step at full speed and closes to 44; sideways the lead stays pinned and the rear swings in. Walking between rounds keeps the old alternating walk.
 - Tired hands: `ST2.drop` on the fight clock (view `ft`), spell state in `Render.sm()` (dOwe, dT, dK). The view also carries `sk` (style) and `rd` (round).
 - Not done: "close" (shorter stance when on top of his man), real pivots on the turn (side view hides most of it), the near / far leg convention (the lead leg is drawn near for both men; a mirror thing, left as is).
+
+### Handoff (Oct 24, F1 built: how they move in 2D)
+Read this first. Older handoffs: `docs/NOTES.md` "Handoff log"; the pre-3D baseline: `docs/SIZE.md` "s3, the pre-3D baseline".
+- **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** after every F1 step. `game.html` rebuilt.
+- **Built (F1, render only, `docs/NOTES.md` "F1, how they move in 2D"):** the 3D stance research in the 2D drawing, five commits: a soft knees + rest weight / hinge / heel / bounce by style and guard (`STY2`, `GST2`, `ST2`), b the blade (shoulders + chest width by guard), c punch flow (`bodyOf`: the body leads the hand, fast home), d step-drag feet, e tired-hands spells by round (12.6 / 14.9 / 13.9 / 19.4% of rounds 1-4, Dunn 13 / 17 / 19) + the hurt man sits back. Tools: `tests/stance2d.js` (stills, guards x styles, punch strips), `tests/live2d.js` (live fight grabs), `tests/hands2d.js` (drop share by round).
+- **Next:** Ed's eye on F1 in the lab (ROADMAP Ed item 00; new lab link https://claude.ai/artifact/J6BQEyzXyLXvaSZjXiG5er, published Oct 24), then F2 fight feel.
+- **3D (parked, Ed Oct 24):** all 7 stance changes built, waiting on Ed's phone notes.
+- **Parked for the brain pass (unchanged, Ed Oct 23):** counter 47.1, swarmer 47.8, peekaboo 44.7, specials 46-47.6, cheese haymaker 64.4 + bodyOnly 59.9 at hard, lead changes 35, PvI 14.6, the short man vs a long outboxer 39.3 at 6 in.
 
 ### Handoff (Oct 24, the 2D game back: G1 + G2 built)
 - **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** (rechecked after the lab split). The brain inline is current.
