@@ -3345,11 +3345,14 @@ const Render = (() => {
   // Render only: contact stays at 60% of the punch (the engine's resolve); the engine version broke the out-boxer (NOTES.md "Rhythm")
   // Timing: a visible coil until d, then the drive (d -> .6, accelerating, ~4-5 frames on a right hand), a hair past and a
   // two-frame hold at contact, then back in ~1.5x the time it took going out. The body rides the same clock
-  const ptOf = (v, jab) => { const ch = v._sm && v._sm.chn; return jab ? { d: ch ? .22 : .3, dip: ch ? 0 : .05 } : { d: ch ? .3 : .42, dip: ch ? .08 : .22 }; };
+  const ptOf = (v, jab) => { const ch = v._sm && v._sm.chn; return jab ? { d: ch ? .22 : .3, dip: ch ? 0 : .05, j: 1 } : { d: ch ? .3 : .42, dip: ch ? .08 : .22 }; };
   // the way back takes ~1.5x the way out, like real boxers (a right hand: ~72 ms out, ~110 ms back; a jab runs to the end of the punch)
-  const backK = (p, t) => { const e = Math.min(1, .65 + 1.5 * (.6 - t.d)); return p < .625 ? 1 + .04 * Math.sin((p - .6) / .025 * Math.PI / 2) : p < .65 ? 1.04 : p < e ? 1.04 * Math.pow(1 - (p - .65) / (e - .65), 2) : 0; };
+  // F1: a power hand is home by 88% (fast home: proto/PLAN.md Round 2)
+  const backK = (p, t) => { const e = Math.min(t.j ? 1 : .88, .65 + 1.5 * (.6 - t.d)); return p < .625 ? 1 + .04 * Math.sin((p - .6) / .025 * Math.PI / 2) : p < .65 ? 1.04 : p < e ? 1.04 * Math.pow(1 - (p - .65) / (e - .65), 2) : 0; };
   const gloveK = (p, t) => p < t.d ? -t.dip * ease(p / t.d) : p < .6 ? -t.dip + (1 + t.dip) * snapIn((p - t.d) / (.6 - t.d), .3) : backK(p, t);
-  const extOf = (p, t) => p < t.d ? 0 : p < .6 ? snapIn((p - t.d) / (.6 - t.d), .3) : p < .64 ? 1 : p < .92 ? 1 - ease((p - .64) / .28) : 0;
+  // F1: the body's clock: the hips fire before the hand (from .8 of the coil, all in by 52%: on a right hand the body is ~3/4 turned
+  // when the glove is 10% out), hold through contact, unwind behind the hand (the kinetic chain, proto/PLAN.md Round 2)
+  const bodyOf = (p, t) => { const a = t.d * .8; return p < a ? 0 : p < .52 ? ease((p - a) / (.52 - a)) : p < .64 ? 1 : p < .92 ? 1 - ease((p - .64) / .28) : 0; };
   const loadOf = (p, t) => p < t.d ? ease(p / t.d) : p < .6 ? 1 - ease((p - t.d) / (.6 - t.d)) : 0; // coil, unwinding into the shot
   const bez = (a, c, b, t) => ({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
   function shade(hex, f) {
@@ -3450,7 +3453,7 @@ const Render = (() => {
     }
     if (v.aT) {
       const P = PUNCH[v.aT], p = v.feint ? Math.min(v.aP, .35) * .8 : v.aP, tm = ptOf(v, P.cat === 'jab');
-      const ext = extOf(p, tm);
+      const ext = bodyOf(p, tm); // the body leads the hand
       const drive = P.cat === 'jab' ? .45 : 1; const rear = P.arm === 'rear';
       load = loadOf(p, tm) * drive * (v._sm && v._sm.chn ? .5 : 1); // coil before the shot (half a coil when the hand is already loaded)
       twist = ext * drive * (rear ? 1 : .7) - .5 * load * (rear ? 1 : .6); // punching shoulder pulls back in the coil, then drives through
@@ -4015,7 +4018,7 @@ const Render = (() => {
     // Too close: he sits back a touch and the rest of the room comes from the other man rocking back off it
     if (P.kind === 'straight' && !body) {
       const rear = P.arm === 'rear', drive = P.cat === 'jab' ? .45 : 1, sp = v.stance === 'southpaw', near = rear ? !sp : sp;
-      const ext = extOf(p, ptOf(v, P.cat === 'jab'));
+      const ext = bodyOf(p, ptOf(v, P.cat === 'jab'));
       const tw = drive * (rear ? 1 : .7), go = (rear ? 6 : 3.5) + J.S.torso * (.12 + .12 * drive) * Math.cos(J.lean);
       const bo = J.bo || 0, shx = J.neck.x - .5 + (rear ? -bo : bo) + go * (1 - ext) + (5 + (rear ? 1.2 * bo : 0)) * tw + (P.cat === 'jab' ? 7 : 0), shy = J.neck.y + (near ? 4 : 2) - 1.5 * tw - (P.cat === 'jab' ? 2.2 : 0);
       const gr = 7.2 * Math.sqrt(J.S.B), hr = Jo.S.headR, Tx = t.x - hr * .8 - gr * .8, Ty = t.y + hr * .5, R2 = J.S.arm * 2 * .93;
