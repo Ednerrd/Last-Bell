@@ -30,9 +30,13 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--ui
 .perf button{font:700 14px var(--ui);color:var(--ink);background:rgba(20,15,11,.9);border:1px solid rgba(240,184,90,.45);border-radius:5px;padding:7px 9px;min-height:36px}
 .perf button:active{background:rgba(240,184,90,.25)}.perf .m{color:var(--mute)}
 .perf table{width:100%;border-collapse:collapse;margin-top:6px;font-variant-numeric:tabular-nums}.perf td,.perf th{padding:2px 4px;text-align:right;white-space:nowrap}.perf td:first-child,.perf th:first-child{text-align:left}.perf th{color:var(--mute);font-weight:500}
+.pov{position:fixed;inset:0;pointer-events:none}.pov i{position:absolute;inset:0;opacity:0}
+.pov .fl{background:radial-gradient(ellipse at center,rgba(255,250,240,0) 38%,rgba(255,250,240,.95) 100%)}.pov .wh{background:#fff8ec}
+.pov .vg{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 34%,rgba(0,0,0,.96) 100%)}
 .perf .ok{color:#8fcf7a}.perf .bad{color:#e07a5f}
 </style></head><body>
 <canvas id="c" aria-label="3D boxing ring with two fighters"></canvas>
+<div class="pov" id="pov"><i class="vg" id="pvVg"></i><i class="fl" id="pvFl"></i><i class="wh" id="pvWh"></i></div>
 <div class="hud">
   <div class="nm" id="n0"></div>
   <div class="clock"><span id="ck">3:00</span><small id="rd">Round 1</small></div>
@@ -284,7 +288,7 @@ function events() {
       const leadA = V(fa.z, 0, -fa.x).multiplyScalar(sp), P0 = PUNCH[e.p] || {}, outS = P0.arm === 'rear' ? leadA.clone().negate() : leadA;
       if (e.type === 'miss') { at.shotDone(false, e, P0); continue; }
       const push = e.kind === 'hook' ? outS.clone().multiplyScalar(-.85).addScaledVector(fa, .45) : fa.clone();
-      df.impact(push.setY(0).normalize(), e, P0); at.shotDone(true, e, P0);
+      df.impact(push.setY(0).normalize(), e, P0); at.shotDone(true, e, P0); if (e.d === povI()) povHit(e);
       if (window.__probe) __probe.push({ a: e.a, p: e.p, q: e.q, d: Math.hypot(fight.f[0].x - fight.f[1].x, fight.f[0].z - fight.f[1].z), rs: fight.f[e.a].size.rs, pend: 1 });
       if (!e.blocked && (e.dmg || 0) > 0) {
         const big = (e.dmg || 0) > 4 || e.crit;
@@ -295,7 +299,7 @@ function events() {
     }
     if (e.type === 'count' && e.n >= 1) bigText(String(e.n), fight.f[e.d] ? fight.f[e.d].sheet.name : '', 900);
     if (e.type === 'knockdown' && boxers[e.d]) { boxers[e.d].kd = { body: e.zone === 'body' }; }
-    if (e.type === 'knockdown') { bigText('Down!', fight.f[e.d] ? fight.f[e.d].sheet.name + ' is down' : '', 1800); shake = .8; excite = 1; if (speed === 1) hitstop = .14; }
+    if (e.type === 'knockdown') { if (e.d === povI()) { povFl = 1; povWh = .7; } bigText('Down!', fight.f[e.d] ? fight.f[e.d].sheet.name + ' is down' : '', 1800); shake = .8; excite = 1; if (speed === 1) hitstop = .14; }
   }
   fight.events = [];
 }
@@ -305,14 +309,59 @@ const CAMS = [
   { n: 'TV', yaw: 0, pitch: .36, dist: 1 },
   { n: 'Ringside', yaw: .18, pitch: .08, dist: .78 },
   { n: 'High', yaw: .7, pitch: .72, dist: 1.25 },
-  { n: 'Corner', yaw: -2.35, pitch: .26, dist: .85 }
+  { n: 'Corner', yaw: -2.35, pitch: .26, dist: .85 },
+  { n: 'Red eyes', pov: 0 },
+  { n: 'Blue eyes', pov: 1 }
 ];
 let sepS = 120, camI = 0, cam = { yaw: 0, pitch: .3, dist: 1, user: false }, tgt = V(0, 60, 0);
 function camFit(sep) { // distance so about 330 units of ring fit across the screen, portrait or landscape
   const asp = innerWidth / innerHeight, vf = THREE.MathUtils.degToRad(camera.fov), hf = 2 * Math.atan(Math.tan(vf / 2) * asp);
   return Math.max(Math.max(asp < 1 ? 128 : 300, (sep || 0) * (asp < 1 ? 1.02 : 1.15) + (asp < 1 ? 44 : 60)) / Math.tan(hf / 2) / 2, 230);
 }
+/* POV: through one man's eyes (Ed, Oct 24: like Thrill of the Fight; research/thrill_look.md, thrill_feel.md). Comfort first, the viewer doesn't drive it:
+   the eye rides his feet tight but his head loosely (slips and bobs half followed), the horizon stays level, no shake.
+   His own body is hidden (his gloves in a guard filled a third of a phone screen: the TotF 1 look, the other man clean).
+   Hits read as an edge flash (a white one on the big ones), and the screen goes gray and dark at the edges as he takes damage */
+const POV = { kFeet: 10, kHead: 4, kLook: 4, eye: 3, up: 1, drop: 9, minY: 12, fovP: 66, fovL: 46, gray: .4 };
+let povEye = null, povHead = null, povLook = null, povFl = 0, povWh = 0, povVg = 0, povFx = '';
+const povI = () => !cam.user && CAMS[camI].pov != null ? CAMS[camI].pov : -1;
+function updPov(dt, i) {
+  const me = boxers[i], op = boxers[1 - i]; if (!me.col || !op.col || !rFeet) return false;
+  const h = me.col.head, oh = op.col.head, ft = rFeet[i];
+  const off = h.clone().sub(ft); // his head off his feet: the part we follow loosely
+  if (!povEye) { povHead = off.clone(); povEye = ft.clone(); povLook = oh.clone(); }
+  povEye.lerp(ft, 1 - Math.exp(-POV.kFeet * dt)); povHead.lerp(off, 1 - Math.exp(-POV.kHead * dt));
+  const to = V(oh.x - h.x, 0, oh.z - h.z).normalize();
+  const eye = povEye.clone().add(povHead);
+  eye.addScaledVector(to, POV.eye).addScaledVector(UP, POV.up); // from the head's center to his eyes
+  const fromO = eye.clone().sub(oh), dO = fromO.length(); if (dO < op.col.hr + 4) eye.addScaledVector(fromO.normalize(), op.col.hr + 4 - dO); // nor inside his man's (the clinch)
+  eye.y = Math.max(POV.minY, eye.y);
+  povLook.lerp(oh.clone().addScaledVector(UP, -POV.drop), 1 - Math.exp(-POV.kLook * dt));
+  camera.position.copy(eye); camera.up.set(0, 1, 0); camera.lookAt(povLook);
+  return true;
+}
+function povHit(e) { // events() calls this for every shot on the POV man
+  if (e.blocked) { povFl = Math.max(povFl, .18); return; }
+  const big = (e.dmg || 0) > 4 || e.crit; povFl = Math.max(povFl, big ? 1 : .5); if (big) povWh = Math.max(povWh, e.crit ? .6 : .4);
+}
+function tickPov(dt, snap) {
+  const i = povI(); let gray = 0, vg = 0;
+  povFl = Math.max(0, povFl - dt * 3); povWh = Math.max(0, povWh - dt * 4);
+  if (i >= 0) {
+    const F = fight.f[i], S = snap.f[i], dmg = 1 - clamp(F.head / Math.max(1, F.headMax), 0, 1);
+    gray = clamp((dmg - POV.gray) / (1 - POV.gray), 0, .9);
+    vg = clamp(dmg * .5 + (S.hurt ? .35 : 0) + (S.state === 'down' ? .55 : 0), 0, .92);
+  } else povFl = povWh = 0;
+  povVg = damp(povVg, vg, 3, dt);
+  $('pvFl').style.opacity = povFl.toFixed(2); $('pvWh').style.opacity = povWh.toFixed(2); $('pvVg').style.opacity = povVg.toFixed(2);
+  const fx = gray > .02 ? 'grayscale(' + gray.toFixed(2) + ')' : ''; if (fx !== povFx) { cv.style.filter = fx; povFx = fx; }
+}
 function updCam(dt) {
+  const pi = povI(); boxers.forEach((b, i) => { b.mesh.visible = b.line.visible = i !== pi; });
+  const wantF = pi >= 0 ? (innerWidth < innerHeight ? POV.fovP : POV.fovL) : innerWidth < innerHeight ? 46 : 34;
+  if (Math.abs(camera.fov - wantF) > .01) { camera.fov = wantF; camera.updateProjectionMatrix(); }
+  if (pi >= 0 && updPov(dt, pi)) { shake = 0; return; }
+  povEye = null;
   const A = fight.f[0], B = fight.f[1], between = fight.phase === 'corner' || fight.phase === 'roundEnd';
   const mid = window.__focus ? window.__focus() : rMid ? rMid.clone() : V((A.x + B.x) / 2, 58, (A.z + B.z) / 2);
   if (between) mid.set(0, 50, 0);
@@ -331,7 +380,7 @@ cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, y
 cv.addEventListener('pointermove', e => { if (!drag) return; cam.user = true; cam.yaw = drag.yaw - (e.clientX - drag.x) * .008; cam.pitch = clamp(drag.pitch + (e.clientY - drag.y) * .006, .03, 1.35); updCamBtn(); });
 cv.addEventListener('pointerup', () => { drag = null; });
 cv.addEventListener('wheel', e => { cam.user = true; cam.dist = clamp(cam.dist * (1 + e.deltaY * .001), .45, 2); updCamBtn(); e.preventDefault(); }, { passive: false });
-function updCamBtn() { $('bCam').textContent = 'Cam: ' + (cam.user ? 'Free' : CAMS[camI].n); }
+function updCamBtn() { $('bCam').textContent = 'Cam: ' + (cam.user ? 'Free' : CAMS[camI].n); povEye = null; }
 $('bCam').onclick = () => { if (cam.user) cam.user = false; else camI = (camI + 1) % CAMS.length; updCamBtn(); };
 $('bSpd').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $('bSpd').textContent = 'Speed ' + speed + 'x'; };
 $('bNew').onclick = () => { newFight(); sPrev = sCur = null; };
@@ -462,9 +511,9 @@ $('perf').addEventListener('click', e => {
 $('bPerf').onclick = () => { PF.open = !PF.open; drawPF(); };
 
 /* ================= loop ================= */
-function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); }
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); } // fov: updCam (the POV cam is wider)
 addEventListener('resize', resize); resize();
-let sep = null, rMid = null, rSep = 60, bodyPush = 0, last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
+let rFeet = null, sep = null, rMid = null, rSep = 60, bodyPush = 0, last = performance.now(), fpsT = 0, fpsN = 0, sPrev = null, sCur = null, hitstop = 0;
 newFight();
 const corners = [V(-RING + 8, 0, -ZR * .55 - 6), V(RING - 8, 0, ZR * .55 + 6)];
 // the sim ticks at 60 Hz; the screen draws between the last two ticks so motion is smooth at any frame rate
@@ -525,7 +574,7 @@ function frame(now) {
       bodyPush = clamp(bodyPush + (need > 0 ? need * .5 : need * .08), 0, 30);
     } else bodyPush = Math.max(0, bodyPush - 60 * dt);
     if (bodyPush > 0) { P[0].x -= ux * bodyPush / 2; P[0].z -= uz * bodyPush / 2; P[1].x += ux * bodyPush / 2; P[1].z += uz * bodyPush / 2; }
-    rSep = P[0].distanceTo(P[1]); rMid = V((P[0].x + P[1].x) / 2, 58, (P[0].z + P[1].z) / 2);
+    rFeet = [P[0].clone(), P[1].clone()]; rSep = P[0].distanceTo(P[1]); rMid = V((P[0].x + P[1].x) / 2, 58, (P[0].z + P[1].z) / 2);
   }
   // poses: both men, each aims at where the other was last frame; then gloves settle off the other man where he is now
   const res = fight.phase === 'over' && fight.result;
@@ -544,7 +593,7 @@ function frame(now) {
   for (let i = 0; i < 2; i++) { const st = stools[i], w = boxers[i].sitW || 0; st.visible = w > .05; st.position.set(corners[i].x, 0, corners[i].z); st.scale.setScalar(clamp(w * 1.4, .01, 1)); }
   ref.update(dt, fight, boxers, snap, P);
   excite = Math.max(0, excite - dt * .25); CROWD.tick(dt, excite);
-  tickSpray(dt); updCam(dt);
+  tickSpray(dt); updCam(dt); tickPov(dt, snap);
   fight.f.forEach((X, i) => { const el = $('hb' + i); if (el) el.style.width = clamp(X.head / Math.max(1, X.headMax) * 100, 0, 100) + '%'; });
   const left = Math.max(0, ROUND_LEN - fight.clock); $('ck').textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
   $('rd').textContent = stand ? 'Standing' : fight.phase === 'corner' ? 'Between rounds' : 'Round ' + fight.round + ' of ' + fight.rounds;
