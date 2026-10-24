@@ -531,7 +531,7 @@ function frame(now) {
   const res = fight.phase === 'over' && fight.result;
   for (let i = 0; i < 2; i++) {
     const F = fight.f[i], won = res && res.winner === i && overT > 1.2 ? clamp((overT - 1.2) * 2, 0, 1) : 0;
-    boxers[i].pose(snap.f[i], { pos: P[i], op: boxers[1 - i], os: snap.f[1 - i], opPos: P[1 - i], corner: corners[i], style: F.sheet.style, winner: won }, dt);
+    boxers[i].pose(snap.f[i], { pos: P[i], op: boxers[1 - i], os: snap.f[1 - i], opPos: P[1 - i], corner: corners[i], style: F.sheet.style, winner: won, round: stand || fight.phase !== 'fight' ? 0 : fight.round }, dt);
   }
   boxers[0].settle(boxers[1].col); boxers[1].settle(boxers[0].col);
   if (window.__probe) for (const h of __probe) if (h.pend) { h.pend = 0; const b = boxers[h.a], P0 = PUNCH[h.p], hi = (P0.arm === 'lead') === (fight.f[h.a].stance !== 'southpaw') ? 0 : 1, J = b.J, sh = J[ARM[hi][1]], wr = J[ARM[hi][3]]; h.ext = sh.distanceTo(wr) / (b.d.UA + b.d.FA); h.want = (sh.distanceTo(b.spotOn({ op: boxers[1 - h.a] }, P0, hi)) - b.d.gl) / (b.d.UA + b.d.FA); h.lg = b.lgN || 0; h.d3 = rSep; }

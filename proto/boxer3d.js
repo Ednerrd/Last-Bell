@@ -17,9 +17,11 @@ const B3 = {
   pf: { out: .1, hit: .54, hold: .63, home: .88, whip: 1.5 }, // punch flow (share of the engine's punch): the hand leaves, lands, holds, is home; whip > 1 = fastest at the end
   step: { thr: 12, one: 7, anc: 4, look: .25, lead: 14, lag: .4, gap: .06, lift: 1.6, dur: [.13, .005, .11, .24], piv: .26, sink: 1.5, land: .56 }, // feet: step-drag when the stance trails by thr (lone foot: one), aim ahead spd x look (max lead), the drag foot goes at lag of the first step, low skims;
   // piv: the stance turned this far (rad) = a pivot: the lead foot stays pinned, the rear swings round it on an arc, the hips sink then rise; land: a punch's lead step lands at this share of the punch (with the hand)
-  stance: { L: 15, close: 3.5, low: 2, back: .6, rear: 5 }  // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low;
+  stance: { L: 15, close: 3.5, low: 2, back: .6, rear: 5, hurtW: 2.5, cap: 9 }, // half the stride front-back (pros stand long: proto/STANCE.md 7b), shorter by close when he's on top of his man, hips down by low;
   // back: share of the hip blade over the old hips-at-.55-of-the-chest that a rear-hand shot turns back, so the hips still go through square;
-  // rear: the rear foot sits further back x his resting heel lift, so the raised heel keeps the rear leg long, not folded
+  // rear: the rear foot sits further back x his resting heel lift, so the raised heel keeps the rear leg long, not folded; hurtW: a hurt man sits back this far; cap: the resting crouch (hips down) soft-caps here
+  drop: { r1: .13, more: .09, k: .7, tired: .15, dur: 2.5, lead: 12, rear: 9 } // the hands drop: share of the round (r1 in round 1, + more toward round 12, + tired; Dunn 2017: 13 / 17 / 19% in rounds 1-3;
+  // x .75-1.25 by the man), spells of ~dur s (a spell starts when he owes drop time and nothing's coming), how far each glove sags
 };
 
 // ---------- small math ----------
@@ -365,8 +367,9 @@ class Boxer3 {
     // rest weight + bent at the waist or the knees, by style and guard (proto/STANCE.md 4): moving evens the weight out, the awkward man drifts;
     // a waist hinge tips the hips too and sits them back, a peekaboo man takes his style's hinge in the knees instead (Frazier vs Tyson)
     const hinge = Math.min(12, (gd.knees ? 0 : rh.hinge) + (gd.hinge || 0));
-    const wt = ((rh.wt + gd.wt) * (1 - .5 * moving) + (rh.odd ? 2.5 * nz(t * .18, this.seed + 17) : 0) - hinge * .1) * hs;
+    const wt = ((rh.wt + gd.wt) * (1 - .5 * moving) + (rh.odd ? 2.5 * nz(t * .18, this.seed + 17) : 0) - hinge * .1 - B3.stance.hurtW * hurt) * hs;
     crouch += rh.lo + (gd.knees ? rh.hinge * .2 : 0); pitch += hinge;
+    if (crouch > B3.stance.cap * hs) crouch = B3.stance.cap * hs + (crouch - B3.stance.cap * hs) * .35; // the resting crouch soft-caps (a peekaboo swarmer, tight, bobbing, stacked them into a squat); slips, ducks and digs add on top
     let clavLift = [0, 0], clavFwd = [0, 0];
     const breath = Math.sin(t * (1.6 + 1.6 * tired) * Math.PI) * (.3 + 1.1 * tired);
     clavLift[0] += breath * .5; clavLift[1] += breath * .5;
@@ -545,10 +548,17 @@ class Boxer3 {
     const gFrame = (a, base) => base.clone().addScaledVector(fwd, a[0]).addScaledVector(up, a[1]).addScaledVector(lead, a[2]);
     const hcN = headC.clone().sub(hOff); // the head without the hit: the guard doesn't chase the snap
     const sag = tired * 7 + (s.gi != null && s.gi < .5 ? (.5 - s.gi) * 16 : 0) + (s.bait ? 10 : 0);
+    // the hands drop: spells of a lazy guard when nothing's coming, more often round by round and when he's tired (proto/STANCE.md 6);
+    // the tension dial snaps them back up the moment something comes. Not in Stand (no round), hurt, punching or defending.
+    const DR = B3.drop, rnd = X.round || 0, held = rnd > 0 && live && !clinch && !s.walk && !s.sit && !hurt && s.guard !== 'handslow';
+    if (this.dropT > 0) { this.dropT -= dt; if (!held || (s.hitT || 0) > .15) this.dropT = 0; } // his own punches and slips ride through a spell: the hands come back down after; a hit wakes him up
+    else if (held && !P_ && !s.def && ten < .8 && this.dAcc > .3) this.dropT = DR.dur * (.5 + Math.random());
+    if (held) this.dAcc = clamp((this.dAcc || 0) + dt * (Math.min(.45, (DR.r1 + DR.more * (1 - Math.exp(-(rnd - 1) * DR.k)) + DR.tired * tired) * (.75 + .5 * ((this.seed * 7.13) % 1))) - ((this.dropW || 0) > .5 ? 1 : 0)), -3, 3); // owed drop time: keeps his share on the round's line
+    const dropW = this.dropW = damp(this.dropW || 0, this.dropT > 0 && !P_ && !s.def ? 1 : 0, this.dropT > 0 ? 4 : 9, dt) * (1 - (os.aT && !os.feint ? smooth(.2, .5, os.aP || 0) : 0)); // a lazy guard ignores the range, comes up late on a punch: that's how he gets caught
     const spot = (tA, lA) => [0, 1, 2].map(j => lerp(lA[j], tA[j], ten));
     let gl = [null, null];
     for (const lr of [0, 1]) { // lr 0 = lead hand, 1 = rear hand
-      const a = spot(lr ? gd.tR : gd.tL, lr ? gd.lR : gd.lL); a[1] -= sag * (1 - ten * .5) * (lr ? .8 : 1);
+      const a = spot(lr ? gd.tR : gd.tL, lr ? gd.lR : gd.lL); a[1] -= sag * (1 - ten * .5) * (lr ? .8 : 1) + dropW * (lr ? DR.rear : DR.lead); a[0] -= dropW * 2;
       if (!lr && s.post) { a[0] += 14 * s.post; a[1] += 4 * s.post; }   // the long guard: lead hand posted out
       const fl = (1 - ten * .7) * life, sd = this.seed + lr * 17;
       a[0] += 2.6 * nz(t * .9, sd) * fl; a[1] += 2.2 * nz(t * .8, sd + 4) * fl; a[2] += 1.8 * nz(t * .7, sd + 8) * fl;
