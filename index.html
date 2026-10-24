@@ -4687,7 +4687,7 @@ function handleEvents() {
       case 'roundEnd': FX.excite = .2; break;
       case 'end': onEnd(e.result); break;
     }
-    const lines = Comm.handle(e, F, F.t);
+    const lines = Comm.handle(e, F, FX.t); // the cooldowns run on the watcher's clock: at 4x the booth talks as often as at 1x, it just skips more
     for (const l of lines) { if (l.kind === 'color') pop(l.text); else feed(l.text, l.pri >= 3); if (l.pri >= 2 || l.kind === 'color') Comm.say(l); }
   }
   F.events = [];
