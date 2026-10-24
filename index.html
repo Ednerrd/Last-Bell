@@ -5009,6 +5009,94 @@ ACT.nextRound = () => {
   } else if (FX.strat !== 'auto') feed('Corner plan: ' + STRATS[FX.strat].label.toLowerCase() + '.');
 };
 
+/* ---------- the fight screen (shared by the lab and the game) ---------- */
+// the fight screen, shared by the lab and the game (game.html): A and B are fight sheets; o: rounds, venue, cutmanA/B, bar (html over the HUD), intro (html, the overlay's top line)
+function startFight(A, B, o) {
+  if (rafId) cancelAnimationFrame(rafId);
+  Comm.stop && Comm.stop();
+  F = new Fight(A, B, { rounds: o.rounds, cutmanA: o.cutmanA == null ? .6 : o.cutmanA, cutmanB: o.cutmanB == null ? .6 : o.cutmanB });
+  F.f.forEach(X => { X.brain.debug = true; }); // the thought log for the debug panel (no dice: the fight plays the same)
+  FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null, calls: [], gas0: 1 };
+  const ta = gearItem('trunks', A.look.trunks).c;
+  if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
+  const ga = gearItem('gloves', A.look.gloves).c;
+  if (colorDist(ga, gearItem('gloves', B.look.gloves).c) < CLASH) { const alt = GEAR.gloves.filter(g => colorDist(g.c, ga) >= CLASH); if (alt.length) B.look = Object.assign({}, B.look, { gloves: pick(alt).id }); }
+  FX.looks = [A.look, B.look].map((l, i) => Object.assign({}, l, { h: F.f[i].size.h })); // Size s1: drawn at his real height
+  Render.reset(); Comm.reset();
+  const nm = s => esc(s.name.split(' ').slice(-1)[0]);
+  show(`<div class="fight">
+    ${o.bar || ''}
+    <div class="hud">
+      <div class="hf l"><div class="hn">${nm(A)}</div><div class="hb"><i class="max" id="hm0"></i><i class="cur" id="hh0"></i></div><div class="sb"><i class="bd" id="hbd0"></i><i class="st" id="hs0"></i></div></div>
+      <div class="clock"><span id="rd">R1</span><b id="ck">3:00</b></div>
+      <div class="hf r"><div class="hn">${nm(B)}</div><div class="hb"><i class="max" id="hm1"></i><i class="cur" id="hh1"></i></div><div class="sb"><i class="bd" id="hbd1"></i><i class="st" id="hs1"></i></div></div>
+    </div>
+    <div class="stage"><canvas id="cv"></canvas><div class="ov" id="ov"></div><div class="pop" id="pop"></div><div class="yell" id="yell"></div></div>
+    <div class="feed" id="feed" aria-live="polite"></div>
+    <div class="shouts off" id="shouts" aria-label="Yell from the corner">${Object.keys(SHOUTS).map(k => `<button data-act="shout" data-v="${k}">${SHOUT_BTN[k]}<i></i></button>`).join('')}</div>
+    <div class="cornerbox" id="cbox"></div>
+    <div class="ctrl"><div class="seg small">${[1, 2, 4].map(s => `<button class="${FX.speed === s ? 'on' : ''}" data-act="speed" data-v="${s}">${s}x</button>`).join('')}</div><div class="row">${soundBtns()}</div></div>
+    <details class="bbox" id="bbox"${BBOX.open ? ' open' : ''} ontoggle="BBOX.open=this.open;updBrainBox(1)"><summary>🧠 What they're thinking</summary><div class="bcols"><div class="bcol" id="bb0"></div><div class="bcol" id="bb1"></div></div></details>
+  </div>`, 'fightmode');
+  Render.init($('#cv'));
+  Sfx.init(); Comm.initVoices(); Sfx.crowd(CROWD_BASE[FX.venue], 1);
+  overlay(`<div class="intro"><span>${o.intro || ''}</span><b>${esc(A.name)}</b><em>vs</em><b>${esc(B.name)}</b><span>${o.rounds} rounds, ${esc(VENUE_NAMES[o.venue])}</span><span>Referee ${esc(F.ref.name)}</span></div>`, 2300);
+  feed(`Referee ${F.ref.name}: ${F.ref.style}. Judges: ${F.judges.map(j => `${j.name} (${j.taste})`).join(', ')}.`);
+  rafId = requestAnimationFrame(loop);
+}
+// the debug panel (Ed, Oct 19): what each brain is doing, what he believes about the other man next to the truth, what he's adjusting, his last thoughts. Display only
+const BBOX = { open: false, t: 0 };
+const MODE_TXT = { feelout: 'feeling him out', work: 'working', press: 'pressing', burst: 'letting it go', reset: 'resetting', counter: 'waiting to counter', hunt: 'going for the finish', huntSafe: 'finishing behind the guard', check: 'checking if he is hurt', survive: 'surviving', down: 'down' };
+const ADJ_TXT = { initiative: ['lead more', 'lead less'], range: ['stay long', 'get closer'], jab: ['more jab', 'less jab'], power: ['more power', 'less power'], body: ['more body', 'less body'], guard: ['hands up', 'hands looser'] };
+function adjList(o, cut) { const out = []; if (!o) return out; for (const k in ADJ_TXT) { const v = o[k] || 0; if (Math.abs(v) > (k === 'range' ? 2 : cut)) out.push(ADJ_TXT[k][v > 0 ? 0 : 1]); } if (o.out && Math.abs(o.out - 1) > .05) out.push(o.out > 1 ? 'throw more' : 'throw less'); return out; }
+function brainCard(X) {
+  const b = X.brain, O = X.op, ph = b.ph || {}, pc = v => Math.round(clamp(v, 0, 1) * 100), e = esc;
+  if (b.log.length > 300) b.log.splice(0, 200);
+  const md = b.out.intent === 'down' ? 'down' : b.mode, hr = md === 'survive' && b.hurtResp ? ' (' + b.hurtResp + ')' : '';
+  const me = [`guard ${pc(b.out.guard)}`]; if ((X.clamp || 0) > .2) me.push('elbows clamped, body hurt'); if ((X.low || 0) > .2) me.push('elbows in, he reads a body digger'); if (X.bluff) me.push('hiding the hurt'); if (X.baitId) me.push('hands down on purpose'); if (X.cover) me.push('covering his ' + (X.cover.s === 'L' ? 'left' : 'right') + ' eye'); if (b.desp) me.push('desperate, behind late');
+  const tg = ph.tgt, spot = []; if (tg) { if (tg.eye) spot.push((tg.side === 'L' ? 'left' : 'right') + ' eye'); if (tg.body) spot.push('body going'); if (tg.arms) spot.push('arms heavy'); } if (ph.el) spot.push('elbows down');
+  const gasT = O.stam / Math.max(1, O.stamMax), grdT = O.bg * (.5 + .5 * O.gi), hurtT = hurtNow(O);
+  const adj = [...adjList(b.cc, .05).map(x => 'corner: ' + x), ...adjList(b.plan, .05).map(x => 'plan: ' + x)];
+  if (b.dl && b.dl.armed) adj.push('trap set for his ' + pName(b.dl.armed)); if ((b.bRd || 0) > .2) adj.push('he lives downstairs'); if (b.setup) adj.push('setup: ' + b.setup.name); if (b.wb && b.wb.p && b.t < b.wb.until) adj.push('baiting his ' + pName(b.wb.p) + ', ' + b.wb.def + ' ready'); if (b.wbS && b.t < b.wbS.thru) adj.push('sees the bait, not biting');
+  const E = b.emo, mood = E.fear > .5 ? 'scared' : E.frus > .5 ? 'frustrated' : E.conf > .4 ? 'confident' : E.conf < -.4 ? 'shaken' : '';
+  const log = b.log.slice(-6).reverse().map(l => `<li>${e(l.replace(/^[\d.]+ /, ''))}</li>`).join('');
+  return `<p><b>${e(X.sheet.name.split(' ').slice(-1)[0])}</b> <span class="bm">${e(MODE_TXT[md] || md)}${e(hr)}</span>${mood ? ' · ' + mood : ''}</p>
+    <p>${e(b.out.why || '')}</p><p>${e(me.join(' · '))}</p>
+    <p>Sees him: ${ph.hurt ? '<span class="bm">HURT</span>' : 'fine'}${hurtT !== !!ph.hurt ? ` <span class="tru">(${hurtT ? 'he is hurt' : 'he is not'})</span>` : ''}, gas ${pc(ph.gas == null ? 1 : ph.gas)} <span class="tru">(${pc(gasT)})</span>, guard ${pc(ph.guard == null ? grdT : ph.guard)} <span class="tru">(${pc(grdT)})</span></p>
+    ${spot.length ? `<p>Spotted: ${e(spot.join(', '))}</p>` : ''}${adj.length ? `<p>Adjusting: ${e(adj.join(', '))}</p>` : ''}
+    <ul class="bl">${log}</ul>`;
+}
+function updBrainBox(now) {  if (!BBOX.open || !F || !F.f[0].brain) return; const t = performance.now(); if (!now && t - BBOX.t < 250) return; BBOX.t = t;
+  F.f.forEach((X, i) => { const el = $('#bb' + i); if (el) el.innerHTML = brainCard(X); });
+}
+const LEARN_LINE = { jab: 'His jab is getting sharper.', power: "He's sitting down on his power shots more.", combos: 'His combinations are flowing better.', body: "He's learning to dig to the body.",
+  feints: "He's selling his feints better.", block: 'His guard is getting tighter.', slip: "He's slipping shots he used to eat.", footwork: 'His feet are getting him out of trouble quicker.',
+  clinch: "He's learning to tie up when it gets hot.", cutoff: "He's cutting off the ring better.", ropes: "He's getting off the ropes faster.", range: "He's finding his range.",
+  angles: "He's taking better angles.", counter: 'His counters are coming quicker.', read: "He's reading what's coming.", pacing: "He's learning to pace himself.", adjust: "He's adjusting quicker between rounds." };
+// d: what learn() returned for side 0, before: his sheet before it (know), O: the other man in F
+function learnLines(d, before, O) {
+  try {
+    const lines = [], K = BoxerBrain.SKILL_KEYS;
+    for (const [k, t] of d.cross) lines.push(`Level up: his ${k} is ${BoxerBrain.TIERS.find(x => x.key === t).label} now.`);
+    K.filter(k => d.sk[k] > .3 && !d.cross.some(c => c[0] === k)).sort((a, b) => d.sk[b] - d.sk[a]).slice(0, 2).forEach(k => lines.push(LEARN_LINE[k]));
+    const top = d.rep.won < 0 && (d.rep.beat.kd[0] || d.rep.beat.hurt[0]); if (top) lines.push(`He'll see that ${pName(top[0])} coming next time.`);
+    const st = domStyle(O.sheet); if ((d.know.style[st] || 0) - (before.know.style[st] || 0) > .05 && (before.know.style[st] || 0) < .5) { const lb = STYLES[st].label.toLowerCase(); lines.push(`He's seen ${/^[aeiou]/.test(lb) ? 'an' : 'a'} ${lb} up close now.`); }
+    if (d.scar && d.scar.n === 0) lines.push(d.scar.kind === 'gunShy' ? 'That knockout shook him. He might hesitate to let his hands go for a while.' : "That knockout's still in his head. He'll be careful for a fight or two.");
+    lines.push(`He'll remember ${O.sheet.name}.`);
+    return lines.slice(0, 5);
+  } catch (e) { return []; }
+}
+// the lab keeps nobody: the read on a copy of his sheet
+function learnedLines() {
+  try { const me = JSON.parse(JSON.stringify(F.f[0].sheet)); learnInit(me); const before = JSON.parse(JSON.stringify(me)); return learnLines(learn(me, F, 0), before, F.f[1]); } catch (e) { return []; }
+}
+const fightCss = document.createElement('style');
+fightCss.textContent = `.learned{text-align:left;margin:14px 0 4px;padding:10px 12px;border-left:3px solid var(--gold,#f0b85a);background:rgba(240,184,90,.08);border-radius:4px}.learned h3{margin:0 0 6px;font-size:15px}.learned ul{margin:0;padding-left:18px;font-size:14px;line-height:1.4}
+.bbox{background:#0e0a08;color:#cfc4ad;border-radius:5px;padding:6px 10px;font-size:12.5px;line-height:1.35}.bbox summary{cursor:pointer;color:#f0b85a;font-weight:700;font-size:15px;padding:4px 0}
+.bcols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}.bcol{min-width:0;overflow-wrap:anywhere;color:#cfc4ad}.bcol b{color:#ece4d6}.bcol .tru{color:#8f8273}.bcol .bm{color:#f0b85a;font-weight:700}.bcol .bl{color:#a09280;margin:4px 0 0;padding-left:14px}.bcol p{margin:3px 0}`;
+document.head.appendChild(fightCss);
+
+/* ===== LAST BELL : lab (the fight lab front end; game/build.js swaps this section for the game in game.html) ===== */
 /* ---------- the fight: straight in, random or picked fighters ---------- */
 const LAB = { div: 'r', a: 'r', b: 'r', ga: 'auto', gb: 'auto', rounds: 6, last: null, open: false };
 const LAB_STYLE_KEYS = Object.keys(STYLES);
@@ -5043,65 +5131,9 @@ function labNew(rematch) {
   labFight(LAB.last);
 }
 function labFight(L) {
-  if (rafId) cancelAnimationFrame(rafId);
-  Comm.stop && Comm.stop();
-  const A = labSheet(L.A, L.div), B = labSheet(L.B, L.div), o = { venue: L.venue, rounds: LAB.rounds, title: [], tier: 'main' };
-  F = new Fight(A, B, { rounds: o.rounds, cutmanA: .6, cutmanB: .6 });
-  F.f.forEach(X => { X.brain.debug = true; }); // the thought log for the debug panel (no dice: the fight plays the same)
-  FX = { offer: o, venue: o.venue, looks: [A.look, B.look], speed: FX ? FX.speed : 1, acc: 0, last: 0, hitStop: 0, mode: 'live', excite: 0, flash: 0, cam: 0, zoom: 1.32, ev: [], t: 0, rp: 0, rpLast: -1, eruptT: 0, strat: 'auto', cornerT: 0, done: false, ref: null, calls: [], gas0: 1 };
-  const ta = gearItem('trunks', A.look.trunks).c;
-  if (colorDist(ta, gearItem('trunks', B.look.trunks).c) < CLASH) { const alt = GEAR.trunks.filter(g => colorDist(g.c, ta) >= CLASH); B.look = Object.assign({}, B.look, { trunks: (alt.length ? pick(alt) : GEAR.trunks.slice().sort((x, y) => colorDist(y.c, ta) - colorDist(x.c, ta))[0]).id }); }
-  const ga = gearItem('gloves', A.look.gloves).c;
-  if (colorDist(ga, gearItem('gloves', B.look.gloves).c) < CLASH) { const alt = GEAR.gloves.filter(g => colorDist(g.c, ga) >= CLASH); if (alt.length) B.look = Object.assign({}, B.look, { gloves: pick(alt).id }); }
-  FX.looks = [A.look, B.look].map((l, i) => Object.assign({}, l, { h: F.f[i].size.h })); // Size s1: drawn at his real height
-  Render.reset(); Comm.reset();
-  const nm = s => esc(s.name.split(' ').slice(-1)[0]);
-  show(`<div class="fight">
-    ${labBar(L)}
-    <div class="hud">
-      <div class="hf l"><div class="hn">${nm(A)}</div><div class="hb"><i class="max" id="hm0"></i><i class="cur" id="hh0"></i></div><div class="sb"><i class="bd" id="hbd0"></i><i class="st" id="hs0"></i></div></div>
-      <div class="clock"><span id="rd">R1</span><b id="ck">3:00</b></div>
-      <div class="hf r"><div class="hn">${nm(B)}</div><div class="hb"><i class="max" id="hm1"></i><i class="cur" id="hh1"></i></div><div class="sb"><i class="bd" id="hbd1"></i><i class="st" id="hs1"></i></div></div>
-    </div>
-    <div class="stage"><canvas id="cv"></canvas><div class="ov" id="ov"></div><div class="pop" id="pop"></div><div class="yell" id="yell"></div></div>
-    <div class="feed" id="feed" aria-live="polite"></div>
-    <div class="shouts off" id="shouts" aria-label="Yell from the corner">${Object.keys(SHOUTS).map(k => `<button data-act="shout" data-v="${k}">${SHOUT_BTN[k]}<i></i></button>`).join('')}</div>
-    <div class="cornerbox" id="cbox"></div>
-    <div class="ctrl"><div class="seg small">${[1, 2, 4].map(s => `<button class="${FX.speed === s ? 'on' : ''}" data-act="speed" data-v="${s}">${s}x</button>`).join('')}</div><div class="row">${soundBtns()}</div></div>
-    <details class="bbox" id="bbox"${BBOX.open ? ' open' : ''} ontoggle="BBOX.open=this.open;updBrainBox(1)"><summary>🧠 What they're thinking</summary><div class="bcols"><div class="bcol" id="bb0"></div><div class="bcol" id="bb1"></div></div></details>
-  </div>`, 'fightmode');
-  Render.init($('#cv'));
-  Sfx.init(); Comm.initVoices(); Sfx.crowd(CROWD_BASE[FX.venue], 1);
-  overlay(`<div class="intro"><span>${esc(DIVS[L.div].name)}</span><b>${esc(A.name)}</b><em>vs</em><b>${esc(B.name)}</b><span>${o.rounds} rounds, ${esc(VENUE_NAMES[o.venue])}</span><span>Referee ${esc(F.ref.name)}</span></div>`, 2300);
-  feed(`Referee ${F.ref.name}: ${F.ref.style}. Judges: ${F.judges.map(j => `${j.name} (${j.taste})`).join(', ')}.`);
-  rafId = requestAnimationFrame(loop);
+  startFight(labSheet(L.A, L.div), labSheet(L.B, L.div), { venue: L.venue, rounds: LAB.rounds, bar: labBar(L), intro: esc(DIVS[L.div].name) });
 }
-// the debug panel (Ed, Oct 19): what each brain is doing, what he believes about the other man next to the truth, what he's adjusting, his last thoughts. Display only
-const BBOX = { open: false, t: 0 };
-const MODE_TXT = { feelout: 'feeling him out', work: 'working', press: 'pressing', burst: 'letting it go', reset: 'resetting', counter: 'waiting to counter', hunt: 'going for the finish', huntSafe: 'finishing behind the guard', check: 'checking if he is hurt', survive: 'surviving', down: 'down' };
-const ADJ_TXT = { initiative: ['lead more', 'lead less'], range: ['stay long', 'get closer'], jab: ['more jab', 'less jab'], power: ['more power', 'less power'], body: ['more body', 'less body'], guard: ['hands up', 'hands looser'] };
-function adjList(o, cut) { const out = []; if (!o) return out; for (const k in ADJ_TXT) { const v = o[k] || 0; if (Math.abs(v) > (k === 'range' ? 2 : cut)) out.push(ADJ_TXT[k][v > 0 ? 0 : 1]); } if (o.out && Math.abs(o.out - 1) > .05) out.push(o.out > 1 ? 'throw more' : 'throw less'); return out; }
-function brainCard(X) {
-  const b = X.brain, O = X.op, ph = b.ph || {}, pc = v => Math.round(clamp(v, 0, 1) * 100), e = esc;
-  if (b.log.length > 300) b.log.splice(0, 200);
-  const md = b.out.intent === 'down' ? 'down' : b.mode, hr = md === 'survive' && b.hurtResp ? ' (' + b.hurtResp + ')' : '';
-  const me = [`guard ${pc(b.out.guard)}`]; if ((X.clamp || 0) > .2) me.push('elbows clamped, body hurt'); if ((X.low || 0) > .2) me.push('elbows in, he reads a body digger'); if (X.bluff) me.push('hiding the hurt'); if (X.baitId) me.push('hands down on purpose'); if (X.cover) me.push('covering his ' + (X.cover.s === 'L' ? 'left' : 'right') + ' eye'); if (b.desp) me.push('desperate, behind late');
-  const tg = ph.tgt, spot = []; if (tg) { if (tg.eye) spot.push((tg.side === 'L' ? 'left' : 'right') + ' eye'); if (tg.body) spot.push('body going'); if (tg.arms) spot.push('arms heavy'); } if (ph.el) spot.push('elbows down');
-  const gasT = O.stam / Math.max(1, O.stamMax), grdT = O.bg * (.5 + .5 * O.gi), hurtT = hurtNow(O);
-  const adj = [...adjList(b.cc, .05).map(x => 'corner: ' + x), ...adjList(b.plan, .05).map(x => 'plan: ' + x)];
-  if (b.dl && b.dl.armed) adj.push('trap set for his ' + pName(b.dl.armed)); if ((b.bRd || 0) > .2) adj.push('he lives downstairs'); if (b.setup) adj.push('setup: ' + b.setup.name); if (b.wb && b.wb.p && b.t < b.wb.until) adj.push('baiting his ' + pName(b.wb.p) + ', ' + b.wb.def + ' ready'); if (b.wbS && b.t < b.wbS.thru) adj.push('sees the bait, not biting');
-  const E = b.emo, mood = E.fear > .5 ? 'scared' : E.frus > .5 ? 'frustrated' : E.conf > .4 ? 'confident' : E.conf < -.4 ? 'shaken' : '';
-  const log = b.log.slice(-6).reverse().map(l => `<li>${e(l.replace(/^[\d.]+ /, ''))}</li>`).join('');
-  return `<p><b>${e(X.sheet.name.split(' ').slice(-1)[0])}</b> <span class="bm">${e(MODE_TXT[md] || md)}${e(hr)}</span>${mood ? ' · ' + mood : ''}</p>
-    <p>${e(b.out.why || '')}</p><p>${e(me.join(' · '))}</p>
-    <p>Sees him: ${ph.hurt ? '<span class="bm">HURT</span>' : 'fine'}${hurtT !== !!ph.hurt ? ` <span class="tru">(${hurtT ? 'he is hurt' : 'he is not'})</span>` : ''}, gas ${pc(ph.gas == null ? 1 : ph.gas)} <span class="tru">(${pc(gasT)})</span>, guard ${pc(ph.guard == null ? grdT : ph.guard)} <span class="tru">(${pc(grdT)})</span></p>
-    ${spot.length ? `<p>Spotted: ${e(spot.join(', '))}</p>` : ''}${adj.length ? `<p>Adjusting: ${e(adj.join(', '))}</p>` : ''}
-    <ul class="bl">${log}</ul>`;
-}
-function updBrainBox(now) {
-  if (!BBOX.open || !F || !F.f[0].brain) return; const t = performance.now(); if (!now && t - BBOX.t < 250) return; BBOX.t = t;
-  F.f.forEach((X, i) => { const el = $('#bb' + i); if (el) el.innerHTML = brainCard(X); });
-}
+
 function labBar(L) {
   return `<div class="lab">
     <div class="labrow"><button class="btn" data-act="labNew">🎲 New fight</button><button class="btn ghost" data-act="labRe">Rematch</button><button class="btn ghost" data-act="labSet">${LAB.open ? 'Hide' : 'Pick'}</button></div>
@@ -5120,23 +5152,6 @@ ACT.labSet = (d, b) => { LAB.open = !LAB.open; const s = document.querySelector(
 // the result: who won and how, the punch stats, then go again
 // L4f: what he takes from this one (docs/LEARN.md 7). The lab doesn't keep fighters, so this is the read on a copy of his sheet: the biggest gains, a level up,
 // the answer to what beat him, a new style seen, a scar, the man he'll remember
-const LEARN_LINE = { jab: 'His jab is getting sharper.', power: "He's sitting down on his power shots more.", combos: 'His combinations are flowing better.', body: "He's learning to dig to the body.",
-  feints: "He's selling his feints better.", block: 'His guard is getting tighter.', slip: "He's slipping shots he used to eat.", footwork: 'His feet are getting him out of trouble quicker.',
-  clinch: "He's learning to tie up when it gets hot.", cutoff: "He's cutting off the ring better.", ropes: "He's getting off the ropes faster.", range: "He's finding his range.",
-  angles: "He's taking better angles.", counter: 'His counters are coming quicker.', read: "He's reading what's coming.", pacing: "He's learning to pace himself.", adjust: "He's adjusting quicker between rounds." };
-function learnedLines() {
-  try {
-    const me = JSON.parse(JSON.stringify(F.f[0].sheet)), lines = [];
-    learnInit(me); const before = JSON.parse(JSON.stringify(me)), d = learn(me, F, 0), O = F.f[1], K = BoxerBrain.SKILL_KEYS;
-    for (const [k, t] of d.cross) lines.push(`Level up: his ${k} is ${BoxerBrain.TIERS.find(x => x.key === t).label} now.`);
-    K.filter(k => d.sk[k] > .3 && !d.cross.some(c => c[0] === k)).sort((a, b) => d.sk[b] - d.sk[a]).slice(0, 2).forEach(k => lines.push(LEARN_LINE[k]));
-    const top = d.rep.won < 0 && (d.rep.beat.kd[0] || d.rep.beat.hurt[0]); if (top) lines.push(`He'll see that ${pName(top[0])} coming next time.`);
-    const st = domStyle(O.sheet); if ((d.know.style[st] || 0) - (before.know.style[st] || 0) > .05 && (before.know.style[st] || 0) < .5) { const lb = STYLES[st].label.toLowerCase(); lines.push(`He's seen ${/^[aeiou]/.test(lb) ? 'an' : 'a'} ${lb} up close now.`); }
-    if (d.scar && d.scar.n === 0) lines.push(d.scar.kind === 'gunShy' ? 'That knockout shook him. He might hesitate to let his hands go for a while.' : "That knockout's still in his head. He'll be careful for a fight or two.");
-    lines.push(`He'll remember ${O.sheet.name}.`);
-    return lines.slice(0, 5);
-  } catch (e) { return []; }
-}
 function resultScreen() {
   if (!F || !F.result) return;
   Comm.stop();
@@ -5153,10 +5168,7 @@ function resultScreen() {
     ${(() => { const ln = learnedLines(); return ln.length ? `<div class="learned"><h3>What ${esc(L.A.name)} takes from this one</h3><ul>${ln.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''; })()}</div>`, '');
 }
 const labCss = document.createElement('style');
-labCss.textContent = `.learned{text-align:left;margin:14px 0 4px;padding:10px 12px;border-left:3px solid var(--gold,#f0b85a);background:rgba(240,184,90,.08);border-radius:4px}.learned h3{margin:0 0 6px;font-size:15px}.learned ul{margin:0;padding-left:18px;font-size:14px;line-height:1.4}
-.bbox{background:#0e0a08;color:#cfc4ad;border-radius:5px;padding:6px 10px;font-size:12.5px;line-height:1.35}.bbox summary{cursor:pointer;color:#f0b85a;font-weight:700;font-size:15px;padding:4px 0}
-.bcols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}.bcol{min-width:0;overflow-wrap:anywhere;color:#cfc4ad}.bcol b{color:#ece4d6}.bcol .tru{color:#8f8273}.bcol .bm{color:#f0b85a;font-weight:700}.bcol .bl{color:#a09280;margin:4px 0 0;padding-left:14px}.bcol p{margin:3px 0}
-.lab{margin:0 0 6px}.labrow{display:flex;gap:6px}.labrow .btn{flex:1;padding:8px 6px;font-size:15px}
+labCss.textContent = `.lab{margin:0 0 6px}.labrow{display:flex;gap:6px}.labrow .btn{flex:1;padding:8px 6px;font-size:15px}
 .labwho{font-size:12.5px;line-height:1.35;color:var(--mute,#999);margin:6px 2px}.labA,.labB{color:var(--ink,#2a2018);font-weight:700}
 .labset[hidden]{display:none}.labset{display:grid;gap:6px;margin:6px 0;font-size:13px}.labf{display:flex;gap:6px;align-items:center}.labf b{width:56px;flex:none;text-align:left}.labf select{flex:1;min-width:0;font:inherit;padding:6px;border-radius:8px;background:#fffaf2;color:#2a2018;border:1px solid #c9bba5}`;
 document.head.appendChild(labCss);
