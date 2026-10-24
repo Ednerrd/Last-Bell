@@ -3380,8 +3380,9 @@ const Render = (() => {
     awkward:      { wt: 0, lo: 0, hinge: 0, heel: .25, b: 1.5, bf: 9.5, toe: .35, odd: 3 }
   };
   const STY2_OF = { volume: 'swarmer', angle: 'outboxer', switch: 'boxerpuncher', body: 'swarmer', pboxer: 'slugger', spoiler: 'counter', jabgrab: 'outboxer', feinter: 'boxerpuncher' };
-  // wt rest weight, knees: he takes his style's hinge in the knees (Tyson, not Frazier)
-  const GST2 = { standard: { wt: 0 }, high: { wt: .6 }, peekaboo: { wt: 2.4, knees: 1 }, philly: { wt: -2.4 }, cross: { wt: 2.4 }, handslow: { wt: -1.8 } };
+  // wt rest weight, knees: he takes his style's hinge in the knees (Tyson, not Frazier), bl the blade (deg, the 3D chest turn): in side view
+  // the lead shoulder sits forward and the rear one back (x 7 sin bl) and the chest reads wider (square guards show the narrow profile)
+  const GST2 = { standard: { wt: 0, bl: 40 }, high: { wt: .6, bl: 26 }, peekaboo: { wt: 2.4, knees: 1, bl: 18 }, philly: { wt: -2.4, bl: 52 }, cross: { wt: 2.4, bl: 24 }, handslow: { wt: -1.8, bl: 38 } };
   // knee: the hips sit this much lower than the old straight-legged stance (lead knee ~37°, rear ~42°: was locked straight);
   // feet: lead / rear foot x (a touch longer than the old 20 / -22); cap: the resting crouch soft-caps past this
   const ST2 = { knee: 4, feet: [21, -23], cap: 12 };
@@ -3514,7 +3515,8 @@ const Render = (() => {
     }
     if (v.state === 'stun') { footF.x = 14 + Math.sin(t * 6) * 4; footB.x = -18; footB.y = 0; }
     if (sit > 0) { footF = L(footF, { x: 18, y: 0 }, sit); footB = L(footB, { x: 6, y: 0 }, sit); }
-    const J = { pv, hip, neck, head, ha, footF, footB, S, twist, breath: breath * (1 + sit * .8), heelB: Math.max(heel, heelR * (1 - .7 * pivot)) * .55, pivotF: pivot * .32, sit };
+    const sq = still || v.walk || v.state === 'clinch' || sit > .5 ? 0 : 1, sb = Math.sin((gst.bl || 40) * Math.PI / 180) * sq; // square in the clinch, walking, on the stool, down
+    const J = { pv, hip, neck, head, ha, footF, footB, S, twist, bo: 7 * sb, tw: 1 + .28 * (sb - .64) * sq, breath: breath * (1 + sit * .8), heelB: Math.max(heel, heelR * (1 - .7 * pivot)) * .55, pivotF: pivot * .32, sit };
     // knockdown: keyframed. Going down: knees buckle, he drops onto his seat, the back hits, the head last.
     // Getting up: sits up, gets to a knee, stands with the gloves coming back up
     const dp = v.state === 'down' ? clamp(v.downP, 0, 1) : 0;
@@ -3541,11 +3543,12 @@ const Render = (() => {
   function arms(v, look, J, tgt, t) {
     let leadBend = -1, rearBend = -1, punchK = 0, punchLead = null;
     const S = J.S; const southpaw = v.stance === 'southpaw';
-    const shN = { x: J.neck.x + 2, y: J.neck.y + 4 }, shF = { x: J.neck.x - 3, y: J.neck.y + 2 };
-    // shoulder rotation: punching shoulder drives through, the other one pulls back
+    const bo = J.dp > 0 ? 0 : J.bo || 0, lx = -.5 + bo, rx = -.5 - bo; // F1: bladed, the lead shoulder forward and the rear one back (square guards close together)
+    const shN = { x: J.neck.x + (southpaw ? lx : rx), y: J.neck.y + 4 }, shF = { x: J.neck.x + (southpaw ? rx : lx), y: J.neck.y + 2 };
+    // shoulder rotation: punching shoulder drives through, the other one pulls back (a rear hand turns the blade through square)
     if (v.aT && J.dp === 0 && J.twist) {
-      const pl = PUNCH[v.aT].arm === 'lead'; const lsh = southpaw ? shN : shF, rsh = southpaw ? shF : shN;
-      const fw = pl ? lsh : rsh, bk = pl ? rsh : lsh; fw.x += 5 * J.twist; bk.x -= 3 * J.twist; fw.y -= 1.5 * J.twist;
+      const pl = PUNCH[v.aT].arm === 'lead'; const lsh = southpaw ? shN : shF, rsh = southpaw ? shF : shN, sw = pl ? 0 : 1.2 * bo;
+      const fw = pl ? lsh : rsh, bk = pl ? rsh : lsh; fw.x += (5 + sw) * J.twist; bk.x -= (3 + sw) * J.twist; fw.y -= 1.5 * J.twist;
       if (PUNCH[v.aT].cat === 'jab' && !v.feint) { const jk = gloveK(v.aP, ptOf(v, true)); fw.x += 7 * jk; fw.y -= 2.2 * jk; } // lead shoulder rolls forward and up over the chin
     }
     let trail = null, stretch = 0, trailNear = false;
@@ -3553,7 +3556,8 @@ const Render = (() => {
     const lsh0 = southpaw ? shN : shF;
     const GP = GUARD_POSE[gd] || GUARD_POSE.standard;
     let leadG = { x: N.x + GP.l[0], y: N.y + GP.l[1] }, rearG = { x: N.x + GP.r[0], y: N.y + GP.r[1] };
-    if (gd === 'philly') lsh0.y -= 3.5;           // lead shoulder up, chin tucked behind it
+    if (gd === 'philly') lsh0.y -= 5;             // lead shoulder up to the chin, chin tucked behind it
+    if (gd === 'cross' && J.dp === 0) { shN.y -= 1.5; shF.y -= 1.5; } // the hunch: shoulders rounded up
     const ph = t + (v.bob || 0), gi = v.gi == null ? 1 : v.gi, live = v.state !== 'down' && v.state !== 'slump' && v.state !== 'clinch';
     // ---- per-guard hand rhythm ----
     if (live && !v.def) {
@@ -3826,7 +3830,7 @@ const Render = (() => {
   // torso as a shape in its own frame: s runs hip (0) to neck (1), o is the offset toward his front (+) or back (-)
   function torsoPts(J, G, pts) {
     const ux = J.neck.x - J.hip.x, uy = J.neck.y - J.hip.y, fx = -uy / J.S.torso, fy = ux / J.S.torso;
-    return pts.map(([q, o]) => ({ x: J.hip.x + ux * q + fx * o * G, y: J.hip.y + uy * q + fy * o * G }));
+    const w = G * (J.tw || 1); return pts.map(([q, o]) => ({ x: J.hip.x + ux * q + fx * o * w, y: J.hip.y + uy * q + fy * o * w }));
   }
   const TORSO = [[-.02, 9], [.22, 8.6], [.48, 9.6], [.66, 12.4], [.8, 12.2], [.93, 9.5], [1.04, 5], [1.07, -1], [1.02, -7.5], [.92, -11.5], [.72, -11.2], [.45, -9.6], [.2, -9.4], [-.02, -10]];
   function drawFighter(v, look, J, A) {
@@ -4013,7 +4017,7 @@ const Render = (() => {
       const rear = P.arm === 'rear', drive = P.cat === 'jab' ? .45 : 1, sp = v.stance === 'southpaw', near = rear ? !sp : sp;
       const ext = extOf(p, ptOf(v, P.cat === 'jab'));
       const tw = drive * (rear ? 1 : .7), go = (rear ? 6 : 3.5) + J.S.torso * (.12 + .12 * drive) * Math.cos(J.lean);
-      const shx = J.neck.x + (near ? 2 : -3) + go * (1 - ext) + 5 * tw + (P.cat === 'jab' ? 7 : 0), shy = J.neck.y + (near ? 4 : 2) - 1.5 * tw - (P.cat === 'jab' ? 2.2 : 0);
+      const bo = J.bo || 0, shx = J.neck.x - .5 + (rear ? -bo : bo) + go * (1 - ext) + (5 + (rear ? 1.2 * bo : 0)) * tw + (P.cat === 'jab' ? 7 : 0), shy = J.neck.y + (near ? 4 : 2) - 1.5 * tw - (P.cat === 'jab' ? 2.2 : 0);
       const gr = 7.2 * Math.sqrt(J.S.B), hr = Jo.S.headR, Tx = t.x - hr * .8 - gr * .8, Ty = t.y + hr * .5, R2 = J.S.arm * 2 * .93;
       const dy = clamp(Ty - shy, -R2 * .6, R2 * .6);
       need = clamp(Tx - shx - Math.sqrt(R2 * R2 - dy * dy), -22, P.cat === 'jab' ? 24 : 20);
