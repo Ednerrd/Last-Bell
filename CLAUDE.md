@@ -21,6 +21,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 - **Private preview** (sample + db + user): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo.
 - **Brain lab** (private): https://claude.ai/artifact/5UhTsjMSCTqhtRnCfdZBSV. `node brain/build-lab.js`, publish `brain/lab.html` (build output, gitignored) to that URL.
 - **3D phone test**: https://claude.ai/artifact/1PhKoExfLib42ReccevLcJ (since Oct 24; the old link 5kVb4PyywgDcPBHSVSc3cu is stale). Claude Code CAN publish it now (Artifact tool, same scratchpad file path keeps the URL; a new session publishing to this URL must read the live page first, ~215k tokens, so a fresh session may need a new link). `node proto/build.js`, publish a copy of `proto/ring3d.html` with the doctype/html/head/body tags stripped.
+- **3D POV test** (Oct 24, Ed: "like Thrill of the Fight"): https://claude.ai/artifact/FakwuF5Py9Yn5MVmvzmjNE. Same build, opens on the Cam button's "Red eyes" (copy with `camI = 4`); research `research/thrill_look.md`, `thrill_feel.md`.
 - `proto/ring3d.html` is a build output: rebuild, don't edit. The 3D boxer lives in `proto/boxer3d.js` (skeleton, cel body, motion layers; inlined by `build.js`); headless 3D tools in `proto/tools/` (README; `feet.js` and `FAST=seed` run seeded at a fixed 30 fps with no rendering).
 - Published-page rules: scripts only from cdnjs/jsdelivr/tailwind/jquery, fonts from Google Fonts, no other network calls, one file.
 
