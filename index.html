@@ -4680,10 +4680,10 @@ function handleEvents() {
       case 'miss': if (Math.random() < .5) Sfx.whiff(); FX.ev.push(e); break;
       case 'bell': Sfx.bell(1); break;
       case 'stun': case 'liver': case 'wind': FX.excite = 1; Sfx.swell(.4); FX.slowT = Math.max(FX.slowT || 0, SLOW.stun); break;
-      case 'knockdown': Sfx.floor(); Sfx.roar(); FX.excite = 1; FX.flash = .5; FX.hitStop = HIT_STOP.kd; FX.hsK = .1; break;
+      case 'knockdown': FX.kdWho = e.d; Sfx.floor(); Sfx.roar(); FX.excite = 1; FX.flash = .5; FX.hitStop = HIT_STOP.kd; FX.hsK = .1; break;
       case 'count': overlay(`<div class="count">${e.n}</div>`, 800); break;
       case 'up': overlay(`<div class="count small">Up at ${e.n}</div>`, 1200); Sfx.swell(.3); break;
-      case 'resume': FX.slowT = Math.max(FX.slowT || 0, SLOW.kd); break;
+      case 'resume': FX.slowT = Math.max(FX.slowT || 0, SLOW.kd); if (F.replay && FX.kdWho != null) startReplay(FX.kdWho); break; // he beat the count: show the shot that dropped him, then fight on
       case 'roundEnd': FX.excite = .2; break;
       case 'end': onEnd(e.result); break;
     }
@@ -4819,15 +4819,15 @@ function loop(ts) {
     view = liveView();
     if (FX.eruptT > 2.6) startReplay();
   } else if (FX.mode === 'replay') {
-    const R_ = FX.rpData; FX.rp += Math.min(.5, rawDt) * 60 * (FX.rp < 50 ? .55 : .3); const i = Math.min(R_.length - 1, Math.floor(FX.rp));
+    const R_ = FX.rpData; FX.rp += Math.min(.5, rawDt) * 60 * (FX.rpKd ? (Math.abs(FX.rp - FX.rpHit) < RP.kdNear ? RP.kdSlow : RP.kdRate) : FX.rp < 50 ? .55 : .3); const i = Math.min(R_.length - 1, Math.floor(FX.rp));
     const ev = []; for (let k = FX.rpLast + 1; k <= i; k++) for (const e of R_[k].ev) if (e.type === 'hit' || e.type === 'miss') ev.push(e);
     FX.rpLast = i; const s = { f: spreadView(i + 1 < R_.length ? blendSnap(R_[i], R_[i + 1], FX.rp - i).f : R_[i].f, FX.rdt) }; // slow motion blends between snapshots
-    const loser = s.f[1 - F.result.winner]; FX.zoom += (1.7 - FX.zoom) * (1 - Math.exp(-dt * 3.1)); FX.cam += (clamp(loser.x, -70, 70) - FX.cam) * (1 - Math.exp(-dt * 3.7));
+    const loser = s.f[FX.rpWho]; FX.zoom += (1.7 - FX.zoom) * (1 - Math.exp(-dt * 3.1)); FX.cam += (clamp(loser.x, -70, 70) - FX.cam) * (1 - Math.exp(-dt * 3.7));
     const ri_ = {}; const dn = s.f.findIndex(x => x.state === 'down'), sl = s.f.findIndex(x => x.state === 'slump');
     if (dn >= 0) { ri_.down = dn; ri_.pulse = Math.min(1, (FX.t % .95) / .5); } else if (sl >= 0) ri_.wave = sl;
     const ref = refTick(s.f, ri_, FX.rdt);
     view = { f: s.f, looks: FX.looks, t: FX.t, venue: FX.venue, cam: FX.cam, zoom: FX.zoom, excite: .6, ev, replay: true, ref, flash: ev.some(e => e.dmg > 5 && !e.blocked) ? .35 : 0 };
-    if (i >= R_.length - 1) { FX.mode = 'done'; clearOverlay(); setTimeout(resultScreen, 700); }
+    if (i >= R_.length - 1) endReplay();
   } else { view = liveView(); }
   updShouts();
   Render.frame(view, dt);
@@ -4846,13 +4846,22 @@ function onEnd(res) {
   overlay(`<div class="big">${res.method === 'KO' ? 'Knockout' : esc(res.method)}</div><div class="sub">${esc(w.sheet.name)}, round ${res.round} at ${res.time}</div>`);
   FX.mode = 'erupt'; FX.eruptT = 0;
 }
-function startReplay() {
-  const data = F.replay || F.rec.slice(-280);
-  if (!data || data.length < 20) { FX.mode = 'done'; clearOverlay(); setTimeout(resultScreen, 400); return; }
-  // start ~3.5s before the end of the clip (clip ends ~1.2s after the final blow)
-  FX.rpData = data.slice(-Math.min(data.length, 150)); FX.rp = 0; FX.rpLast = -1; FX.mode = 'replay'; FX.zoom = 1.32;
-  overlay(`<div class="replay-tag">Replay <small>tap to skip</small></div>`);
-  $('.stage').onclick = () => { if (FX.mode === 'replay') { FX.mode = 'done'; clearOverlay(); resultScreen(); } };
+// the knockdown replay (he got up): the clip ends ~1.2 s (72 steps) after the blow; kdLen steps of it, slow (kdSlow) within kdNear steps of the blow
+const RP = { kdLen: 120, kdAfter: 72, kdNear: 22, kdSlow: .3, kdRate: .65 };
+function startReplay(kdWho) {
+  const kd = kdWho != null, data = F.replay || F.rec.slice(-280);
+  if (!data || data.length < 20) { if (!kd) { FX.mode = 'done'; clearOverlay(); setTimeout(resultScreen, 400); } return; }
+  // the fight's end: start ~3.5s before the end of the clip (clip ends ~1.2s after the final blow)
+  FX.rpData = data.slice(-Math.min(data.length, kd ? RP.kdLen : 150)); FX.rp = 0; FX.rpLast = -1; FX.mode = 'replay'; FX.zoom = 1.32;
+  FX.rpKd = kd; FX.rpWho = kd ? kdWho : 1 - F.result.winner; FX.rpHit = FX.rpData.length - RP.kdAfter;
+  if (kd) F.replay = null; // shown once
+  overlay(`<div class="replay-tag">${kd ? 'Knockdown replay' : 'Replay'} <small>tap to skip</small></div>`);
+  $('.stage').onclick = () => { if (FX.mode === 'replay') endReplay(); };
+}
+function endReplay() {
+  $('.stage').onclick = null; clearOverlay();
+  if (FX.rpKd) { FX.mode = 'live'; FX.acc = 0; FX.slowT = Math.max(FX.slowT || 0, SLOW.kd); FX.zoom = CAM.zoom; return; } // back to the fight: the restart plays at 1x
+  FX.mode = 'done'; setTimeout(resultScreen, 700);
 }
 
 /* ---------- corner ---------- */
