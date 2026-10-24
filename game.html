@@ -5590,7 +5590,7 @@ const Store = {
           const snap = await db.doc(`data/users/${id}/game${i}`).get();
           if (snap.exists) {
             const d = snap.data();
-            if (d && d.json) { const s = migrateSave(JSON.parse(d.json)); if (!slots[i] || (s.savedAt || 0) > (slots[i].savedAt || 0)) { slots[i] = s; changed = true; } }
+            if (d && (d.z || d.json)) { const s = d.z ? await Backup.decode(d.z) : migrateSave(JSON.parse(d.json)); if (!slots[i] || (s.savedAt || 0) > (slots[i].savedAt || 0)) { slots[i] = s; changed = true; } }
             else if (d && d.empty && slots[i] && (d.savedAt || 0) > (slots[i].savedAt || 0)) { slots[i] = null; changed = true; }
           }
         } catch (e) { }
@@ -5602,8 +5602,9 @@ const Store = {
     this.saveLocal();
     if (!this.db) return;
     const s = slots[i]; const ref = this.db.doc(`data/users/${this.uid}/game${i}`);
-    const body = s ? { json: JSON.stringify(s), savedAt: s.savedAt || Date.now() } : { empty: true, savedAt: Date.now() };
-    this.chain[i] = this.chain[i].then(() => ref.set(body)).catch(() => { });
+    // the save goes up gzipped (a backup code): the memory tables grow every fight and a db doc holds 256 KiB
+    const json = s ? JSON.stringify(s) : null, at = s ? s.savedAt || Date.now() : Date.now();
+    this.chain[i] = this.chain[i].then(async () => ref.set(json ? { z: await Backup.pack(json), savedAt: at } : { empty: true, savedAt: at })).catch(() => { });
   }
 };
 let slots = Store.load(); let cur = -1; let save = null;
@@ -5616,8 +5617,9 @@ const fromB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
 const pipeBytes = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
 const Backup = {
   // LBz1. = gzipped (about a quarter of the size), LB1. = plain, for browsers without CompressionStream
-  async encode(s) {
-    const bytes = new TextEncoder().encode(JSON.stringify(s));
+  encode(s) { return this.pack(JSON.stringify(s)); },
+  async pack(json) {
+    const bytes = new TextEncoder().encode(json);
     if (window.CompressionStream) { try { return 'LBz1.' + toB64(await pipeBytes(bytes, new CompressionStream('gzip'))); } catch (e) { } }
     return 'LB1.' + toB64(bytes);
   },

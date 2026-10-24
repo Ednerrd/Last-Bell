@@ -27,7 +27,8 @@ for (let c = 0; c < NC; c++) {
     if (out.learn.d.cross.length) console.log('   level up:', out.learn.d.cross.map(x => x.join(' -> ')).join(', '));
     if (fights % 5 === 0 || out.notes.length) console.log(`  #${fights} ${P.record.w}-${P.record.l}-${P.record.d} rank ${G.playerRank(save)} | ${o.label} ${o.rounds}r vs ${o.opp.name} (${o.opp.style}) -> ${f.result.winner === 0 ? 'W' : f.result.winner == null ? 'D' : 'L'} ${f.result.method} | skills ${G.lvOf(P).avg} ${G.lvOf(P).label}, OVR ${G.ovr(P.stats)}, $${Math.round(P.money)}, age ${G.age(save).toFixed(1)}${out.notes.length ? ' | ' + out.notes.join(' ') : ''}`);
   }
+  if (process.env.SIZES) { const kb = o => (JSON.stringify(o || {}).length / 1024).toFixed(1), Rs = save.world.roster; console.log("save KB: player", kb(P), "(opp memory", kb(P.opp) + ", tape", kb(P.tape) + ", history", kb(P.history) + ") roster", kb(Rs), "(men", Rs.length + ", their memory", kb(Rs.map(f => f.opp)) + ", skills+know", kb(Rs.map(f => [f.sk, f.know])) + ") away", kb(save.world.away)); }
   const top = Object.entries(P.sk).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([k, v]) => k + ' ' + Math.round(v)).join(', ');
-  console.log(`END ${P.record.w}-${P.record.l}-${P.record.d} (${P.record.ko} KO), belts ${P.belts.join(',') || '-'}, peak #${P.peakRank}, skills ${sk0} -> ${G.lvOf(P).avg} (${G.lvOf(P).label}), best: ${top}, remembers ${Object.keys(P.opp || {}).length} men${P.scar ? ', scar ' + P.scar.kind : ''}, wear ${Math.round(P.wear)}`);
+  console.log(`END ${P.record.w}-${P.record.l}-${P.record.d} (${P.record.ko} KO), belts ${P.belts.join(',') || '-'}, peak #${P.peakRank}, skills ${sk0} -> ${G.lvOf(P).avg} (${G.lvOf(P).label}), best: ${top}, remembers ${Object.keys(P.opp || {}).length} men${P.scar ? ', scar ' + P.scar.kind : ''}, wear ${Math.round(P.wear)}, save ${(JSON.stringify(save).length / 1024).toFixed(0)} KB`);
 }
 console.log(`\n${((Date.now() - t0) / 1000).toFixed(0)} s`);
