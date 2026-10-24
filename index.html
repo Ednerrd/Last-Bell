@@ -4758,12 +4758,22 @@ function spreadView(fs, dt) {
   if (rB > 0) mv(A, -u * rB);
   return [A, B];
 }
+// camera zoom by moment (1 = the whole ring), how far it swings toward the man (0 the pair's middle, 1 him), how fast it gets there
+const CAM = { zoom: 1.32, wide: 1.02, hurt: 1.42, hurtOn: .3, kd: 1.56, stop: 1.5, kdOn: .7, inRate: 2.6, maxX: 76 };
 function liveView() {
   if (FX.mode !== 'live' && FX.mode !== 'erupt') FX.sPrev = FX.sCur = null;
   const s = FX.sCur ? blendSnap(FX.sPrev, FX.sCur, clamp(FX.acc / DT, 0, 1)) : F.snap();
   const fs = spreadView(s.f, FX.rdt || .016), A = fs[0], B = fs[1];
-  const mid = (A.x + B.x) / 2, rt = FX.dtR || .016; FX.cam += (clamp(mid, -70, 70) - FX.cam) * (1 - Math.exp(-rt * 5)); // per second, not per frame (120Hz phones)
-  { const zt = F.phase === 'corner' || (F.phase === 'roundEnd' && F.phaseT > .8) ? 1.02 : 1.32; FX.zoom += (zt - FX.zoom) * (1 - Math.exp(-rt * 3.7)); } // pull back so both corners fit between rounds
+  const mid = (A.x + B.x) / 2, rt = FX.dtR || .016;
+  // the camera: pull back so both corners fit between rounds; push in on the man on the floor, the loser after a stoppage, a hurt or stunned man
+  let zt = CAM.zoom, ct = mid, who = -1;
+  if (F.phase === 'corner' || (F.phase === 'roundEnd' && F.phaseT > .8)) zt = CAM.wide;
+  else if (F.phase === 'kd' && F.kdState) { who = F.kdState.who; zt = CAM.kd; ct = mid + (fs[who].x - mid) * CAM.kdOn; }
+  else if (FX.mode === 'erupt' && F.result && F.result.winner != null) { who = 1 - F.result.winner; zt = CAM.stop; ct = mid + (fs[who].x - mid) * CAM.kdOn; }
+  else if (F.phase === 'fight') { const st = fs.findIndex(X => X.state === 'stun'), h = st >= 0 ? st : FX.slowT > 0 ? fs.findIndex(X => X.hurt) : -1; if (h >= 0) { who = h; zt = CAM.hurt; ct = mid + (fs[h].x - mid) * CAM.hurtOn; } } // hurt: just the moment he gets there
+  const cr = who >= 0 ? CAM.inRate : 5; // per second, not per frame (120Hz phones)
+  FX.cam += (clamp(ct, -CAM.maxX, CAM.maxX) - FX.cam) * (1 - Math.exp(-rt * cr));
+  FX.zoom += (zt - FX.zoom) * (1 - Math.exp(-rt * (who >= 0 ? CAM.inRate : 3.7)));
   const info = {};
   if (F.phase === 'kd' && F.kdState) { info.down = F.kdState.who; info.pulse = Math.min(1, F.kdState.tick / .5); }
   else if (F.phase === 'over' && F.result && !F.result.decision && F.phaseT < 3.5) info.wave = 1 - F.result.winner;
