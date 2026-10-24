@@ -1,3 +1,10 @@
+### Handoff (Oct 24, the 2D game back: planned, 3D parked)
+- **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667**, `same.js 200` = **6c94c895**. The brain inline in `index.html` is current (`node brain/inline.js` changes nothing).
+- **New (Ed, Oct 24):** the 2D game back, 3D parked. `docs/GAME.md`: where the old game is (`51ee63f^`, needs `git fetch --unshallow`), what the cut removed, what the engine grew since with no career to live in (skills, L4 `learn`/`camp`, rematch memory, scars, flaws, size), the plan G1-G5.
+- **Next:** Ed's 3 open questions (`docs/GAME.md` bottom), then G1 the shell back in `game.html` (high effort: ask Ed to switch first).
+- **3D (parked):** all 7 stance changes built, waiting on Ed's phone notes (previous handoff in `docs/NOTES.md`).
+- **Parked for the brain pass (unchanged, Ed Oct 23):** counter 47.1, swarmer 47.8, peekaboo 44.7, specials 46-47.6, cheese haymaker 64.4 + bodyOnly 59.9 at hard, lead changes 35, PvI 14.6, the short man vs a long outboxer 39.3 at 6 in.
+
 ### Handoff (Oct 24, 3D stance change 7: tired hands; the stance list is done)
 - **State:** main `claude/epic-goldberg-ps6ip4`. Engine untouched: `same.js 40` = **3fd3c667** (rechecked), `same.js 200` = **6c94c895**. 3D is render only and must keep it.
 - **3D phase 1:** first iteration + round 2 (punch flow, step-drag feet) built and on the 3D phone test (`proto/PLAN.md`). **All 7 stance changes from `proto/STANCE.md` section 7 built** (Oct 23-24): long stance, blade split, rest weight + waist hinge, lead toe + rear heel, guard details, pivot + punch-foot timing, tired hands. Change 7: `B3.drop`, spells of a lazy guard on a share of the round that climbs round by round and with gas (measured R1 13.6 / R2 15.2 / R3 19.6 / R4 19.1% vs Dunn 13 / 17 / 19), the gloves come up late on a real punch; the hurt man sits back (`B3.stance.hurtW`); the resting crouch soft-caps (`B3.stance.cap` 9: a peekaboo swarmer was squatting). Changes 3-7 are not on the phone test yet (Claude Code can't publish: `node proto/build.js`, publish the stripped copy).

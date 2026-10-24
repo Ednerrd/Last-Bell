@@ -1,10 +1,10 @@
 # Last Bell
 
-Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 lines) boots straight into a fight (random or picked fighters). Career, saves, hub, camp and gym mode were cut (Oct 2026); the old full game lives in git history on `claude/epic-goldberg-ps6ip4` before that cut. Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
+Phone-first auto-boxing fight sim. `index.html` (~5,000 lines) is the fight lab: boots straight into a fight (random or picked fighters). **`game.html` is the full game** (Oct 24, `docs/GAME.md`): career, saves, hub, camp on the same engine + brain with the learning wired in; built by `node game/build.js` from `index.html` + `game/career.js` + `game/ui.js` (edit those, never `game.html`; it's committed so Ed can grab it). Gym mode is not back yet (G4). Owner: Ed. Pure watch/idle sim, side view, real boxing rules, 1v1. The player is the coach.
 
 **The boxer brain: `brain/`** (standalone AI module + dummy ring + sims, `brain/README.md`). Wired into `index.html` as the only AI: the old engine AI (`decide()`/`react()`) was retired Oct 16. `brain/brain.js` is inlined by `node brain/inline.js`: edit the source, rerun it, never edit the copy.
 
-**What to do next: `ROADMAP.md`** (the only to-do list; next (Ed, Oct 24): **the 2D game back**, `docs/GAME.md`: the full game from before the Oct 10 cut (career, gym, saves, hub, camp) on today's engine + brain with the L4 learning wired in, then the 3D motion research in the 2D drawing; Ed's 3 open questions first; 3D phase 1 is parked; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/GAME.md` (the 2D game back), `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `proto/STANCE.md` (the 3D stance spec; sources `research/stance.md`), `research/` (boxing research; `research/MIND.md` is the index).
+**What to do next: `ROADMAP.md`** (the only to-do list; next (Ed, Oct 24): **the 2D game**, `docs/GAME.md`: G1+G2 built (the career back on today's engine, the learning wired in); next Ed's phone notes on the game link, then G3 (the world on today's fighters), G4 gym mode, G5 the 3D motion research in the 2D drawing; 3D phase 1 is parked; read `docs/BRAIN.md` "Where we are" first). Design docs, read on demand: `docs/GAME.md` (the 2D game back), `docs/BRAIN.md` (AI fight IQ, skill levels plan, brain measurements), `docs/GYM.md` (gym + stable mode), `docs/SIZE.md` (size: reach, height, the plan), `docs/NOTES.md` (system details, balance history: grep the heading you need), `proto/PLAN.md` (3D), `proto/STANCE.md` (the 3D stance spec; sources `research/stance.md`), `research/` (boxing research; `research/MIND.md` is the index).
 
 ## Who and how
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
@@ -18,7 +18,8 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 ## Links
 - **Live game** (Claude Code can NOT publish): https://claude.ai/artifact/KYmQg6PQo4qE4qoyDDDt7k. Ed uploads `index.html` in a claude.ai chat with `{db:{},user:{},sample:{}}` (sample powers corner talk; without it a keyword matcher runs).
 - **Fight lab**: https://claude.ai/artifact/QhC1gMrw1pSabzuLzMw7Ev. `index.html` IS the lab now: publish it as-is, no capabilities.
-- **Private preview** (sample + db + user): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo.
+- **The game** (private, sample + db + user, Oct 24): https://claude.ai/artifact/RF3wctrjte4R63FyN28mC5. Claude Code publishes it: `node game/build.js`, strip the doctype/html/head/body tags into a scratchpad copy, publish (same scratchpad path keeps the URL; a new session must read the live page first, ~560 KB).
+- **Private preview** (sample + db + user): https://claude.ai/artifact/KcaS5AaPWu316tV7nENsVo (still the old pre-cut game: left as is).
 - **Brain lab** (private): https://claude.ai/artifact/5UhTsjMSCTqhtRnCfdZBSV. `node brain/build-lab.js`, publish `brain/lab.html` (build output, gitignored) to that URL.
 - **3D phone test**: https://claude.ai/artifact/1PhKoExfLib42ReccevLcJ (since Oct 24; the old link 5kVb4PyywgDcPBHSVSc3cu is stale). Claude Code CAN publish it now (Artifact tool, same scratchpad file path keeps the URL; a new session publishing to this URL must read the live page first, ~215k tokens, so a fresh session may need a new link). `node proto/build.js`, publish a copy of `proto/ring3d.html` with the doctype/html/head/body tags stripped.
 - **3D POV test** (Oct 24, Ed: "like Thrill of the Fight"): https://claude.ai/artifact/FakwuF5Py9Yn5MVmvzmjNE. Same build, opens on the Cam button's "Red eyes" (copy with `camI = 4`); research `research/thrill_look.md`, `thrill_feel.md`.
@@ -34,7 +35,7 @@ Phone-first auto-boxing fight sim, stripped to the engine: `index.html` (~5,000 
 - Save tokens: never read all of `index.html`; grep, then read the section. Run long sims through a subagent or print summaries only. Long-form detail goes in `docs/NOTES.md`; keep this file short.
 
 ## Code map (markers `/* ===== LAST BELL : ... ===== */`)
-engine (~200, the brain inlined at ~203) → career (~3060: just fighter gen, divisions, gear, P4P stars) → render (~3160) → audio (~4160) → ui part 1 (helpers) → ui part 3 (~4390: fight loop, corner, replay) → the fight screen (`LAB`, `labNew`, `labFight`, `resultScreen`).
+engine (~200, the brain inlined at ~203) → career (~3180: just fighter gen, divisions, gear, P4P stars) → render (~3280) → audio (~4300) → ui part 1 (helpers) → ui part 3 (~4540: fight loop, corner, replay, the shared fight screen `startFight(A, B, o)`, brain box, `learnLines`) → lab (`LAB`, `labNew`, `labFight`, `resultScreen`, boot: `game/build.js` swaps this section for `game/career.js` + `game/ui.js`).
 - Ring: x ±146 (RING), z ±115 (ZR), MIN_D 30. `P3()` projection.
 - Fight loop: `brainTick()` every frame (`perceive()` → `F.brain.think()` → feet, hands, defense), `footwork()`, `spoil()` when a punch starts, `resolve()` at 60% of the punch, `miss()`. `nextRound()` at phase 'corner'. Bare `R()` calls are rolls the old AI made, kept so the seeded fights don't shift: drop them only on purpose (new hash).
 - Knobs: one marked block `TUNING` (STOP the ref's stoppages, TUNE combat, DMG damage, CUT cuts/doctor, SW swelling, COV covering a bad eye, STAM gas, BODY, EXT reach, AI the brain on this engine, SKL skill sheet, SHOUT_EDGE, AIC the AI corner, TEACH, STYLE_* tricks). Content tables stay with their code: `PUNCH`, `STYLES`, `GUARDS`, `STRATS` (labels), `SHOUTS`. The brain's own knobs: `BoxerBrain.BR` in `brain/brain.js`.
@@ -76,6 +77,7 @@ Node extracts the engine+career sections and runs fights headless (`sim.js` is t
 - `node tests/kdwhy.js 100` (x4): where KDs come from (flash / accum / zero / body, counter, crit, crit on a fresh head, fate, stops with a KD in the round).
 - `node tests/swap.js 100` side swaps, `rhythm.js 200` tempo, `gas.js 250` gas by round, `bodykd.js 300` KDs head/body.
 - YouTube research: `tools/yt/yt.py search "query"` / `get ID` (captions to `tools/yt/raw/`, gitignored; `research/CLIPS_WANTED.md`).
+- The game: `node tests/career.js [careers] [fights] [div]` careers headless (offers, camp picks, learn, rankings; `SIZES=1` the save by part), `node tests/gameflow.js [drill|spar|tape]` clicks through `game.html` (shots in `shots/g_*`), `node tests/boot.js page.html [js] [shot]` loads any page and prints errors. `node game/build.js --check`: game.html current.
 - Also `cut.js`, `diag.js`, `probe.js`, `commtest.js`. Playwright: `tests/strip.py`, `shot.py`, `live.py` into `shots/` (gitignored); render tools in `tools/measure/` (see its README).
 
 ## Targets (check after engine changes)
