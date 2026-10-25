@@ -162,6 +162,7 @@ input,select{background:var(--panel);border:1.5px solid var(--line);border-radiu
 .cst{display:grid;grid-template-columns:1fr 3.5em 3.5em;gap:2px 8px;font-size:15px}.cst b{text-align:right}.cst span{color:#a09280}
 .corner .cut{color:#cfc4ad;font-size:15px;margin:0}.corner .pv{margin:0;font-size:15px;padding-left:8px;border-left:3px solid #a09280}.corner .pv.ok{border-color:#6fbf73}.corner .pv.no{border-color:#d9644a}.corner .adv{margin:0;font-size:16px}
 .corner .notes{margin:0;padding-left:18px;font-size:14px;color:#cfc4ad}.corner .notes li{margin:1px 0}
+.corner .calls{font-size:14px}.corner .calls b{font-size:13px;color:#a09280;text-transform:uppercase;letter-spacing:.06em;font-weight:600}.corner .calls ul{margin:3px 0 0;padding:0;list-style:none}.corner .calls li{margin:3px 0;padding-left:8px;border-left:3px solid #a09280}.corner .calls li.ok{border-color:#6fbf73}.corner .calls li.no{border-color:#d9644a}.corner .calls i{color:#cfc4ad}
 .corner .talk{display:flex;gap:6px}.corner .talk input{flex:1;min-width:0;background:#1c1510;color:#ece4d6;border:1px solid rgba(236,228,214,.3);border-radius:4px;padding:8px;font:inherit;font-size:16px}
 .corner .say{margin:0;font-size:16px}.corner .say b{color:#f0b85a}.corner .plan{margin:0;font-size:14px;color:#a09280}.corner .mute{opacity:.7}
 .corner .chip{color:#ece4d6;border-color:rgba(236,228,214,.25);padding:5px 10px;font-size:15px}
@@ -577,12 +578,14 @@ const BR = {
   // the corner (Ed, Oct 15: the corner and live shouts, the corner weighs more, he always listens; research/mind_coach.md 4-5). Each call is an offset on his own plan
   // (initiative, range, jab, power, body: the same units as this.plan), out = throw rate x, guard = + on his guard. Corner plan (STRATS key) at full strength, fading to 1 - fade by the bell;
   // corner x (blind plans at 1 swung mirror fights -4..+7: research says 20-40% of the gap); a live shout (SHOUTS key) at live x how well he took it (engine q), in over ramp clock s, out with the engine's own fade. Output calls are capped by the tank (gasOut .. 1)
-  coach: { on: 1, corner: .6, live: .45, ramp: 2, fade: .5, gasOut: .5,
+  // F3c (Oct 25): live .45 -> .9 and pick (the call's own punches x 1 + pick x his ear, straight into the combo weights): at .45 through the traits a body call
+  // moved his body shots 2.1 -> 2.14 in 14 s (tests/callfx.js), nothing you could see
+  coach: { on: 1, corner: .6, live: .9, ramp: 2, fade: .5, gasOut: .5, pick: { jab: 1.4, body: 2.4, press: .8 },
     plan: { pressure: { initiative: .25, range: -8, out: 1.1 }, move: { range: 10, initiative: -.15, jab: .25, power: -.1 }, body: { body: .35, range: -4 },
       counter: { initiative: -.3, out: .9 }, ko: { power: .3, initiative: .25, range: -6, out: 1.1 }, survive: { range: 12, initiative: -.35, out: .75, guard: .15 },
       up: { out: 1.18, initiative: .15 }, down: { out: .85 } },
-    call: { jab: { jab: .3, range: 3 }, body: { body: .35, range: -3 }, press: { initiative: .3, range: -8 }, counter: { initiative: -.3 }, move: { range: 8, initiative: -.15 },
-      hands: { guard: .15, out: .85 }, up: { out: 1.18, initiative: .15 }, down: { out: .85 } } },
+    call: { jab: { jab: .3, range: 3 }, body: { body: .35, range: -3 }, press: { initiative: .45, range: -15 }, counter: { initiative: -.45 }, move: { range: 15, initiative: -.25 },
+      hands: { guard: .15, out: .85 }, up: { out: 1.4, initiative: .3, range: -6 }, down: { out: .75 } } }, // F3c: press / move / up / down pushed (were -8 / 8 / 1.18 + init .15 / .85; up steps in to have something to throw at): 14 s of a call moved range ~2.5 and output ~5%
   // gas pacing (Ed, Oct 15: a man who knows his tank adjusts naturally and adapts to the fight; research/mind_pace.md 2, 4). A throw-rate x for the round, on top of the in-the-moment fatigue throttle.
   // know [N, I, P, W] on pacing mastery: how much he budgets. His tank (stamMax vs the first bell) against the line from 1 to end by the last round (the field's tank runs ~1 to .64 by R11 of 12): ahead of it he spends, behind it he saves (adj per point, capped at max).
   // last: the last round, nothing to save. fade: the other man's gas under fadeAt and well under mine, step on it (x read). rush: a novice comes out too hot the first rushR rounds (the fast-start fade)
@@ -1180,7 +1183,8 @@ class Brain {
     const o = { initiative: 0, range: 0, jab: 0, power: 0, body: 0, out: 1, guard: 0 }, gas = P.me.stam / (P.me.stamMax || 100);
     const add = (m, w) => { if (!m || w <= 0) return; for (const x in m) { if (x === 'out') { const v = m.out > 1 ? 1 + (m.out - 1) * lerp(C.gasOut, 1, gas) : m.out; o.out *= 1 + (v - 1) * w; } else o[x] += m[x] * w; } };
     if (P.me.strat) add(C.plan[P.me.strat], C.corner * (1 - C.fade * P.clock / P.roundLen));
-    const s = P.me.order; if (s) add(C.call[s.k], C.live * s.q * Math.min(1, s.age / C.ramp) * Math.min(1, s.left / .3));
+    const s = P.me.order, sw = s ? s.q * Math.min(1, s.age / C.ramp) * Math.min(1, s.left / .3) : 0; if (s) add(C.call[s.k], C.live * sw);
+    /** @type {any} */ (o).pick = s && C.pick[s.k] ? { k: s.k, w: sw * C.pick[s.k] } : null; // F3c: the call shows in what he throws (a body call: he goes downstairs)
     this.cc = o;
   }
   // how hard to work this round, for the tank (BR.gas)
@@ -1346,6 +1350,7 @@ class Brain {
       if (this.szL || this.szS) w *= this.szW(c, dSeen); // s2: size
       w *= 1 + c.power * (clamp(tr.power + this.pv('power'), 0, 1) * 2 - .6);
       w *= 1 + c.body * (clamp(tr.body + this.pv('body'), 0, 1) * 2.4 - .7);
+      { const pk = this.cc && /** @type {any} */ (this.cc).pick; if (pk) w *= 1 + pk.w * (pk.k === 'jab' ? c.jab : pk.k === 'body' ? c.body : c.power); } // F3c: the corner's call, straight into the pick
       w *= c.n === 1 ? 1.5 - tr.combo : c.n === 2 ? 1 : (.2 + tr.combo * 1.3) * (c.n > 3 ? .6 : 1);
       if (c.n > maxLen) w *= .15; // tries it anyway, badly
       // what's been working against this man (a smart man weighs it, a novice barely notices)
@@ -4653,18 +4658,52 @@ const CALL_GOOD = ['Good call. That is open.', 'The corner sees it.', 'Right cal
 const CALL_BAD = ["He does it, but that's not what's open.", "Not sure that's the look, coach.", 'That call does not fit this fight right now.'];
 let yellT = 0;
 function yell(text) { const y = $('#yell'); if (!y) return; y.textContent = text; y.classList.add('show'); clearTimeout(yellT); yellT = setTimeout(() => y.classList.remove('show'), 1600); }
+// F3a: what the call did. From the shout until the order runs out (or another call replaces it) his work is counted against the call,
+// and when it ends the feed says what came of it; the round's calls go to the corner (FX.callLog)
+function callStart(k, fit) { callEnd(); FX.call = { k, fit, o: F.f[0].order, r: F.round, t0: F.t, th: 0, ld: 0, ctr: 0, ev: 0, tk: 0, bl: 0, heard: false, ign: false, pre: FX.thr ? FX.thr.filter(t => t > F.t - 20).length * 3 : 0 }; }
+function callEv(e) {
+  if (e.type === 'hit' || e.type === 'miss') { if (e.a === 0) (FX.thr || (FX.thr = [])).push(F.t); if (FX.thr && FX.thr.length > 80) FX.thr.shift(); }
+  const c = FX.call; if (!c) return;
+  if (e.type === 'heard' && e.a === 0) c.heard = true;
+  if (e.type === 'ignored' && e.a === 0) c.ign = true;
+  if (e.type !== 'hit' && e.type !== 'miss') return;
+  const P = PUNCH[e.p] || {}, hit = e.type === 'hit' && !e.blocked;
+  if (e.a === 0) {
+    const on = c.k === 'jab' ? P.cat === 'jab' : c.k === 'body' ? (e.zone || P.zone) === 'body' : c.k === 'press' ? P.cat !== 'jab' : true;
+    if (on) { c.th++; if (hit) c.ld++; }
+    if (hit && e.counter) c.ctr++;
+  } else {
+    if (e.type === 'miss' && e.why === 'evade') c.ev++;
+    if (e.type === 'hit' && e.blocked) c.bl++;
+    if (hit) c.tk++;
+  }
+}
+function callEnd() {
+  const c = FX.call; if (!c) return; FX.call = null;
+  const secs = Math.max(1, F.t - c.t0), rate = Math.round(c.th / secs * 60);
+  const line = {
+    jab: `Jab call: ${c.th} jabs, ${c.ld} landed.`, body: `Body call: ${c.th} downstairs, ${c.ld} landed.`, press: `Pressure call: ${c.th} power shots, ${c.ld} landed.`,
+    counter: `Counter call: ${c.ctr} counters landed, he made him miss ${c.ev}.`, move: `Move call: made him miss ${c.ev}, took ${c.tk} clean.`,
+    hands: `Hands up call: blocked ${c.bl}, took ${c.tk} clean.`, up: `Pick it up: ${rate} a minute${c.pre ? ` (was ${c.pre})` : ''}, ${c.ld} landed.`,
+    down: `Slow down: ${rate} a minute${c.pre ? ` (was ${c.pre})` : ''}, ${c.ld} of ${c.th} landed.`
+  }[c.k] + (c.ign && !c.heard ? " He didn't really do it." : '');
+  c.text = line; c.good = c.fit >= .5 && !(c.ign && !c.heard);
+  (FX.callLog || (FX.callLog = [])).push(c);
+  if (F.phase === 'fight' || F.phase === 'roundEnd') feed(line, c.good);
+}
 ACT.shout = d => {
   if (!F || FX.mode !== 'live' || F.phase !== 'fight' || performance.now() < (FX.shoutLock || 0)) return;
   const o = F.shout(0, d.v); if (!o) return;
   F.f[0].userT = F.t; // the coach has the floor: the AI corner on his side goes quiet a while
-  FX.calls.push({ r: F.round, fit: o.fit });
+  FX.calls.push({ r: F.round, fit: o.fit }); callStart(d.v, o.fit);
   FX.shoutLock = performance.now() + 900;
   const line = pick(YELLS[d.v]); yell(line); Comm.say({ text: line, kind: 'coach', pri: 4 });
   if (F.t - (FX.tuneT || -99) > 12 && (F.f[0].spam > 2.6 || o.q < .4)) { FX.tuneT = F.t; feed(F.f[0].spam > 2.6 ? "Easy, coach. He's tuning you out." : "He can barely hear you right now."); }
   else if ((o.fit >= .7 || o.fit < .2) && F.t - (FX.callT || -99) > 8) { FX.callT = F.t; feed(pick(o.fit >= .7 ? CALL_GOOD : CALL_BAD), o.fit >= .7); }
 };
 function updShouts() {
-  if (FX.cornerCall && FX.mode === 'live' && F.phase === 'fight') { const k = FX.cornerCall; FX.cornerCall = null; const o = F.shout(0, k); if (o) { F.f[0].userT = F.t; FX.calls.push({ r: F.round, fit: o.fit }); yell(pick(YELLS[k])); } } // the first call the coach gave him in the corner
+  if (FX.cornerCall && FX.mode === 'live' && F.phase === 'fight') { const k = FX.cornerCall; FX.cornerCall = null; const o = F.shout(0, k); if (o) { F.f[0].userT = F.t; FX.calls.push({ r: F.round, fit: o.fit }); callStart(k, o.fit); yell(pick(YELLS[k])); } } // the first call the coach gave him in the corner
+  if (FX.call && F.f[0].order !== FX.call.o) callEnd(); // ran out, or the AI corner's call took over
   const box = $('#shouts'); if (!box) return;
   const live = FX.mode === 'live' && F.phase === 'fight', o = F.f[0].order;
   box.classList.toggle('off', !live);
@@ -4678,6 +4717,7 @@ function updShouts() {
 const HIT_STOP = { clean: [.04, .075], flush: [.05, .095], glancing: [0, .016], smothered: [0, 0], blocked: [0, .016], kd: .15 };
 function handleEvents() {
   for (const e of F.events) {
+    callEv(e);
     switch (e.type) {
       case 'hit': {
         Sfx.punch(e.dmg, e.zone, e.blocked); FX.ev.push(e);
@@ -4695,7 +4735,7 @@ function handleEvents() {
       case 'count': overlay(`<div class="count">${e.n}</div>`, 800); break;
       case 'up': overlay(`<div class="count small">Up at ${e.n}</div>`, 1200); Sfx.swell(.3); break;
       case 'resume': FX.slowT = Math.max(FX.slowT || 0, SLOW.kd); if (F.replay && FX.kdWho != null) startReplay(FX.kdWho); break; // he beat the count: show the shot that dropped him, then fight on
-      case 'roundEnd': FX.excite = .2; break;
+      case 'roundEnd': FX.excite = .2; callEnd(); break; // a call still running at the bell goes to the corner
       case 'end': onEnd(e.result); break;
     }
     const lines = Comm.handle(e, F, FX.t); // the cooldowns run on the watcher's clock: at 4x the booth talks as often as at 1x, it just skips more
@@ -5081,6 +5121,7 @@ function openCorner() {
     <div class="cst"><span></span><b>You</b><b>Him</b><span>Landed</span><b>${ln(a)}</b><b>${ln(b)}</b><span>Power</span><b>${a.landedPow + a.landedBody}</b><b>${b.landedPow + b.landedBody}</b><span>Knockdowns</span><b>${a.kd}</b><b>${b.kd}</b></div>
     ${pv ? `<p class="pv ${pv.ok ? 'ok' : 'no'}">${esc(pv.text)}</p>` : ''}
     <p class="cut">${esc(cutmanLine())}</p>
+    ${callsHtml()}
     <p class="adv">Trainer: “${esc(adv)}”</p>
     ${notes.length ? `<ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
     <div class="talk"><input id="talkin" type="text" maxlength="400" enterkeyhint="send" autocomplete="off" placeholder="Talk to him (or use the mic)" aria-label="Talk to your fighter"><button class="chip" data-act="talk">Tell him</button></div>
@@ -5094,6 +5135,12 @@ function openCorner() {
   const inp = $('#talkin'); if (inp) { inp.onfocus = ACT.talkHold; inp.oninput = ACT.talkHold; inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); ACT.talk(); } }; }
   getSample();
   if (Comm.voice) Comm.say({ text: adv, kind: 'color', pri: 1 });
+}
+// F3b: the round's calls, what came of each, and whether it was the right look (the corner sees what he can't: shoutFit at the call)
+function callsHtml() {
+  const cs = (FX.callLog || []).filter(c => c.r === F.round).slice(-3); if (!cs.length) return '';
+  const v = c => c.ign && !c.heard ? 'He tuned it out.' : c.fit >= .5 ? 'Right call.' : c.fit < .2 ? 'Not the look.' : 'Fair call.';
+  return `<div class="calls"><b>Your calls</b><ul>${cs.map(c => `<li class="${c.ign && !c.heard ? 'no' : c.fit >= .5 ? 'ok' : c.fit < .2 ? 'no' : ''}">${esc(c.text.replace(" He didn't really do it.", ''))} <i>${v(c)}</i></li>`).join('')}</ul></div>`;
 }
 function showCorner(html) { const c = $('#cbox'); c.innerHTML = html; c.classList.add('show'); $('#feed').style.display = 'none'; c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 function hideCorner() { const c = $('#cbox'); if (c) { c.classList.remove('show'); c.innerHTML = ''; } const f = $('#feed'); if (f) f.style.display = ''; }

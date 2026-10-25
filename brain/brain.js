@@ -375,12 +375,14 @@ const BR = {
   // the corner (Ed, Oct 15: the corner and live shouts, the corner weighs more, he always listens; research/mind_coach.md 4-5). Each call is an offset on his own plan
   // (initiative, range, jab, power, body: the same units as this.plan), out = throw rate x, guard = + on his guard. Corner plan (STRATS key) at full strength, fading to 1 - fade by the bell;
   // corner x (blind plans at 1 swung mirror fights -4..+7: research says 20-40% of the gap); a live shout (SHOUTS key) at live x how well he took it (engine q), in over ramp clock s, out with the engine's own fade. Output calls are capped by the tank (gasOut .. 1)
-  coach: { on: 1, corner: .6, live: .45, ramp: 2, fade: .5, gasOut: .5,
+  // F3c (Oct 25): live .45 -> .9 and pick (the call's own punches x 1 + pick x his ear, straight into the combo weights): at .45 through the traits a body call
+  // moved his body shots 2.1 -> 2.14 in 14 s (tests/callfx.js), nothing you could see
+  coach: { on: 1, corner: .6, live: .9, ramp: 2, fade: .5, gasOut: .5, pick: { jab: 1.4, body: 2.4, press: .8 },
     plan: { pressure: { initiative: .25, range: -8, out: 1.1 }, move: { range: 10, initiative: -.15, jab: .25, power: -.1 }, body: { body: .35, range: -4 },
       counter: { initiative: -.3, out: .9 }, ko: { power: .3, initiative: .25, range: -6, out: 1.1 }, survive: { range: 12, initiative: -.35, out: .75, guard: .15 },
       up: { out: 1.18, initiative: .15 }, down: { out: .85 } },
-    call: { jab: { jab: .3, range: 3 }, body: { body: .35, range: -3 }, press: { initiative: .3, range: -8 }, counter: { initiative: -.3 }, move: { range: 8, initiative: -.15 },
-      hands: { guard: .15, out: .85 }, up: { out: 1.18, initiative: .15 }, down: { out: .85 } } },
+    call: { jab: { jab: .3, range: 3 }, body: { body: .35, range: -3 }, press: { initiative: .45, range: -15 }, counter: { initiative: -.45 }, move: { range: 15, initiative: -.25 },
+      hands: { guard: .15, out: .85 }, up: { out: 1.4, initiative: .3, range: -6 }, down: { out: .75 } } }, // F3c: press / move / up / down pushed (were -8 / 8 / 1.18 + init .15 / .85; up steps in to have something to throw at): 14 s of a call moved range ~2.5 and output ~5%
   // gas pacing (Ed, Oct 15: a man who knows his tank adjusts naturally and adapts to the fight; research/mind_pace.md 2, 4). A throw-rate x for the round, on top of the in-the-moment fatigue throttle.
   // know [N, I, P, W] on pacing mastery: how much he budgets. His tank (stamMax vs the first bell) against the line from 1 to end by the last round (the field's tank runs ~1 to .64 by R11 of 12): ahead of it he spends, behind it he saves (adj per point, capped at max).
   // last: the last round, nothing to save. fade: the other man's gas under fadeAt and well under mine, step on it (x read). rush: a novice comes out too hot the first rushR rounds (the fast-start fade)
@@ -978,7 +980,8 @@ class Brain {
     const o = { initiative: 0, range: 0, jab: 0, power: 0, body: 0, out: 1, guard: 0 }, gas = P.me.stam / (P.me.stamMax || 100);
     const add = (m, w) => { if (!m || w <= 0) return; for (const x in m) { if (x === 'out') { const v = m.out > 1 ? 1 + (m.out - 1) * lerp(C.gasOut, 1, gas) : m.out; o.out *= 1 + (v - 1) * w; } else o[x] += m[x] * w; } };
     if (P.me.strat) add(C.plan[P.me.strat], C.corner * (1 - C.fade * P.clock / P.roundLen));
-    const s = P.me.order; if (s) add(C.call[s.k], C.live * s.q * Math.min(1, s.age / C.ramp) * Math.min(1, s.left / .3));
+    const s = P.me.order, sw = s ? s.q * Math.min(1, s.age / C.ramp) * Math.min(1, s.left / .3) : 0; if (s) add(C.call[s.k], C.live * sw);
+    /** @type {any} */ (o).pick = s && C.pick[s.k] ? { k: s.k, w: sw * C.pick[s.k] } : null; // F3c: the call shows in what he throws (a body call: he goes downstairs)
     this.cc = o;
   }
   // how hard to work this round, for the tank (BR.gas)
@@ -1144,6 +1147,7 @@ class Brain {
       if (this.szL || this.szS) w *= this.szW(c, dSeen); // s2: size
       w *= 1 + c.power * (clamp(tr.power + this.pv('power'), 0, 1) * 2 - .6);
       w *= 1 + c.body * (clamp(tr.body + this.pv('body'), 0, 1) * 2.4 - .7);
+      { const pk = this.cc && /** @type {any} */ (this.cc).pick; if (pk) w *= 1 + pk.w * (pk.k === 'jab' ? c.jab : pk.k === 'body' ? c.body : c.power); } // F3c: the corner's call, straight into the pick
       w *= c.n === 1 ? 1.5 - tr.combo : c.n === 2 ? 1 : (.2 + tr.combo * 1.3) * (c.n > 3 ? .6 : 1);
       if (c.n > maxLen) w *= .15; // tries it anyway, badly
       // what's been working against this man (a smart man weighs it, a novice barely notices)
