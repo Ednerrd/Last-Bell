@@ -1937,7 +1937,7 @@ const AI = {
   tech: .25, commit: .25, tell: .08, // technique moves damage, sitting down on it moves damage and gas, a tell adds wind-up (s)
   out: .5,         // per second, times the style's out: an out-boxer crowded inside slides out
   bluffDim: .7, bluffTurn: .5, bluffLat: 40, // 1f bluff: the hurt wobble shown x (1 - dim x sell); the sell x (1 - turn) at full sideways speed (bluffLat units/s): the hurt shows on a turn
-  odd: .5,         // how much later the brain sees an awkward man's punches (negative tell: odd .6 = ~.05 s)
+  odd: 1.3,        // how much later the brain sees an awkward man's punches (negative tell: st.odd .6 x 1.3 x BR.tellSee = ~.055 s; F4: .5 had him at 45.5, 1.5 at 55.1)
   offDmg: .2, flinchT: .35, // L2: off balance from a miss, he takes this much more; a flinch shuts his eyes this long (s)
   esc: 2.2,        // per second: how often a man on the ropes with his feet working pivots out (times lateral and ropes skill)
   escCut: .6,      // how much a man cutting the ring off (by his cutoff skill) takes the pivot away
@@ -2113,7 +2113,7 @@ function laneOf(A, P) {
 // [base, trait lean, skill lean]. Volume works in bunches from mid range (chest to chest his light hands lose the trades);
 // the body snatcher waits for the dig instead of walking onto counters (both Oct 14: volume 46 -> 53.5, body 44 -> ~50).
 // The angle man thinks like a boxer-puncher who keeps turning (as an out-boxer at his short range he lived on the ropes: 44.6 -> 52.7)
-const AI_MAP = { volume: ['swarmer', { combo: .1, patience: .15, range: .25, legs: .15 }, { pacing: 8 }], angle: ['boxerpuncher', { circle: .3, legs: .2, combo: .1 }, { angles: 8, ropes: 8 }], awkward: ['counter', { patience: -.1 }],
+const AI_MAP = { volume: ['swarmer', { combo: .1, patience: .15, range: .4, legs: .15 }, { pacing: 8 }], angle: ['boxerpuncher', { circle: .3, legs: .2, combo: .1 }, { angles: 8, ropes: 8 }], awkward: ['counter', { patience: -.1 }],
   switch: ['boxerpuncher', {}], body: ['swarmer', { body: .25, output: -.2, patience: .15 }, { body: 10 }], pboxer: ['slugger', { jab: .3, output: .1, range: .1 }],
   spoiler: ['counter', { clinch: .35, shell: .15 }], jabgrab: ['outboxer', { clinch: .4, jab: .1, post: 1 }], feinter: ['boxerpuncher', { patience: .15 }] };
 // the guard is a defense habit: what he reaches for when one comes (shell: gloves and arms, slip: head movement, legs: gets out of range)
