@@ -1,5 +1,5 @@
 // F1: stance stills for the 2D drawing. Rows = guards (cols = styles, idle), then strips of a cross, a lead hook and a jab.
-// node tests/stance2d.js [html] [out.png] [extra opts json, e.g. '{"tired":1}'; '{"sel":[["peekaboo","swarmer"],["standard","boxerpuncher",{"aT":"cross","aP":.6}]]}' big cells of just those]
+// node tests/stance2d.js [html] [out.png] [extra opts json, e.g. '{"tired":1}'; '{"sel":[["peekaboo","swarmer"],["standard","boxerpuncher",{"aT":"cross","aP":.6}]]}' big cells of just those; "h":.9 a short man (look.h)]
 const { chromium } = require('playwright'), path = require('path'), fs = require('fs');
 const html = process.argv[2] || 'index.html', out = process.argv[3] || 'shots/stance2d.png', extra = process.argv[4] || '{}';
 fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -10,7 +10,7 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
   await pg.evaluate(extra => {
     extra = JSON.parse(extra);
     document.body.innerHTML = '<div id=g style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:#111"></div>';
-    const g = document.getElementById('g'), mr = Math.random; let sd = 7; Math.random = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296; const look = randLook(4); Math.random = mr; look.h = 1; look.build = 1;
+    const g = document.getElementById('g'), mr = Math.random; let sd = 7; Math.random = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296; const look = randLook(4); Math.random = mr; look.h = extra.h || 1; look.build = 1; delete extra.h;
     const cell = (txt, o) => { const w = document.createElement('div'); w.style.cssText = 'color:#ccc;font:9px sans-serif;text-align:center';
       w.innerHTML = txt; const c = document.createElement('canvas'); c.style.cssText = 'width:104px;height:120px;display:block;margin:auto';
       w.appendChild(c); g.appendChild(w); o.v = Object.assign({}, extra.v || {}, o.v || {}); const x = Object.assign({}, extra); delete x.sel; Render.portrait(c, look, Object.assign({ stance: 'orthodox', dx: 6 }, x, o)); };

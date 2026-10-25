@@ -3388,7 +3388,8 @@ const Render = (() => {
   const GST2 = { standard: { wt: 0, bl: 40 }, high: { wt: .6, bl: 26 }, peekaboo: { wt: 2.4, knees: 1, bl: 18 }, philly: { wt: -2.4, bl: 52 }, cross: { wt: 2.4, bl: 24 }, handslow: { wt: -1.8, bl: 38 } };
   // knee: the hips sit this much lower than the old straight-legged stance (lead knee ~37°, rear ~42°: was locked straight);
   // feet: lead / rear foot x (a touch longer than the old 20 / -22); cap: the resting crouch soft-caps past this;
-  const ST2 = { knee: 4, feet: [21, -23], cap: 12, step: 14, hurtW: 3, // step: ground per step-drag pair (both feet move once); hurtW: a hurt man sits back on the rear foot
+  const ST2 = { knee: 4, feet: [21, -23], cap: 12, step: 14, hurtW: 3, rearK: 46, rearSlide: 8, heelMax: .5, // rearK: past this rear knee bend (deg) the rear foot slides back, up to rearSlide; heelMax: the most a heel comes up (rad, was .75: the boot tipped over)
+    // step: ground per step-drag pair (both feet move once); hurtW: a hurt man sits back on the rear foot
     // the hands drop (the 3D B3.drop): spells of a lazy guard on a share of the round (r1 in round 1, + more toward round 12 (curve k), + tired;
     // x .75-1.25 by the man; Dunn 2017: 13 / 17 / 19% of rounds 1-3), ~dur s each, lead / rear: how far each glove sags
     drop: { r1: .13, more: .09, k: .7, tired: .15, dur: 2.5, lead: 13, rear: 10 } };
@@ -3415,7 +3416,7 @@ const Render = (() => {
       hipY += cr * Hh; lean += hg; hipX += wt - hg * 12; // a waist hinge sits the hips back
       if (gd === 'peekaboo') {        // constant figure-8 pendulum: dip twice per sway, gloves stay glued to the cheeks
         const w = 4.4 * (1 - .35 * tir), a = Math.sin(ph * w);
-        hipY += (1 - Math.cos(ph * w * 2)) * 2.4; lean += .1 + a * .07; hipX += a * 2.6;
+        hipY += (1 - Math.cos(ph * w * 2)) * 1.6; lean += .1 + a * .07; hipX += a * 2.6;
       } else if (gd === 'philly') {   // bladed, weight on the back foot, chin behind the shoulder, easy sway
         lean -= .07 + Math.sin(ph * 2.1) * .025;
       } else if (gd === 'high') {     // shelled up and walking him down
@@ -3510,7 +3511,7 @@ const Render = (() => {
     const breath = still ? 0 : Math.sin(ph * (2.2 + 1.6 * tir)) * (1 + 1.6 * tir);
     neck.y -= breath * .7;                                            // shoulders rise and fall with the breath
     const head = { x: neck.x + Math.sin(ha) * (S.headR + 3) + (v.shake || 0), y: neck.y - Math.cos(ha) * (S.headR + 3) + 1.4 * twist }; // shake: hit-stop rattle
-    let footF = { x: ST2.feet[0] - pivot * 2, y: -pivot * .8 }, footB = { x: ST2.feet[1] + heel * 5, y: -heel * 1.2 };
+    let footF = { x: ST2.feet[0] * Hh - pivot * 2, y: -pivot * .8 }, footB = { x: ST2.feet[1] * Hh + heel * 5, y: -heel * 1.2 }; // the stance scales with his legs (was the same feet for everyone: a short man's lead knee locked straight, a tall man sat deep)
     if (v.aT && PUNCH[v.aT].arm === 'lead' && PUNCH[v.aT].kind === 'straight') footF.x += 3.5 * twist; // the jab comes with a step
     // shuffle step while moving: feet alternate, never cross
     const mvk = still ? 0 : clamp((v.mv || 0) / 55, 0, 1);
@@ -3884,6 +3885,8 @@ const Render = (() => {
       ctx.fillStyle = wl; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(sx - 12, sy, 24, 4.5, 1.5) : ctx.rect(sx - 12, sy, 24, 4.5); ctx.fill(); ctx.stroke();
       ctx.globalAlpha = 1;
     }
+    // past ST2.rearK of rear knee bend (the stance research: ~42°) a deeper crouch slides the rear foot back a little (a low stance is a wide one) instead of folding the shin flat (Ed, Oct 25: "the leg positions is weird sometimes")
+    if (J.dp === 0 && !J.knee && !(J.sit > 0)) { const ln = (J.S.thigh + J.S.shin) * Math.cos(ST2.rearK * Math.PI / 360), dy = J.footB.y - J.hip.y; if (Math.abs(dy) < ln) { const bx = J.hip.x - Math.sqrt(ln * ln - dy * dy); if (J.footB.x > bx) J.footB = { x: Math.max(bx, J.footB.x - ST2.rearSlide), y: J.footB.y }; } }
     const kneeF = ik(J.hip, J.footF, J.S.thigh, J.S.shin, 1), kneeB = ik(J.hip, J.footB, J.S.thigh, J.S.shin, 1);
     const leg = (knee, foot, far) => {
       const s = far ? skinD : skin, ank = L(knee, foot, .93);
@@ -3891,7 +3894,7 @@ const Render = (() => {
       mass([segPath(J.hip, knee, 14 * G, 8.6 * G, 1.4 * G, 2.4 * G, .38), segPath(knee, ank, 9 * G, 6 * G, 3 * G, .9 * G, .3)], s);
       if (!far) { crease(J.hip, knee, .9, 4 * G, .9, .28); crease(knee, ank, .45, 4 * G, .7, .22); rim(knee, ank, 9 * G, 6 * G, .26); }
       // an ankle only bends so far: once the shin leans well forward over the foot, the heel comes up onto the ball of the foot
-      const lean = Math.atan2(knee.x - foot.x, foot.y - knee.y), lift = Math.min(.75, Math.max(0, lean - (far ? .38 : .55)) * (far ? 1.1 : .8));
+      const lean = Math.atan2(knee.x - foot.x, foot.y - knee.y), lift = Math.min(ST2.heelMax, Math.max(0, lean - (far ? .38 : .55)) * (far ? 1.1 : .8)); // up on the ball of the foot, not tipped over
       boot(knee, foot, ank, far ? shade(sh.c, -.3) : sh.c, G, Math.max(far ? footAngB : footAngF, lift), far);
       // trunk leg: loose, flares a little
       mass([segPath(J.hip, L(J.hip, knee, .5), 14 * G, 15.4 * G, .3, .3, .5, null, true)], far ? shade(tr.c, -.3) : tr.c, 2.6);
