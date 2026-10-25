@@ -3889,22 +3889,25 @@ const Render = (() => {
     if (J.dp === 0 && !J.knee && !(J.sit > 0)) { const ln = (J.S.thigh + J.S.shin) * Math.cos(ST2.rearK * Math.PI / 360), dy = J.footB.y - J.hip.y; if (Math.abs(dy) < ln) { const bx = J.hip.x - Math.sqrt(ln * ln - dy * dy); if (J.footB.x > bx) J.footB = { x: Math.max(bx, J.footB.x - ST2.rearSlide), y: J.footB.y }; } }
     const kneeF = ik(J.hip, J.footF, J.S.thigh, J.S.shin, 1), kneeB = ik(J.hip, J.footB, J.S.thigh, J.S.shin, 1);
     const leg = (knee, foot, far) => {
+      // an ankle only bends so far: once the shin leans well forward over the foot, the heel comes up onto the ball of the foot.
+      // The ball stays on the floor and the ankle rises with the heel, so the shin is solved again to the raised ankle
+      const lean = Math.atan2(knee.x - foot.x, foot.y - knee.y), lift = Math.min(ST2.heelMax, Math.max(0, lean - (far ? .38 : .55)) * (far ? 1.1 : .8)); // up on the ball of the foot, not tipped over
+      const ang = Math.max(far ? footAngB : footAngF, lift), fl = 15.5 * B, toe = { x: foot.x + fl * .62, y: foot.y };
+      if (ang > .01) { foot = { x: toe.x - fl * .62 * Math.cos(ang), y: toe.y - fl * .62 * Math.sin(ang) }; knee = ik(J.hip, foot, J.S.thigh, J.S.shin, 1); }
       const s = far ? skinD : skin, ank = L(knee, foot, .93);
       // thigh: quad in front (-normal side going down), hamstring behind. Shin: calf behind
       mass([segPath(J.hip, knee, 14 * G, 8.6 * G, 1.4 * G, 2.4 * G, .38), segPath(knee, ank, 9 * G, 6 * G, 3 * G, .9 * G, .3)], s);
       if (!far) { crease(J.hip, knee, .9, 4 * G, .9, .28); crease(knee, ank, .45, 4 * G, .7, .22); rim(knee, ank, 9 * G, 6 * G, .26); }
-      // an ankle only bends so far: once the shin leans well forward over the foot, the heel comes up onto the ball of the foot
-      const lean = Math.atan2(knee.x - foot.x, foot.y - knee.y), lift = Math.min(ST2.heelMax, Math.max(0, lean - (far ? .38 : .55)) * (far ? 1.1 : .8)); // up on the ball of the foot, not tipped over
-      boot(knee, foot, ank, far ? shade(sh.c, -.3) : sh.c, G, Math.max(far ? footAngB : footAngF, lift), far);
+      boot(knee, foot, ank, far ? shade(sh.c, -.3) : sh.c, G, ang, far, toe);
       // trunk leg: loose, flares a little
       mass([segPath(J.hip, L(J.hip, knee, .5), 14 * G, 15.4 * G, .3, .3, .5, null, true)], far ? shade(tr.c, -.3) : tr.c, 2.6);
     };
     // boxing boot: high-top shaft to mid-calf, a thin sock line, laces, a real foot with a heel, a toe and a thin sole
     const footAngF = J.pivotF || 0, footAngB = J.heelB || 0;
-    const boot = (knee, foot, ank0, bc, G, ang, far) => {
+    const boot = (knee, foot, ank0, bc, G, ang, far, toe) => {
       const top = L(knee, foot, .44), ank = L(knee, foot, .86);
       // the foot, as points around the toe; rotated when the heel comes up
-      const fl = 15.5 * B, fh = 6.4 * B, tx = foot.x + fl * .62, ty = foot.y, ca = Math.cos(-ang), sa = Math.sin(-ang);
+      const fl = 15.5 * B, fh = 6.4 * B, tx = toe.x, ty = toe.y, ca = Math.cos(ang), sa = Math.sin(ang); // +ang: the heel comes up, the toe stays down (was -ang: the toe came up and the heel went into the canvas)
       const R = (x, y) => ({ x: tx + x * ca - y * sa, y: ty + x * sa + y * ca });
       const FP = [[2.6 * B, -fh * .32], [.5, -fh * .78], [-fl * .4, -fh * 1.12], [-fl + 2.4, -fh * 1.2], [-fl - .4, -fh * .55], [-fl + 2, 0], [0, 0]].map(([x, y]) => R(x, y));
       const fp = new Path2D(); fp.moveTo(FP[0].x, FP[0].y); smooth(fp, FP.concat([FP[0]])); fp.closePath();
