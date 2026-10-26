@@ -829,7 +829,7 @@ The plans alone never beat silent (47–50 every read). All the value is live sh
 
 ## Where we are (Oct 25, F4 built: fight IQ / balance)
 Read this first. Older handoffs: `docs/NOTES.md` "Handoff log"; the F4 numbers: `docs/NOTES.md` "F4, fight IQ / balance".
-- **State:** main `claude/epic-goldberg-ps6ip4`. **New hash**: `same.js 40` = **4f8e6d15**, `same.js 200` = **c1d1cdc7**. `game.html` rebuilt. Lab not republished.
+- **State:** main `claude/epic-goldberg-ps6ip4`. **New hash**: `same.js 40` = **4f8e6d15**, `same.js 200` = **c1d1cdc7**. `game.html` rebuilt. Lab republished Oct 26 with F1-F4: https://claude.ai/artifact/FBLVapx4zPsKM5v9RV2vqA.
 - **Built (F4):** awkward read later (`AI.odd` 1.3: 45.5 -> 51.9), volume works from further out (`AI_MAP.volume` range .4: 47.4 -> ~50, 48.5 in the full check), the counter puncher's counter skill 18 (46.8 -> 49.3). Guards needed nothing (peekaboo 49.7 since F3). bodyOnly cheese passes at hard (66.5).
 - **Full check `f4e`:** audit 51.4 / 15.0 / 29.1%, stops 33.1 (finish 35.8), KDs .48, body 6.5%; styles 47.8-53.5; specials 47.2-52.7; guards 47.2-52.3; one level down 16.0 / 13.9 / 16.2; judges on target; drama lead change 37.0, comebacks 9.9.
 - **Lesson:** `STYLES.*.counter` / `aggr` in the engine are dead (old AI). Check a knob moves the hash first; ~1100 fights swing ±2.
