@@ -14,11 +14,11 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
     const cell = (txt, o) => { const w = document.createElement('div'); w.style.cssText = 'color:#ccc;font:9px sans-serif;text-align:center';
       w.innerHTML = txt; const c = document.createElement('canvas'); c.style.cssText = 'width:104px;height:120px;display:block;margin:auto';
       w.appendChild(c); g.appendChild(w); o.v = Object.assign({}, extra.v || {}, o.v || {}); const x = Object.assign({}, extra); delete x.sel; Render.portrait(c, look, Object.assign({ stance: 'orthodox', dx: 6 }, x, o)); };
-    if (extra.sel) { g.style.gridTemplateColumns = 'repeat(' + Math.min(4, extra.sel.length) + ',1fr)'; for (const [gd, st, v] of extra.sel) cell(gd + ' / ' + st, { guard: gd, v: Object.assign({ style: st }, v || {}) });
+    if (extra.sel) { g.style.gridTemplateColumns = 'repeat(' + Math.min(4, extra.sel.length) + ',1fr)'; for (const [gd, st, v] of extra.sel) cell(gd + ' / ' + st, { guard: gd, v: Object.assign({ style: st, sk: st }, v || {}) });
       g.querySelectorAll('canvas').forEach(c => { c.style.width = '150px'; c.style.height = '175px'; }); return; }
     const ST = ['outboxer', 'boxerpuncher', 'counter', 'slugger', 'swarmer', 'awkward'];
-    for (const gd of Object.keys(GUARDS)) { cell(gd, { guard: gd }); for (const s of ST) cell(gd + ' / ' + s, { guard: gd, v: { style: s } }); }
-    for (const [a, lab] of [['cross', 'cross'], ['hook', 'lead hook'], ['jab', 'jab']]) for (const p of [0, .2, .4, .55, .6, .75, .9]) cell(lab + ' ' + p, { guard: 'standard', v: { aT: a, aP: p, style: 'boxerpuncher' } });
+    for (const gd of Object.keys(GUARDS)) { cell(gd, { guard: gd }); for (const s of ST) cell(gd + ' / ' + s, { guard: gd, v: { style: s, sk: s } }); }
+    for (const [a, lab] of [['cross', 'cross'], ['hook', 'lead hook'], ['jab', 'jab']]) for (const p of [0, .2, .4, .55, .6, .75, .9]) cell(lab + ' ' + p, { guard: 'standard', v: { aT: a, aP: p, style: 'boxerpuncher', sk: 'boxerpuncher' } });
   }, extra);
   await pg.waitForTimeout(300); await pg.screenshot({ path: out, fullPage: true }); await b.close();
   console.log('errors:', errs.length ? errs : 'none', '->', out);
