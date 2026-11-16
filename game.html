@@ -2017,7 +2017,7 @@ const RESET = { back: .3, dur: .85, bk: .8, ang: 1.05, latB: .15 };
 // (p per s to react, x his cut skill and ring IQ), sp x his speed for dur s with quick feet (rate x), then cool s before the next one
 const CUTS = { at: 32, p: 7, sp: 1.25, dur: .3, rate: 1.8, cool: .45 };
 // the step-in on power shots (movement pass): a power or body shot thrown long (past its reach less at) brings the feet in, up to max more ground; he stays where it lands (no pull back on the extra)
-const STEPIN = { at: 4, max: 7, ev: .2 }; // ev: the lunge shows it (x the share of max he stepped)
+const STEPIN = { at: 0, max: 7, ev: .2 }; // ev: the lunge shows it (x the share of max he stepped)
 const TURN = { w: 3.2, k: 8, punch: .35, stun: .3, lo: 10, hi: 40, ev: .3, blk: .25, atk: .3, foot: 20 }; // foot: the drawing only, ground the feet step per radian he turns (the pivot steps)
 const STYLE_OPEN = { edge: .45 }, STYLE_STICK = 1.6, STYLE_STICK_EV = .6;
 /* ---------- end TUNING ---------- */
@@ -2838,7 +2838,7 @@ class Fight {
       if (dip) ev *= 1 - BODY.overEv;
       if (P.zone === 'body' && D.low) ev *= 1 + BODY.lowEv * D.low; // he's waiting for it down there: a step back, a turn
       if (a.stick) ev *= STYLE_STICK_EV;
-      ev += TUNE.moveEv * clamp((D.mv - 30) / 50, 0, 1) * gf(D, 'ev'); // a moving target is harder to find (his real speed: the feet ease in and out)
+      ev += TUNE.moveEv * clamp(((D.csT > 0 ? 0 : D.mv) - 30) / 50, 0, 1) * gf(D, 'ev'); // a moving target is harder to find (his real speed: the feet ease in and out; a cutter stepping across to take the lane isn't getting away)
       { const ins = A.st.inside; if (ins && d < STYLE_IN.at) ev *= 1 - STYLE_IN.ev * ins; } // smothered: no room to slip in there
       const setup = (A.prevP === 'jab' && P.cat !== 'jab' ? 1 - TUNE.setup : 1) * (1 - STYLE_OPEN.edge * (a.open || 0)) * parO; // the jab hides the right hand behind it; a shot into an opening finds him recovering; parried, his hand's out of the way
       ev *= setup;
