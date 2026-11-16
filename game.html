@@ -3404,13 +3404,13 @@ const Render = (() => {
     awkward:      { cell: 1, pz: .3, dbl: .3, tv: .5, b: 1, sw: 1.1, swf: .5, up: .04 }
   };
   function hsh2(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
-  function rhy2(v, t, bf, st) {
+  function rhy2(v, t, bf, st, s5) {
     const rz = RHY2[st] || RHY2.boxerpuncher, sd = (v.bob || 0) * 13.7 + 1, L0 = rz.cell * (.8 + .45 * hsh2(sd));
     const bd = k => (k + .7 * (hsh2(sd + k * 1.618) - .5)) * L0;
     let k = Math.floor(t / L0); if (t < bd(k)) k--; else if (t >= bd(k + 1)) k++;
     const a = bd(k), dur = bd(k + 1) - a, u = (t - a) / dur;
     const ph = (kk, f) => { const r1 = hsh2(sd + kk * 2.414 + 5), r2 = hsh2(sd + kk * 3.303 + 9), r3 = hsh2(sd + kk * .577 + 13), r4 = hsh2(sd + kk * 4.11 + 17);
-      return { still: r1 < rz.pz, tmp: r2 < rz.dbl ? 1.75 : 1 + rz.tv * (r2 * 2 - 1), amp: .65 + .5 * r3, sh: (r3 - .5) * 2, gx: (r4 - .5) * 3, gy: (hsh2(sd + kk * 5.3 + 21) - .5) * 2.4, tw: .25 + .5 * r4 }; };
+      return { still: r1 < rz.pz + (1 - rz.pz) * .85 * (s5 || 0), tmp: r2 < rz.dbl ? 1.75 : 1 + rz.tv * (r2 * 2 - 1), amp: .65 + .5 * r3, sh: (r3 - .5) * 2, gx: (r4 - .5) * 3, gy: (hsh2(sd + kk * 5.3 + 21) - .5) * 2.4, tw: .25 + .5 * r4 }; };
     const P = ph(k), Q = ph(k - 1), e = clamp((t - a) / .18, 0, 1), es = e * e * (3 - 2 * e); // the shift and the guard ease over from the last phrase
     const n = Math.max(1, Math.round(dur * bf * P.tmp / (2 * Math.PI))), w = u * n * 2 * Math.PI;
     const tw = P.still ? Math.exp(-Math.pow((u - P.tw) * dur / .08, 2)) : 0; // a shoulder twitch in the still phrase
@@ -3440,12 +3440,17 @@ const Render = (() => {
     // F1: knees soft (the hips sit lower than the old locked legs), the bounce and the rest weight by style, the rear heel up a little
     const sty = STY2[STY2_OF[v.sk] || v.sk] || STY2.boxerpuncher, gst = GST2[gd] || GST2.standard;
     let heelR = 0;
-    const rh = rhy2(v, t, sty.bf, STY2_OF[v.sk] || v.sk), rz = rh.rz, gph = rh.tt + (v.bob || 0); // gph: the guard rhythms' drifting clock
+    // rhythm step 2: the feet go first (research/movement.md 8). Leg fatigue off the gas, and a little off the late rounds; five stages
+    // in order: 1 the heels drop, 2 the stance widens and squares, 3 bigger, sloppier steps, 4 the feet cross on the drag, 5 he stops moving
+    const lf = still ? 0 : clamp(tir * .9 + Math.max(0, (v.rd || 1) - 4) * .03, 0, 1), stg = (a, w) => clamp((lf - a) / w, 0, 1);
+    const s1 = stg(.04, .25), s2 = stg(.25, .3), s3 = stg(.45, .25), s4 = stg(.62, .2), s5 = stg(.78, .2);
+    const rh = rhy2(v, t, sty.bf, STY2_OF[v.sk] || v.sk, s5), rz = rh.rz, gph = rh.tt + (v.bob || 0); // gph: the guard rhythms' drifting clock
     if (!still) {
-      const ga = (1 - .6 * tir) * rh.env, bo = Math.sin(rh.w) * sty.b * rz.b * ga * (1 - .4 * mvk0); // on the toes the out-boxer rides up and down in phrases, the slugger sits flat, gas kills it
+      const ga = (1 - .85 * s1) * rh.env, bo = Math.sin(rh.w) * sty.b * rz.b * ga * (1 - .4 * mvk0); // on the toes the out-boxer rides up and down in phrases, the slugger sits flat, gas kills it
       const sw = Math.sin(rh.w * rz.swf) * rz.sw * ga * rh.win;                    // the side sway: the hips rock over each foot in turn
       hipY += ST2.knee * Hh + bo + Math.abs(sw) * .35; hipX += sw + rh.sh * (1 - .5 * mvk0); lean += Math.sin(rh.w * .5) * rz.up * ga * rh.win + Math.sin(rh.tt * 1.3 + (v.bob || 0)) * .012 + rh.tw * .07; // loaded stillness: the weight shifts, a shoulder twitch
-      heelR = sty.heel + gst.wt * .03 + sty.toe * Math.max(0, -bo) * .3;
+      heelR = (sty.heel + gst.wt * .03 + sty.toe * Math.max(0, -bo) * .3) * (1 - .75 * s1); // stage 1: flat-footed
+      hipY += 2.4 * s2 * Hh; // stage 2: the wider base sits lower
     }
     // ---- guard stance: each guard has its own rhythm ----
     if (!still && v.state !== 'clinch' && v.state !== 'stun') {
@@ -3552,7 +3557,11 @@ const Render = (() => {
     neck.y -= breath * .7;                                            // shoulders rise and fall with the breath
     const head = { x: neck.x + Math.sin(ha) * (S.headR + 3) + (v.shake || 0), y: neck.y - Math.cos(ha) * (S.headR + 3) + 1.4 * twist }; // shake: hit-stop rattle
     let footF = { x: ST2.feet[0] * Hh - pivot * 2, y: -pivot * .8 }, footB = { x: ST2.feet[1] * Hh + heel * 5, y: -heel * 1.2 }; // the stance scales with his legs (was the same feet for everyone: a short man's lead knee locked straight, a tall man sat deep)
-    if (v.aT && PUNCH[v.aT].arm === 'lead' && PUNCH[v.aT].kind === 'straight') footF.x += 3.5 * twist; // the jab comes with a step
+    footF.x += 4.5 * s2 * Hh; footB.x -= 5.5 * s2 * Hh; // stage 2: the base goes wide
+    if (v.aT && PUNCH[v.aT].arm === 'lead' && PUNCH[v.aT].kind === 'straight') { // the jab comes with a step: the lead foot lands as the glove does (resolve at .6), the rear drags up after, then both settle
+      const pp = v.feint ? Math.min(v.aP, .35) * .8 : v.aP, set = 1 - ease(clamp((pp - .82) / .18, 0, 1)), inF = ease(clamp((pp - .06) / .5, 0, 1)) * set, inB = ease(clamp((pp - .6) / .22, 0, 1)) * set;
+      footF.x += 6 * inF; footF.y -= (pp > .06 && pp < .56 ? Math.sin(Math.PI * (pp - .06) / .5) : 0) * 2.2; footB.x += 4.5 * inB; footB.y -= (pp > .6 && pp < .82 ? Math.sin(Math.PI * (pp - .6) / .22) : 0) * 1;
+    }
     // shuffle step while moving: feet alternate, never cross
     const mvk = still ? 0 : clamp((v.mv || 0) / 55, 0, 1);
     if (mvk > .05 && !v.aT && !v.walk) {
@@ -3561,13 +3570,15 @@ const Render = (() => {
       // and the rear one swings round it. The planted foot rides back as the body moves over it
       const sm = v._sm || {}, mv = Math.max(1, v.mv || 0), fk = clamp((v.mvx || 0) / mv, -1, 1), sd0 = fk > .25 ? 1 : fk < -.25 ? -1 : sm.sd || 1;
       sm.sd = sm.sd == null ? sd0 : sm.sd + (sd0 - sm.sd) * (1 - Math.exp(-(v._dt || 1 / 60) * 8)); const sd = sm.sd;
-      const u = ((v.gait || 0) / ST2.step) % 1, st = (a, b) => ease((u - a) / (b - a)), lift = (a, b) => u > a && u < b ? Math.sin(Math.PI * (u - a) / (b - a)) : 0;
-      const S = ST2.step * Math.abs(fk) * mvk, lat = (1 - Math.abs(fk)) * mvk;
+      const stp = ST2.step * (1 + .7 * s3), u = ((v.gait || 0) / stp) % 1, st = (a, b) => ease((u - a) / (b - a)), lift = (a, b) => u > a && u < b ? Math.sin(Math.PI * (u - a) / (b - a)) : 0;
+      const S = stp * Math.abs(fk) * mvk, lat = (1 - Math.abs(fk)) * mvk;
       const go = (a, b, m) => S * (st(a, b) - u - m); // a foot's place under the moving body: steps (a..b), then rides back (same m both feet: planted, the stance is its rest length)
       const fwd = [go(0, .35, .19), go(.28, .62, .19)], back = [-go(.28, .62, .19), -go(0, .35, .19)], k = (sd + 1) / 2; // [lead, rear]
       const lw = k > .5 ? [0, .35] : [.28, .62], rw = k > .5 ? [.28, .62] : [0, .35];
       footF.x += lerp(back[0], fwd[0], k); footB.x += lerp(back[1], fwd[1], k) + lift(...rw) * 3 * lat; // the rear foot swings in round the pinned lead
       footF.y -= lift(...lw) * 1.8 * mvk * (1 - .7 * lat); footB.y -= lift(...rw) * 1.6 * mvk;
+      if (s4 > 0) { footB.x += lift(...rw) * S * .9 * s4 * k; footF.x -= lift(...lw) * S * .9 * s4 * (1 - k); } // stage 4: the dragging foot overshoots, the feet come together / cross
+      const ob = (lift(...lw) - lift(...rw)) * 2.2 * s3 * mvk; hip.x += ob; neck.x += ob; head.x += ob * 1.3; // stage 3: off balance over each step
     } else if (mvk > .05 && v.walk) {
       const ph = (v.gait || 0) * .2;
       footF.x += Math.sin(ph) * 5 * mvk; footF.y -= Math.max(0, Math.cos(ph)) * 2.6 * mvk;
@@ -3575,7 +3586,7 @@ const Render = (() => {
     }
     if (v.state === 'stun') { footF.x = 14 + Math.sin(t * 6) * 4; footB.x = -18; footB.y = 0; }
     if (sit > 0) { footF = L(footF, { x: 18, y: 0 }, sit); footB = L(footB, { x: 6, y: 0 }, sit); }
-    const sq = still || v.walk || v.state === 'clinch' || sit > .5 ? 0 : 1, sb = Math.sin((gst.bl || 40) * Math.PI / 180) * sq; // square in the clinch, walking, on the stool, down
+    const sq = still || v.walk || v.state === 'clinch' || sit > .5 ? 0 : 1, sb = Math.sin((gst.bl || 40) * (1 - .35 * s2) * Math.PI / 180) * sq; // stage 2: squares up // square in the clinch, walking, on the stool, down
     const J = { pv, hip, neck, head, ha, footF, footB, S, twist, bo: 7 * sb, tw: 1 + .28 * (sb - .64) * sq, breath: breath * (1 + sit * .8), heelB: Math.max(heel, heelR * (1 - .7 * pivot)) * .55, pivotF: pivot * .32, turnBx: heel, turnFx: pivot, sit, rh };
     // knockdown: keyframed. Going down: knees buckle, he drops onto his seat, the back hits, the head last.
     // Getting up: sits up, gets to a knee, stands with the gloves coming back up
