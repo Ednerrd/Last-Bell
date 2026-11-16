@@ -5365,7 +5365,7 @@ function newCareer(p) {
       stats: p.stats, pot: p.pot, look: p.look, startAge: p.age || 21,
       record: { w: 0, l: 0, d: 0, ko: 0 }, points: 0, money: 800, gym: 0, wear: 0,
       injury: null, belts: [], history: [], earnings: 0, owned: ['t_black', 't_ox', 'g_red', 'g_black', 's_black', 's_white'],
-      retired: false, peakRank: null, titleDefenses: 0, campDone: false, exp: 0, mandatory: false
+      retired: false, peakRank: null, titleDefenses: 0, campDone: false, exp: 0, mandatory: false, titleCooldown: false
     },
     world: { div: p.div, roster, belts },
     pending: null
@@ -5463,7 +5463,8 @@ function genOffers(save) {
   // G3 batch 7: the 6-10 shot is rolled once per week, not once per tap — backing out and tapping in again can't reroll it.
   if (save.shotRoll == null || save.shotRoll.wk !== save.week || save.shotRoll.div !== save.world.div) save.shotRoll = { wk: save.week, div: save.world.div, ok: R() < SHOT_6_10 };
   // G3 batch 6: the gate — top 5 always get a shot, 6-10 sometimes, and the mandatory always does.
-  if (r <= 4 || P.mandatory || (r <= 9 && save.shotRoll.ok)) {
+  // G3 batch 8: not while he's on cooldown — lose a title shot and he has to win his way back.
+  if (!P.titleCooldown && (r <= 4 || P.mandatory || (r <= 9 && save.shotRoll.ok))) {
     const notMine = ORGS.filter(o => !P.belts.includes(o.k)).map(o => o.k);
     if (notMine.length) {
       const holderId = save.world.belts[notMine[0]];
@@ -5490,7 +5491,8 @@ function genOffers(save) {
     else if (form.hot) { const c = takeFree(r - 12, r - 5); const f = c || takeFree(r - 8, r); add(f, null, c ? 'Call-out' : 'Step up'); }
     else add(take(r - 8, r - 1), null, 'Step up');
     // G3 batch 7: the last resort is an even match now, not a random man — a top man who can't step up stays busy against someone his own level.
-    if (tries > 6 && offers.length < 3) { if (!add(takeFree(r - 2, r + 3), null, 'Keep-busy')) add(take(0, list.length), null, 'Open offer'); }
+    // G3 batch 8: the even range collapses near the bottom of the rankings (two men, both used), so the last resort tries a wider net before the Open offer.
+    if (tries > 6 && offers.length < 3) { if (!add(takeFree(r - 2, r + 3), null, 'Keep-busy') && !add(takeFree(r - 8, r + 8), null, 'Keep-busy')) add(take(0, list.length), null, 'Open offer'); }
   }
   return offers.slice(0, 3);
 }
@@ -5591,6 +5593,8 @@ function applyResult(save, offer, fight) {
   settleStyle(P, out.notes);
   // G3 batch 6: winning an eliminator makes him the mandatory challenger.
   if (win && offer.eliminator) { P.mandatory = true; out.notes.push('You won the eliminator. You are the mandatory challenger — the champion has to face you next.'); }
+  // G3 batch 8: any win earns him another shot at the title.
+  if (win) P.titleCooldown = false;
   // belts
   if (isTitle) {
     P.mandatory = false; // he had his shot
@@ -5600,6 +5604,8 @@ function applyResult(save, offer, fight) {
       if (P.titleDivs.length > 1) out.notes.push(['', '', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'][P.titleDivs.length] + '-division world champion.');
     } else if (loss) {
       offer.title.forEach(k => { if (P.belts.includes(k)) { P.belts = P.belts.filter(b => b !== k); out.notes.push('Lost the ' + k + ' belt.'); } save.world.belts[k] = opp.id; });
+      // G3 batch 8: he lost his title shot — he has to win his way back.
+      P.titleCooldown = true; out.notes.push('Lost his title shot. He has to win his way back.');
     }
   }
   // damage, wear, injury
@@ -5737,6 +5743,7 @@ function changeDiv(save, to) {
   if (held.length) { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; held.forEach(o => { W.belts[o.k] = top.id; }); notes.push('Vacated the ' + held.map(o => o.k).join(', ') + ' ' + DIVS[from].name.toLowerCase() + (held.length > 1 ? ' belts.' : ' belt.')); }
   P.belts = [];
   P.mandatory = false; // mandatory status stays in the old division
+  P.titleCooldown = false; // a new division is a fresh title path
   W.away[from] = { roster: W.roster, belts: W.belts, week: save.week };
   const back = W.away[to];
   if (back) { W.roster = back.roster; W.belts = back.belts; delete W.away[to]; }
@@ -6146,6 +6153,7 @@ function hub(tab) {
         <div class="mute">${P.retired ? 'Retired' : `Ranked #${rank} of ${save.world.roster.length + 1}`}${P.peakRank ? `, peak #${P.peakRank}` : ''}</div>
         ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}
         ${P.mandatory ? `<div class="mute">Mandatory challenger — his title shot is next.</div>` : ''}
+        ${P.titleCooldown ? `<div class="mute">Lost his title shot — he has to win his way back.</div>` : ''}
       </div>
     </div>
     ${status}

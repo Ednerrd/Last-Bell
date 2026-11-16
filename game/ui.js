@@ -390,6 +390,7 @@ function hub(tab) {
         <div class="mute">${P.retired ? 'Retired' : `Ranked #${rank} of ${save.world.roster.length + 1}`}${P.peakRank ? `, peak #${P.peakRank}` : ''}</div>
         ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}
         ${P.mandatory ? `<div class="mute">Mandatory challenger — his title shot is next.</div>` : ''}
+        ${P.titleCooldown ? `<div class="mute">Lost his title shot — he has to win his way back.</div>` : ''}
       </div>
     </div>
     ${status}
