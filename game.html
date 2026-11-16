@@ -5865,6 +5865,21 @@ function scoutLine(save, offer) {
   const own = BoxerBrain.BR.flaw.by[brainStyle(domStyle(f))[0]];
   return habit + ' ' + (f.flaw !== own ? (FLAW_HINT_OFF[f.flaw] || hint) : hint);
 }
+// G3: what your corner remembers of a man you've fought: how many times, the running score, how the last one ended
+function rematchLine(save, f) {
+  const P = save.player;
+  const bouts = P.history.filter(h => h.oppId ? h.oppId === f.id : h.opp === f.name);
+  if (!bouts.length) return null;
+  const last = bouts[0];
+  const end = last.r === 'D' ? 'you drew with him'
+    : !last.dec ? (last.r === 'W' ? `you stopped him in R${last.round}` : `he stopped you in R${last.round}`)
+    : (last.r === 'W' ? 'you beat him on points' : 'he beat you on points');
+  if (bouts.length === 1) return `Rematch. Last time ${end}.`;
+  const w = bouts.filter(h => h.r === 'W').length, l = bouts.filter(h => h.r === 'L').length, d = bouts.length - w - l;
+  const nth = ['', '', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth'][bouts.length] || ((bouts.length + 1) + 'th');
+  const scar = bouts.some(h => h.r === 'L' && !h.dec) && !(last.r === 'L' && !last.dec) ? ' He stopped you once. The corner remembers.' : '';
+  return `${nth} fight. You're ${w}-${l}${d ? `-${d}` : ''} with him. Last time ${end}.${scar}`;
+}
 function winLine(w) { return `<li class="${w.you ? 'you' : ''}">${w.you ? (w.ko ? 'Stopped <b>you</b>' : 'Beat <b>you</b>') : (w.ko ? 'KO ' : 'Beat ') + esc(w.n)}${w.r ? ` <small>(#${w.r})</small>` : ''}${w.t && w.t.length ? ' ' + beltChips(w.t) : ''}</li>`; }
 function lastLine(L) {
   if (!L) return 'No pro fights on record.';
@@ -5887,7 +5902,7 @@ function tapeHtml(save, offer, open, idx) {
     <p class="small"><span class="mute">Last fight:</span> ${lastLine(f.last)}</p>
     ${belts.length ? `<p class="small"><span class="mute">Holds:</span> ${beltChips(belts)}</p>` : ''}${ex.length ? `<p class="small"><span class="mute">Former champ:</span> ${beltChips(ex)}</p>` : ''}</div>`;
   const c = scoutCost(offer);
-  const foot = known ? `<p class="mute tiny">${(P.history.some(h => h.oppId ? h.oppId === f.id : h.opp === f.name)) ? "You've been in there with him. You know what he has." : 'Scouted. Your corner has film on him.'}</p>`
+  const foot = known ? `<p class="mute tiny">${rematchLine(save, f) || 'Scouted. Your corner has film on him.'}</p>`
     : `<div class="scout"><button class="btn sm" data-act="scout" data-i="${idx}" ${P.money < c ? 'disabled' : ''}>Scout him: ${money(c)}</button><span class="mute tiny">Film study. Shows his real numbers for a year.</span></div>`;
   return `<details class="tape" ${open ? 'open' : ''}><summary>Tale of the tape${known ? '' : ' <small class="mute">(not scouted)</small>'}</summary><div class="tt"><span class="h" style="grid-column:1/3">You</span><span></span><span class="h" style="grid-column:4/6;text-align:right">Him</span>${pub}${rows}
     <span class="v w">${ovr(me)}</span><span></span><span class="l"><b>Overall</b></span><span></span><span class="v w">${ovr(him)}</span></div>${res}${foot}</details>`;
