@@ -53,3 +53,6 @@ You can read the repo but can't push or run tests. So: you write the code, Ed ca
 The files are too big to paste whole. Ask Ed for the section you need by its marker or function name (e.g. "paste the `TUNING` block" or "paste `drawFighter`"), and give changes back as small, exact find-and-replace edits rather than whole-file rewrites.
 
 To start, reply with a short summary of what you understood, then ask Ed what he wants to work on.
+
+## Next batch (kept current by Claude Code each time one lands)
+- **Batch 7 (Nov 16, Muse running it):** 1) the climb: first title shot at fights 15-25 (now ~34-37): A/B more points per early win vs the eliminator band 6-20; 2) the 6-10 shot rolls once a week, not per tap (`ACT.offers` in `game/ui.js` calls `genOffers` every time the screen opens); 3) the Open offer at #1-2: an even match, not a random man; 4) can a good man (OVR 80-85) take a belt (0/74 title wins in the 24x50 harness, men ~OVR 60). Test: 6+ careers a side, `PICK=mix` and the middle pick; Claude runs 24x50 before main.
