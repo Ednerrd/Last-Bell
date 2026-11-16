@@ -8,6 +8,7 @@ Last Bell is a phone-first **auto-boxing fight sim**: side view, real boxing rul
 - `brain/brain.js`: **the boxer AI**, a standalone module that gets inlined into `index.html`. Each frame: `perceive()` builds what the fighter sees → `brain.think()` → feet, hands, defense. Each fighter has a skill sheet, a level (Novice / Intermediate / Pro / World), one flaw, opponent memory, and corner calls he listens to.
 - `game/career.js` + `game/ui.js`: **the full game** (career, saves, hub, fight offers, camp: drill / spar / watch tape, weight classes, legends + 2026 pound-for-pound stars). A build script combines them with `index.html` into `game.html`.
 - All balance knobs sit in one `TUNING` block (stoppages, damage, cuts, swelling, stamina, body shots, reach, AI...). Fighter styles: out-boxer, swarmer, slugger, boxer-puncher, counter puncher, plus special styles. Guards: standard, high, peekaboo, philly shell, cross-arm, hands low.
+- **Coach calls: he always listens.** There is no trust system: corner calls (between rounds) weigh more than live calls, but he follows both. Trust is a parked idea, not built: don't assume it.
 - There's a 3D version too, but it's **parked** until the 2D game is done.
 
 ## What's done
