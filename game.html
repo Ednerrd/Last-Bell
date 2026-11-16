@@ -5268,6 +5268,7 @@ const TIERS = {
   main: { label: 'Main event', venue: 'coliseum', purse: [100000, 350000] },
   title: { label: 'World title fight', venue: 'vegas', purse: [350000, 700000] }
 };
+const SHOT_6_10 = .5; // G3 batch 6: a man ranked 6-10 gets a title-shot offer about half the time
 const GYMS = [
   { name: 'Garage gym', cost: 0, mult: .6, cut: .25, note: 'Free. Rusted bags, no cutman worth the name.' },
   { name: 'Neighborhood club', cost: 400, mult: .85, cut: .35, note: 'Real coaches, real sparring.' },
@@ -5364,7 +5365,7 @@ function newCareer(p) {
       stats: p.stats, pot: p.pot, look: p.look, startAge: p.age || 21,
       record: { w: 0, l: 0, d: 0, ko: 0 }, points: 0, money: 800, gym: 0, wear: 0,
       injury: null, belts: [], history: [], earnings: 0, owned: ['t_black', 't_ox', 'g_red', 'g_black', 's_black', 's_white'],
-      retired: false, peakRank: null, titleDefenses: 0, campDone: false, exp: 0
+      retired: false, peakRank: null, titleDefenses: 0, campDone: false, exp: 0, mandatory: false
     },
     world: { div: p.div, roster, belts },
     pending: null
@@ -5453,13 +5454,14 @@ function genOffers(save) {
   const list = rankList(save).filter(e => !e.isPlayer); const r = playerRank(save) - 1;
   const take = (lo, hi) => { const c = list.slice(clamp(lo, 0, list.length - 1), clamp(hi, 1, list.length)); return c.length ? pick(c).f : null; };
   const used = new Set();
-  const add = (f, title, lbl) => { if (f && !used.has(f.id)) { used.add(f.id); offers.push(mk(f, title, lbl)); return true; } return false; };
+  const add = (f, title, lbl, elim) => { if (f && !used.has(f.id)) { used.add(f.id); const o = mk(f, title, lbl); if (elim) o.eliminator = true; offers.push(o); return true; } return false; };
   // defenses / title shots
   if (P.belts.length) {
     const contender = list[0].f; const b = P.belts.slice();
     add(contender, b, 'Mandatory defense');
   }
-  if (r <= 4) {
+  // G3 batch 6: the gate — top 5 always get a shot, 6-10 sometimes, and the mandatory always does.
+  if (r <= 4 || P.mandatory || (r <= 9 && R() < SHOT_6_10)) {
     const notMine = ORGS.filter(o => !P.belts.includes(o.k)).map(o => o.k);
     if (notMine.length) {
       const holderId = save.world.belts[notMine[0]];
@@ -5469,6 +5471,8 @@ function genOffers(save) {
   }
   // G3: offers react to his record — a killer gets ducked, a hot prospect gets called out, a loss means a bounce-back.
   const form = formOf(P);
+  // G3 batch 6: ranked 6-15 and not already mandatory, with no shot on the table, the third card is an eliminator.
+  const elimOk = !P.mandatory && !P.belts.length && r >= 5 && r <= 14 && !offers.some(o => o.title.length);
   const takeFree = (lo, hi) => { const c = list.slice(clamp(lo, 0, list.length - 1), clamp(hi, 1, list.length)).filter(e => !used.has(e.f.id)); return c.length ? pick(c).f : null; };
   if (form.killer) {
     const ducker = takeFree(r - 8, r - 1);
@@ -5479,8 +5483,9 @@ function genOffers(save) {
     const k = offers.length;
     if (k === 0) add(take(r + 2, r + 9), null, 'Tune-up');
     else if (k === 1) add(take(r - 2, r + 3), null, 'Even match');
-    else if (form.cold) add(take(r + 1, r + 4), null, 'Bounce-back');
-    else if (form.hot) add(takeFree(r - 12, r - 5), null, 'Call-out');
+    else if (form.cold) add(takeFree(r + 1, r + 4), null, 'Bounce-back');
+    else if (elimOk) add(takeFree(r - 4, r + 4), null, 'Eliminator', true);
+    else if (form.hot) { const c = takeFree(r - 12, r - 5); const f = c || takeFree(r - 8, r); add(f, null, c ? 'Call-out' : 'Step up'); }
     else add(take(r - 8, r - 1), null, 'Step up');
     if (tries > 6 && offers.length < 3) add(take(0, list.length), null, 'Open offer');
   }
@@ -5580,8 +5585,11 @@ function applyResult(save, offer, fight) {
   if (P.styleFrom) P.styleFit = Math.min(1, P.styleFit + STYLE_LEARN.fight);
   if (P.stanceFit != null) P.stanceFit = Math.min(1, P.stanceFit + STYLE_LEARN.fight);
   settleStyle(P, out.notes);
+  // G3 batch 6: winning an eliminator makes him the mandatory challenger.
+  if (win && offer.eliminator) { P.mandatory = true; out.notes.push('You won the eliminator. You are the mandatory challenger — the champion has to face you next.'); }
   // belts
   if (isTitle) {
+    P.mandatory = false; // he had his shot
     if (win) {
       offer.title.forEach(k => { if (!P.belts.includes(k)) { P.belts.push(k); out.notes.push('New ' + k + ' world champion.'); } else { P.titleDefenses++; } save.world.belts[k] = P.id; });
       P.titleDivs = Array.from(new Set([...(P.titleDivs || []), P.div]));
@@ -5628,7 +5636,8 @@ function worldSim(save, weeks) {
     const A = L[a], B = L[b]; const aw = (A.rating - B.rating) + gauss() * 6 > 0;
     const Wn = aw ? A : B, Ls = aw ? B : A, ko = R() < .55;
     Wn.record.w++; Ls.record.l++; if (ko) Wn.record.ko++;
-    const g = 6 + Ls.points * .1; Wn.points += g; Ls.points = Math.max(5, Ls.points - (4 + g * .3));
+    // G3 batch 6: world fights are (near) zero-sum — the loser drops what the winner gains, so the bar stops running away.
+    const g = 6 + Ls.points * .1; Wn.points += g; Ls.points = Math.max(5, Ls.points - g);
     // belts change hands sometimes
     const took = []; ORGS.forEach(o => { if (W.belts[o.k] === Ls.id && R() < .5) { W.belts[o.k] = Wn.id; took.push(o.k); } });
     noteFight(Wn, Ls, { ko, t: took, r: (aw ? b : a) + 1, wk: save.week });
@@ -5723,6 +5732,7 @@ function changeDiv(save, to) {
   const held = ORGS.filter(o => W.belts[o.k] === P.id);
   if (held.length) { const top = W.roster.slice().sort((x, y) => y.points - x.points)[0]; held.forEach(o => { W.belts[o.k] = top.id; }); notes.push('Vacated the ' + held.map(o => o.k).join(', ') + ' ' + DIVS[from].name.toLowerCase() + (held.length > 1 ? ' belts.' : ' belt.')); }
   P.belts = [];
+  P.mandatory = false; // mandatory status stays in the old division
   W.away[from] = { roster: W.roster, belts: W.belts, week: save.week };
   const back = W.away[to];
   if (back) { W.roster = back.roster; W.belts = back.belts; delete W.away[to]; }
@@ -6131,6 +6141,7 @@ function hub(tab) {
         <div class="mute">${DIVS[P.div].name} (${DIVS[P.div].lb})${(P.titleDivs || []).length > 1 ? `, champion in ${P.titleDivs.length} divisions` : ''}</div>
         <div class="mute">${P.retired ? 'Retired' : `Ranked #${rank} of ${save.world.roster.length + 1}`}${P.peakRank ? `, peak #${P.peakRank}` : ''}</div>
         ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}
+        ${P.mandatory ? `<div class="mute">Mandatory challenger — his title shot is next.</div>` : ''}
       </div>
     </div>
     ${status}

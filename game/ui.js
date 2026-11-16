@@ -389,6 +389,7 @@ function hub(tab) {
         <div class="mute">${DIVS[P.div].name} (${DIVS[P.div].lb})${(P.titleDivs || []).length > 1 ? `, champion in ${P.titleDivs.length} divisions` : ''}</div>
         <div class="mute">${P.retired ? 'Retired' : `Ranked #${rank} of ${save.world.roster.length + 1}`}${P.peakRank ? `, peak #${P.peakRank}` : ''}</div>
         ${P.belts.length ? `<div class="chips">${beltChips(P.belts)}</div>` : ''}
+        ${P.mandatory ? `<div class="mute">Mandatory challenger — his title shot is next.</div>` : ''}
       </div>
     </div>
     ${status}
