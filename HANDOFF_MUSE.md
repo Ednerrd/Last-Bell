@@ -56,4 +56,5 @@ To start, reply with a short summary of what you understood, then ask Ed what he
 
 ## Next batch (kept current by Claude Code each time one lands)
 - **Batch 7 in (Nov 16).** Claude's 24x50, smart pick: shots 14 -> 22 of 24, first median 33.5 -> 28.5, 7 in 15-25, 2 careers won a belt.
-- **Batch 8 (next):** 1) a lost title shot sends him back: ~6 title fights a career now (one man lost 9 straight), the gate re-offers top 5 / the mandatory right after a loss: make him win again first; 2) the Open offer still shows 6-14 a run (Keep-busy finds nobody): find where; 3) optional: a good-career harness mode in `tests/career.js` (`PICK=smart` is in: the title, else the eliminator, else tune-up/even 50/50) to test 15-25 for real.
+- **Batch 8 in (Nov 16).** Claude's 24x50: smart title fights 5.3 -> 2.8 a career, 0 back-to-back title losses, Open offer 0; good mode first shot median 23 (17 of 24 in 15-25), 6 careers of 24 won a belt.
+- **Next: Ed's call.** Candidates: pedigree as a faster ladder, interim belts, the mandatory clock, the division deflating past ~40 fights.
