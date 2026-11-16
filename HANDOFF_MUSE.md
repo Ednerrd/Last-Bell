@@ -55,4 +55,5 @@ The files are too big to paste whole. Ask Ed for the section you need by its mar
 To start, reply with a short summary of what you understood, then ask Ed what he wants to work on.
 
 ## Next batch (kept current by Claude Code each time one lands)
-- **Batch 7 (Nov 16, Muse running it):** 1) the climb: first title shot at fights 15-25 (now ~34-37): A/B more points per early win vs the eliminator band 6-20; 2) the 6-10 shot rolls once a week, not per tap (`ACT.offers` in `game/ui.js` calls `genOffers` every time the screen opens); 3) the Open offer at #1-2: an even match, not a random man; 4) can a good man (OVR 80-85) take a belt (0/74 title wins in the 24x50 harness, men ~OVR 60). Test: 6+ careers a side, `PICK=mix` and the middle pick; Claude runs 24x50 before main.
+- **Batch 7 in (Nov 16).** Claude's 24x50, smart pick: shots 14 -> 22 of 24, first median 33.5 -> 28.5, 7 in 15-25, 2 careers won a belt.
+- **Batch 8 (next):** 1) a lost title shot sends him back: ~6 title fights a career now (one man lost 9 straight), the gate re-offers top 5 / the mandatory right after a loss: make him win again first; 2) the Open offer still shows 6-14 a run (Keep-busy finds nobody): find where; 3) optional: a good-career harness mode in `tests/career.js` (`PICK=smart` is in: the title, else the eliminator, else tune-up/even 50/50) to test 15-25 for real.
