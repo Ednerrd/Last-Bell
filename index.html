@@ -3389,6 +3389,36 @@ const Render = (() => {
     awkward:      { wt: 0, lo: 0, hinge: 0, heel: .25, b: 1.5, bf: 9.5, toe: .35, odd: 3 }
   };
   const STY2_OF = { volume: 'swarmer', angle: 'outboxer', switch: 'boxerpuncher', body: 'swarmer', pboxer: 'slugger', spoiler: 'counter', jabgrab: 'outboxer', feinter: 'boxerpuncher' };
+  // the rhythm pass (Nov 16, research/movement.md 1, 7, 10): the bounce was a metronome (one sine per style). Now each man rides his own
+  // phrases: a jittered grid of ~cell s phrases, each a whole number of beats (it starts and ends on the beat) at its own tempo (tv +-,
+  // dbl the odd half-beat burst at 1.75x), pz of them still ("loaded stillness": weight shifts, a shoulder twitch, the guard adjusts).
+  // What moves by style: b the vertical bounce (out-boxer on his toes), sw / swf a side sway leg to leg (swarmer; side view shows it as
+  // the hips rocking over each foot), counter nothing below the waist (up: head and shoulders only), slugger flat with a slow heavy shift.
+  // Render only: a pure function of the time and the man's seed (v.bob), no rolls, no state.
+  const RHY2 = {
+    outboxer:     { cell: 1.3, pz: .14, dbl: .25, tv: .3, b: 1, sw: .5, swf: .5, up: .02 },
+    boxerpuncher: { cell: 1.45, pz: .3, dbl: .15, tv: .25, b: 1, sw: .7, swf: .5, up: .025 },
+    counter:      { cell: 1.8, pz: .5, dbl: .05, tv: .2, b: 0, sw: 0, swf: .5, up: .05 },
+    slugger:      { cell: 2.1, pz: .45, dbl: 0, tv: .15, b: .25, sw: 1.4, swf: .25, up: .02 },
+    swarmer:      { cell: 1.2, pz: .2, dbl: .2, tv: .3, b: .2, sw: 2.8, swf: .5, up: .03 },
+    awkward:      { cell: 1, pz: .3, dbl: .3, tv: .5, b: 1, sw: 1.1, swf: .5, up: .04 }
+  };
+  function hsh2(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+  function rhy2(v, t, bf, st) {
+    const rz = RHY2[st] || RHY2.boxerpuncher, sd = (v.bob || 0) * 13.7 + 1, L0 = rz.cell * (.8 + .45 * hsh2(sd));
+    const bd = k => (k + .7 * (hsh2(sd + k * 1.618) - .5)) * L0;
+    let k = Math.floor(t / L0); if (t < bd(k)) k--; else if (t >= bd(k + 1)) k++;
+    const a = bd(k), dur = bd(k + 1) - a, u = (t - a) / dur;
+    const ph = (kk, f) => { const r1 = hsh2(sd + kk * 2.414 + 5), r2 = hsh2(sd + kk * 3.303 + 9), r3 = hsh2(sd + kk * .577 + 13), r4 = hsh2(sd + kk * 4.11 + 17);
+      return { still: r1 < rz.pz, tmp: r2 < rz.dbl ? 1.75 : 1 + rz.tv * (r2 * 2 - 1), amp: .65 + .5 * r3, sh: (r3 - .5) * 2, gx: (r4 - .5) * 3, gy: (hsh2(sd + kk * 5.3 + 21) - .5) * 2.4, tw: .25 + .5 * r4 }; };
+    const P = ph(k), Q = ph(k - 1), e = clamp((t - a) / .18, 0, 1), es = e * e * (3 - 2 * e); // the shift and the guard ease over from the last phrase
+    const n = Math.max(1, Math.round(dur * bf * P.tmp / (2 * Math.PI))), w = u * n * 2 * Math.PI;
+    const tw = P.still ? Math.exp(-Math.pow((u - P.tw) * dur / .08, 2)) : 0; // a shoulder twitch in the still phrase
+    // the guard rhythms (peekaboo pendulum, the philly paw...) ride a tempo that drifts +-30% instead of a clock
+    const sp = (v.bob || 0) * 3.1, tt = t + .3 * Math.sin(t * .7 + sp) / .7 + .15 * Math.sin(t * 1.9 + sp * 2) / 1.9;
+    const win = Math.min(1, Math.sin(Math.PI * u) * 3); // the sway and the head ease in and out at the phrase's ends (the bounce lands on the beat by itself)
+    return { rz, w, win, env: P.still ? 0 : P.amp, still: P.still, sh: lerp(Q.sh, P.sh, es) * (P.still ? 1.6 : .6), gx: lerp(Q.gx, P.gx, es), gy: lerp(Q.gy, P.gy, es), tw, tt };
+  }
   // wt rest weight, knees: he takes his style's hinge in the knees (Tyson, not Frazier), bl the blade (deg, the 3D chest turn): in side view
   // the lead shoulder sits forward and the rear one back (x 7 sin bl) and the chest reads wider (square guards show the narrow profile)
   const GST2 = { standard: { wt: 0, bl: 40 }, high: { wt: .6, lo: 1, bl: 26 }, peekaboo: { wt: 2.4, knees: 1, lo: 1.5, bl: 18 }, philly: { wt: -2.4, bl: 52 }, cross: { wt: 2.4, lo: 1, bl: 24 }, handslow: { wt: -1.8, bl: 38 } };
@@ -3410,9 +3440,12 @@ const Render = (() => {
     // F1: knees soft (the hips sit lower than the old locked legs), the bounce and the rest weight by style, the rear heel up a little
     const sty = STY2[STY2_OF[v.sk] || v.sk] || STY2.boxerpuncher, gst = GST2[gd] || GST2.standard;
     let heelR = 0;
+    const rh = rhy2(v, t, sty.bf, STY2_OF[v.sk] || v.sk), rz = rh.rz, gph = rh.tt + (v.bob || 0); // gph: the guard rhythms' drifting clock
     if (!still) {
-      const bo = Math.sin(ph * sty.bf) * sty.b * (1 - .6 * tir) * (1 - .4 * mvk0); // on the toes the out-boxer rides up and down, the slugger sits flat, gas kills it
-      hipY += ST2.knee * Hh + bo; heelR = sty.heel + gst.wt * .03 + sty.toe * Math.max(0, -bo) * .3;
+      const ga = (1 - .6 * tir) * rh.env, bo = Math.sin(rh.w) * sty.b * rz.b * ga * (1 - .4 * mvk0); // on the toes the out-boxer rides up and down in phrases, the slugger sits flat, gas kills it
+      const sw = Math.sin(rh.w * rz.swf) * rz.sw * ga * rh.win;                    // the side sway: the hips rock over each foot in turn
+      hipY += ST2.knee * Hh + bo + Math.abs(sw) * .35; hipX += sw + rh.sh * (1 - .5 * mvk0); lean += Math.sin(rh.w * .5) * rz.up * ga * rh.win + Math.sin(rh.tt * 1.3 + (v.bob || 0)) * .012 + rh.tw * .07; // loaded stillness: the weight shifts, a shoulder twitch
+      heelR = sty.heel + gst.wt * .03 + sty.toe * Math.max(0, -bo) * .3;
     }
     // ---- guard stance: each guard has its own rhythm ----
     if (!still && v.state !== 'clinch' && v.state !== 'stun') {
@@ -3422,16 +3455,16 @@ const Render = (() => {
       const hg = gst.knees ? 0 : sty.hinge, wt = (sty.wt + gst.wt + (sty.odd ? Math.sin(ph * .37) * sty.odd : 0)) * (1 - .5 * mvk0); // 50/50 on the move
       hipY += (cr + Math.max(0, -wt) * ST2.sitBack - Math.max(0, wt) * ST2.fwdUp) * Hh; lean += hg; hipX += wt - hg * 12; // a waist hinge sits the hips back; weight back sits on the rear knee (no locked lead leg)
       if (gd === 'peekaboo') {        // constant figure-8 pendulum: dip twice per sway, gloves stay glued to the cheeks
-        const w = 4.4 * (1 - .35 * tir), a = Math.sin(ph * w);
-        hipY += (1 - Math.cos(ph * w * 2)) * 1.2; lean += .1 + a * .07; hipX += a * 2.6;
+        const w = 4.4 * (1 - .35 * tir), a = Math.sin(gph * w);
+        hipY += (1 - Math.cos(gph * w * 2)) * 1.2; lean += .1 + a * .07; hipX += a * 2.6;
       } else if (gd === 'philly') {   // bladed, weight on the back foot, chin behind the shoulder, easy sway
-        lean -= .07 + Math.sin(ph * 2.1) * .025;
+        lean -= .07 + Math.sin(gph * 2.1) * .025;
       } else if (gd === 'high') {     // shelled up and walking him down
-        lean += .1 + Math.sin(ph * 3) * .02; hipY += mvk0 * 1.5;
+        lean += .1 + Math.sin(gph * 3) * .02; hipY += mvk0 * 1.5;
       } else if (gd === 'cross') {    // Moore's Lock: slow rock behind the arms
-        const r = Math.sin(ph * 1.6); lean += .14 + r * .05; hipX += r * 1.5;
+        const r = Math.sin(gph * 1.6); lean += .14 + r * .05; hipX += r * 1.5;
       } else if (gd === 'handslow') { // tall and loose, bouncing on the toes when he's set
-        lean -= .05; hipY -= 1 + Math.abs(Math.sin(ph * 6.5)) * 1.7 * (1 - mvk0) * (1 - tir);
+        lean -= .05; hipY -= 1 + Math.abs(Math.sin(gph * 6.5)) * 1.7 * (rh.still ? .3 : 1) * (1 - mvk0) * (1 - tir);
       }
       // gassed: shoulders hunch forward, heavy breathing
       lean += .06 * tir; hipY += 1.5 * tir + Math.sin(ph * 2.6) * 1.4 * tir;
@@ -3543,7 +3576,7 @@ const Render = (() => {
     if (v.state === 'stun') { footF.x = 14 + Math.sin(t * 6) * 4; footB.x = -18; footB.y = 0; }
     if (sit > 0) { footF = L(footF, { x: 18, y: 0 }, sit); footB = L(footB, { x: 6, y: 0 }, sit); }
     const sq = still || v.walk || v.state === 'clinch' || sit > .5 ? 0 : 1, sb = Math.sin((gst.bl || 40) * Math.PI / 180) * sq; // square in the clinch, walking, on the stool, down
-    const J = { pv, hip, neck, head, ha, footF, footB, S, twist, bo: 7 * sb, tw: 1 + .28 * (sb - .64) * sq, breath: breath * (1 + sit * .8), heelB: Math.max(heel, heelR * (1 - .7 * pivot)) * .55, pivotF: pivot * .32, turnBx: heel, turnFx: pivot, sit };
+    const J = { pv, hip, neck, head, ha, footF, footB, S, twist, bo: 7 * sb, tw: 1 + .28 * (sb - .64) * sq, breath: breath * (1 + sit * .8), heelB: Math.max(heel, heelR * (1 - .7 * pivot)) * .55, pivotF: pivot * .32, turnBx: heel, turnFx: pivot, sit, rh };
     // knockdown: keyframed. Going down: knees buckle, he drops onto his seat, the back hits, the head last.
     // Getting up: sits up, gets to a knee, stands with the gloves coming back up
     const dp = v.state === 'down' ? clamp(v.downP, 0, 1) : 0;
@@ -3585,9 +3618,10 @@ const Render = (() => {
     let leadG = { x: N.x + GP.l[0], y: N.y + GP.l[1] }, rearG = { x: N.x + GP.r[0], y: N.y + GP.r[1] };
     if (gd === 'philly') lsh0.y -= 5;             // lead shoulder up to the chin, chin tucked behind it
     if (gd === 'cross' && J.dp === 0) { shN.y -= 1.5; shF.y -= 1.5; } // the hunch: shoulders rounded up
-    const ph = t + (v.bob || 0), gi = v.gi == null ? 1 : v.gi, live = v.state !== 'down' && v.state !== 'slump' && v.state !== 'clinch';
+    const rh = J.rh, ph = rh ? rh.tt + (v.bob || 0) : t + (v.bob || 0), gi = v.gi == null ? 1 : v.gi, live = v.state !== 'down' && v.state !== 'slump' && v.state !== 'clinch';
     // ---- per-guard hand rhythm ----
     if (live && !v.def) {
+      if (rh && !v.aT) { leadG.x += rh.gx + rh.tw * 4; leadG.y += rh.gy - rh.tw * 2.5; rearG.x += rh.gx * .6; rearG.y += rh.gy * .7; } // the rhythm pass: the guard adjusts each phrase, the lead shoulder twitches in a still one
       if (gd === 'philly') {          // lead hand paws and flicks, rear hand drifts across the face
         const fl = Math.pow(Math.max(0, Math.sin(ph * 1.3)), 14);
         leadG.x += Math.sin(ph * 2.3) * 2.5 + fl * 9; leadG.y += -fl * 7;
@@ -4388,7 +4422,7 @@ const Render = (() => {
     drawFighter(v, look, J, A);
     ctx = prev;
   }
-  return { init, resize, reset, frame, portrait, W, H, sm: () => SM }; // sm: the per-man pose state (tests/hands2d.js)
+  return { init, resize, reset, frame, portrait, W, H, sm: () => SM, pose: body }; // sm: the per-man pose state (tests/hands2d.js); pose: one pose (tests/rhythm2d.js)
 })();
 
 /* ===== LAST BELL : audio (synthesized) ===== */
