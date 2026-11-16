@@ -37,6 +37,15 @@ The 3D stance work (`proto/STANCE.md` 2-7, `proto/PLAN.md` Round 2) ported to th
 - i (Oct 27, Ed: "why they look like they crouching"; the peek-a-boo volume man was in a lunge): the crouch stacked (base knees + the guard's crouch + the style's lo + peekaboo taking the swarmer's hinge in the knees + forward weight closing the lead leg). Measured off the drawing (lead knee bend): peekaboo 70-96°, cross 46-67, high 39-63 vs the 20-35 target (`proto/STANCE.md` 1). Now the guard crouch lives in `GST2.lo` (peekaboo 8 -> 1.5, cross 3 -> 1, high 2.5 -> 1), `ST2.cap` 12 -> 4 with `capK` .25 (was .4), the peekaboo knees take hinge x 15 (was 25), the dip 1.6 -> 1.2, forward weight lifts the hips (`ST2.fwdUp` .45 a unit), weight back sits on the knees (`sitBack` .25: no locked lead leg), outboxer lo -1.2 -> 0. After: standard 33-41°, high 39-46, peekaboo 49-59, cross 41-48, Philly 28-42, hands low 13-28. Hash holds (4f8e6d15). `tests/stance2d.js` never applied the style (it set `style`, the drawing reads `sk`): fixed.
 - Not done: "close" (shorter stance when on top of his man), real pivots on the turn (side view hides most of it), the near / far leg convention (the lead leg is drawn near for both men; a mirror thing, left as is).
 
+### Handoff (Oct 25, F4 built: fight IQ / balance)
+Read this first. Older handoffs: `docs/NOTES.md` "Handoff log"; the F4 numbers: `docs/NOTES.md` "F4, fight IQ / balance".
+- **State:** main `claude/epic-goldberg-ps6ip4`. **New hash**: `same.js 40` = **4f8e6d15**, `same.js 200` = **c1d1cdc7**. `game.html` rebuilt. Lab republished Oct 26 with F1-F4: https://claude.ai/artifact/FBLVapx4zPsKM5v9RV2vqA.
+- **Built (F4):** awkward read later (`AI.odd` 1.3: 45.5 -> 51.9), volume works from further out (`AI_MAP.volume` range .4: 47.4 -> ~50, 48.5 in the full check), the counter puncher's counter skill 18 (46.8 -> 49.3). Guards needed nothing (peekaboo 49.7 since F3). bodyOnly cheese passes at hard (66.5).
+- **Full check `f4e`:** audit 51.4 / 15.0 / 29.1%, stops 33.1 (finish 35.8), KDs .48, body 6.5%; styles 47.8-53.5; specials 47.2-52.7; guards 47.2-52.3; one level down 16.0 / 13.9 / 16.2; judges on target; drama lead change 37.0, comebacks 9.9.
+- **Lesson:** `STYLES.*.counter` / `aggr` in the engine are dead (old AI). Check a knob moves the hash first; ~1100 fights swing ±2.
+- **Next:** Ed's notes on F1-F3 in the lab (ROADMAP Ed item 00), then the career (G3). F4 leftovers go to the brain pass: cheese haymaker 58.2 at hard, lead changes 37 / comebacks 9.9, PvI ~14, the short man at 6 in.
+- **3D (parked, Ed Oct 24):** all 7 stance changes built, waiting on Ed's phone notes.
+
 ### Handoff (Oct 25, F3 built: your coaching)
 Read this first. Older handoffs: `docs/NOTES.md` "Handoff log"; the pre-3D baseline: `docs/SIZE.md` "s3, the pre-3D baseline".
 - **State:** main `claude/epic-goldberg-ps6ip4`. **New hash** (F3c, the brain): `same.js 40` = **38eccb57**, `same.js 200` = **26185177**. `game.html` rebuilt. Lab republished (same link).
