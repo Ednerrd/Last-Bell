@@ -210,8 +210,10 @@ function genOffers(save) {
     const contender = list[0].f; const b = P.belts.slice();
     add(contender, b, 'Mandatory defense');
   }
+  // G3 batch 7: the 6-10 shot is rolled once per week, not once per tap — backing out and tapping in again can't reroll it.
+  if (save.shotRoll == null || save.shotRoll.wk !== save.week || save.shotRoll.div !== save.world.div) save.shotRoll = { wk: save.week, div: save.world.div, ok: R() < SHOT_6_10 };
   // G3 batch 6: the gate — top 5 always get a shot, 6-10 sometimes, and the mandatory always does.
-  if (r <= 4 || P.mandatory || (r <= 9 && R() < SHOT_6_10)) {
+  if (r <= 4 || P.mandatory || (r <= 9 && save.shotRoll.ok)) {
     const notMine = ORGS.filter(o => !P.belts.includes(o.k)).map(o => o.k);
     if (notMine.length) {
       const holderId = save.world.belts[notMine[0]];
@@ -221,8 +223,8 @@ function genOffers(save) {
   }
   // G3: offers react to his record — a killer gets ducked, a hot prospect gets called out, a loss means a bounce-back.
   const form = formOf(P);
-  // G3 batch 6: ranked 6-15 and not already mandatory, with no shot on the table, the third card is an eliminator.
-  const elimOk = !P.mandatory && !P.belts.length && r >= 5 && r <= 14 && !offers.some(o => o.title.length);
+  // G3 batch 6: ranked 6-20 and not already mandatory, with no shot on the table, the third card is an eliminator. (Batch 7: band widened from 6-15 — men stall at 16-20.)
+  const elimOk = !P.mandatory && !P.belts.length && r >= 5 && r <= 19 && !offers.some(o => o.title.length);
   const takeFree = (lo, hi) => { const c = list.slice(clamp(lo, 0, list.length - 1), clamp(hi, 1, list.length)).filter(e => !used.has(e.f.id)); return c.length ? pick(c).f : null; };
   if (form.killer) {
     const ducker = takeFree(r - 8, r - 1);
@@ -237,7 +239,8 @@ function genOffers(save) {
     else if (elimOk) add(takeFree(r - 4, r + 4), null, 'Eliminator', true);
     else if (form.hot) { const c = takeFree(r - 12, r - 5); const f = c || takeFree(r - 8, r); add(f, null, c ? 'Call-out' : 'Step up'); }
     else add(take(r - 8, r - 1), null, 'Step up');
-    if (tries > 6 && offers.length < 3) add(take(0, list.length), null, 'Open offer');
+    // G3 batch 7: the last resort is an even match now, not a random man — a top man who can't step up stays busy against someone his own level.
+    if (tries > 6 && offers.length < 3) { if (!add(takeFree(r - 2, r + 3), null, 'Keep-busy')) add(take(0, list.length), null, 'Open offer'); }
   }
   return offers.slice(0, 3);
 }
@@ -321,7 +324,8 @@ function applyResult(save, offer, fight) {
   if (win) { P.record.w++; if (stop) P.record.ko++; } else if (loss) P.record.l++; else P.record.d++;
   if (opp.record) { if (loss) { opp.record.w++; if (stop) opp.record.ko++; } else if (win) opp.record.l++; else opp.record.d++; }
   const op = opp.points || 0;
-  if (win) { const g = 8 + op * .16 + (stop ? 3 : 0) + (isTitle ? 30 : 0); P.points += g; if (!opp.club) opp.points = Math.max(0, opp.points - (4 + g * .3)); }
+  // G3 batch 7: a win is worth at least 20 points — early wins against low-points men were gaining 13-16, and the climb to 6-15 took ~30 fights.
+  if (win) { const g = Math.max(20, 8 + op * .16 + (stop ? 3 : 0) + (isTitle ? 30 : 0)); P.points += g; if (!opp.club) opp.points = Math.max(0, opp.points - (4 + g * .3)); }
   else if (loss) { const l = 5 + Math.max(0, P.points - op) * .12 + P.points * .06; P.points = Math.max(0, P.points - l); if (!opp.club) opp.points += 6 + P.points * .1; }
   else { P.points += 2; if (!opp.club) opp.points += 2; }
   P.money += offer.purse; P.earnings += offer.purse;

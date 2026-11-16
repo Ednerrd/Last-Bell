@@ -8,7 +8,7 @@ const G = new Function(src.slice(a, b) + fs.readFileSync(process.env.CJ || 'game
   BASE_STYLES,rollGuard,FIRST,LAST,pick,ri,BoxerBrain,FOCUS,camp};`)();
 const NC = +process.argv[2] || 3, NF = +process.argv[3] || 30, DIV = process.argv[4] != null ? +process.argv[4] : 4;
 const run = (A, B, rounds) => { const f = new G.Fight(A, B, { rounds, cutmanA: .5, cutmanB: .45 }); let n = 0; while (f.phase !== 'over' && n++ < 600000) { f.step(); if (f.phase === 'corner') f.nextRound(f.aiStrategy(0), f.aiStrategy(1)); f.events = []; } return f; };
-const t0 = Date.now(), TAL = {}; // PICK=mix: take the hardest offer 1 in 3 (exercises the third slot: Step up / Call-out / Bounce-back)
+const t0 = Date.now(), TAL = {}; // PICK=mix: take the hardest offer 1 in 3 (exercises the third slot); PICK=smart: a sensible human (the title, else the eliminator, else tune-up or even 50/50)
 for (let c = 0; c < NC; c++) {
   const style = G.pick(G.BASE_STYLES), stats = G.genStats(G.ri(50, 58), style), pot = {}; G.STATS.forEach(k => pot[k] = Math.min(97, stats[k] + G.ri(16, 42)));
   const save = G.newCareer({ name: G.pick(G.FIRST) + ' ' + G.pick(G.LAST), nick: '', div: DIV, style, guard: G.rollGuard(style), stance: Math.random() < .22 ? 'southpaw' : 'orthodox', stats, pot, look: G.randLook(DIV), age: G.ri(19, 22) });
@@ -17,7 +17,7 @@ for (let c = 0; c < NC; c++) {
   while (fights < NF && !P.retired) {
     if (P.injury) { G.rest(save); continue; }
     const offers = G.genOffers(save); if (!offers.length) { G.rest(save); continue; }
-    const o = offers.find(x => x.title.length) || (process.env.PICK === 'mix' && Math.random() < 1 / 3 ? offers[offers.length - 1] : offers[Math.min(offers.length - 1, 1)]); // the title shot if there is one, else the even match
+    const o = offers.find(x => x.title.length) || (process.env.PICK === 'smart' ? (offers.find(x => x.eliminator) || offers[Math.random() < .5 ? 0 : Math.min(offers.length - 1, 1)]) : null) || (process.env.PICK === 'mix' && Math.random() < 1 / 3 ? offers[offers.length - 1] : offers[Math.min(offers.length - 1, 1)]); // the title shot if there is one, else the even match
     offers.forEach(x => TAL['seen ' + x.label] = (TAL['seen ' + x.label] || 0) + 1); if (save.ducked && save.ducked.length) TAL.ducked = (TAL.ducked || 0) + 1; TAL['took ' + o.label] = (TAL['took ' + o.label] || 0) + 1; if (o.title.length && !shot1) shot1 = fights + 1;
     save.pending = { offer: o, campDone: false };
     const weak = Object.keys(P.sk).sort((x, y) => P.sk[x] / P.cap[x] - P.sk[y] / P.cap[y])[0], k = fights % 3; // rotate the camp pick: drill his weakest skill, spar, film
