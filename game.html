@@ -5819,6 +5819,14 @@ const FLAW_HINT = {
   same: 'His counter is always the same punch. Slip it once and come back over the top while his hands are down.',
   drop: 'His jab hand comes back low. Throw the right hand over it.'
 };
+// the same hole on a man whose style doesn't own it (a flaw is his style's own 60% of the time): same tell, same answer, worded so it doesn't clash with how he fights
+const FLAW_HINT_OFF = {
+  jab: 'When he steps in, he has no answer for the jab. Stick it in his face and he has to start over.',
+  fold: "He doesn't like it close: crowd him and he shells up behind the gloves. Once he folds, the body is wide open.",
+  straight: 'When he comes forward, he lunges in head-first. Meet him with a straight shot and he stops dead.',
+  same: 'The one counter he throws is always the same punch. Slip it once and come back over the top while his hands are down.',
+  drop: 'Watch his jab hand: it comes back low. Throw the right hand over it.'
+};
 /* ---------- tale of the tape: his numbers next to yours, and what the corner makes of it ---------- */
 const TAPE_HIM = { power: 'he hits harder than you', speed: 'his hands are quicker', accuracy: "he's the sharper puncher", defense: "he's harder to hit", footwork: 'he moves better', chin: 'he takes a shot better', body: 'he takes the body better', stamina: "he's got the bigger gas tank", recovery: 'he bounces back quicker', heart: "he won't break easy" };
 const TAPE_YOU = { power: 'you hit harder', speed: 'your hands are quicker', accuracy: "you're the sharper puncher", defense: "you're harder to hit", footwork: 'you move better', chin: 'you take a shot better', body: 'you take the body better', stamina: "you've got more gas", recovery: 'you bounce back quicker', heart: "you've got more heart" };
@@ -5847,13 +5855,15 @@ function cornerRead(save, f) {
   let lo = null; for (const k of STATS) if (him[k] - avg <= -6 && k !== yk && (!lo || him[k] < him[lo])) lo = k;
   return [verdict, edge, lo ? TAPE_HOLE[lo] : ''].filter(Boolean).join(' ');
 }
-// G3: the tape reads his real habits (his style, as he fights it). The flaw hint needs film: scouted, or you fought him
+// G3: the tape reads his real habits (his style, as he fights it). The flaw hint needs film: scouted, or you fought him. A flaw off his style gets the bridged line
 function scoutLine(save, offer) {
   const f = ready(oppNow(save, offer), save.world.div);
   const habit = STYLE_SCOUT[domStyle(f)] || STYLE_SCOUT.boxerpuncher;
   if (!isScouted(save, f)) return habit + ' Get film on him to find the hole.';
   const hint = FLAW_HINT[f.flaw];
-  return hint ? habit + ' ' + hint : habit;
+  if (!hint) return habit;
+  const own = BoxerBrain.BR.flaw.by[brainStyle(domStyle(f))[0]];
+  return habit + ' ' + (f.flaw !== own ? (FLAW_HINT_OFF[f.flaw] || hint) : hint);
 }
 function winLine(w) { return `<li class="${w.you ? 'you' : ''}">${w.you ? (w.ko ? 'Stopped <b>you</b>' : 'Beat <b>you</b>') : (w.ko ? 'KO ' : 'Beat ') + esc(w.n)}${w.r ? ` <small>(#${w.r})</small>` : ''}${w.t && w.t.length ? ' ' + beltChips(w.t) : ''}</li>`; }
 function lastLine(L) {
