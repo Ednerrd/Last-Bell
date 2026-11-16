@@ -15,8 +15,8 @@ const TIERS = {
   club: { label: 'Club show', venue: 'gym', purse: [500, 1600] },
   regional: { label: 'Regional card', venue: 'hall', purse: [3000, 14000] },
   tv: { label: 'TV undercard', venue: 'civic', purse: [25000, 120000] },
-  main: { label: 'Main event', venue: 'coliseum', purse: [150000, 650000] },
-  title: { label: 'World title fight', venue: 'vegas', purse: [700000, 4500000] }
+  main: { label: 'Main event', venue: 'coliseum', purse: [100000, 350000] },
+  title: { label: 'World title fight', venue: 'vegas', purse: [350000, 700000] }
 };
 const GYMS = [
   { name: 'Garage gym', cost: 0, mult: .6, cut: .25, note: 'Free. Rusted bags, no cutman worth the name.' },
@@ -153,18 +153,24 @@ function p4p(save) {
   return out.slice(0, 10);
 }
 
+// G3: title money scales with what you hold — a first shot pays like a first shot, a defense pays like a champ,
+// a unification pays like an event. (Was one flat 700k-4.5M range for anyone, plus a belt multiplier that stacked
+// on top of it.) A first shot uses TIERS.title; the table below only kicks in once you hold a belt. The old +.25 belt bump
+// in q now applies to non-title fights only — on a title night the range already carries the belts, so the bump would
+// have pinned q at 1 and paid the top of the range every time.
+const TITLE_PURSE = { 1: [800000, 2000000], 2: [2000000, 4000000] };
 function purseFor(save, tier, oppPoints, isTitle) {
   const T = TIERS[tier]; const P = save.player; const div = DIVS[P.div];
-  const caps = { club: 35, regional: 110, tv: 240, main: 430, title: 430 };
-  const q = clamp((Math.max(P.points, oppPoints) / caps[tier]) * .7 + R() * .3 + (P.belts.length ? .25 : 0), 0, 1);
-  let v = lerp(T.purse[0], T.purse[1], q) * div.pay;
-  if (isTitle && P.belts.length) v *= 1 + P.belts.length * .3;
+  const caps = { club: 50, regional: 150, tv: 300, main: 430, title: 430 };
+  const q = clamp((Math.max(P.points, oppPoints) / caps[tier]) * .7 + R() * .3 + (P.belts.length && !isTitle ? .25 : 0), 0, 1);
+  const range = isTitle ? (TITLE_PURSE[Math.min(P.belts.length, 2)] || T.purse) : T.purse;
+  const v = lerp(range[0], range[1], q) * div.pay;
   return Math.round(v / 50) * 50;
 }
 function tierFor(save, oppPoints, title) {
   if (title) return 'title';
   const p = Math.max(save.player.points, oppPoints || 0);
-  return p < 35 ? 'club' : p < 110 ? 'regional' : p < 240 ? 'tv' : 'main';
+  return p < 50 ? 'club' : p < 150 ? 'regional' : p < 300 ? 'tv' : 'main';
 }
 function roundsFor(save, tier) {
   if (tier === 'club') return save.player.record.w + save.player.record.l < 3 ? 4 : 6;
