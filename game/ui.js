@@ -490,7 +490,7 @@ function renderOffers(openI) {
     </div>`;
   }).join('');
   show(`<div class="screen"><div class="topbar"><button class="link" data-act="backHub">Back</button><span class="tb-title">Fight offers</span><span class="cash">${money(save.player.money)}</span></div>
-    <p class="mute">Your promoter came back with these. Pick one.</p>${cards || '<p>No offers right now.</p>'}</div>`, 'offers');
+    <p class="mute">Your promoter came back with these. Pick one.</p>${save.ducked && save.ducked.length ? `<p class="mute">${esc(save.ducked[0])} turned the fight down. His people say he's "not ready yet."</p>` : ''}${cards || '<p>No offers right now.</p>'}</div>`, 'offers');
   document.querySelectorAll('canvas[data-look]').forEach(c => { const o = offerCache[+c.dataset.look]; Render.portrait(c, o.opp.look, { stance: o.opp.stance, guard: o.opp.guard, dir: -1 }); });
 }
 ACT.scout = d => {

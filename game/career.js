@@ -176,8 +176,16 @@ function roundsFor(save, tier) {
   if (tier === 'club') return save.player.record.w + save.player.record.l < 3 ? 4 : 6;
   return { regional: 8, tv: 10, main: R() < .5 ? 10 : 12, title: 12 }[tier];
 }
+// G3: what his recent record says — a killer gets ducked, a hot prospect gets called out, a loss means a bounce-back.
+function formOf(P) {
+  const h = P.history || [];
+  let streak = 0, kos = 0;
+  for (const e of h) { if (e.r !== 'W') break; streak++; if (!e.dec) kos++; }
+  return { streak, kos, hot: streak >= 3, killer: kos >= 2, cold: h.length > 0 && h[0].r === 'L' };
+}
 function genOffers(save) {
-  const P = save.player; if (P.injury) return [];
+  const P = save.player; save.ducked = [];
+  if (P.injury) return [];
   const pO = ovr(P.stats); const offers = [];
   const mk = (opp, title, label) => {
     const tier = tierFor(save, opp.points, !!(title && title.length));
@@ -209,11 +217,20 @@ function genOffers(save) {
       if (holder) { const onLine = beltsOf(save, holder.id).filter(k => !P.belts.includes(k)); add(holder, P.belts.length ? onLine.concat(P.belts) : onLine, P.belts.length ? 'Unification' : 'Title shot'); }
     }
   }
+  // G3: offers react to his record — a killer gets ducked, a hot prospect gets called out, a loss means a bounce-back.
+  const form = formOf(P);
+  const takeFree = (lo, hi) => { const c = list.slice(clamp(lo, 0, list.length - 1), clamp(hi, 1, list.length)).filter(e => !used.has(e.f.id)); return c.length ? pick(c).f : null; };
+  if (form.killer) {
+    const ducker = takeFree(r - 8, r - 1);
+    if (ducker) { used.add(ducker.id); save.ducked = [ducker.name]; }
+  }
   let tries = 0;
   while (offers.length < 3 && tries++ < 20) {
     const k = offers.length;
     if (k === 0) add(take(r + 2, r + 9), null, 'Tune-up');
     else if (k === 1) add(take(r - 2, r + 3), null, 'Even match');
+    else if (form.cold) add(take(r + 1, r + 4), null, 'Bounce-back');
+    else if (form.hot) add(takeFree(r - 12, r - 5), null, 'Call-out');
     else add(take(r - 8, r - 1), null, 'Step up');
     if (tries > 6 && offers.length < 3) add(take(0, list.length), null, 'Open offer');
   }
