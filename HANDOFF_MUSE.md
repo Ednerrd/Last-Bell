@@ -32,6 +32,23 @@ Per round: ~52 punches thrown, ~15 landed, ~29% connect. Stoppages 30-35% of fig
 - Published pages: one file, scripts only from cdnjs / jsdelivr, fonts from Google Fonts, no other network calls.
 - Ed's voice in any writing is his own. Commentary lines for the game are fine to write.
 
+## Building code (Muse writes, Claude Code applies and tests)
+You can read the repo but can't push or run tests. So: you write the code, Ed carries it to Claude Code, Claude Code applies it, builds, runs the tests, and pushes. Then you reread the raw links to see the result.
+- Raw files: `https://raw.githubusercontent.com/Ednerrd/Last-Bell/claude/epic-goldberg-ps6ip4/<path>`
+- **Your lane: G3, in `game/career.js` (~32 KB, career logic, no DOM) and `game/ui.js` (~53 KB, screens, saves).** Both are small enough to read whole. They sit on top of the engine, so the fight outcomes (the hash) don't move.
+- The current scouting tape: `GUARD_SCOUT`, `publicRead`, `cornerRead`, `tapeHtml` in `game/ui.js`; `scoutHim` in `game/career.js`. G3 plan: `docs/GAME.md`.
+- **Hands off** `index.html` (the engine, ~500 KB) and `brain/brain.js` unless Claude Code asks: changes there move fight outcomes and need hundreds of sims you can't run. If G3 needs something from the engine, say what and Claude Code wires it.
+- Never edit `game.html`: it's built from the other files.
+- **Hand back edits like this**, one block per change, the FIND text copied exactly from the current file and unique in it:
+  ```
+  FILE: game/ui.js
+  FIND:
+  <exact existing lines>
+  REPLACE:
+  <new lines>
+  ```
+  New functions: say which existing function they go after. Keep each batch small (one feature), say what it does and how Ed will see it in the game.
+
 ## Working with code
 The files are too big to paste whole. Ask Ed for the section you need by its marker or function name (e.g. "paste the `TUNING` block" or "paste `drawFighter`"), and give changes back as small, exact find-and-replace edits rather than whole-file rewrites.
 
