@@ -2,9 +2,7 @@
 
 Each PNG: top row before (the Oct 25 F1h feet), bottom row after (Nov 16). Fighter looks differ between the runs (random look): compare the feet.
 - `stance_before_after.png`: the idle stance, standard guard, every style.
-- `cross_before_after.png`: a rear cross, punch clock 0 -> .9.
-- `hook_before_after.png`: a lead hook, punch clock 0 -> .9.
-- `jab_before_after.png`: a jab, punch clock 0 -> .9.
+- `punch_<name>.png`, every punch, punch clock 0 -> .9: `jab`, `cross`, `lead_hook`, `rear_hook`, `lead_uppercut`, `rear_uppercut`, `body_jab`, `body_cross`, `body_hook`.
 
 What changed (render only, `same.js 40` 4f8e6d15 holds), `ST2` in `index.html`:
 - `rearHeel` .8 -> .48 rad: the rear heel at rest 46 -> ~27 deg.
