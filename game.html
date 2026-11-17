@@ -2781,7 +2781,7 @@ class Fight {
     const P = PUNCH[type]; const ss = 1.2 - F.s.speed / 100 * 0.4; const sf = stamFac(F);
     const v = vec(F, F.op);
     F.act = { id: this.pid = (this.pid || 0) + 1, type, t: 0, dur: P.dur * ss * (1.15 - 0.15 * sf) * (1.5 - .5 * tankF(F)), done: false, feint: false, step: P.kind === 'straight' ? 10 : 5, ux: v.ux, uz: v.uz };
-    if (P.cat !== 'jab') { const x = clamp(v.d - (F.pun[type].max - STEPIN.at), 0, STEPIN.max); F.act.stepR = F.act.step; F.act.step += x; } // long for it: he steps in to make it reach
+    if (P.cat !== 'jab') { const x = clamp(v.d - (F.pun[type].max + (F.st.leap || 0) - STEPIN.at), 0, STEPIN.max); F.act.stepR = F.act.step; F.act.step += x; } // long for it: he steps in to make it reach (past his own leap: the awkward man's lunge is already in it)
     { const b = F.binfo, i = F.bi++, a = F.act; a.tech = !b ? .75 : Array.isArray(b.tech) ? b.tech[Math.min(i, b.tech.length - 1)] : b.tech; a.commit = b ? b.commit || 0 : 0; a.tell = b && !i ? b.tell || 0 : 0; a.look = b && b.look && i === b.combo.length - 1 ? b.look : null; a.dur += a.tell * AI.tell; F.stam = Math.max(0, F.stam - P.cost * AI.commit * a.commit * .5); if (b) { a.first = !i; F.bev.push({ type: 'thrown', by: 'me', p: type, first: !i }); } } // the brain hears it started
     { const op = F.st.open; if (op) F.act.open = op * this.opening(F); }
     if (F.biteT > 0 && type !== 'jab') { F.act.open = Math.max(F.act.open || 0, STYLE_BITE.edge * F.st.bite); F.biteT = 0; } // he bit on the feint
