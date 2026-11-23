@@ -7,7 +7,7 @@ namespace LastBell
 {
     public class FightPlayer : MonoBehaviour
     {
-        public const float S = 0.021f;      // meters per engine unit: the ring comes out ~6 m across
+        public const float S = 0.0185f;     // meters per engine unit: clean shots land ~54 units apart = 1.0 m; the ring comes out ~5.4 m
         public string resource = "fight";   // Resources/<name>.json
         public float speed = 1f;
         public bool paused;
@@ -85,8 +85,57 @@ namespace LastBell
             if (!hasLight)
             {
                 var l = new GameObject("light").AddComponent<Light>();
-                l.type = LightType.Directional; l.intensity = 1.1f;
+                l.type = LightType.Directional; l.intensity = 0.7f;
                 l.transform.rotation = Quaternion.Euler(55, -20, 0);
+            }
+            // the ring lights: a spot over the canvas
+            var spot = new GameObject("ring light").AddComponent<Light>();
+            spot.type = LightType.Spot; spot.range = 14f; spot.spotAngle = 75f; spot.intensity = 2.2f;
+            spot.color = new Color(1f, 0.96f, 0.88f);
+            spot.transform.position = new Vector3(0, 6.5f, -0.5f);
+            spot.transform.rotation = Quaternion.Euler(88, 0, 0);
+            BuildCrowd(px, pz);
+        }
+
+        // the crowd: tiered rows on three sides (the camera side stays open). ~250 people, cheap primitives.
+        // On a phone build this is the first thing to merge or swap for a backdrop.
+        void BuildCrowd(float px, float pz)
+        {
+            var rnd = new System.Random(F.seed);
+            var shirts = new[] { new Color(0.25f, 0.25f, 0.3f), new Color(0.4f, 0.12f, 0.12f), new Color(0.12f, 0.2f, 0.4f), new Color(0.35f, 0.35f, 0.35f), new Color(0.1f, 0.1f, 0.1f), new Color(0.45f, 0.4f, 0.3f) };
+            var skins = new[] { new Color(0.86f, 0.66f, 0.52f), new Color(0.62f, 0.44f, 0.32f), new Color(0.42f, 0.28f, 0.2f), new Color(0.78f, 0.6f, 0.45f) };
+            var root = new GameObject("crowd").transform;
+            for (int sideI = 0; sideI < 3; sideI++)          // 0 = far side (+z), 1 = left (-x), 2 = right (+x)
+            {
+                for (int row = 0; row < 4; row++)
+                {
+                    float off = 2.6f + row * 0.95f, baseY = -0.6f + row * 0.4f;
+                    float len = sideI == 0 ? 2 * (px + off) : 2 * (pz + off);
+                    Vector3 c, along;
+                    if (sideI == 0) { c = new Vector3(0, baseY, pz + off); along = Vector3.right; }
+                    else { c = new Vector3((sideI == 1 ? -1 : 1) * (px + off), baseY, 0); along = Vector3.forward; }
+                    var tier = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    Object.Destroy(tier.GetComponent<Collider>());
+                    tier.transform.SetParent(root, false);
+                    tier.transform.position = c + Vector3.up * 0.2f;
+                    tier.transform.localScale = sideI == 0 ? new Vector3(len, 0.4f, 0.95f) : new Vector3(0.95f, 0.4f, len);
+                    tier.GetComponent<Renderer>().material.color = new Color(0.08f, 0.08f, 0.1f);
+                    for (float t = -len / 2 + 0.3f; t < len / 2 - 0.3f; t += 0.62f)
+                    {
+                        if (rnd.NextDouble() < 0.12) continue;     // empty seats
+                        var at = c + along * (t + (float)(rnd.NextDouble() - 0.5) * 0.15f) + Vector3.up * 0.4f;
+                        var b = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                        Object.Destroy(b.GetComponent<Collider>());
+                        b.transform.SetParent(root, false);
+                        b.transform.position = at + Vector3.up * 0.38f; b.transform.localScale = new Vector3(0.36f, 0.32f, 0.3f);
+                        b.GetComponent<Renderer>().material.color = shirts[rnd.Next(shirts.Length)];
+                        var h = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                        Object.Destroy(h.GetComponent<Collider>());
+                        h.transform.SetParent(root, false);
+                        h.transform.position = at + Vector3.up * 0.85f; h.transform.localScale = Vector3.one * 0.2f;
+                        h.GetComponent<Renderer>().material.color = skins[rnd.Next(skins.Length)];
+                    }
+                }
             }
         }
 
@@ -104,9 +153,10 @@ namespace LastBell
             if (cam == null) { cam = new GameObject("Main Camera").AddComponent<Camera>(); cam.tag = "MainCamera"; }
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.04f, 0.04f, 0.06f);
-            cam.fieldOfView = 40f;
-            cam.transform.position = new Vector3(0, 2.4f, -F.ringZ * S - 6.5f);
-            cam.transform.LookAt(new Vector3(0, 1f, 0));
+            cam.fieldOfView = 38f;
+            cam.transform.position = new Vector3(0, CAM_Y, -CAM_BACK - 2f);
+            camLook = new Vector3(0, LOOK_Y, 0);
+            cam.transform.LookAt(camLook);
         }
 
         void Update()
@@ -230,15 +280,20 @@ namespace LastBell
             }
         }
 
+        // TV side view: stays outside the ropes, follows the pair, backs off as they spread out
+        const float CAM_Y = 1.75f, LOOK_Y = 1.2f, CAM_BACK = 3.6f;
+        Vector3 camLook;
+
         void FollowCamera(Vector3 a, Vector3 b)
         {
             var mid = (a + b) * 0.5f;
-            float spread = Mathf.Abs(a.x - b.x);
-            var want = new Vector3(mid.x * 0.7f, 2.4f, mid.z - 6.2f - spread * 0.6f);
+            float spread = Vector3.Distance(a, b);
+            float ropeZ = -(F.ringZ * S + 0.45f) - 0.6f;   // never inside the near ropes
+            var want = new Vector3(mid.x * 0.85f, CAM_Y, Mathf.Min(mid.z - CAM_BACK - spread * 0.55f, ropeZ));
             float k = 1f - Mathf.Exp(-Time.deltaTime * 2.5f);
             cam.transform.position = Vector3.Lerp(cam.transform.position, want, k);
-            var look = Vector3.Lerp(cam.transform.position + cam.transform.forward, new Vector3(mid.x, 1.05f, mid.z), k);
-            cam.transform.LookAt(look);
+            camLook = Vector3.Lerp(camLook, new Vector3(mid.x, LOOK_Y, mid.z), 1f - Mathf.Exp(-Time.deltaTime * 4f));
+            cam.transform.LookAt(camLook);
         }
 
         void Restart()
@@ -286,7 +341,7 @@ namespace LastBell
 
             var f = F.frames[Mathf.FloorToInt(cursor)];
             int c = Mathf.Clamp(Mathf.FloorToInt(f.clock), 0, 180);
-            GUI.Label(new Rect(0, 10, W, 44), "RD " + f.round + "   " + (c / 60) + ":" + (c % 60).ToString("00"), big);
+            GUI.Label(new Rect(0, 18, W, 44), "RD " + f.round + "   " + (c / 60) + ":" + (c % 60).ToString("00"), big);
 
             for (int s = 0; s < 2; s++)
             {
@@ -295,7 +350,7 @@ namespace LastBell
                 st.normal.textColor = s == 0 ? new Color(1f, 0.5f, 0.5f) : new Color(0.55f, 0.7f, 1f);
                 string line = fi.name + "  " + fi.style + " / " + fi.guard + " / " + fi.stance +
                               "\nlanded " + landed[s] + " of " + thrown[s] + (kds[s] > 0 ? "   KDs " + kds[s] : "");
-                GUI.Label(new Rect(16, 60, W - 32, 60), line, st);
+                GUI.Label(new Rect(24, 66, W - 48, 60), line, st);
             }
 
             for (int i = 0; i < ticker.Count; i++)
@@ -304,7 +359,7 @@ namespace LastBell
             bool over = cursor >= F.frames.Length - 1;
             if (over) GUI.Label(new Rect(0, 300, W, 60), F.ResultText(), big);
 
-            float y = 720 - 70, bw = 110, gap = 10, x = (W - (bw * 5 + gap * 4)) / 2;
+            float y = 720 - 86, bw = 110, gap = 10, x = (W - (bw * 5 + gap * 4)) / 2;
             if (GUI.Button(new Rect(x, y, bw, 54), paused ? "Play" : "Pause", btn)) paused = !paused; x += bw + gap;
             if (GUI.Button(new Rect(x, y, bw, 54), "1x", btn)) speed = 1; x += bw + gap;
             if (GUI.Button(new Rect(x, y, bw, 54), "2x", btn)) speed = 2; x += bw + gap;
