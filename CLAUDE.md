@@ -8,6 +8,7 @@ Phone-first auto-boxing fight sim. `index.html` (~5,000 lines) is the fight lab:
 
 ## Who and how
 - **Muse collab (Nov 16):** Ed runs the game in a Muse AI space; Muse (Stephie) builds G3 in `game/career.js` + `game/ui.js` and does research briefs (`HANDOFF_MUSE.md`). Since Nov 16 she pushes to the repo herself (`git pull --rebase` before every push); older batches Ed carried here: apply, `node game/build.js`, hash, test careers (`tests/career.js`, before vs after), push. Her research goes in `research/` + the `research/MIND.md` index.
+- **Unity (Nov 23, plan A):** Unity is only a skin; the JS engine stays the truth. `node tools/unity/record.js` records a seeded fight to JSON (read-only, hash safe), and Antigravity builds the viewer in `unity/` from `HANDOFF_ANTIGRAVITY.md`.
 - Ed reads on his phone. Talk to him like a homie: light, real, roasts welcome. Short answers.
 - Ed runs parallel sessions: `git fetch` and check `git branch -r` for newer work before starting. The main line is `claude/epic-goldberg-ps6ip4` (the default branch: push each finished step there too, no extra ask: Ed, Oct 20 and Oct 21). Work lands on main; every side line is inside it except the parked tale-of-the-tape WIP on `claude/bold-faraday-bryk6t`. What's safe to delete: ROADMAP, Ed item 1. A v2 3D restart sits on `claude/brave-einstein-ojkyzm`: parked (Ed, Oct 14), v1 is the game.
 - Never publish to the live game without Ed's explicit OK.
