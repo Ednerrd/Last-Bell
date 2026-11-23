@@ -8,3 +8,12 @@ tools/arena/raw/
 tools/yt/raw/
 __pycache__/
 tools/dynamic/pull.log
+# Unity
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Ll]ogs/
+unity/[Uu]ser[Ss]ettings/
+unity/[Bb]uild*/
+unity/*.csproj
+unity/*.sln

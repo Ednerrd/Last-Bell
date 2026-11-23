@@ -20,7 +20,7 @@ while (f.phase !== 'over' && n < 600000) {
   f.step(); n++;
   for (const e of f.events) if (KEEP.has(e.type)) { const o = {}; for (const k in e) if (typeof e[k] !== 'object') o[k] = e[k]; o.i = frames.length; events.push(o); }
   f.events = [];
-  if (n % EVERY === 0 && f.phase !== 'corner') { const sn = f.snap(); frames.push([r2(f.t), f.round, f.phase === 'fight' ? 1 : 0, f.clinchT > 0 ? 1 : 0, fr(sn.f[0], f.f[0]), fr(sn.f[1], f.f[1])]); }
+  if (n % EVERY === 0 && f.phase !== 'corner') { const sn = f.snap(); frames.push([r2(f.t), f.round, f.phase === 'fight' ? 1 : 0, f.clinchT > 0 ? 1 : 0, fr(sn.f[0], f.f[0]), fr(sn.f[1], f.f[1]), r2(f.clock)]); }
   if (f.phase === 'corner') f.nextRound(f.aiStrategy(0), f.aiStrategy(1));
 }
 const who = (sh, F) => ({ name: sh.name, style: sh.style, guard: sh.guard, stance: sh.stance, reach: F.size && F.size.reach || null });
@@ -28,7 +28,7 @@ const rec = {
   v: 1, seed, dt: S.DT * EVERY, ring: { x: 146, z: 115 },
   fighters: [who(A, f.f[0]), who(B, f.f[1])],
   punches: PT.map(k => ({ id: k, name: S.PUNCH[k].name, dur: S.PUNCH[k].dur, kind: S.PUNCH[k].kind, zone: S.PUNCH[k].zone, arm: S.PUNCH[k].arm })),
-  states: STATES, frameKeys: ['t', 'round', 'live', 'clinch', 'red', 'blue'], fighterKeys: ['x', 'z', 'yaw', 'state', 'punch', 'punchP', 'feint', 'hitT', 'hitZone', 'hitPow', 'downP', 'rise', 'sit', 'tired', 'def', 'defP', 'dmg', 'cut', 'swL', 'swR', 'hurt'],
+  states: STATES, frameKeys: ['t', 'round', 'live', 'clinch', 'red', 'blue', 'clock'], fighterKeys: ['x', 'z', 'yaw', 'state', 'punch', 'punchP', 'feint', 'hitT', 'hitZone', 'hitPow', 'downP', 'rise', 'sit', 'tired', 'def', 'defP', 'dmg', 'cut', 'swL', 'swR', 'hurt'],
   result: f.result, frames, events
 };
 fs.writeFileSync(out, JSON.stringify(rec));

@@ -37,8 +37,8 @@ Top level:
 | `frames` | one array per frame (no frames during the corner break between rounds) |
 | `events` | the fight's events; `i` = index of the frame it happened on |
 
-A frame: `[t, round, live, clinch, red, blue]`
-- `t` sim time in seconds; `live` 1 while the round is on (0 = walking to corners, KD counts, etc.); `clinch` 1 while they're tied up.
+A frame: `[t, round, live, clinch, red, blue, clock]`
+- `clock` the round clock in seconds (0-180, what the TV shows). `t` sim time in seconds; `live` 1 while the round is on (0 = walking to corners, KD counts, etc.); `clinch` 1 while they're tied up.
 - **A round is 60 s of sim time** (the clock shows 3:00, it runs 3x). Play back at `dt` per frame for real speed.
 
 A fighter (`red` / `blue`): `[x, z, yaw, state, punch, punchP, feint, hitT, hitZone, hitPow, downP, rise, sit, tired, def, defP, dmg, cut, swL, swR, hurt]`
@@ -59,21 +59,22 @@ A fighter (`red` / `blue`): `[x, z, yaw, state, punch, punchP, feint, hitT, hitZ
 
 Events worth hooking up first: `throw` (`a` = who, `p` = punch), `hit` (`a`, `d`, `zone`, `p`, `blocked`, `crit`, `q` the quality, `hand`, `glove`), `miss` (`why`, `def`), `knockdown`, `count`, `up`, `bell`, `clinch`, `break`, `stoppage`, `end`. Every event also has `t`, `round`, `clock` (seconds on the round clock, 0-180).
 
-## Mapping to Unity
-- Unity position = `(x * S, 0, z * S)` with S ≈ **0.021 m per unit**, which makes the ring about 6.1 m wide (a real ring). Unity is Y-up, left-handed: check z doesn't come out mirrored.
-- Facing: `Quaternion.Euler(0, 90 - yaw * Mathf.Rad2Deg, 0)`, then confirm by eye that red and blue face each other at the start.
-- Interpolate between frames (lerp position, slerp facing) so it's smooth at 60+ fps.
-- Parsing: Unity's `JsonUtility` can't read mixed arrays. Use **Newtonsoft** (`com.unity.nuget.newtonsoft-json`) and read `frames` as `JArray`.
+## Mapping to Unity (as built in `unity/`, step 1)
+- Position: `FightPlayer.W(x, z)` = `(x * S, 0, -z * S)`, S = **0.021 m per unit** (the ring is about 6 m wide). z flips because in the 2D view +z is nearer the camera: the Unity camera sits at -z, so left and right match the lab.
+- Facing: `FightPlayer.Yaw(yaw)` = `90 + yaw * Rad2Deg` degrees (with the z flip). When yaw is 0 on both frames, he faces the other man.
+- Frames are lerped (position, facing, punchP, downP, defP), and the corner break isn't lerped across.
+- Parsing: `MiniJson.cs` (a small reader, no packages). `FightData.Parse()` reads columns by name from `frameKeys` / `fighterKeys`, so new recorder columns won't break it.
 
 ## Build order (small steps, Ed checks each one)
-1. **Ring + two capsules** replaying `sample_fight.json`: they move, face each other, a round counter and a clock. Ed eyeballs that the movement looks like the 2D lab.
-2. **Punches**: a simple arm or glove per hand that reaches out over `punchP` (lead/rear arm from the table, southpaw swaps them), flinch on `hitT`, fall on `downP`.
+1. **Built (Nov 23, Claude Code):** ring + capsule boxers replaying the fight, with a round counter and clock, names, landed/thrown, an event ticker, Play/Pause, 1x/2x/4x, Next Rd, the result. Ed's eye: does the movement look like the 2D lab?
+2. **Built roughly (Nov 23):** gloves punch over `punchP` (straight / hook arc / uppercut, lead/rear, southpaw swapped), the guards (standard, high, peekaboo, philly, cross, handslow), defense (block, roll, slip, duck, pull, parry), the flinch on `hitT`, falling on `downP`, wobbling when hurt, hit sparks, slow-mo on a KD. **Your first job: run it, fix what looks off, tune it by eye.**
 3. **Fight feel**: hit sparks or sounds on `hit` events, a KD camera, the bell, the result card.
 4. **The real boxer**: there's already a three.js 3D boxer in `proto/boxer3d.js` (skeleton, stance, punch motion layers), with the spec in `proto/STANCE.md`. Port the *look* from there instead of starting cold. Reference screenshots: `proto/tools/shot.js`.
 5. Later: live fights (not a replay), the coach's calls, the career screens. **Ask Ed before starting these.**
 
 ## Where to put things
-- The Unity project goes in **`unity/`** at the repo root (Ed's call if he wants it somewhere else). Commit `Assets/`, `Packages/`, `ProjectSettings/`. Gitignore `Library/`, `Temp/`, `Obj/`, `Logs/`, `UserSettings/`, `Build*/`.
+- The Unity code is in **`unity/Assets/LastBell/`** (`Scripts/` + `Resources/fight.json`). Setup: `unity/README.md`. Once it's a real Unity project, commit `Assets/`, `Packages/`, `ProjectSettings/`; `Library/` etc. are already gitignored.
+- No scene file needed: `FightPlayer` boots itself on Play (`RuntimeInitializeOnLoadMethod`) and builds everything. The scripts were type-checked with Mono against a stub of the Unity API, not in a real editor: expect small fixes.
 - Recorder changes go in `tools/unity/record.js`. Bump `v` if the format changes, and update the table above.
 
 ## House rules (short version of `CLAUDE.md`)
